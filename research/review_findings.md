@@ -2,6 +2,8 @@
 
 Reviewed 2026-09-06. This review takes precedence over the imported AI packet. It is a research assessment, not hydrologic validation or a determination of the City's currently declared restrictions.
 
+The supplemental transcript is now corrected in [corrected_supplement.md](corrected_supplement.md). It also resolves Article XII versus VII, unsupported geography and capacity-cause claims, missing hyperlink targets, overbroad approval-preservation requirements and free-text export privacy.
+
 ## What is useful
 
 The packet identifies a sensible evidence stack: NOAA precipitation, TWDB storage and regional planning, municipal policy, USGS flow and watershed boundaries, and U.S. Drought Monitor context. Its proposed source details, comparison view, export provenance, and analyst questions support the team's goal of reducing time spent reconciling conflicting evidence. Keep those ideas; verify each underlying claim before implementation.

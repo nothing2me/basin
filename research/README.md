@@ -4,6 +4,8 @@ Owner: BASIN research/evidence workstream (B03), with policy review B07 and vali
 
 **Start with [review findings](review_findings.md). The imported AI packet contains factual errors and unverified claims. Its own `reviewed` and `adopted` labels are inherited claims, not team approval. Nothing in this folder changes the application or authorizes automatic ingestion.**
 
+The additional pasted handoff has been replaced by [corrected_supplement.md](corrected_supplement.md), including corrected definitions, code-audit scope, acceptance criteria and working source links. Use that document instead of the extra transcript.
+
 ## Read in this order
 
 1. [Review findings and immediate team tasks](review_findings.md): corrections, policy extraction, gaps and acceptance criteria.
