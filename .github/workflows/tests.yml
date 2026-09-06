@@ -10,5 +10,8 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: python -m pip install -r requirements.txt
+      - run: python scripts/check_snapshot_checkout.py
       - run: python -m pytest -q
       - run: python scripts/demo_smoke.py
+      - run: python scripts/replay_bundle.py output/BASIN-rehearsal.zip
+      - run: python scripts/package_demo.py

@@ -1,56 +1,56 @@
 # BASIN
 
-**Basin Analysis and Scenario Intelligence Navigator** — a local rainfall-scenario workbench for the Coastal Bend / Region N project, built for From the Ground Up 2026.
+**Basin Analysis and Scenario Intelligence Navigator** is a local rainfall evidence workbench for the Coastal Bend / Region N hackathon project.
 
-Generate hundreds of stress tests from NOAA observations, group patterns with local KMeans, choose community priorities, review/edit/reject candidates, and export an auditable shortlist for professional hydrologic review.
+Use public NOAA observations to construct rainfall stress scenarios, compare their measurements and priorities, challenge assumptions, and prepare a reviewed packet for deeper hydrologic analysis. Local KMeans groups candidates; the product has no LLM or cloud inference.
 
-**Research prototype:** bundled airport stations are provisional regional proxies. Catchment representativeness, scientific assumptions and user benefit still require practitioner validation. BASIN does not forecast water supply, reservoir levels, restriction dates, drought probability or the hydrologic drought of record.
+## Supported Windows presentation path
 
-## Start on Windows
+Use **Python 3.12, 64-bit** and the browser launcher. Extract the complete package, run **Setup BASIN.cmd** once, then **Start BASIN.cmd**. Setup installs the exact requirements from `wheelhouse/` when supplied, otherwise from the internet. After setup, the app and its coordinate overview work locally. Keep the console open; Ctrl+C stops the app.
 
-Requires Python 3.12 (64-bit). Double-click **Setup BASIN.cmd** once, then **Start BASIN.cmd**. Setup uses bundled wheels if wheelhouse/ exists; otherwise it needs internet. Open http://127.0.0.1:8501 and keep the console running. This checkout already has an installed environment.
+The launcher starts at port 8501 and chooses another local port if needed. Its console prints the actual address. Runtime needs no API key or account. This release supports a browser on Windows; the old tracked `BASIN.exe` and native wrapper are legacy artifacts and are excluded from the current distribution. They have not been rebuilt or accepted for this release.
 
 ```powershell
 py -3.12 -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
-.venv/Scripts/python.exe -m streamlit run app.py
+.venv/Scripts/python.exe scripts/start_browser.py
 ```
 
-macOS/Linux: create a Python 3.12 venv, install requirements, then `sh start_basin.sh`. The Windows wheel bundle does not install on those operating systems; their launch script is provided but was not tested here. Runtime needs no internet, API key, account or paid service after setup.
+The offline Windows wheel bundle is specific to CPython 3.12 x64. Python itself must be installed beforehand. macOS/Linux require their own dependency installation and validation; `start_basin.sh` is provided without a presentation-support claim.
 
-## Workflow
+## Analyst workflow
 
-1. **Workspace:** run settings and ranking weights in the sidebar; scenario distribution, score contributions, searchable/filterable candidate grid, and shortlist selection. Select a table row to inspect a candidate.
-2. **Review:** daily/cumulative rainfall and rolling deficits; direct daily-value editing, CSV replacement, scaling, accept/reject and candidate swaps. Edits recompute measurements/groups/scores and invalidate approval.
-3. **Exports:** review every shortlisted item and accept at least one current revision. Build and replay-verify a CSV/JSON/snapshot ZIP. Free-text notes stay excluded unless explicitly opted in.
-4. **Data:** station quality table, observed daily/monthly/annual rainfall, source records and downloadable methodology.
+1. **Data:** inspect provisional stations, completeness, flags, observation history and the snapshot manifest.
+2. **Workspace:** generate complete historical rainfall windows with declared retention factors. Inspect groups and score contributions, compare two or three candidates, and preview alternative priorities on the same pool. Ranking changes preserve your shortlist until an explicit rebuild or swap.
+3. **Review:** trace a metric to its evidence, compare two cited records, record a public disagreement and human disposition, and leave unresolved issues visible. Add cited records to a scenario. Private annotations stay local by default.
+4. **Review rainfall:** edit daily values, apply a multiplier or replace the same dates/stations from CSV. Edits recompute metrics and clear acceptance. Accept or reject each shortlisted revision; rejection requires a reason. Acceptance is a local content decision, not professional certification.
+5. **Exports:** inspect included evidence and unresolved issues, choose whether to include private notes, and build a packet. Replay verifies its declared internal-consistency checks before download.
 
-The interface contains operational controls and data. Pitch language, competition information, discovery findings and rehearsal guidance are kept in docs/.
+The optional **Reservoir simulation** view is an uncalibrated, illustrative experiment. All material assumptions are shown. It tracks actual served losses, unmet demand and spill. Its settings, results and conditional storage bands are excluded from saved evidence packets and their verification. It does not predict reservoir levels, deliveries, safe yield or official restriction dates.
 
-Sessions and append-only review logs save in gitignored local/. Restore from the sidebar after a refresh. The server binds 127.0.0.1; LAN/multiuser access is not configured. Local files are not encrypted. Runtime telemetry, automatic data fetching and cloud inference are absent.
+## Data, limits and privacy
 
-## Data and method
+The bundled NOAA GHCN-Daily snapshot covers 1991–2025 at Corpus Christi, Victoria and San Antonio airport stations. These are provisional regional proxies, not validated catchment rainfall. Whole-window sampling preserves complete simultaneous observations. Retention scales rainfall, not streamflow or hydrologic drought severity. The rainfall reference uses matched onset/duration/stations and windows ending by 2015, with 1991–2020 climatology. It is not the hydrologic drought of record or an occurrence probability.
 
-Real NOAA GHCN-Daily records for 1991–2025: USW00012924 (Corpus Christi), USW00012912 (Victoria), USW00012921 (San Antonio). Snapshot and flags are bundled. Missing or failed-quality values never become zero. Explicit ahead-of-time refresh: `python scripts/fetch_noaa.py`. Preserve old snapshots with old sessions; refreshed observations invalidate session compatibility.
+Sessions and append-only review snapshots are in gitignored `local/`. Restore a run from the sidebar. Local files are not encrypted. The server binds loopback, has no accounts, and is intended for one operator. Automatic refreshing and telemetry are disabled. Explicit refresh: `python scripts/fetch_noaa.py`; retain original snapshots with old sessions.
 
-Generation uses complete, synchronized, season-matched **whole historical windows**, correcting the design draft's unspecified block bootstrap. Retention scales rainfall, not hydrologic deficit. The rainfall reference uses the same stations, onset and duration among complete windows ending by 2015, with 1991–2020 climatology. It is not the model's drought of record. See [full methodology](docs/methodology.md).
+Public evidence and conflict dispositions enter the packet. Provider notes, review notes and private evidence/conflict annotations are excluded unless opted in. Unsigned hashes detect internal inconsistencies within the verifier's scope, not coordinated tampering or source authenticity.
+
+Session/export schema 2.0 and implementation v0.2.0 identify this workflow. Version 1.0 sessions migrate in memory after content/history validation. Save them to persist the migration. Version 1.0 bundles must be re-exported from their original sessions; the new verifier does not silently apply its stronger claim to old packets.
 
 ## Verify and package
 
 ```powershell
 .venv/Scripts/python.exe -m pytest -q
+.venv/Scripts/python.exe scripts/check_snapshot_checkout.py
 .venv/Scripts/python.exe scripts/demo_smoke.py
 .venv/Scripts/python.exe scripts/replay_bundle.py output/BASIN-rehearsal.zip
-python -m pip download --only-binary=:all: -r requirements.txt --dest wheelhouse
+.venv/Scripts/python.exe scripts/evaluate_selection.py
 .venv/Scripts/python.exe scripts/package_demo.py --wheels
 ```
 
-The rehearsal blocks network connections and exercises generation, a revision, approval, privacy-default export and replay. Packaging under output/ includes source, docs, verified observations and optional platform-specific wheels. It excludes notes, sessions, credentials and attachments. Python must be installed beforehand; the kit is not a standalone executable.
+The rehearsal blocks Python network connections and exercises scaling, replacement, changed priorities, a rejection, evidence conflict, session restoration and privacy-default export. Browser network isolation is a separate developer rehearsal described in `docs/build_validation.md`. Packages include source, tests, documentation, verified data and optional wheels; they exclude user sessions, credentials, private correspondence and legacy executable artifacts.
 
-## Structure and handoff
+Core modules live in `basin_core/`; `app.py` and `basin_ui.py` contain the interface. See [methodology](docs/methodology.md), [verification scope](docs/verification_scope.md), [build evidence](docs/build_validation.md), [practitioner exercise](docs/validation_notes.md), [demo runbook](docs/demo_runbook.md), and [shared task board](TODO.md).
 
-basin_core/: data verification, generator/reference, learning/ranking, revision/persistence workflow, exporter/replayer. app.py: Streamlit/Plotly UI. scripts/: explicit refresh, offline rehearsal, replay, packaging. tests/: numerical/data invariants, privacy/review integrity, persistence, offline pipeline and UI workflow.
-
-Read the [demo runbook](docs/demo_runbook.md), [validation status](docs/validation_notes.md), [AI disclosure](docs/ai_use_log.md) and [third-party materials](docs/third_party_materials.md).
-
-Working software is not field validation. The team still needs practitioner review, actual-laptop/projector rehearsal, backup video and final pitch materials. No local chat agent or live utility integration is included.
+The actual presentation laptop, practitioner usefulness, catchment suitability and final team acceptance remain separate release gates.

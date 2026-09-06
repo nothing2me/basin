@@ -10,7 +10,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 
-from basin_core.analysis import comparison, COMMUNITY_PRESETS, simulate_reservoir_drawdown
+from basin_core.analysis import comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMPTIONS, simulate_reservoir_drawdown
+from basin_ui import evidence_panel, comparison_panel
 from basin_core.data import CachedSource, ROOT
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle
@@ -54,8 +55,10 @@ def load_source():
 def save(w):
     try:
         w.save()
+        return True
     except OSError as error:
         st.error(f"Save failed: {error}")
+        return False
 
 
 def chart(fig, height=300):
@@ -70,73 +73,18 @@ def chart(fig, height=300):
 
 
 def basin_map(stations_df):
-    fig = go.Figure()
-    reservoirs = pd.DataFrame([
-        {"name": "Choke Canyon Reservoir", "latitude": 28.48, "longitude": -98.27, "desc": "Frio River · 662k ac-ft storage"},
-        {"name": "Lake Corpus Christi", "latitude": 28.05, "longitude": -97.87, "desc": "Nueces River · 257k ac-ft terminal pool"},
-        {"name": "Lake Texana", "latitude": 28.83, "longitude": -96.53, "desc": "Navidad River · Mary Rhodes Pipeline Source"},
-    ])
-
-    # Mary Rhodes Phase 1 Pipeline: 101-mile conveyance from Lake Texana to Corpus Christi O.N. Stevens WTP
-    pipe_lats = [28.83, 28.67, 28.38, 28.08, 27.87]
-    pipe_lons = [-96.53, -96.88, -97.18, -97.45, -97.55]
-    fig.add_trace(go.Scattergeo(
-        lat=pipe_lats,
-        lon=pipe_lons,
-        mode="lines",
-        line=dict(width=3, color="#087e8b", dash="dash"),
-        name="Mary Rhodes Pipeline (101 mi · 60 MGD)",
-        hoverinfo="text",
-        text=["Mary Rhodes Pipeline · 60 MGD Raw Water Conveyance (Lake Texana → Corpus Christi)"] * len(pipe_lats)
-    ))
-
-    fig.add_trace(go.Scattergeo(
-        lat=reservoirs["latitude"],
-        lon=reservoirs["longitude"],
-        mode="markers+text",
-        text=reservoirs["name"],
-        textposition=["bottom center", "top right", "top right"],
-        customdata=reservoirs["desc"],
-        hovertemplate="<b>%{text}</b><br>%{customdata}<extra>Reservoir</extra>",
-        marker=dict(size=11, color="#087e8b", symbol="diamond", line=dict(width=1.5, color="#103632")),
-        name="Drinking Reservoirs"
-    ))
-    fig.add_trace(go.Scattergeo(
-        lat=stations_df["latitude"],
-        lon=stations_df["longitude"],
-        mode="markers+text",
-        text=stations_df["name"].str.replace(" Intl Ap", "").str.replace(" Rgnl Ap", "").str.replace(" Airport", ""),
-        textposition=["top center", "bottom right", "top left"],
-        customdata=stations_df["station_id"],
-        hovertemplate="<b>%{text}</b> (%{customdata})<br>Lat: %{lat:.2f}, Lon: %{lon:.2f}<extra>NOAA Proxy Station</extra>",
-        marker=dict(size=10, color="#cc9145", symbol="circle", line=dict(width=1.5, color="#503513")),
-        name="NOAA GHCN-Daily Stations"
-    ))
-    fig.update_geos(
-        fitbounds="locations",
-        visible=True,
-        resolution=50,
-        showcountries=True,
-        countrycolor="#c8d6d3",
-        showsubunits=True,
-        subunitcolor="#c8d6d3",
-        showcoastlines=True,
-        coastlinecolor="#8fa8a2",
-        showland=True,
-        landcolor="#f4f7f6",
-        showlakes=True,
-        lakecolor="#d6e8e6",
-        showrivers=True,
-        rivercolor="#c2dedb",
-        projection_type="albers usa"
-    )
-    fig.update_layout(
-        height=320,
-        margin=dict(l=5, r=8, t=10, b=5),
-        legend=dict(orientation="h", y=-0.15, x=0.0),
-        paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Arial", size=11, color="#42605a")
-    )
+    # Cartesian coordinates use no browser map tiles or remote geographic assets.
+    fig = go.Figure(go.Scatter(
+        x=stations_df["longitude"], y=stations_df["latitude"], mode="markers+text",
+        text=stations_df["name"], textposition="top center", customdata=stations_df["station_id"],
+        marker=dict(size=13, color="#087e8b"),
+        hovertemplate="%{text}<br>%{customdata}<br>Longitude %{x:.4f}, latitude %{y:.4f}<extra></extra>"))
+    fig.update_layout(height=320, margin=dict(l=20, r=20, t=35, b=20),
+                      title="Station locations · coordinate overview",
+                      xaxis_title="Longitude (degrees)", yaxis_title="Latitude (degrees)",
+                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#edf2ef")
+    fig.update_xaxes(range=[-99, -96.3])
+    fig.update_yaxes(range=[27.3, 30.1])
     return fig
 
 
@@ -174,11 +122,11 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150):
         hovertemplate="Day %{x}<br>Storage: %{y:.1f}%<extra></extra>"
     ), row=1, col=2)
 
-    fig.add_hline(y=40, line_dash="dash", line_color="#d97706", annotation_text="Stage 1 (40%)",
+    fig.add_hline(y=40, line_dash="dash", line_color="#d97706", annotation_text="Band 1 (40%)",
                   annotation_position="top right", row=1, col=2)
-    fig.add_hline(y=30, line_dash="dash", line_color="#ea580c", annotation_text="Stage 2 (30%)",
+    fig.add_hline(y=30, line_dash="dash", line_color="#ea580c", annotation_text="Band 2 (30%)",
                   annotation_position="top right", row=1, col=2)
-    fig.add_hline(y=20, line_dash="dash", line_color="#dc2626", annotation_text="Stage 3 (20%)",
+    fig.add_hline(y=20, line_dash="dash", line_color="#dc2626", annotation_text="Band 3 (20%)",
                   annotation_position="top right", row=1, col=2)
 
     frames = []
@@ -205,7 +153,7 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150):
     fig.frames = frames
 
     fig.update_yaxes(range=[0, 700000], title="ac-ft", row=1, col=1)
-    fig.update_yaxes(range=[0, 65], title="Combined %", row=1, col=2)
+    fig.update_yaxes(range=[0, 100], title="Combined %", row=1, col=2)
     fig.update_xaxes(range=[0, days + 2], title="Scenario Day", row=1, col=2)
 
     fig.update_layout(
@@ -266,10 +214,10 @@ TUTORIAL_STEPS = [
     {
         "target": "data_map",
         "page": "Data",
-        "tag": "OBSERVATIONAL BASELINE · GIS",
-        "title": "1. Verified Gauge & Conveyance Network",
-        "desc": "Anchored to First-Order NOAA stations (SHA-256 verified) and the 101-mile Mary Rhodes pipeline supplying Region N reservoirs.",
-        "directive": "Examine the catchment locations, pipeline route, and station completeness below.",
+        "tag": "OBSERVATIONS · PROVENANCE",
+        "title": "1. Inspect the Observation Sources",
+        "desc": "Three provisional NOAA station proxies with a byte-verified snapshot. A checksum does not validate catchment suitability.",
+        "directive": "Inspect the station locations, missing-data policy, and completeness below.",
         "arrow_dir": "down"
     },
     {
@@ -277,7 +225,7 @@ TUTORIAL_STEPS = [
         "page": "Workspace",
         "tag": "SCENARIO ENGINE · RESAMPLING",
         "title": "2. Resample Historical Weather Windows",
-        "desc": "Extracts synchronized multi-station historical windows (30–365 days) with retention scaling (35%–85%) without synthetic hallucinations.",
+        "desc": "Extracts synchronized multi-station historical windows (30–365 days) with retention scaling (35%–85%) with every transformation recorded.",
         "directive": "Click 'Generate' below to compute candidates, or click 'Next Step ▶' to use current run.",
         "arrow_dir": "down"
     },
@@ -285,8 +233,8 @@ TUTORIAL_STEPS = [
         "target": "sidebar_presets",
         "page": "Workspace",
         "tag": "COMMUNITY PRIORITIES · WEIGHTS",
-        "title": "3. Stakeholder Priority Presets",
-        "desc": "Snaps multi-objective ranking weights to community archetypes (e.g. Rural Water District vs. River Basin Authority).",
+        "title": "3. Illustrative User Priorities",
+        "desc": "Illustrative presets and editable weights change scores. Your reviewed shortlist stays in place until you rebuild it.",
         "directive": "Choose a stakeholder preset from the dropdown below to recalculate scenario scores.",
         "arrow_dir": "down"
     },
@@ -302,19 +250,19 @@ TUTORIAL_STEPS = [
     {
         "target": "review_simulation",
         "page": "Review",
-        "tag": "PHYSICAL SIMULATION · MASS-BALANCE",
-        "title": "5. Dual-Tank Reservoir Stress-Test",
-        "desc": "Daily mass balance for Choke Canyon & Lake Corpus Christi under 180 MGD regional draw and evaporation.",
-        "directive": "Click '▶ Play Simulation' below to observe storage depletion and Stage 1/2/3 triggers.",
+        "tag": "OPTIONAL · ILLUSTRATIVE EXPERIMENT",
+        "title": "5. Explore an Illustrative Water Balance",
+        "desc": "Uncalibrated two-pool experiment with assumed inflow, evaporation, demand and capacity. Its outputs are excluded from the evidence packet.",
+        "directive": "Inspect assumptions, then play the conditional storage trajectory. Bands are illustrative, not official restriction dates.",
         "arrow_dir": "down",
         "review_mode": "Reservoir simulation"
     },
     {
         "target": "review_decision",
         "page": "Review",
-        "tag": "HUMAN-IN-THE-LOOP · TEXAS § 1001",
-        "title": "6. Engineering Sign-Off Gate",
-        "desc": "Texas law requires licensed human review. AI never makes autonomous planning decisions.",
+        "tag": "HUMAN REVIEW · RAINFALL CONTENT",
+        "title": "6. Review, Challenge and Accept Rainfall",
+        "desc": "Inspect evidence, record disagreements, and edit or accept rainfall content. Acceptance is a local review decision, not professional certification.",
         "directive": "Enter an audit rationale note and click 'Accept' to approve this scenario.",
         "arrow_dir": "down",
         "review_mode": "Cumulative rainfall"
@@ -322,10 +270,10 @@ TUTORIAL_STEPS = [
     {
         "target": "export_panel",
         "page": "Exports",
-        "tag": "VERIFIED HANDOFF · WAM MODELING",
-        "title": "7. Texas WAM Engineering Package",
-        "desc": "Packages accepted scenarios with SHA-256 manifests and hydrologist translation brief for Texas WAM Run 3.",
-        "directive": "Click 'Build verified export' below to compile the cryptographic handoff ZIP.",
+        "tag": "AUDITABLE HANDOFF · EXPERT REVIEW",
+        "title": "7. Export a Reviewed Evidence Packet",
+        "desc": "Packages reviewed rainfall, public evidence, unresolved conflicts and a readable brief. Replay checks internal consistency within its stated scope.",
+        "directive": "Click 'Build verified export' below to build the reviewed handoff ZIP.",
         "arrow_dir": "down"
     }
 ]
@@ -510,8 +458,8 @@ with st.sidebar:
             note = st.text_area("Provider notes", value=w.notes, key=f"provider_{w.id}", label_visibility="collapsed")
             if st.button("Save notes", width="stretch"):
                 w.notes = note
-                save(w)
-                st.toast("Saved locally")
+                if save(w):
+                    st.toast("Saved locally")
     with st.expander("Saved runs"):
         sessions = sorted((ROOT / "local").glob("session-*.json"), key=lambda p: p.stat().st_mtime, reverse=True) if (ROOT / "local").exists() else []
         if sessions:
@@ -550,7 +498,7 @@ if page == "Data" or (page == "Workspace" and w is None):
     quality = pd.DataFrame(source.manifest["quality"])
     station_table = metadata.merge(quality, on="station_id")
     st.plotly_chart(basin_map(station_table), width="stretch")
-    st.caption("Provisional Regional Proxies: Corpus Christi (USW00012924), Victoria (USW00012912), and San Antonio (USW00012921) represent downstream and adjacent First-Order NOAA stations used for methodology demonstration. Full operational deployment requires upstream COOP/mesonet gauge calibration across the Nueces and Frio headwaters.")
+    st.caption("Corpus Christi, Victoria and San Antonio airport observations are provisional regional proxies. These coordinates do not establish catchment coverage. Station suitability and spatial aggregation require practitioner review. The coordinate overview works offline.")
     st.dataframe(station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
                  hide_index=True, width="stretch", column_config={"completeness_pct": st.column_config.NumberColumn("Complete %", format="%.3f")})
     tour_target_close("data_map")
@@ -635,6 +583,7 @@ elif page == "Workspace":
         st.button(f"Inspect {selected_id}", on_click=open_review, args=(selected_id,), type="primary")
     elif len(filtered):
         st.button("Review shortlist", on_click=open_review, args=(w.selected[0],))
+    comparison_panel(w, save)
     with st.expander("Selection diagnostics"):
         st.dataframe(pd.DataFrame(comparison(w.scenarios, w.selected, w.params.seed)), hide_index=True, width="stretch")
         st.json({"clustering": w.clustering, "generation": w.generation, "selection_history": w.selection_history})
@@ -652,20 +601,25 @@ elif page == "Review":
     a, b, c, d, e = st.columns(5)
     a.metric("Deficit", f"{f['deficit_mm']:.1f} mm", f"{f['deficit_mm']/25.4:.2f} in")
     b.metric("Duration · days", f["duration_days"])
-    c.metric("Concurrence", f"{f['concurrence']:.1%}")
+    c.metric("Station stress frequency" if len(s.series.columns) == 1 else "Concurrence", f"{f['concurrence']:.1%}")
     d.metric("Reference percentile", f"{f['historical_percentile']:.0%}")
     e.metric("Score", f"{s.score:.2f}")
     left, right = st.columns([2.2, 1])
     with left:
         mode = st.radio("Series", ["Cumulative rainfall", "Daily rainfall", "30-day deficit", "Reservoir simulation"], horizontal=True, label_visibility="collapsed", key="review_series_mode")
         if mode == "Reservoir simulation":
-            c_pace, c_init = st.columns([1, 1])
+            c_pace, c_init, c_conserve = st.columns([1, 1, 1])
             pace_choice = c_pace.selectbox("Playback pace", ["Presentation mode (2.5 min)", "Deliberate (45 sec)", "Rapid preview (10 sec)"], label_visibility="collapsed")
             pace_ms = 2500 if "2.5 min" in pace_choice else (800 if "45 sec" in pace_choice else 150)
-            init_choice = c_init.selectbox("Initial storage", ["48% (2024 Drought Entry)", "60% (Historical Baseline)", "35% (Pre-Stressed Pool)"], label_visibility="collapsed")
+            init_choice = c_init.selectbox("Initial storage", ["48% (illustrative)", "60% (illustrative)", "35% (illustrative)"], label_visibility="collapsed")
             init_pct = 0.48 if "48%" in init_choice else (0.60 if "60%" in init_choice else 0.35)
+            conserve_choice = c_conserve.select_slider("Emergency Conservation", options=[0, 10, 20, 30], value=0, format_func=lambda v: f"Conservation: {v}%", label_visibility="collapsed")
 
-            sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct)
+            pipeline_active = st.checkbox("Assume pipeline supply available", value=True)
+            st.info("Illustrative experiment: conditional storage under assumed inputs. Not calibrated, not a forecast, and excluded from saved evidence packets and their verification.")
+            with st.expander("All experiment assumptions and accounting"):
+                st.json(RESERVOIR_ASSUMPTIONS)
+            sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active)
 
             render_tour_step("review_simulation")
             tour_target_open("review_simulation")
@@ -677,10 +631,10 @@ elif page == "Review":
             term = sim_df.iloc[-1]
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("Final Combined", f"{term['combined_pct']:.1f}%", f"{term['combined_acft']:,.0f} ac-ft")
-            m2.metric("Terminal Status", term["stage"])
-            m3.metric("Stage 1 Breach (<40%)", f"Day {s1}" if s1 else "Not breached")
-            m4.metric("Stage 2 Breach (<30%)", f"Day {s2}" if s2 else "Not breached")
-            st.caption("Physical Reservoir Mass-Balance Model: Choke Canyon (662k ac-ft) and Lake Corpus Christi (257k ac-ft) system simulation under regional municipal draw, seasonal net pan evaporation, and catchment inflow. Pre-engineering scoping tool; official firm yield modeling requires Texas WAM Run 3 by a licensed P.E.")
+            m2.metric("Illustrative band", term["stage"])
+            m3.metric("Below 40% (conditional)", f"Day {s1}" if s1 else "Not breached")
+            m4.metric("Below 30% (conditional)", f"Day {s2}" if s2 else "Not breached")
+            st.caption("Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings reset independently of saved rainfall sessions.")
         else:
             expected = pd.DataFrame(w.reference.expected(s.series.index), index=s.series.index, columns=s.series.columns)
             fig = go.Figure()
@@ -770,6 +724,7 @@ elif page == "Review":
                                    "Initial rainfall retained": list(s.provenance["retention_by_station"].values()),
                                    "Current deficit mm": [f["station_deficits_mm"][i] for i in s.provenance["retention_by_station"]]}),
                      hide_index=True, width="stretch")
+        evidence_panel(w, s, save)
         st.json({"source": s.provenance, "features": f, "score_contributions": s.components, "snapshot_sha256": source.manifest["sha256"]})
     with history_tab:
         if s.history:
@@ -781,6 +736,13 @@ elif page == "Exports":
     chosen = [w.get(i) for i in w.selected]
     st.dataframe(table(w).query("Shortlist").drop(columns="Shortlist"), hide_index=True, width="stretch")
     share = st.checkbox("Include provider notes and free-text review notes", value=False)
+    st.caption("Packet includes rainfall, metrics, public evidence, scenario links and all conflict dispositions. Private evidence annotations follow the same opt-in. Reservoir results are excluded.")
+    unresolved = [c for c in w.conflicts if c["status"] == "unresolved"]
+    if unresolved:
+        st.warning(f"{len(unresolved)} unresolved evidence disagreement(s) will be included for the recipient.")
+        st.dataframe(pd.DataFrame(unresolved).drop(columns="private_note", errors="ignore"), hide_index=True)
+    with st.expander("Evidence included in packet"):
+        st.dataframe(pd.DataFrame(w.evidence).drop(columns="private_note", errors="ignore"), hide_index=True)
     try:
         w.exportable()
         ready = True
@@ -800,8 +762,9 @@ elif page == "Exports":
     packet = st.session_state.get("packet")
     if packet and packet["share"] == share and packet["fingerprint"] == json.dumps(w.record(share), sort_keys=True):
         st.download_button("Download ZIP", packet["data"], f"BASIN-{w.id}.zip", "application/zip", type="primary")
-        st.caption(f"{packet['report']['scenarios_replayed']} revisions verified · rainfall.csv / shortlist.csv / audit.json / input snapshot / checksums")
+        st.json(packet["report"])
+        st.caption(f"{packet['report']['scenarios_replayed']} revisions verified · daily_rainfall.csv / shortlist.csv / audit.json / input snapshot / checksums")
     with st.expander("Run resource usage"):
         st.json(w.footprint)
 
-st.caption("Rainfall analysis only · Regional station proxies unvalidated")
+st.caption("Rainfall evidence workbench · Regional station proxies unvalidated · Optional reservoir experiment is illustrative")

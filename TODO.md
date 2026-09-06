@@ -4,6 +4,15 @@ Updated: 2026-09-06 | Planning baseline: `ebd8d59` on `main`
 
 This is the shared task board for BASIN. Subdivide work here using stable IDs rather than maintaining separate TODO documents per person. A GitHub issue or PR may discuss implementation, but link its ID here and keep this board's owner/status current. This plan proposes work; it does not claim team approval of new product scope or assign real people without their agreement.
 
+## Active implementation — September 6
+
+User authorized completing this board. Implementation owner: Codex on `codex/demo-ready`.
+Intended independent reviewer: a TAMUCC professional identified by the user; name and review evidence pending.
+User explicitly selected B08 Path B: retain an illustrative reservoir experiment. Paths A/C are not selected.
+Primary workflow: rural-serving analyst prepares three reviewed rainfall scenarios, inspects evidence, records an unresolved assumption, and exports a packet for expert review.
+Implement B02/B04 baseline first, B03/B05 evidence next, then B06 comparison. One implementer owns the shared schema and app integration.
+Presentation device is a different Windows laptop. User will supply actual submission/organizer materials; freeze and official format remain pending.
+
 ## Product objective and scope
 
 Proposed objective for team confirmation in B01: help rural-serving water analysts assemble traceable evidence, compare rainfall stress scenarios and assumptions, and prepare a reviewed packet for deeper drought-planning analysis.
@@ -35,7 +44,7 @@ Any teammate may claim another lane's work after coordinating. Existing team own
 | ID | Task | Priority | Suggested lead | Owner / reviewer | Status | Dependencies |
 |---|---|---|---|---|---|---|
 | B01 | Confirm scope and claim work | P0 | All | Unclaimed / Unclaimed | Ready | None |
-| B02 | Establish a reproducible working baseline | P0 | B | Unclaimed / Unclaimed | Ready | None |
+| B02 | Establish a reproducible working baseline | P0 | B | Codex / TAMUCC reviewer (name pending) | In progress | None |
 | B03 | Define evidence and assumption records | P1 | A | Unclaimed / Unclaimed | Needs decision | B01 for new scope; inventory can start |
 | B04 | Complete audit and export verification | P0 | B | Unclaimed / Unclaimed | Ready | B02 for runtime verification; B03 for new fields |
 | B05 | Build evidence inspection and conflict review | P1 | C | Unclaimed / Unclaimed | Needs decision | B01, B03, B04 schema agreement |

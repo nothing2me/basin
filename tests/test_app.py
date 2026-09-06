@@ -20,7 +20,7 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert not app.exception
     preset_box = next((s for s in app.sidebar.selectbox if s.label == "Community priority preset"), None)
     if preset_box:
-        preset_box.set_value("Rural Water District (Nueces County WCID #3)").run()
+        preset_box.set_value("Illustrative rural provider").run()
         assert app.session_state.workspace.weights["season"] == 50
     app.slider(key="weight_duration").set_value(80).run()
     assert app.session_state.workspace.weights["duration"] == 80

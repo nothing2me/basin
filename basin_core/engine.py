@@ -15,6 +15,11 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def rainfall_digest(series: pd.DataFrame) -> str:
+    """Stable semantic CSV identity, independent of an editor's index label."""
+    return hashlib.sha256(series.rename_axis("date").to_csv(float_format="%.12g", lineterminator="\n").encode()).hexdigest()
+
+
 @dataclass(frozen=True)
 class ScenarioParams:
     stations: tuple[str, ...]
@@ -131,7 +136,7 @@ class Scenario:
         self.components: dict = {}
 
     def digest(self) -> str:
-        return hashlib.sha256(self.series.to_csv(float_format="%.12g", lineterminator="\n").encode()).hexdigest()
+        return rainfall_digest(self.series)
 
     def review(self, accept: bool, note: str = ""):
         if not accept and not note.strip():

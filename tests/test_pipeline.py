@@ -112,9 +112,9 @@ def test_review_revision_replay_privacy_and_rejection(workspace):
         assert rejected.id.encode() in archive.read("audit.json")
         assert "Hydrologist_Handoff_Brief.md" in archive.namelist()
         brief = archive.read("Hydrologist_Handoff_Brief.md").decode("utf-8")
-        assert "Engineering Specification" in brief
+        assert "Rainfall Scenario Handoff" in brief
         assert "Net Deficit (in)" in brief
-        assert "Texas Water Availability Models" in brief
+        assert "Rainfall retention cannot be applied directly" in brief
         assert "Community Priority Configuration" in brief
     assert verify_bundle(payload)["scenarios_replayed"] == 2
     with zipfile.ZipFile(io.BytesIO(export_bundle(workspace, True))) as archive:
@@ -129,14 +129,14 @@ def test_cluster_profiling_and_community_presets(workspace):
         assert hasattr(s, "cluster_name")
         assert s.cluster_name == workspace.clustering["group_profiles"][s.cluster]
     
-    assert "Rural Water District (Nueces County WCID #3)" in COMMUNITY_PRESETS
-    rural = COMMUNITY_PRESETS["Rural Water District (Nueces County WCID #3)"]
+    assert "Illustrative rural provider" in COMMUNITY_PRESETS
+    rural = COMMUNITY_PRESETS["Illustrative rural provider"]
     assert rural["season"] == 50
     workspace.rerank(rural)
     assert workspace.weights == rural
 
 
-def test_reservoir_drawdown_simulation(workspace):
+def test_reservoir_storage_bounds(workspace):
     s = workspace.scenarios[0]
     sim = simulate_reservoir_drawdown(s.series, initial_pct=0.48)
     assert len(sim) == len(s.series)
@@ -211,4 +211,12 @@ def test_reservoir_drawdown_simulation(workspace):
     # Check that initial combined percentage matches initial_pct * 100
     assert abs(sim.iloc[0]["combined_pct"] - 48.0) < 1.0
     assert sim.iloc[0]["demand_acft"] == 370.0
+
+    # Test conservation reduction parameter
+    sim_conserved = simulate_reservoir_drawdown(series, initial_pct=0.48, conservation_pct=0.20)
+    assert sim_conserved.iloc[0]["demand_acft"] == pytest.approx(370.0 * 0.8, abs=0.1)
+    # Conservation should preserve higher final storage
+    assert sim_conserved.iloc[-1]["combined_pct"] >= sim.iloc[-1]["combined_pct"]
+
+
 

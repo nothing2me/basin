@@ -4,6 +4,7 @@ import hashlib
 import importlib.metadata
 import io
 import json
+from types import SimpleNamespace
 import zipfile
 
 import numpy as np
@@ -11,138 +12,164 @@ import pandas as pd
 
 from basin_core import __version__
 from basin_core.data import CachedSource, ROOT
-from basin_core.engine import Reference
+from basin_core.evidence import public_copy
+from basin_core.integrity import compare_values, reconstruct_audit
+
+SCHEMA = '2.0'
+CHECKS = ['complete file inventory and hashes', 'source snapshot identity', 'exact dates, station order and units',
+          'all scenario transformations and revision digests', 'selected/accepted IDs and approval history',
+          'rainfall features, scores, components and shortlist summaries', 'evidence links and privacy defaults',
+          'readable brief matches audited content']
+EXCLUDED = ['scientific validity or source authenticity', 'professional approval or user benefit',
+            'KMeans labels, selection history and saved comparison results (recorded and hash-checked only)',
+            'reservoir experiment and threshold timing', 'performance measurements and implementation identity attestation']
+FILES = {'daily_rainfall.csv', 'shortlist.csv', 'audit.json', 'Hydrologist_Handoff_Brief.md',
+         'snapshot/observations.csv', 'snapshot/manifest.json', 'methodology.md', 'README.txt'}
 
 
 def dumps(value):
     return json.dumps(value, indent=2, allow_nan=False).encode()
 
 
-def generate_brief(workspace, accepted) -> str:
-    rows = []
+def implementation_identity():
+    paths = [ROOT / 'app.py', ROOT / 'basin_ui.py', ROOT / 'requirements.txt', ROOT / 'scripts/replay_bundle.py',
+             ROOT / 'docs/methodology.md', *sorted((ROOT / 'basin_core').glob('*.py'))]
+    # Normalize text line endings so Windows and Unix identify the same source.
+    files = {p.relative_to(ROOT).as_posix(): hashlib.sha256(p.read_bytes().replace(b'\r\n', b'\n')).hexdigest() for p in paths}
+    return {'method': 'sha256 of named UTF-8 source files with LF line endings', 'files': files,
+            'sha256': hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()}
+
+
+def text_cell(value):
+    return str(value).replace('|', '\\|').replace('\n', ' ').replace('\r', ' ').replace('<', '&lt;').replace('>', '&gt;')
+
+
+def generate_brief(workspace, accepted):
+    total = sum(workspace.weights.values())
+    lines = ['# BASIN — Rainfall Scenario Handoff', '', f'Run: `{workspace.id}` · created {workspace.created_at} · BASIN {__version__}', '',
+             '## Purpose and limits', '',
+             'An analyst selected rainfall stress scenarios for deeper drought-planning analysis. Accept records a local rainfall-content review; it does not establish professional sign-off, validated catchment suitability, probability, water supply or restriction dates.', '',
+             'Stations are provisional regional airport proxies. Rainfall retention cannot be applied directly to naturalized streamflow. A domain specialist must determine geographic suitability, rainfall–runoff modeling, operating rules and any appropriate downstream modeling application.', '',
+             '## Community Priority Configuration', '', 'User-selected normalized weights (illustrative priorities; no provider endorsement):', '']
+    lines += [f'- {k.title()}: {v / total:.1%} (raw weight {v})' for k, v in workspace.weights.items()]
+    lines += ['', 'Approval applies to rainfall content; current weights may differ from weights at approval. The shortlist changes only on an explicit rebuild or manual swap.', '',
+              '## Accepted rainfall revisions', '',
+              '| Scenario | Revision | Days | Net deficit (mm/station) | Net Deficit (in) | Station stress fraction | Reference n | Source window |',
+              '|---|---|---|---|---|---|---|---|']
     for s in accepted:
-        f = s.features
-        p = s.provenance
-        def_mm = f["deficit_mm"]
-        def_in = def_mm / 25.4
-        profile = getattr(s, "cluster_name", f"Group {s.cluster}")
-        exceeded = "Yes" if f.get("beyond_rainfall_reference") else "No"
-        rows.append(f"| {s.id} | r{s.revision} | {profile} | {f['duration_days']}d | {def_mm:.1f} mm | {def_in:.2f} in | {f['concurrence']:.1%} | {exceeded} | {p.get('source_start')} to {p.get('source_end')} |")
-    table_text = "\n".join(rows)
-    return f"""# BASIN -- Hydrologist Handoff Brief & Engineering Specification
-**Run Identifier:** `{workspace.id}`  
-**Created:** `{workspace.created_at}`  
-**Software Version:** BASIN v{__version__}  
-
----
-
-## 1. Executive Summary & Purpose
-This handoff brief accompanies an auditable meteorological drought scenario packet prepared for professional hydrologic review. The scenarios prioritize compound rainfall deficits across key regional supply indicators for the Coastal Bend / Texas Region N water planning area.
-
-* **Target Application:** Professional evaluation through Texas Water Availability Models (WAM / WRAP) or reservoir balance models (e.g. Corpus Christi Water Supply Model for Lake Corpus Christi, Choke Canyon Reservoir, and Lake Texana).
-* **Community Decision Context:** Prioritized by local water district stakeholders to focus scarce engineering consulting resources on drought patterns matching local community risk tolerance, high-demand summer timing, and multi-basin concurrence.
-* **Scope Boundary:** These are meteorological rainfall-stress scenarios (expressed in daily mm/day). They represent **precipitation stress tests**, not streamflow forecasts or hydrologic firm yield determinations. Official engineering analyses must be conducted by or under the supervision of a licensed Professional Engineer (P.E.).
-
----
-
-## 2. Community Priority Configuration
-The shortlist was evaluated from `{len(workspace.scenarios)}` candidate scenarios using the following stakeholder weights:
-* **Severity (Historical Percentile):** {workspace.weights.get('severity', 0)}%
-* **Duration:** {workspace.weights.get('duration', 0)}%
-* **Multi-Basin Spatial Concurrence:** {workspace.weights.get('concurrence', 0)}%
-* **Peak Summer Timing (Jun-Sep):** {workspace.weights.get('season', 0)}%
-
----
-
-## 3. Approved Scenario Specifications
-The following {len(accepted)} scenario revisions were formally reviewed, refined, and approved for expert evaluation:
-
-| Scenario ID | Revision | Profile | Duration | Net Deficit (mm) | Net Deficit (in) | Concurrence | Ref Exceeded? | Source Baseline Window |
-| :--- | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-{table_text}
-
----
-
-## 4. Modeling Work Order & WAM Translation Guidance
-For consulting engineers translating these scenarios into Texas WAM / WRAP inputs:
-1. **Source Window Alignment:** Each scenario is anchored to an intact, synchronized historical observation window (`source_start` to `source_end`). 
-2. **Sub-Basin Translation:** Tabulated daily precipitation series in `daily_rainfall.csv` provide station-specific daily totals and retention factors. Apply the corresponding monthly retention percentages to naturalized streamflow files (`.DAT`) for the respective sub-basins (Nueces River above Lake Corpus Christi, Frio River above Choke Canyon, and Navidad River above Lake Texana).
-3. **Audit Verification:** The mathematical integrity of this bundle can be verified offline from the repository:
-   ```bash
-   python scripts/replay_bundle.py <bundle_path.zip>
-   ```
-
----
-*Provisional regional station proxies (USW00012924, USW00012912, USW00012921) shown for methodology demonstration. Catchment gauge calibration required for operational compliance.*
-"""
+        f, p = s.features, s.provenance
+        lines.append(f"| {s.id} | {s.revision} | {f['duration_days']} | {f['deficit_mm']:.2f} | {f['deficit_mm']/25.4:.2f} | {f['concurrence']:.1%} | {f['benchmark_n']} | {p['source_start']} – {p['source_end']} |")
+    lines.append('')
+    for s in accepted:
+        lines.append(f"Evidence for {s.id}: " + ', '.join(workspace.evidence_refs[s.id]))
+    lines += ['', '## Evidence and assumptions', '']
+    # Include the registry so both sides of every conflict remain interpretable.
+    for e in workspace.evidence:
+        lines += [f"### {text_cell(e['id'])}: {text_cell(e['title'])}",
+                  f"{text_cell(e['kind'])} · {text_cell(e['review_status'])} · {text_cell(e['publisher'])}",
+                  f"Source: {text_cell(e['source_locator'])}; source date/version date: {text_cell(e['source_date']) or 'not supplied'}; retrieved: {text_cell(e['retrieved_at']) or 'not supplied'}.",
+                  f"Geography: {text_cell(e['geographic_scope'])}. Units: {text_cell(e['units']) or 'not applicable'}.",
+                  text_cell(e['description']), '']
+    lines += ['## Unresolved issues and conflict dispositions', '', 'Catchment suitability and practitioner methodology review remain unvalidated.', '']
+    if not workspace.conflicts:
+        lines.append('No evidence disagreements have been recorded; this does not establish that none exist.')
+    for c in workspace.conflicts:
+        lines += [f"- {text_cell(c['id'])} [{c['status']}]: {text_cell(c['left_id'])} vs {text_cell(c['right_id'])} — {text_cell(c['disagreement'])}",
+                  '  Comparability: ' + text_cell(c['comparability']), '  Human disposition: ' + (text_cell(c['resolution']) or 'Unresolved; no disposition recorded.')]
+    lines += ['', '## Recipient next action', '',
+              'Inspect daily_rainfall.csv and the matched references, challenge the listed assumptions, and decide what further data or modeling is appropriate. Scenario dates identify historical source days. The separate illustrative reservoir experiment is excluded from this packet.', '',
+              'Replay: `python scripts/replay_bundle.py path/to/bundle.zip`.', '',
+              'Verification checks internal consistency, not authenticity or scientific validity. Grouping, selection history and saved comparisons are recorded and hash-checked only. Unsigned hashes do not protect against coordinated changes. Public evidence and dispositions are included; private annotations only appear in audit.json when opted in.']
+    return '\n'.join(lines) + '\n'
 
 
-def export_bundle(workspace, include_notes=False) -> bytes:
+def summary_record(s):
+    return {'scenario_id': s.id, 'revision': s.revision, 'priority_score': s.score,
+            **{k: v for k, v in s.features.items() if not isinstance(v, dict)}}
+
+
+def rainfall_rows(s):
+    frame = s.series.rename_axis('date').reset_index().melt(id_vars='date', var_name='station_id', value_name='precip_mm')
+    frame['scenario_id'], frame['revision'], frame['units'] = s.id, s.revision, 'mm/day'
+    return frame
+
+
+def export_bundle(workspace, include_notes=False):
     accepted = workspace.exportable()
-    rows, summaries = [], []
-    for s in accepted:
-        frame = s.series.rename_axis("date").reset_index().melt(id_vars="date", var_name="station_id", value_name="precip_mm")
-        frame["scenario_id"], frame["revision"], frame["units"] = s.id, s.revision, "mm/day"
-        rows.append(frame)
-        summaries.append({"scenario_id": s.id, "revision": s.revision, "priority_score": s.score,
-                          **{k: v for k, v in s.features.items() if not isinstance(v, dict)}})
-    files = {"daily_rainfall.csv": pd.concat(rows).to_csv(index=False, lineterminator="\n").encode(),
-             "shortlist.csv": pd.DataFrame(summaries).to_csv(index=False, lineterminator="\n").encode(),
-             "audit.json": dumps(workspace.record(include_notes)),
-             "Hydrologist_Handoff_Brief.md": generate_brief(workspace, accepted).encode("utf-8"),
-             "snapshot/observations.csv": workspace.source.raw,
-             "snapshot/manifest.json": dumps(workspace.source.manifest),
-             "methodology.md": (ROOT / "docs/methodology.md").read_bytes(),
-             "README.txt": b"BASIN rainfall scenarios for expert review. Historical dates label scenario days, not forecasts.\nVerify offline from the BASIN checkout: python scripts/replay_bundle.py path/to/bundle.zip\nPrivate notes are excluded unless explicitly opted in. Station proxies are provisional; no hydrologic yield or drought-of-record claim.\n"}
-    manifest = {"schema_version": "1.0", "basin_version": __version__, "run_id": workspace.id,
-                "accepted_ids": [s.id for s in accepted], "private_notes_included": include_notes,
-                "software": {p: importlib.metadata.version(p) for p in ["numpy", "pandas", "scikit-learn", "streamlit"]},
-                "files": {name: hashlib.sha256(payload).hexdigest() for name, payload in files.items()}}
-    files["bundle_manifest.json"] = dumps(manifest)
+    audit = workspace.record(include_notes)
+    reconstruct_audit(workspace.source, audit, require_export=True)
+    files = {'daily_rainfall.csv': pd.concat([rainfall_rows(s) for s in accepted]).to_csv(index=False, lineterminator='\n').encode(),
+             'shortlist.csv': pd.DataFrame([summary_record(s) for s in accepted]).to_csv(index=False, lineterminator='\n').encode(),
+             'audit.json': dumps(audit), 'Hydrologist_Handoff_Brief.md': generate_brief(workspace, accepted).encode(),
+             'snapshot/observations.csv': workspace.source.raw, 'snapshot/manifest.json': dumps(workspace.source.manifest),
+             'methodology.md': (ROOT / 'docs/methodology.md').read_bytes(),
+             'README.txt': b'BASIN rainfall scenarios for expert review. Historical dates are source labels, not forecasts.\nReplay with BASIN 0.2: python scripts/replay_bundle.py path/to/bundle.zip\nSee the handoff brief for verification scope, assumptions and unresolved issues. The reservoir experiment is excluded.\n'}
+    manifest = {'schema_version': SCHEMA, 'basin_version': __version__, 'run_id': workspace.id,
+                'accepted_ids': [s.id for s in accepted], 'private_notes_included': include_notes,
+                'implementation': implementation_identity(), 'verification_scope': {'checks': CHECKS, 'excluded': EXCLUDED},
+                'software': {p: importlib.metadata.version(p) for p in ['numpy', 'pandas', 'scikit-learn', 'streamlit']},
+                'files': {n: hashlib.sha256(b).hexdigest() for n, b in files.items()}}
+    files['bundle_manifest.json'] = dumps(manifest)
     buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-        for name, payload in files.items():
-            archive.writestr(name, payload)
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
+        for name, data in files.items(): archive.writestr(name, data)
     return buffer.getvalue()
 
 
-def verify_bundle(payload: bytes) -> dict:
+def _verify(payload):
     with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        names = archive.namelist()
+        if len(names) != len(set(names)) or set(names) != FILES | {'bundle_manifest.json'}:
+            raise ValueError('Bundle file inventory mismatch or duplicate entries')
         if sum(f.file_size for f in archive.infolist()) > 100_000_000:
-            raise ValueError("Bundle is too large")
-        manifest = json.loads(archive.read("bundle_manifest.json"))
-        for name, digest in manifest["files"].items():
-            if hashlib.sha256(archive.read(name)).hexdigest() != digest:
-                raise ValueError(f"Checksum mismatch: {name}")
-        source = CachedSource(raw=archive.read("snapshot/observations.csv"), manifest=json.loads(archive.read("snapshot/manifest.json")))
-        audit = json.loads(archive.read("audit.json"))
-        reference = Reference(source, audit["params"]["stations"])
-        rainfall = pd.read_csv(io.BytesIO(archive.read("daily_rainfall.csv")), parse_dates=["date"])
-        if set(rainfall.scenario_id) != set(manifest["accepted_ids"]):
-            raise ValueError("Exported scenario list mismatch")
-        for record in audit["scenarios"]:
-            if record["id"] not in manifest["accepted_ids"]:
-                continue
-            if record["status"] != "accepted" or record["revision"] != record["approved_revision"]:
-                raise ValueError("Unapproved scenario in export")
-            rows = rainfall[rainfall.scenario_id.eq(record["id"])]
-            if not rows.revision.eq(record["revision"]).all() or not rows.units.eq("mm/day").all():
-                raise ValueError("Revision or units mismatch")
-            series = rows.pivot(index="date", columns="station_id", values="precip_mm")[reference.stations]
-            p = record["provenance"]
-            original = source.select(reference.stations).loc[p["source_start"]:p["source_end"]]
-            replay = original * pd.Series(p["retention_by_station"])
-            for event in record["history"]:
-                if event["action"] == "scale":
-                    replay = replay * event["factor"]
-                elif event["action"] == "replace":
-                    replay = pd.DataFrame(event["replacement_values"], index=replay.index, columns=replay.columns)
-            np.testing.assert_allclose(replay.to_numpy(), series.to_numpy(), rtol=1e-10, atol=1e-10)
-            features = reference.features(series)
-            for key, value in features.items():
-                if isinstance(value, dict):
-                    np.testing.assert_allclose(list(value.values()), list(record["features"][key].values()), rtol=1e-9, atol=1e-8)
-                else:
-                    np.testing.assert_allclose(value, record["features"][key], rtol=1e-9, atol=1e-8)
-        return {"verified": True, "run_id": audit["id"], "scenarios_replayed": len(manifest["accepted_ids"]),
-                "checks": ["file hashes", "approval revisions", "source window and all edits", "all exported features"]}
+            raise ValueError('Bundle is too large')
+        manifest = json.loads(archive.read('bundle_manifest.json'))
+        if manifest['schema_version'] != SCHEMA or manifest['basin_version'] != __version__:
+            raise ValueError('Unsupported bundle version; restore the original session and re-export with BASIN 0.2')
+        if set(manifest['files']) != FILES:
+            raise ValueError('Missing file checksums')
+        for name, digest in manifest['files'].items():
+            if hashlib.sha256(archive.read(name)).hexdigest() != digest: raise ValueError(f'Checksum mismatch: {name}')
+        if manifest['verification_scope'] != {'checks': CHECKS, 'excluded': EXCLUDED}:
+            raise ValueError('Verification scope mismatch')
+        identity = manifest['implementation']
+        if hashlib.sha256(json.dumps(identity['files'], sort_keys=True).encode()).hexdigest() != identity['sha256']:
+            raise ValueError('Implementation identity is internally inconsistent')
+        source = CachedSource(raw=archive.read('snapshot/observations.csv'), manifest=json.loads(archive.read('snapshot/manifest.json')))
+        audit = json.loads(archive.read('audit.json'))
+        if audit['schema_version'] != SCHEMA or audit['id'] != manifest['run_id']:
+            raise ValueError('Audit schema or run identity mismatch')
+        if type(manifest['private_notes_included']) is not bool:
+            raise ValueError('Invalid privacy choice')
+        if not manifest['private_notes_included'] and public_copy(audit) != audit:
+            raise ValueError('Private annotations included despite privacy setting')
+        params, reference, scenarios = reconstruct_audit(source, audit, require_export=True)
+        by_id = {s.id: s for s in scenarios}
+        accepted = [by_id[i] for i in audit['selected'] if by_id[i].status == 'accepted']
+        if manifest['accepted_ids'] != [s.id for s in accepted]:
+            raise ValueError('Accepted IDs disagree with selected audit records')
+        rainfall = pd.read_csv(io.BytesIO(archive.read('daily_rainfall.csv')), parse_dates=['date'], float_precision='round_trip')
+        expected = pd.concat([rainfall_rows(s) for s in accepted], ignore_index=True)
+        if list(rainfall.columns) != list(expected.columns) or len(rainfall) != len(expected):
+            raise ValueError('Rainfall row/column count mismatch')
+        for field in ('date', 'station_id', 'scenario_id', 'revision', 'units'):
+            if not rainfall[field].equals(expected[field]): raise ValueError(f'Rainfall {field} order or identity mismatch')
+        np.testing.assert_allclose(rainfall.precip_mm, expected.precip_mm, rtol=1e-10, atol=1e-10)
+        summary = pd.read_csv(io.BytesIO(archive.read('shortlist.csv')), float_precision='round_trip')
+        expected_summary = [summary_record(s) for s in accepted]
+        if len(summary) != len(accepted) or list(summary.columns) != list(expected_summary[0]):
+            raise ValueError('Shortlist summary inventory mismatch')
+        for row, wanted in zip(summary.to_dict('records'), expected_summary): compare_values(row, wanted, 'Shortlist summary')
+        view = SimpleNamespace(**{k: audit[k] for k in ('id', 'created_at', 'weights', 'evidence', 'evidence_refs', 'conflicts')})
+        if archive.read('Hydrologist_Handoff_Brief.md') != generate_brief(view, accepted).encode():
+            raise ValueError('Handoff brief differs from audited content')
+        return {'verified': True, 'run_id': audit['id'], 'scenarios_replayed': len(accepted),
+                'audit_records_replayed': len(scenarios), 'checks': CHECKS, 'excluded': EXCLUDED,
+                'implementation_matches_current': identity == implementation_identity()}
+
+
+def verify_bundle(payload):
+    try:
+        return _verify(payload)
+    except (KeyError, TypeError, IndexError, AttributeError, zipfile.BadZipFile, AssertionError, OverflowError) as error:
+        raise ValueError(f'Malformed or inconsistent bundle: {error}') from error

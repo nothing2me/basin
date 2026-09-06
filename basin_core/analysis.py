@@ -12,17 +12,17 @@ from basin_core.engine import Scenario
 DEFAULT_WEIGHTS = {"severity": 40, "duration": 25, "concurrence": 25, "season": 10}
 
 COMMUNITY_PRESETS = {
-    "Rural Water District (Nueces County WCID #3)": {"severity": 30, "duration": 10, "concurrence": 10, "season": 50},
-    "River Basin Authority (Nueces Basin)": {"severity": 15, "duration": 35, "concurrence": 40, "season": 10},
-    "County Emergency Management": {"severity": 50, "duration": 30, "concurrence": 10, "season": 10},
+    "Illustrative rural provider": {"severity": 30, "duration": 10, "concurrence": 10, "season": 50},
+    "Illustrative regional planner": {"severity": 15, "duration": 35, "concurrence": 40, "season": 10},
+    "Illustrative emergency planner": {"severity": 50, "duration": 30, "concurrence": 10, "season": 10},
 }
 
 
-def label_profile(c: np.ndarray) -> str:
+def label_profile(c: np.ndarray, station_count=3) -> str:
     perc, dur, conc, summer, dry = c[0], c[1] * 365, c[2], c[3], c[4] * 365
     parts = []
     if conc >= 0.45:
-        parts.append("Multi-Basin Concurrent")
+        parts.append("Concurrent Stations" if station_count > 1 else "Frequent Station Stress")
     elif summer >= 0.50:
         parts.append("Peak Summer")
     elif dur >= 210:
@@ -84,7 +84,7 @@ class ScenarioClusterer:
         # Compute semantic profile names for each canonicalized cluster
         group_profiles = {}
         for new_label, old_idx in enumerate(ordered, start=1):
-            group_profiles[new_label] = label_profile(model.cluster_centers_[old_idx])
+            group_profiles[new_label] = label_profile(model.cluster_centers_[old_idx], len(scenarios[0].series.columns))
 
         for scenario, label in zip(scenarios, labels):
             scenario.cluster = label
@@ -131,95 +131,68 @@ def comparison(scenarios: list[Scenario], selected: list[str], seed: int) -> lis
     return result
 
 
-def simulate_reservoir_drawdown(
-    series: pd.DataFrame,
-    initial_pct: float = 0.48
-) -> pd.DataFrame:
-    """
-    Physical mass-balance reservoir storage simulation across the Region N system
-    (Lake Corpus Christi and Choke Canyon Reservoir), calibrated to Texas Water
-    Development Board (TWDB) historical conservation pool capacities and Drought
-    Contingency Plan (DCP) operational triggers.
+RESERVOIR_ASSUMPTIONS = {
+    "model_version": "illustrative-balance-2",
+    "scope": "Uncalibrated two-pool experiment; no forecast or official restriction dates. Excluded from session evidence packets and replay verification.",
+    "capacities_acft": {"Lake Corpus Christi": 257300.0, "Choke Canyon": 662600.0},
+    "inflow": "30 + 45 × equal-station mean rainfall (mm/day), in ac-ft/day; illustrative coefficient, no catchment calibration",
+    "evaporation": "Potential loss 750 ac-ft/day in June–September, 380 otherwise; illustrative fixed seasonal assumption",
+    "demand": "Requested 370 ac-ft/day with pipeline availability, 554 otherwise; conservation reduces this request",
+    "allocation": "Inflow proportional to capacities; evaporation proportional to available water; demand targets 65% from LCC above 20% storage, 15% otherwise, with remaining water covering any shortfall; remaining excess spills",
+    "thresholds": "Illustrative combined-storage bands at 40%, 30%, 20%, 15%; not current official policy",
+    "time_step": "Daily: add inflow, serve available evaporation and demand, spill excess. Rows report end-of-day storage.",
+}
 
-    Conservation capacities:
-      Lake Corpus Christi (LCC): 257,300 ac-ft
-      Choke Canyon Reservoir (CCR): 662,600 ac-ft
-      Combined Conservation Pool: 919,900 ac-ft
 
-    Drought Contingency Plan (DCP) combined storage triggers:
-      Stage 1 (Mild Drought): Combined < 40% (367,960 ac-ft)
-      Stage 2 (Moderate Drought): Combined < 30% (275,970 ac-ft)
-      Stage 3 (Critical / Mandatory Cuts): Combined < 20% (183,980 ac-ft)
-      Stage 4 (Emergency): Combined < 15% (137,985 ac-ft)
-    """
-    cap_lcc = 257300.0
-    cap_ccr = 662600.0
-    cap_total = cap_lcc + cap_ccr
-
-    storage_lcc = cap_lcc * initial_pct
-    storage_ccr = cap_ccr * initial_pct
-
+def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
+                                conservation_pct: float = 0.0, pipeline_active: bool = True) -> pd.DataFrame:
+    """Illustrative daily water accounting, explicitly tracking unserved losses and spill."""
+    if not isinstance(series, pd.DataFrame) or series.empty or not len(series.columns):
+        raise ValueError("Provide a nonempty daily rainfall table")
+    if not isinstance(series.index, pd.DatetimeIndex) or not series.index.equals(pd.date_range(series.index[0], periods=len(series))):
+        raise ValueError("Reservoir experiment requires consecutive daily dates")
+    values = series.to_numpy(dtype=float)
+    if not np.isfinite(values).all() or (values < 0).any():
+        raise ValueError("Reservoir rainfall must be finite, nonnegative and complete")
+    for label, value in (("Initial storage", initial_pct), ("Conservation", conservation_pct)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value) or not 0 <= value <= 1:
+            raise ValueError(label + " must be a fraction from 0 to 1")
+    if type(pipeline_active) is not bool:
+        raise ValueError("Pipeline availability must be true or false")
+    caps = np.array([257300.0, 662600.0])
+    storage = caps * initial_pct
     records = []
-    mean_daily_prcp = series.mean(axis=1)
-
-    for step, (date, prcp_mm) in enumerate(mean_daily_prcp.items()):
-        month = getattr(date, "month", 7)
-        # Seasonal pan evaporation (ac-ft/day) based on TWDB historical net evaporation rates
-        evap_daily = 750.0 if month in [6, 7, 8, 9] else 380.0
-
-        # Base regional municipal and industrial demand (~180 MGD minus ~60 MGD Mary Rhodes pipeline)
-        demand_daily = 370.0
-
-        # Catchment inflow response during drought (calibrated runoff response + baseflow)
-        inflow = 30.0 + (float(prcp_mm) * 45.0)
-
-        net_loss = demand_daily + evap_daily - inflow
-
-        # Lower Nueces priority rule: draw LCC first until 20%, then CCR supplements
-        if storage_lcc > cap_lcc * 0.20:
-            loss_lcc = min(max(net_loss * 0.65, 0.0), storage_lcc)
-            loss_ccr = max(net_loss - loss_lcc, 0.0)
-        else:
-            loss_lcc = min(max(net_loss * 0.15, 0.0), storage_lcc)
-            loss_ccr = max(net_loss - loss_lcc, 0.0)
-
-        storage_lcc = max(0.0, min(cap_lcc, storage_lcc - loss_lcc))
-        storage_ccr = max(0.0, min(cap_ccr, storage_ccr - loss_ccr))
-        comb = storage_lcc + storage_ccr
-        comb_pct = comb / cap_total
-
-        if comb_pct < 0.15:
-            stage = "Stage 4 (Emergency)"
-            stage_num = 4
-        elif comb_pct < 0.20:
-            stage = "Stage 3 (Critical)"
-            stage_num = 3
-        elif comb_pct < 0.30:
-            stage = "Stage 2 (Moderate)"
-            stage_num = 2
-        elif comb_pct < 0.40:
-            stage = "Stage 1 (Mild)"
-            stage_num = 1
-        else:
-            stage = "Normal"
-            stage_num = 0
-
-        records.append({
-            "day": step + 1,
-            "date": str(date)[:10],
-            "lcc_acft": round(storage_lcc, 1),
-            "lcc_pct": round(storage_lcc / cap_lcc * 100, 1),
-            "ccr_acft": round(storage_ccr, 1),
-            "ccr_pct": round(storage_ccr / cap_ccr * 100, 1),
-            "combined_acft": round(comb, 1),
-            "combined_pct": round(comb_pct * 100, 1),
-            "stage": stage,
-            "stage_num": stage_num,
-            "prcp_mm": round(float(prcp_mm), 2),
-            "evap_acft": round(evap_daily, 1),
-            "demand_acft": round(demand_daily, 1),
-            "net_loss_acft": round(net_loss, 1)
-        })
-
+    for step, (date, rain) in enumerate(series.mean(axis=1).items()):
+        beginning = float(storage.sum())
+        inflow = 30.0 + float(rain) * 45.0
+        potential_evap = 750.0 if date.month in (6, 7, 8, 9) else 380.0
+        requested_demand = (370.0 if pipeline_active else 554.0) * (1 - conservation_pct)
+        storage += inflow * caps / caps.sum()
+        actual_evap = min(potential_evap, float(storage.sum()))
+        if storage.sum() > 0:
+            storage -= actual_evap * storage / storage.sum()
+        fraction = .65 if storage[0] > caps[0] * .20 else .15
+        withdrawals = np.minimum(storage, requested_demand * np.array([fraction, 1 - fraction]))
+        storage -= withdrawals
+        served = float(withdrawals.sum())
+        for tank in (0, 1):
+            extra = min(float(storage[tank]), max(0.0, requested_demand - served))
+            storage[tank] -= extra
+            served += extra
+        spill = float(np.maximum(storage - caps, 0).sum())
+        storage = np.clip(storage, 0, caps)
+        combined = float(storage.sum())
+        pct = combined / caps.sum() * 100
+        band = 4 if pct < 15 else 3 if pct < 20 else 2 if pct < 30 else 1 if pct < 40 else 0
+        records.append({"day": step + 1, "date": str(date.date()),
+                        "lcc_acft": float(storage[0]), "lcc_pct": float(storage[0] / caps[0] * 100),
+                        "ccr_acft": float(storage[1]), "ccr_pct": float(storage[1] / caps[1] * 100),
+                        "combined_acft": combined, "combined_pct": pct, "beginning_acft": beginning,
+                        "stage": f"Illustrative band {band}", "stage_num": band, "prcp_mm": float(rain),
+                        "inflow_acft": inflow, "evap_acft": actual_evap, "potential_evap_acft": potential_evap,
+                        "unmet_evap_acft": potential_evap - actual_evap,
+                        "demand_acft": requested_demand, "served_demand_acft": served,
+                        "unmet_demand_acft": max(0.0, requested_demand - served), "spill_acft": spill,
+                        "net_loss_acft": requested_demand + potential_evap - inflow,
+                        "balance_error_acft": combined - (beginning + inflow - actual_evap - served - spill)})
     return pd.DataFrame(records)
-
