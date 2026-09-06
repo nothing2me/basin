@@ -59,3 +59,15 @@ The actual presentation laptop, practitioner usefulness, catchment suitability a
 
 See the [research library](research/README.md) for source packets, policy evidence, reviewed corrections and research assignments. Read its review before using imported AI claims.
 
+
+## Try local rainfall uploads
+
+After pulling the latest code, run Setup BASIN.cmd to install/update dependencies, then Start BASIN.cmd (Python 3.12 required). Each teammate runs their own local app; sharing a localhost URL does not share a running session. On macOS/Linux, use the setup commands above and start_basin.sh; this release was tested on Windows only.
+
+Open **Data → Preview your local rainfall CSV** (also visible in the initial Workspace). Download the in-app template or use [the illustrative sample](docs/examples/local-rainfall-example.csv). Enter a station name, location description and explicit mm/inches unit. Use exactly `date,precipitation` columns and YYYY-MM-DD dates. One station per file; 10 MB / 250,000 rows maximum.
+
+The preview reports valid/missing days, converts values to mm and shows a chart/table plus the original file hash. Blank values and absent dates remain gaps. Invalid dates, duplicate dates, negative/non-finite values and malformed files are rejected. Removing the file clears its preview. The example is illustrative, not verified historical station data.
+
+**Current scope: preview only.** Uploads are not saved to disk, added to scenarios, assigned historical percentiles or included in exports. PDF ingestion, new-station scenarios and research comparisons are planned next. The existing Review-page CSV replacement is a separate workflow requiring matching scenario dates/stations. The updated app also has manual evidence records and scenario comparisons; those do not yet ingest this local upload. Local app processes are single-user and not an authenticated company server.
+
+See [the implementation plan](docs/local_upload_and_research_plan.md) and [verified build status](docs/build_validation.md). The plan includes future work; its unchecked tasks are not available features.

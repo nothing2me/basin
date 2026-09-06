@@ -1,2 +1,6 @@
 # This snapshot is verified byte-for-byte against data/manifest.json.
 /data/observations.csv text eol=lf
+
+# Preserve original research bytes recorded in the import manifest.
+/research/incoming/* -text
+/research/sources/*.pdf -text

@@ -4,26 +4,22 @@ Updated: 2026-09-06
 
 ## Current state
 
-The additional pasted research transcript has a corrected replacement at research/corrected_supplement.md. It covers every major section, removes unsupported specifics, corrects policy/definitions/station identities, supplies actual source URLs, rechecks the current code audit and distinguishes proposed features from implementation. Existing original artifacts remain unchanged for traceability.
+User explicitly authorized publishing the complete local CSV preview work and documentation. Integrated with upstream main 8f04091, preserving teammate schema 2.0 evidence/integrity, revised illustrative reservoir behavior and launcher. The previous local-only restriction is superseded for this release; private uploads, sessions and environments remain excluded.
 
-## Files changed
+The Data/initial Workspace view now previews one station's date,precipitation CSV with explicit station/location/unit, bounded validation, missing-day counts, chart/table and original hash. Preview does not save inputs or modify scenarios. README provides teammate setup and an illustrative example.
 
-- research/corrected_supplement.md: corrected handoff, source directory, acceptance criteria and bounded outstanding verification.
-- research/README.md and research/review_findings.md: link the replacement and explain precedence.
-- research/research_agent_brief.md: update stale supplied-policy access status.
-- HANDOFF.md: current state and next action.
+## Release files
+
+- basin_core/uploads.py, app.py, tests/test_uploads.py: preview parser, UI and tests.
+- docs/examples/local-rainfall-example.csv: illustrative 30-day, 62.5 mm sample, not verified observations.
+- README.md, docs/build_validation.md, docs/local_upload_and_research_plan.md, HANDOFF.md: setup, verified status, updated plan and checkpoint.
+- .gitattributes: preserve original research artifact hashes; retain upstream LF snapshot rule.
+- TODO.md: current preview checkpoint without marking later work complete.
 
 ## Verification
 
-- Read the complete additional transcript and compared its claims with reviewed policy, source assessments and current analysis.py/app.py.
-- Reopened official USDM classification, City dashboard and WBD references; no new active restriction declaration asserted.
-- Checked local links, UTF-8, existing artifact hashes, source ID mapping and authored diff whitespace.
-- Documentation-only update; no application tests run. Reservoir, model-language and export-feature work remains open in TODO.md.
-
-## Blockers
-
-Adopted-plan chapter review, gauge/catchment suitability, current policy applicability and the Appendix C release inconsistency remain external research gates for corresponding scientific claims. They do not block evidence UI scaffolding with explicit unknowns or baseline testing.
+97 tests passed after upstream integration. Fresh-checkout observation hash passed. Offline smoke and explicit replay verified 5 exported scenarios and 500 audit records. Source package built and checked for preview/sample inclusion and absence of local sessions/environment. Diff whitespace checks passed. Python 3.12.14 on Windows; teammate machines still require their own setup/rehearsal.
 
 ## Next action
 
-Assign the four work lists in research/review_findings.md and implement one reproducible evidence packet. Use corrected_supplement.md acceptance criteria for evidence review and private-text export handling.
+Teammates pull main, run Setup BASIN.cmd and Start BASIN.cmd, then try Data → Preview your local rainfall CSV. Continue local-station reference handling and persistence using existing schema 2.0 evidence/integrity boundaries. PDF ingestion and numerical uploaded-versus-public comparison remain future work. Do not treat illustrative rainfall or the reservoir experiment as validated predictions.
