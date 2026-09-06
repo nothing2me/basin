@@ -90,19 +90,6 @@ def basin_map(stations_df):
         text=["Mary Rhodes Pipeline · 60 MGD Raw Water Conveyance (Lake Texana → Corpus Christi)"] * len(pipe_lats)
     ))
 
-    # I-37 Industrial / AI Data Center Corridor (San Antonio to Corpus Christi)
-    corridor_lats = [29.53, 29.15, 28.52, 28.08, 27.80]
-    corridor_lons = [-98.47, -98.32, -98.05, -97.68, -97.40]
-    fig.add_trace(go.Scattergeo(
-        lat=corridor_lats,
-        lon=corridor_lons,
-        mode="lines",
-        line=dict(width=2, color="#cc9145", dash="dot"),
-        name="I-37 Industrial & Data Center Corridor",
-        hoverinfo="text",
-        text=["I-37 Infrastructure Corridor · High Industrial & Cooling Water Demand Growth"] * len(corridor_lats)
-    ))
-
     fig.add_trace(go.Scattergeo(
         lat=reservoirs["latitude"],
         lon=reservoirs["longitude"],
@@ -323,20 +310,10 @@ TUTORIAL_STEPS = [
         "review_mode": "Reservoir simulation"
     },
     {
-        "target": "review_stressors",
-        "page": "Review",
-        "tag": "CLIMATE & DATA CENTER STRESSORS",
-        "title": "6. Global Warming & Data Center Draw",
-        "desc": "Simulate thermal pan evaporation amplification (+0°C to +3°C) and AI data center cooling loads (0 to 15 MGD).",
-        "directive": "Adjust the Data Center slider below to see how cooling demands accelerate drought triggers.",
-        "arrow_dir": "down",
-        "review_mode": "Reservoir simulation"
-    },
-    {
         "target": "review_decision",
         "page": "Review",
         "tag": "HUMAN-IN-THE-LOOP · TEXAS § 1001",
-        "title": "7. Engineering Sign-Off Gate",
+        "title": "6. Engineering Sign-Off Gate",
         "desc": "Texas law requires licensed human review. AI never makes autonomous planning decisions.",
         "directive": "Enter an audit rationale note and click 'Accept' to approve this scenario.",
         "arrow_dir": "down",
@@ -346,7 +323,7 @@ TUTORIAL_STEPS = [
         "target": "export_panel",
         "page": "Exports",
         "tag": "VERIFIED HANDOFF · WAM MODELING",
-        "title": "8. Texas WAM Engineering Package",
+        "title": "7. Texas WAM Engineering Package",
         "desc": "Packages accepted scenarios with SHA-256 manifests and hydrologist translation brief for Texas WAM Run 3.",
         "directive": "Click 'Build verified export' below to compile the cryptographic handoff ZIP.",
         "arrow_dir": "down"
@@ -688,26 +665,7 @@ elif page == "Review":
             init_choice = c_init.selectbox("Initial storage", ["48% (2024 Drought Entry)", "60% (Historical Baseline)", "35% (Pre-Stressed Pool)"], label_visibility="collapsed")
             init_pct = 0.48 if "48%" in init_choice else (0.60 if "60%" in init_choice else 0.35)
 
-            render_tour_step("review_stressors")
-            tour_target_open("review_stressors")
-            with st.expander("🌡️ Climate Warming & Data Center Demand Stressors", expanded=True):
-                c_temp, c_dc = st.columns(2)
-                temp_anom = c_temp.slider("Global warming anomaly · +°C", 0.0, 3.0, 0.0, 0.5,
-                                          help="Thermal pan evaporation amplification: ~4.5% increase per +1.0°C anomaly.")
-                dc_mgd = c_dc.slider("AI data center cooling · MGD", 0.0, 15.0, 0.0, 1.0,
-                                     help="Evaporative cooling tower freshwater consumption from hyperscale data center infrastructure.")
-                if temp_anom > 0 or dc_mgd > 0:
-                    st.caption(f"Compound Stress Active: +{temp_anom:.1f}°C thermal evaporation (+{temp_anom*4.5:.1f}%) and +{dc_mgd:.1f} MGD ({dc_mgd*3.07:.1f} ac-ft/day) cooling loss.")
-            tour_target_close("review_stressors")
-
-            sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, temp_anomaly_c=temp_anom, data_center_mgd=dc_mgd)
-
-            if temp_anom > 0 or dc_mgd > 0:
-                base_sim = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, temp_anomaly_c=0.0, data_center_mgd=0.0)
-                base_s1 = next((r["day"] for _, r in base_sim.iterrows() if r["combined_pct"] < 40), None)
-                base_s2 = next((r["day"] for _, r in base_sim.iterrows() if r["combined_pct"] < 30), None)
-            else:
-                base_s1, base_s2 = None, None
+            sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct)
 
             render_tour_step("review_simulation")
             tour_target_open("review_simulation")
@@ -720,11 +678,9 @@ elif page == "Review":
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("Final Combined", f"{term['combined_pct']:.1f}%", f"{term['combined_acft']:,.0f} ac-ft")
             m2.metric("Terminal Status", term["stage"])
-            m1_delta = f"{base_s1 - s1} days earlier" if (base_s1 and s1 and s1 < base_s1) else None
-            m2_delta = f"{base_s2 - s2} days earlier" if (base_s2 and s2 and s2 < base_s2) else None
-            m3.metric("Stage 1 Breach (<40%)", f"Day {s1}" if s1 else "Not breached", delta=m1_delta, delta_color="inverse")
-            m4.metric("Stage 2 Breach (<30%)", f"Day {s2}" if s2 else "Not breached", delta=m2_delta, delta_color="inverse")
-            st.caption("Physical Reservoir Stress Model: Choke Canyon (662k ac-ft) and Lake Corpus Christi (257k ac-ft) mass-balance under ~180 MGD regional draw, seasonal evaporation, and industrial/cooling loads. Pre-engineering scoping tool; official firm yield modeling requires Texas WAM Run 3 by a licensed P.E.")
+            m3.metric("Stage 1 Breach (<40%)", f"Day {s1}" if s1 else "Not breached")
+            m4.metric("Stage 2 Breach (<30%)", f"Day {s2}" if s2 else "Not breached")
+            st.caption("Physical Reservoir Mass-Balance Model: Choke Canyon (662k ac-ft) and Lake Corpus Christi (257k ac-ft) system simulation under regional municipal draw, seasonal net pan evaporation, and catchment inflow. Pre-engineering scoping tool; official firm yield modeling requires Texas WAM Run 3 by a licensed P.E.")
         else:
             expected = pd.DataFrame(w.reference.expected(s.series.index), index=s.series.index, columns=s.series.columns)
             fig = go.Figure()

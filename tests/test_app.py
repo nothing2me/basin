@@ -30,14 +30,6 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     if series_radio:
         series_radio.set_value("Reservoir simulation").run()
         assert not app.exception
-        temp_slider = next((s for s in app.slider if "Global warming anomaly" in s.label), None)
-        if temp_slider:
-            temp_slider.set_value(2.0).run()
-            assert not app.exception
-        dc_slider = next((s for s in app.slider if "AI data center cooling" in s.label), None)
-        if dc_slider:
-            dc_slider.set_value(8.0).run()
-            assert not app.exception
         series_radio.set_value("Cumulative rainfall").run()
         assert not app.exception
     for identifier in list(w.selected):
@@ -77,28 +69,28 @@ def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
     assert app.session_state.tutorial_step == 0
     assert app.session_state.page == "Data"
 
-    # Step through all 8 steps across the pipeline
-    for step in range(1, 8):
+    # Step through all 7 steps across the pipeline
+    for step in range(1, 7):
         next_btn = next(b for b in app.button if b.label == "Next Step ▶")
         next_btn.click().run()
         assert not app.exception
         assert app.session_state.tutorial_step == step
 
-    assert app.session_state.tutorial_step == 7
+    assert app.session_state.tutorial_step == 6
     assert app.session_state.page == "Exports"
 
     # Test Previous button
     prev_btn = next(b for b in app.button if b.label == "◀ Prev")
     prev_btn.click().run()
     assert not app.exception
-    assert app.session_state.tutorial_step == 6
+    assert app.session_state.tutorial_step == 5
     assert app.session_state.page == "Review"
 
     # Advance back to end and finish
     next_btn = next(b for b in app.button if b.label == "Next Step ▶")
     next_btn.click().run()
     assert not app.exception
-    assert app.session_state.tutorial_step == 7
+    assert app.session_state.tutorial_step == 6
 
     finish_btn = next(b for b in app.button if b.label == "✓ Finish Tutorial")
     finish_btn.click().run()

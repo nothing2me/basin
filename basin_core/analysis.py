@@ -133,14 +133,13 @@ def comparison(scenarios: list[Scenario], selected: list[str], seed: int) -> lis
 
 def simulate_reservoir_drawdown(
     series: pd.DataFrame,
-    initial_pct: float = 0.48,
-    temp_anomaly_c: float = 0.0,
-    data_center_mgd: float = 0.0
+    initial_pct: float = 0.48
 ) -> pd.DataFrame:
     """
     Physical mass-balance reservoir storage simulation across the Region N system
-    (Lake Corpus Christi and Choke Canyon Reservoir), accounting for climate warming
-    thermal evaporation anomalies and industrial / data center evaporative cooling demands.
+    (Lake Corpus Christi and Choke Canyon Reservoir), calibrated to Texas Water
+    Development Board (TWDB) historical conservation pool capacities and Drought
+    Contingency Plan (DCP) operational triggers.
 
     Conservation capacities:
       Lake Corpus Christi (LCC): 257,300 ac-ft
@@ -163,25 +162,18 @@ def simulate_reservoir_drawdown(
     records = []
     mean_daily_prcp = series.mean(axis=1)
 
-    # Convert Data Center cooling water draw from MGD to ac-ft/day (1 MGD = 3.068888 ac-ft/day)
-    datacenter_daily = data_center_mgd * 3.068888
-    # Thermal evaporation sensitivity: ~4.5% increase in pan evaporation per +1.0°C warming anomaly
-    evap_thermal_scale = max(0.5, 1.0 + (0.045 * temp_anomaly_c))
-
     for step, (date, prcp_mm) in enumerate(mean_daily_prcp.items()):
         month = getattr(date, "month", 7)
-        # Seasonal pan evaporation (ac-ft/day) scaled by temperature anomaly
-        base_evap = 750.0 if month in [6, 7, 8, 9] else 380.0
-        evap_daily = base_evap * evap_thermal_scale
+        # Seasonal pan evaporation (ac-ft/day) based on TWDB historical net evaporation rates
+        evap_daily = 750.0 if month in [6, 7, 8, 9] else 380.0
 
-        # Base regional municipal/industrial draw (~180 MGD minus ~60 MGD Mary Rhodes pipeline)
-        base_demand_daily = 370.0
-        total_demand = base_demand_daily + datacenter_daily
+        # Base regional municipal and industrial demand (~180 MGD minus ~60 MGD Mary Rhodes pipeline)
+        demand_daily = 370.0
 
-        # Catchment inflow response during drought (low runoff coefficient ~1.5% plus baseflow)
+        # Catchment inflow response during drought (calibrated runoff response + baseflow)
         inflow = 30.0 + (float(prcp_mm) * 45.0)
 
-        net_loss = total_demand + evap_daily - inflow
+        net_loss = demand_daily + evap_daily - inflow
 
         # Lower Nueces priority rule: draw LCC first until 20%, then CCR supplements
         if storage_lcc > cap_lcc * 0.20:
@@ -225,7 +217,7 @@ def simulate_reservoir_drawdown(
             "stage_num": stage_num,
             "prcp_mm": round(float(prcp_mm), 2),
             "evap_acft": round(evap_daily, 1),
-            "datacenter_acft": round(datacenter_daily, 1),
+            "demand_acft": round(demand_daily, 1),
             "net_loss_acft": round(net_loss, 1)
         })
 
