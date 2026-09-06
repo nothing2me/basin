@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0",
+  "source": "NOAA NCEI GHCN-Daily",
+  "dataset_version": "The current version of GHCN Daily is 3.34-upd-2026090418 (i.e, an update that started at 2026090418 [yyyymmddhh] UTC; yyyy=year; mm=month; dd=day; hh=hour),\ncreated by appending recently available data updates to the last fully reprocessed version: 3.34-por-2026082823.",
+  "downloaded_at": "2026-09-06T00:56:58.240581+00:00",
+  "start": "1991-01-01",
+  "end": "2025-12-31",
+  "sha256": "672c23f8335093cdba84608c53ade768a9737e4088e60d95c04965257e0178a0",
+  "stations": [
+    {
+      "id": "USW00012924",
+      "name": "CORPUS CHRISTI",
+      "latitude": 27.7839,
+      "longitude": -97.5114,
+      "elevation_m": 43.3,
+      "role": "Provisional regional station proxy; catchment representativeness unvalidated",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00012924.dly"
+    },
+    {
+      "id": "USW00012912",
+      "name": "VICTORIA RGNL AP",
+      "latitude": 28.8625,
+      "longitude": -96.93,
+      "elevation_m": 33.8,
+      "role": "Provisional regional station proxy; catchment representativeness unvalidated",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00012912.dly"
+    },
+    {
+      "id": "USW00012921",
+      "name": "SAN ANTONIO INTL AP",
+      "latitude": 29.5442,
+      "longitude": -98.4839,
+      "elevation_m": 243.5,
+      "role": "Provisional regional station proxy; catchment representativeness unvalidated",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00012921.dly"
+    }
+  ],
+  "quality": [
+    {
+      "station_id": "USW00012912",
+      "expected_days": 12784,
+      "valid_days": 12783,
+      "missing_or_excluded_days": 1,
+      "completeness_pct": 99.992,
+      "trace_days": 1452
+    },
+    {
+      "station_id": "USW00012921",
+      "expected_days": 12784,
+      "valid_days": 12783,
+      "missing_or_excluded_days": 1,
+      "completeness_pct": 99.992,
+      "trace_days": 1854
+    },
+    {
+      "station_id": "USW00012924",
+      "expected_days": 12784,
+      "valid_days": 12784,
+      "missing_or_excluded_days": 0,
+      "completeness_pct": 100.0,
+      "trace_days": 1781
+    }
+  ],
+  "raw_sha256": {
+    "USW00012924": "122276e77d9b7d47e177897eaa19f3983df21b1e79a258e806559e80b0966b76",
+    "USW00012912": "c265a99d6f406898a2b44e74f18b4b78d3e0d116a13a7862422d6ce1e9b3ee69",
+    "USW00012921": "1c7bc1fcb8ad412b986003c51eca395de5650f6aa83dad6f2d18fe8ba2842fa8"
+  },
+  "policy": "PRCP only; tenths mm / 10; missing/negative, nonblank QFLAG, MFLAG P excluded; trace = 0; no imputation; MDPR never used. Complete simultaneous windows only.",
+  "documentation": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt"
+}
