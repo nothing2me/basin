@@ -193,3 +193,24 @@ def test_offline_pipeline(source, monkeypatch):
     for identifier in w.selected:
         w.get(identifier).review(True)
     assert verify_bundle(export_bundle(w))["verified"]
+
+
+def test_reservoir_drawdown_climate_and_datacenter(workspace):
+    from basin_core.analysis import simulate_reservoir_drawdown
+    series = workspace.get(workspace.selected[0]).series
+
+    base_sim = simulate_reservoir_drawdown(series, initial_pct=0.48)
+    assert not base_sim.empty
+    assert "combined_pct" in base_sim.columns
+    base_end_pct = base_sim.iloc[-1]["combined_pct"]
+
+    warm_sim = simulate_reservoir_drawdown(series, initial_pct=0.48, temp_anomaly_c=2.0)
+    warm_end_pct = warm_sim.iloc[-1]["combined_pct"]
+    assert warm_end_pct < base_end_pct
+    assert warm_sim.iloc[0]["evap_acft"] > base_sim.iloc[0]["evap_acft"]
+
+    dc_sim = simulate_reservoir_drawdown(series, initial_pct=0.48, data_center_mgd=10.0)
+    dc_end_pct = dc_sim.iloc[-1]["combined_pct"]
+    assert dc_end_pct < base_end_pct
+    assert dc_sim.iloc[0]["datacenter_acft"] > 0
+

@@ -32,13 +32,16 @@ h2{font-size:1.15rem!important}h3{font-size:1rem!important}
 [data-testid="stVerticalBlock"]{gap:.7rem}
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.45rem}
 button{border-radius:4px!important}
-.tutorial-card{position:relative;background:#ffffff;border:2px solid #087e8b;border-radius:8px;padding:16px 22px;box-shadow:0 4px 16px rgba(8,126,139,0.16);margin-bottom:1.1rem}
-.tutorial-badge{background:#e0f2f1;color:#0d5952;font-weight:700;font-size:0.75rem;padding:3px 8px;border-radius:4px;letter-spacing:0.05em}
-.tutorial-tag{color:#61706d;font-size:0.72rem;font-weight:600;letter-spacing:0.06em;margin-left:8px}
-.tutorial-card.arrow-left::before{content:"";position:absolute;top:32px;left:-14px;border-width:12px 14px 12px 0;border-style:solid;border-color:transparent #087e8b transparent transparent}
-.tutorial-card.arrow-left::after{content:"";position:absolute;top:34px;left:-11px;border-width:10px 12px 10px 0;border-style:solid;border-color:transparent #ffffff transparent transparent}
-.tutorial-card.arrow-down::before{content:"";position:absolute;bottom:-14px;left:45px;border-width:14px 12px 0 12px;border-style:solid;border-color:#087e8b transparent transparent transparent}
-.tutorial-card.arrow-down::after{content:"";position:absolute;bottom:-11px;left:47px;border-width:12px 10px 0 10px;border-style:solid;border-color:#ffffff transparent transparent transparent}
+.tutorial-card{position:relative;background:#ffffff;border:2px solid #087e8b;border-radius:7px;padding:12px 16px;box-shadow:0 4px 18px rgba(8,126,139,0.18);margin-bottom:0.8rem;z-index:99}
+.tutorial-badge{background:#e0f2f1;color:#0d5952;font-weight:700;font-size:0.72rem;padding:2px 7px;border-radius:3px;letter-spacing:0.04em}
+.tutorial-tag{color:#61706d;font-size:0.7rem;font-weight:600;letter-spacing:0.05em;margin-left:6px}
+.tour-directive{background:#f4fbf9;border-left:4px solid #cc9145;padding:7px 11px;border-radius:3px;font-size:0.84rem;color:#1a3d38;margin-top:6px;margin-bottom:8px;font-weight:500}
+.tour-target-box{border:2.5px solid #087e8b!important;border-radius:8px!important;padding:6px!important;box-shadow:0 0 0 4px rgba(8,126,139,0.22),0 0 20px rgba(8,126,139,0.3)!important;animation:tour-pulse 2s infinite ease-in-out;background:rgba(8,126,139,0.02)}
+@keyframes tour-pulse{0%{box-shadow:0 0 0 3px rgba(8,126,139,0.35),0 0 10px rgba(8,126,139,0.2)}50%{box-shadow:0 0 0 6px rgba(8,126,139,0.15),0 0 22px rgba(8,126,139,0.35)}100%{box-shadow:0 0 0 3px rgba(8,126,139,0.35),0 0 10px rgba(8,126,139,0.2)}}
+.tutorial-card.arrow-left::before{content:"";position:absolute;top:28px;left:-12px;border-width:10px 12px 10px 0;border-style:solid;border-color:transparent #087e8b transparent transparent}
+.tutorial-card.arrow-left::after{content:"";position:absolute;top:30px;left:-9px;border-width:8px 10px 8px 0;border-style:solid;border-color:transparent #ffffff transparent transparent}
+.tutorial-card.arrow-down::before{content:"";position:absolute;bottom:-12px;left:35px;border-width:12px 10px 0 10px;border-style:solid;border-color:#087e8b transparent transparent transparent}
+.tutorial-card.arrow-down::after{content:"";position:absolute;bottom:-9px;left:37px;border-width:10px 8px 0 8px;border-style:solid;border-color:#ffffff transparent transparent transparent}
 @media(max-width:700px){.block-container{padding-top:3rem}h1{font-size:1.25rem!important}}
 </style>''', unsafe_allow_html=True)
 
@@ -71,8 +74,35 @@ def basin_map(stations_df):
     reservoirs = pd.DataFrame([
         {"name": "Choke Canyon Reservoir", "latitude": 28.48, "longitude": -98.27, "desc": "Frio River · 662k ac-ft storage"},
         {"name": "Lake Corpus Christi", "latitude": 28.05, "longitude": -97.87, "desc": "Nueces River · 257k ac-ft terminal pool"},
-        {"name": "Lake Texana", "latitude": 28.83, "longitude": -96.53, "desc": "Navidad River · Mary Rhodes Pipeline"},
+        {"name": "Lake Texana", "latitude": 28.83, "longitude": -96.53, "desc": "Navidad River · Mary Rhodes Pipeline Source"},
     ])
+
+    # Mary Rhodes Phase 1 Pipeline: 101-mile conveyance from Lake Texana to Corpus Christi O.N. Stevens WTP
+    pipe_lats = [28.83, 28.67, 28.38, 28.08, 27.87]
+    pipe_lons = [-96.53, -96.88, -97.18, -97.45, -97.55]
+    fig.add_trace(go.Scattergeo(
+        lat=pipe_lats,
+        lon=pipe_lons,
+        mode="lines",
+        line=dict(width=3, color="#087e8b", dash="dash"),
+        name="Mary Rhodes Pipeline (101 mi · 60 MGD)",
+        hoverinfo="text",
+        text=["Mary Rhodes Pipeline · 60 MGD Raw Water Conveyance (Lake Texana → Corpus Christi)"] * len(pipe_lats)
+    ))
+
+    # I-37 Industrial / AI Data Center Corridor (San Antonio to Corpus Christi)
+    corridor_lats = [29.53, 29.15, 28.52, 28.08, 27.80]
+    corridor_lons = [-98.47, -98.32, -98.05, -97.68, -97.40]
+    fig.add_trace(go.Scattergeo(
+        lat=corridor_lats,
+        lon=corridor_lons,
+        mode="lines",
+        line=dict(width=2, color="#cc9145", dash="dot"),
+        name="I-37 Industrial & Data Center Corridor",
+        hoverinfo="text",
+        text=["I-37 Infrastructure Corridor · High Industrial & Cooling Water Demand Growth"] * len(corridor_lats)
+    ))
+
     fig.add_trace(go.Scattergeo(
         lat=reservoirs["latitude"],
         lon=reservoirs["longitude"],
@@ -247,78 +277,79 @@ def switch_page(name):
 
 TUTORIAL_STEPS = [
     {
+        "target": "data_map",
         "page": "Data",
-        "tag": "INTRODUCTION & PURPOSE",
-        "arrow_dir": "down",
-        "focus": "⬇ Down · Regional Basin Map & NOAA Gauges",
-        "title": "BASIN — Decision-Support Scoping Workbench",
-        "desc": "Welcome to BASIN (Basin Analysis and Scenario Intelligence Navigator), built for the From the Ground Up 2026 AI Hackathon. In the Texas Coastal Bend (Region N), the official water supply model stops at 2015 hydrology due to consulting costs. BASIN bridges this gap by enabling regional water districts (like Nueces County WCID #3) to stress-test compound drought risk using 35 years of unmanipulated NOAA observations — running 100% locally and offline without cloud dependencies.",
-        "next_action": "Inspect the station observation network and regional reservoir proxies below, then click 'Next Step' to see how scenarios are generated."
+        "tag": "OBSERVATIONAL BASELINE · GIS",
+        "title": "1. Verified Gauge & Conveyance Network",
+        "desc": "Anchored to First-Order NOAA stations (SHA-256 verified) and the 101-mile Mary Rhodes pipeline supplying Region N reservoirs.",
+        "directive": "Examine the catchment locations, pipeline route, and station completeness below.",
+        "arrow_dir": "down"
     },
     {
-        "page": "Data",
-        "tag": "OBSERVATIONAL BASELINE",
-        "arrow_dir": "down",
-        "focus": "⬇ Down · Quality Metrics & Precipitation Table",
-        "title": "NOAA Station Network & Drinking Reservoir Proxies",
-        "desc": "On this Data screen, examine the South Texas Basin map and quality metrics table. BASIN anchors all simulations to long-term First-Order NOAA GHCN-Daily stations (Corpus Christi, Victoria, San Antonio) with SHA-256 integrity checks. Missing or flagged values are strictly preserved and never silently filled with zero. Station proxies reflect catchment zones for Choke Canyon Reservoir (662k ac-ft), Lake Corpus Christi (257k ac-ft), and Lake Texana.",
-        "next_action": "Click 'Next Step' to navigate to the Scenario Workspace and inspect candidate generation."
-    },
-    {
+        "target": "sidebar_generator",
         "page": "Workspace",
-        "tag": "SCENARIO GENERATION",
-        "arrow_dir": "left",
-        "focus": "⬅ Left · New Run Sidebar Controls",
-        "title": "Synchronized Historical Window Resampling",
-        "desc": "In the left sidebar under 'New run', BASIN generates drought candidates by extracting complete, synchronized multi-station historical windows (30 to 365 days) and applying rainfall retention scaling (e.g., 35% to 85%). This preserves real-world meteorological dynamics, storm tracks, and seasonal concurrence without artificial synthetic hallucinations.",
-        "next_action": "Look at 'Ranking weights' in the sidebar to see how community priorities shape selection."
+        "tag": "SCENARIO ENGINE · RESAMPLING",
+        "title": "2. Resample Historical Weather Windows",
+        "desc": "Extracts synchronized multi-station historical windows (30–365 days) with retention scaling (35%–85%) without synthetic hallucinations.",
+        "directive": "Click 'Generate' below to compute candidates, or click 'Next Step ▶' to use current run.",
+        "arrow_dir": "down"
     },
     {
+        "target": "sidebar_presets",
         "page": "Workspace",
-        "tag": "COMMUNITY PRIORITIZATION",
-        "arrow_dir": "left",
-        "focus": "⬅ Left · Ranking Weights & Community Presets",
-        "title": "Stakeholder Risk Archetype Presets",
-        "desc": "Under 'Ranking weights' in the sidebar, open the 'Community priority preset' dropdown. A Rural Water District (Nueces County WCID #3) prioritizes peak Jun–Sep summer timing (50%), whereas a River Basin Authority prioritizes multi-basin concurrence (40%). Selecting a preset automatically snaps the sliders and recalculates multi-objective scores across all candidates.",
-        "next_action": "Next, see how unsupervised machine learning organizes candidates into distinct drought clusters."
+        "tag": "COMMUNITY PRIORITIES · WEIGHTS",
+        "title": "3. Stakeholder Priority Presets",
+        "desc": "Snaps multi-objective ranking weights to community archetypes (e.g. Rural Water District vs. River Basin Authority).",
+        "directive": "Choose a stakeholder preset from the dropdown below to recalculate scenario scores.",
+        "arrow_dir": "down"
     },
     {
+        "target": "workspace_table",
         "page": "Workspace",
-        "tag": "UNSUPERVISED CLUSTERING",
-        "arrow_dir": "down",
-        "focus": "⬇ Down · Candidate Table & Feature Clustering",
-        "title": "K-Means Morphological Drought Profiling",
-        "desc": "Look at the Candidate table below. BASIN runs deterministic K-Means clustering across normalized duration, deficit severity, dry run length, and concurrence, assigning explainable profiles (such as 'Peak Summer Elevated Deficit' or 'Multi-Basin Concurrent Deficit'). BASIN's diverse selector guarantees that every distinct drought cluster is represented on the review shortlist, preventing 'groupthink' selection.",
-        "next_action": "Click 'Next Step' to enter the Review screen and run the physical reservoir drawdown simulation."
+        "tag": "UNSUPERVISED ML · CLUSTERING",
+        "title": "4. K-Means Drought Profiles",
+        "desc": "Deterministic K-Means clusters candidates into explainable profiles, ensuring diverse representation across the shortlist.",
+        "directive": "Select any scenario row in the table below to inspect its deficit pattern.",
+        "arrow_dir": "down"
     },
     {
+        "target": "review_simulation",
         "page": "Review",
-        "tag": "PHYSICAL SIMULATION",
+        "tag": "PHYSICAL SIMULATION · MASS-BALANCE",
+        "title": "5. Dual-Tank Reservoir Stress-Test",
+        "desc": "Daily mass balance for Choke Canyon & Lake Corpus Christi under 180 MGD regional draw and evaporation.",
+        "directive": "Click '▶ Play Simulation' below to observe storage depletion and Stage 1/2/3 triggers.",
         "arrow_dir": "down",
-        "focus": "⬇ Down · Physical Reservoir Simulation & Triggers",
-        "review_mode": "Reservoir simulation",
-        "title": "Real-Time Reservoir Drawdown & Drought Triggers",
-        "desc": "On this Review screen, select 'Reservoir simulation' in the series toggle. BASIN computes a daily physical mass-balance model across Lake Corpus Christi and Choke Canyon Reservoir under 180 MGD regional demand and seasonal evaporation. Click '▶ Play Simulation' to watch active storage drain day by day and observe when legal Stage 1 (40%), Stage 2 (30%), and Stage 3 (20%) drought restrictions trigger.",
-        "next_action": "Next, inspect the human-in-the-loop review gate and audit controls."
+        "review_mode": "Reservoir simulation"
     },
     {
+        "target": "review_stressors",
         "page": "Review",
-        "tag": "HUMAN-IN-THE-LOOP REVIEW",
-        "arrow_dir": "left",
-        "focus": "⬅ Left · Practitioner Decision Buttons & Scaling",
-        "review_mode": "Cumulative rainfall",
-        "title": "Practitioner Override, Scaling & Daily Edits",
-        "desc": "In compliance with Texas engineering practice standards (§ 1001), AI never makes autonomous planning decisions. Water managers can Accept, Reject, apply scaling multipliers, or directly edit daily values in the 'Daily values' tab. Any modification requires an explicit rationale note, which is permanently logged in the immutable scenario audit history.",
-        "next_action": "Click 'Next Step' to proceed to the Exports screen for verified engineering handoff."
+        "tag": "CLIMATE & DATA CENTER STRESSORS",
+        "title": "6. Global Warming & Data Center Draw",
+        "desc": "Simulate thermal pan evaporation amplification (+0°C to +3°C) and AI data center cooling loads (0 to 15 MGD).",
+        "directive": "Adjust the Data Center slider below to see how cooling demands accelerate drought triggers.",
+        "arrow_dir": "down",
+        "review_mode": "Reservoir simulation"
     },
     {
+        "target": "review_decision",
+        "page": "Review",
+        "tag": "HUMAN-IN-THE-LOOP · TEXAS § 1001",
+        "title": "7. Engineering Sign-Off Gate",
+        "desc": "Texas law requires licensed human review. AI never makes autonomous planning decisions.",
+        "directive": "Enter an audit rationale note and click 'Accept' to approve this scenario.",
+        "arrow_dir": "down",
+        "review_mode": "Cumulative rainfall"
+    },
+    {
+        "target": "export_panel",
         "page": "Exports",
-        "tag": "VERIFIED EXPORT & WAM HANDOFF",
-        "arrow_dir": "down",
-        "focus": "⬇ Down · Cryptographic Replay & Verified Export",
-        "title": "Texas WAM Modeling Brief & Cryptographic Replay",
-        "desc": "The Exports screen enforces a hard gate: all shortlisted scenarios must be reviewed and accepted before packaging. Clicking 'Build verified export' creates a self-contained ZIP bundle containing daily rainfall series, SHA-256 manifests, and 'Hydrologist_Handoff_Brief.md' with naturalized streamflow translation guidance for consulting engineers running Texas WAM / WRAP models.",
-        "next_action": "Tutorial complete! Click '✓ Finish Tutorial' to explore freely, or restart anytime from the sidebar settings."
+        "tag": "VERIFIED HANDOFF · WAM MODELING",
+        "title": "8. Texas WAM Engineering Package",
+        "desc": "Packages accepted scenarios with SHA-256 manifests and hydrologist translation brief for Texas WAM Run 3.",
+        "directive": "Click 'Build verified export' below to compile the cryptographic handoff ZIP.",
+        "arrow_dir": "down"
     }
 ]
 
@@ -366,38 +397,52 @@ def tutorial_exit():
     st.session_state.tutorial_active = False
 
 
-def render_tutorial_callout():
+def render_tour_step(target_id: str):
+    if not st.session_state.get("tutorial_active", False):
+        return
     step_idx = st.session_state.get("tutorial_step", 0)
-    if step_idx >= len(TUTORIAL_STEPS):
+    if step_idx < 0 or step_idx >= len(TUTORIAL_STEPS):
         st.session_state.tutorial_active = False
         return
     step = TUTORIAL_STEPS[step_idx]
+    if step["target"] != target_id:
+        return
+
     arrow_cls = f"arrow-{step['arrow_dir']}"
+    is_last = step_idx == len(TUTORIAL_STEPS) - 1
+    next_label = "✓ Finish Tutorial" if is_last else "Next Step ▶"
 
     card_html = f"""<div class="tutorial-card {arrow_cls}">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <div style="display:flex; align-items:center;">
-          <span class="tutorial-badge">STEP {step_idx + 1} OF {len(TUTORIAL_STEPS)}</span>
-          <span class="tutorial-tag">{step['tag']}</span>
-        </div>
-        <span style="font-size:0.75rem; font-weight:700; color:#087e8b; background:#eef7f6; border:1px solid #c2dedb; padding:2px 8px; border-radius:4px;">
-          {step['focus']}
-        </span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span class="tutorial-badge">STEP {step_idx + 1} OF {len(TUTORIAL_STEPS)}</span>
+        <span class="tutorial-tag">{step['tag']}</span>
       </div>
-      <h3 style="margin:0 0 8px 0; color:#123d38; font-size:1.15rem; font-weight:700;">{step['title']}</h3>
-      <p style="margin:0 0 12px 0; font-size:0.92rem; line-height:1.55; color:#233f3b;">{step['desc']}</p>
-      <div style="background:#f4fbf9; border-left:4px solid #cc9145; padding:8px 12px; border-radius:3px; font-size:0.86rem; color:#233f3b; margin-bottom:12px;">
-        👉 <b>Next action:</b> {step['next_action']}
+      <h4 style="margin:0 0 6px 0; color:#123d38; font-size:1.05rem; font-weight:700;">{step['title']}</h4>
+      <p style="margin:0 0 8px 0; font-size:0.88rem; line-height:1.45; color:#233f3b;">{step['desc']}</p>
+      <div class="tour-directive">
+        👉 <b>Action:</b> {step['directive']}
       </div>
     </div>"""
     st.markdown(card_html, unsafe_allow_html=True)
 
-    c_prev, c_next, c_exit = st.columns([1, 1.2, 1])
-    c_prev.button("◀ Previous", key="tut_prev_btn", disabled=step_idx == 0, on_click=tutorial_prev)
-    is_last = step_idx == len(TUTORIAL_STEPS) - 1
-    next_label = "✓ Finish Tutorial" if is_last else "Next Step ▶"
-    c_next.button(next_label, key="tut_next_btn", type="primary", on_click=tutorial_next)
-    c_exit.button("✕ Exit Tour", key="tut_exit_btn", on_click=tutorial_exit)
+    c_prev, c_next, c_exit = st.columns([1, 1.3, 1])
+    c_prev.button("◀ Prev", key=f"tut_prev_{target_id}", disabled=step_idx == 0, on_click=tutorial_prev)
+    c_next.button(next_label, key=f"tut_next_{target_id}", type="primary", on_click=tutorial_next)
+    c_exit.button("✕ Exit", key=f"tut_exit_{target_id}", on_click=tutorial_exit)
+
+
+def tour_target_open(target_id: str):
+    if st.session_state.get("tutorial_active", False):
+        step_idx = st.session_state.get("tutorial_step", 0)
+        if 0 <= step_idx < len(TUTORIAL_STEPS) and TUTORIAL_STEPS[step_idx]["target"] == target_id:
+            st.markdown('<div class="tour-target-box">', unsafe_allow_html=True)
+
+
+def tour_target_close(target_id: str):
+    if st.session_state.get("tutorial_active", False):
+        step_idx = st.session_state.get("tutorial_step", 0)
+        if 0 <= step_idx < len(TUTORIAL_STEPS) and TUTORIAL_STEPS[step_idx]["target"] == target_id:
+            st.markdown('</div>', unsafe_allow_html=True)
 
 
 try:
@@ -412,7 +457,11 @@ with st.sidebar:
     st.title("BASIN")
     page = st.radio("View", ["Workspace", "Review", "Exports", "Data"], key="page", label_visibility="collapsed")
     st.divider()
-    with st.expander("New run", expanded=w is None):
+    curr_target = TUTORIAL_STEPS[st.session_state.get("tutorial_step", 0)]["target"] if st.session_state.get("tutorial_active") else ""
+    exp_gen = (w is None) or (curr_target == "sidebar_generator")
+    with st.expander("New run", expanded=exp_gen):
+        render_tour_step("sidebar_generator")
+        tour_target_open("sidebar_generator")
         with st.form("generate"):
             stations = st.multiselect("Stations", list(names), default=list(w.params.stations) if w else list(names), format_func=names.get)
             durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
@@ -425,6 +474,7 @@ with st.sidebar:
             size = b.selectbox("Shortlist", [3, 4, 6, 8], index=2)
             seed = st.number_input("Seed", 0, 4294967295, w.params.seed if w else 22)
             generate = st.form_submit_button("Generate", type="primary", width="stretch")
+        tour_target_close("sidebar_generator")
         if generate:
             try:
                 with st.spinner("Computing…"):
@@ -443,7 +493,10 @@ with st.sidebar:
             except (ValueError, OSError) as error:
                 st.error(str(error))
     if w:
-        with st.expander("Ranking weights", expanded=page == "Workspace"):
+        exp_weights = (page == "Workspace") or (curr_target == "sidebar_presets")
+        with st.expander("Ranking weights", expanded=exp_weights):
+            render_tour_step("sidebar_presets")
+            tour_target_open("sidebar_presets")
             preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
             matched = "Custom weights"
             for p_name, p_vals in COMMUNITY_PRESETS.items():
@@ -475,6 +528,7 @@ with st.sidebar:
                     st.rerun()
                 except ValueError as error:
                     st.error(str(error))
+            tour_target_close("sidebar_presets")
         with st.expander("Private notes"):
             note = st.text_area("Provider notes", value=w.notes, key=f"provider_{w.id}", label_visibility="collapsed")
             if st.button("Save notes", width="stretch"):
@@ -512,10 +566,9 @@ header, status = st.columns([3, 2])
 header.subheader(page if page != "Workspace" else "Scenario workspace")
 status.caption(f"{w.id}  /  {len(w.scenarios)} candidates  /  seed {w.params.seed}" if w else "NOAA GHCN-Daily  /  1991–2025")
 
-if st.session_state.get("tutorial_active", False):
-    render_tutorial_callout()
-
 if page == "Data" or (page == "Workspace" and w is None):
+    render_tour_step("data_map")
+    tour_target_open("data_map")
     metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
     quality = pd.DataFrame(source.manifest["quality"])
     station_table = metadata.merge(quality, on="station_id")
@@ -523,6 +576,7 @@ if page == "Data" or (page == "Workspace" and w is None):
     st.caption("Provisional Regional Proxies: Corpus Christi (USW00012924), Victoria (USW00012912), and San Antonio (USW00012921) represent downstream and adjacent First-Order NOAA stations used for methodology demonstration. Full operational deployment requires upstream COOP/mesonet gauge calibration across the Nueces and Frio headwaters.")
     st.dataframe(station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
                  hide_index=True, width="stretch", column_config={"completeness_pct": st.column_config.NumberColumn("Complete %", format="%.3f")})
+    tour_target_close("data_map")
     left, right = st.columns([3, 1])
     station_view = left.multiselect("Observed rainfall", list(names), default=list(names), format_func=names.get)
     interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"])
@@ -593,8 +647,11 @@ elif page == "Workspace":
     if only_selected:
         filtered = filtered[filtered.Shortlist]
     filtered = filtered.sort_values(["Score", "ID"], ascending=[False, True]).reset_index(drop=True)
+    render_tour_step("workspace_table")
+    tour_target_open("workspace_table")
     selection = st.dataframe(filtered, hide_index=True, width="stretch", height=min(430, 40+len(filtered)*35),
                              on_select="rerun", selection_mode="single-row", key=f"candidates_{w.id}")
+    tour_target_close("workspace_table")
     rows = selection.selection.rows
     if rows and rows[0] < len(filtered):
         selected_id = filtered.iloc[rows[0]].ID
@@ -631,8 +688,31 @@ elif page == "Review":
             init_choice = c_init.selectbox("Initial storage", ["48% (2024 Drought Entry)", "60% (Historical Baseline)", "35% (Pre-Stressed Pool)"], label_visibility="collapsed")
             init_pct = 0.48 if "48%" in init_choice else (0.60 if "60%" in init_choice else 0.35)
 
-            sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct)
+            render_tour_step("review_stressors")
+            tour_target_open("review_stressors")
+            with st.expander("🌡️ Climate Warming & Data Center Demand Stressors", expanded=True):
+                c_temp, c_dc = st.columns(2)
+                temp_anom = c_temp.slider("Global warming anomaly · +°C", 0.0, 3.0, 0.0, 0.5,
+                                          help="Thermal pan evaporation amplification: ~4.5% increase per +1.0°C anomaly.")
+                dc_mgd = c_dc.slider("AI data center cooling · MGD", 0.0, 15.0, 0.0, 1.0,
+                                     help="Evaporative cooling tower freshwater consumption from hyperscale data center infrastructure.")
+                if temp_anom > 0 or dc_mgd > 0:
+                    st.caption(f"Compound Stress Active: +{temp_anom:.1f}°C thermal evaporation (+{temp_anom*4.5:.1f}%) and +{dc_mgd:.1f} MGD ({dc_mgd*3.07:.1f} ac-ft/day) cooling loss.")
+            tour_target_close("review_stressors")
+
+            sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, temp_anomaly_c=temp_anom, data_center_mgd=dc_mgd)
+
+            if temp_anom > 0 or dc_mgd > 0:
+                base_sim = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, temp_anomaly_c=0.0, data_center_mgd=0.0)
+                base_s1 = next((r["day"] for _, r in base_sim.iterrows() if r["combined_pct"] < 40), None)
+                base_s2 = next((r["day"] for _, r in base_sim.iterrows() if r["combined_pct"] < 30), None)
+            else:
+                base_s1, base_s2 = None, None
+
+            render_tour_step("review_simulation")
+            tour_target_open("review_simulation")
             st.plotly_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms), width="stretch")
+            tour_target_close("review_simulation")
 
             s1 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 40), None)
             s2 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 30), None)
@@ -640,9 +720,11 @@ elif page == "Review":
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("Final Combined", f"{term['combined_pct']:.1f}%", f"{term['combined_acft']:,.0f} ac-ft")
             m2.metric("Terminal Status", term["stage"])
-            m3.metric("Stage 1 Breach (<40%)", f"Day {s1}" if s1 else "Not breached")
-            m4.metric("Stage 2 Breach (<30%)", f"Day {s2}" if s2 else "Not breached")
-            st.caption("Physical Reservoir Stress Model: Choke Canyon (662k ac-ft) and Lake Corpus Christi (257k ac-ft) mass-balance under ~180 MGD regional draw and seasonal evaporation. Pre-engineering scoping tool; official firm yield modeling requires Texas WAM Run 3 by a licensed P.E.")
+            m1_delta = f"{base_s1 - s1} days earlier" if (base_s1 and s1 and s1 < base_s1) else None
+            m2_delta = f"{base_s2 - s2} days earlier" if (base_s2 and s2 and s2 < base_s2) else None
+            m3.metric("Stage 1 Breach (<40%)", f"Day {s1}" if s1 else "Not breached", delta=m1_delta, delta_color="inverse")
+            m4.metric("Stage 2 Breach (<30%)", f"Day {s2}" if s2 else "Not breached", delta=m2_delta, delta_color="inverse")
+            st.caption("Physical Reservoir Stress Model: Choke Canyon (662k ac-ft) and Lake Corpus Christi (257k ac-ft) mass-balance under ~180 MGD regional draw, seasonal evaporation, and industrial/cooling loads. Pre-engineering scoping tool; official firm yield modeling requires Texas WAM Run 3 by a licensed P.E.")
         else:
             expected = pd.DataFrame(w.reference.expected(s.series.index), index=s.series.index, columns=s.series.columns)
             fig = go.Figure()
@@ -655,6 +737,8 @@ elif page == "Review":
             st.plotly_chart(chart(fig, 320), width="stretch")
             st.caption(f"Matched rainfall reference: {f['benchmark_mm']:.1f} mm ({f['benchmark_mm']/25.4:.2f} in) · n={f['benchmark_n']} · {'exceeded' if f['beyond_rainfall_reference'] else 'not exceeded'} · 30-day windows: {f['eligible_concurrence_days']}")
     with right:
+        render_tour_step("review_decision")
+        tour_target_open("review_decision")
         st.markdown(f"**{s.id}** ({getattr(s, 'cluster_name', f'Group {s.cluster}')}) / revision {s.revision} / {s.status}")
         note = st.text_area("Review note", key=f"note_{s.id}_{w.id}", height=90)
         a, b = st.columns(2)
@@ -678,6 +762,7 @@ elif page == "Review":
                     st.rerun()
                 except ValueError as error:
                     st.error(str(error))
+        tour_target_close("review_decision")
         with st.expander("Replace from CSV"):
             st.download_button("CSV template", s.series.rename_axis("date").to_csv(), f"{s.id}-template.csv", "text/csv")
             upload = st.file_uploader("Daily rainfall · mm", type="csv", key=f"replacement_{w.id}_{s.id}")
@@ -746,6 +831,8 @@ elif page == "Exports":
     except ValueError as error:
         ready = False
         st.warning(str(error))
+    render_tour_step("export_panel")
+    tour_target_open("export_panel")
     if st.button("Build verified export", type="primary", disabled=not ready):
         try:
             payload = export_bundle(w, share)
@@ -753,6 +840,7 @@ elif page == "Exports":
             st.session_state.packet = {"data": payload, "fingerprint": json.dumps(w.record(share), sort_keys=True), "share": share, "report": report}
         except (ValueError, AssertionError, OSError) as error:
             st.error(f"Verification failed: {error}")
+    tour_target_close("export_panel")
     packet = st.session_state.get("packet")
     if packet and packet["share"] == share and packet["fingerprint"] == json.dumps(w.record(share), sort_keys=True):
         st.download_button("Download ZIP", packet["data"], f"BASIN-{w.id}.zip", "application/zip", type="primary")
