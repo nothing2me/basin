@@ -4,22 +4,18 @@ Updated: 2026-09-06
 
 ## Current state
 
-User explicitly authorized publishing the complete local CSV preview work and documentation. Integrated with upstream main 8f04091, preserving teammate schema 2.0 evidence/integrity, revised illustrative reservoir behavior and launcher. The previous local-only restriction is superseded for this release; private uploads, sessions and environments remain excluded.
+CSV preview release ae6ec27 is published. The running app subsequently encountered missing Workspace.selection_reason/evidence attributes after an in-place code update. Current source has the members; restarting the old server resolved the stale-runtime condition. No application source patch was required.
 
-The Data/initial Workspace view now previews one station's date,precipitation CSV with explicit station/location/unit, bounded validation, missing-day counts, chart/table and original hash. Preview does not save inputs or modify scenarios. README provides teammate setup and an illustrative example.
+## Files changed
 
-## Release files
-
-- basin_core/uploads.py, app.py, tests/test_uploads.py: preview parser, UI and tests.
-- docs/examples/local-rainfall-example.csv: illustrative 30-day, 62.5 mm sample, not verified observations.
-- README.md, docs/build_validation.md, docs/local_upload_and_research_plan.md, HANDOFF.md: setup, verified status, updated plan and checkpoint.
-- .gitattributes: preserve original research artifact hashes; retain upstream LF snapshot rule.
-- TODO.md: current preview checkpoint without marking later work complete.
+- README.md: stop/pull/restart instructions, stale Workspace troubleshooting and legacy executable distinction.
+- docs/build_validation.md: restart diagnosis and fresh-process UI test results.
+- HANDOFF.md: current checkpoint.
 
 ## Verification
 
-97 tests passed after upstream integration. Fresh-checkout observation hash passed. Offline smoke and explicit replay verified 5 exported scenarios and 500 audit records. Source package built and checked for preview/sample inclusion and absence of local sessions/environment. Diff whitespace checks passed. Python 3.12.14 on Windows; teammate machines still require their own setup/rehearsal.
+Fresh import confirms Workspace.selection_reason exists. Server restarted on 127.0.0.1:8501. `python -m pytest -q tests/test_app.py --basetemp=tmp/pytest-restart-check --tb=short`: 2 passed. Previous integrated release passed 97 tests and offline replay; these were not rerun for documentation-only changes. Unsaved in-memory work is not preserved by restart.
 
 ## Next action
 
-Teammates pull main, run Setup BASIN.cmd and Start BASIN.cmd, then try Data → Preview your local rainfall CSV. Continue local-station reference handling and persistence using existing schema 2.0 evidence/integrity boundaries. PDF ingestion and numerical uploaded-versus-public comparison remain future work. Do not treat illustrative rainfall or the reservoir experiment as validated predictions.
+Teammates stop the server before pulling, restart via Start BASIN.cmd and refresh the browser. Continue local-station reference/persistence work from docs/local_upload_and_research_plan.md. Private uploads and environments remain excluded from Git.

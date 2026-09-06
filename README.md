@@ -71,3 +71,9 @@ The preview reports valid/missing days, converts values to mm and shows a chart/
 **Current scope: preview only.** Uploads are not saved to disk, added to scenarios, assigned historical percentiles or included in exports. PDF ingestion, new-station scenarios and research comparisons are planned next. The existing Review-page CSV replacement is a separate workflow requiring matching scenario dates/stations. The updated app also has manual evidence records and scenario comparisons; those do not yet ingest this local upload. Local app processes are single-user and not an authenticated company server.
 
 See [the implementation plan](docs/local_upload_and_research_plan.md) and [verified build status](docs/build_validation.md). The plan includes future work; its unchecked tasks are not available features.
+
+## Updating an already running app
+
+Stop BASIN with Ctrl+C in its server console **before pulling updates**. Pull the latest main, run Setup BASIN.cmd if dependencies changed (or when unsure), then run Start BASIN.cmd again. Refresh the browser at the address printed by the launcher and restore a saved session or generate a new run. Unsaved in-memory work is not preserved by a restart; save before updating when the current app is functioning.
+
+If you see `AttributeError: 'Workspace' object has no attribute 'selection_reason'` or a missing `evidence` attribute after an update, restart the server, not just the browser tab. An old process may retain an earlier Workspace class or session object while loading newer interface code. The current source includes these members. Use the Python/browser launcher above; the legacy downloaded executable is not rebuilt by git pull.

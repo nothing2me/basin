@@ -42,3 +42,9 @@ User explicitly authorized publication, superseding the prior local-only checkpo
 README now includes teammate setup and preview use. docs/examples/local-rainfall-example.csv is the supplied illustrative 30-day gauge example adapted by header only: 62.5 mm total, no gaps. It is not authenticated historical data. The multi-station example, original attachment and private/local artifacts remain out of Git. The in-app template remains available too.
 
 Preview limitations remain: one station per file; no upload persistence, scenario mutation, PDF parsing or numeric public-versus-upload comparison. Existing manual evidence and scenario comparisons from teammate changes remain available separately. Publishing repository code does not host a shared running app.
+
+## Running-process update recovery — 2026-09-06
+
+After pulling the schema 2.0 changes while the older server was still running, the UI reported missing Workspace.selection_reason and evidence attributes. A fresh Python import confirmed selection_reason exists in the current source. Restarted the local Streamlit server to reload modules and clear stale in-memory objects. No application code patch was needed.
+
+`.venv/Scripts/python.exe -m pytest -q tests/test_app.py --basetemp=tmp/pytest-restart-check --tb=short`: **2 passed**. Server restarted successfully on loopback port 8501. README now documents stopping before pull, restarting afterward, saved-session recovery and the distinction from legacy executable artifacts. Tests verify fresh-process UI workflows; they do not establish preservation of unsaved in-memory work across updates.
