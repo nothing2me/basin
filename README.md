@@ -54,3 +54,7 @@ basin_core/: data verification, generator/reference, learning/ranking, revision/
 Read the [demo runbook](docs/demo_runbook.md), [validation status](docs/validation_notes.md), [AI disclosure](docs/ai_use_log.md) and [third-party materials](docs/third_party_materials.md).
 
 Working software is not field validation. The team still needs practitioner review, actual-laptop/projector rehearsal, backup video and final pitch materials. No local chat agent or live utility integration is included.
+
+## Data research
+
+See the [research library](research/README.md) for source packets, policy evidence, reviewed corrections and research assignments. Read its review before using imported AI claims.

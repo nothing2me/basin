@@ -1,0 +1,83 @@
+{
+  "review_date": "2026-09-06",
+  "purpose": "Assessment overlay for incoming/source_register.json; not a runtime data schema",
+  "records": [
+    {
+      "evidence_id": "E001",
+      "source_url": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Correct P/T measurement flags; source format reviewed, not approval of every original claim."
+    },
+    {
+      "evidence_id": "E002",
+      "source_url": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/ghcnd-inventory.txt",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Station inventory is a useful source; validate exact station metadata and catchment applicability."
+    },
+    {
+      "evidence_id": "E003",
+      "source_url": "https://www.twdb.texas.gov/waterplanning/rwp/plans/2026/",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Adoption index located; actual adopted chapters and asserted model constraints require retrieval and review."
+    },
+    {
+      "evidence_id": "E004",
+      "source_url": "https://www.twdb.texas.gov/waterplanning/rwp/regions/n/",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Discovery portal only; not itself evidence for chapter-level claims."
+    },
+    {
+      "evidence_id": "E005",
+      "source_url": "https://www.twdb.texas.gov/waterplanning/rwp/planningdocu/2026/projectdocs/Tech_Memos/RegionN_TechnicalMemorandum.pdf",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Do not mark the entire memorandum superseded without section-level comparison and approval history."
+    },
+    {
+      "evidence_id": "E006",
+      "source_url": "https://waterdatafortexas.org/reservoirs/municipal/corpus-christi",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Keep two-reservoir policy grouping separate from three-reservoir summary; reproduce dates and denominators. No independent simultaneous City verification established."
+    },
+    {
+      "evidence_id": "E007",
+      "source_url": "https://www.corpuschristitx.gov/department-directory/corpus-christi-water/water-supply-dashboard/",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Supplied PDF reviewed selectively. Page60 visibly shows approval 2026-06-02 and effective stamp 2026-06-08. Resolve current applicability and Appendix C inconsistency."
+    },
+    {
+      "evidence_id": "E008",
+      "source_url": "https://api.waterdata.usgs.gov/",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Correct 08210000 to Nueces near Three Rivers and 08206900 to Choke Canyon Reservoir. Actual gauge suitability and series remain unvalidated."
+    },
+    {
+      "evidence_id": "E009",
+      "source_url": "https://www.usgs.gov/national-hydrography/watershed-boundary-dataset",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Proposed HUC mappings not validated; six digits cannot be HUC8. Obtain polygons and upstream relationships."
+    },
+    {
+      "evidence_id": "E010",
+      "source_url": "https://www.twdb.texas.gov/surfacewater/data/ExtendedNatFlow/index.asp",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Exact naturalized-flow file versions, coverage and publication dates remain unverified."
+    },
+    {
+      "evidence_id": "E011",
+      "source_url": "https://droughtmonitor.unl.edu/About/WhatistheUSDM.aspx",
+      "review_status": "partially_checked_follow_up_required",
+      "approved_for_runtime_ingestion": false,
+      "assessment": "Correct illustrative percentile categories; do not infer official drought category from one rainfall proxy."
+    }
+  ]
+}

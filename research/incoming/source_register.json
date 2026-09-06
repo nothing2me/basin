@@ -1,0 +1,407 @@
+[
+  {
+    "evidence_id": "E001",
+    "title": "NOAA GHCN-Daily Documentation & Readme",
+    "publisher": "NOAA National Centers for Environmental Information (NCEI)",
+    "source_url": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt",
+    "document_or_dataset_version": "Format Version 3.34",
+    "publication_date": null,
+    "effective_date": null,
+    "retrieved_at_utc": "2026-09-06T00:56:58Z",
+    "source_status": "adopted",
+    "claim_type": "observation",
+    "geographic_scope": "Global / National",
+    "included_assets_or_station_ids": [
+      "USW00012924",
+      "USW00012912",
+      "USW00012921"
+    ],
+    "period_start": "1991-01-01",
+    "period_end": "2025-12-31",
+    "time_basis": "Observational Day (LST/UTC depending on station type)",
+    "variable": "PRCP (Precipitation)",
+    "units": "Tenths of millimeters",
+    "aggregation_and_denominator": "Daily total",
+    "claim_paraphrase": "PRCP is precipitation in tenths of mm; measurement flags indicate quality checks; nonblank QFLAG denotes failed quality checks; missing values coded as -9999.",
+    "locator": "Sections 2 and 3 (Format of data files and data flags)",
+    "limitations": [
+      "Observational day ending times vary between first-order automated stations and COOP observers.",
+      "Trace precipitation reported as 0 with flag P or other indicators."
+    ],
+    "upstream_source_ids": [],
+    "content_sha256": null,
+    "proposed_use": "use now",
+    "supports_todo_ids": [
+      "B02",
+      "B07"
+    ],
+    "review_status": "reviewed",
+    "access_and_reuse_notes": "Public domain U.S. Federal Government data. Free redistribution."
+  },
+  {
+    "evidence_id": "E002",
+    "title": "NOAA Station Metadata Inventory",
+    "publisher": "NOAA NCEI",
+    "source_url": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/ghcnd-inventory.txt",
+    "document_or_dataset_version": "Live Inventory 2026-09",
+    "publication_date": null,
+    "effective_date": null,
+    "retrieved_at_utc": "2026-09-06T16:15:00Z",
+    "source_status": "adopted",
+    "claim_type": "observation",
+    "geographic_scope": "Texas Coastal Bend and South Central Texas",
+    "included_assets_or_station_ids": [
+      "USW00012924",
+      "USW00012912",
+      "USW00012921"
+    ],
+    "period_start": "1991-01-01",
+    "period_end": "2025-12-31",
+    "time_basis": "Calendar Day",
+    "variable": "PRCP coverage span",
+    "units": "Years",
+    "aggregation_and_denominator": "Station period of record",
+    "claim_paraphrase": "Corpus Christi Intl AP, Victoria Rgnl AP, and San Antonio Intl AP maintain continuous PRCP records from 1991 through 2025.",
+    "locator": "Station lines for USW00012924, USW00012912, USW00012921",
+    "limitations": [
+      "Presence in inventory confirms reporting period but does not verify daily completeness or flag status."
+    ],
+    "upstream_source_ids": [],
+    "content_sha256": null,
+    "proposed_use": "use now",
+    "supports_todo_ids": [
+      "B02",
+      "B07"
+    ],
+    "review_status": "reviewed",
+    "access_and_reuse_notes": "Public domain."
+  },
+  {
+    "evidence_id": "E003",
+    "title": "2026 Coastal Bend (Region N) Regional Water Plan",
+    "publisher": "Coastal Bend Regional Water Planning Group / Texas Water Development Board",
+    "source_url": "https://www.twdb.texas.gov/waterplanning/rwp/plans/2026/",
+    "document_or_dataset_version": "Adopted 2026 Plan",
+    "publication_date": "2026-01-22",
+    "effective_date": "2026-01-22",
+    "retrieved_at_utc": "2026-09-06T16:19:22Z",
+    "source_status": "adopted",
+    "claim_type": "policy",
+    "geographic_scope": "Region N (11 Counties: Aransas, Bee, Brooks, Duval, Jim Wells, Kenedy, Kleberg, Live Oak, McMullen, Nueces, San Patricio)",
+    "included_assets_or_station_ids": [
+      "Choke Canyon Reservoir",
+      "Lake Corpus Christi",
+      "Lake Texana"
+    ],
+    "period_start": "2020-01-01",
+    "period_end": "2080-12-31",
+    "time_basis": "Decadal Planning Horizons (2030-2080)",
+    "variable": "Water supply availability, projected demands, safe yield",
+    "units": "Acre-feet per year (ac-ft/yr)",
+    "aggregation_and_denominator": "Regional basin water user groups",
+    "claim_paraphrase": "Region N's adopted regional water plan approved by TWDB on January 22, 2026; evaluates existing supplies using CCWSM and recommends water management strategies through 2080.",
+    "locator": "Executive Summary and Chapter 3 (Water Supply Availability)",
+    "limitations": [
+      "Decadal planning numbers are long-term averages; not calibrated for daily operational routing."
+    ],
+    "upstream_source_ids": [
+      "E005"
+    ],
+    "content_sha256": null,
+    "proposed_use": "context only",
+    "supports_todo_ids": [
+      "B01",
+      "B07",
+      "B11"
+    ],
+    "review_status": "reviewed",
+    "access_and_reuse_notes": "State of Texas governmental planning document. Free access."
+  },
+  {
+    "evidence_id": "E004",
+    "title": "TWDB Region N Planning Group Portal",
+    "publisher": "Texas Water Development Board",
+    "source_url": "https://www.twdb.texas.gov/waterplanning/rwp/regions/n/",
+    "document_or_dataset_version": "Portal Snapshot 2026-09",
+    "publication_date": null,
+    "effective_date": null,
+    "retrieved_at_utc": "2026-09-06T16:19:06Z",
+    "source_status": "adopted",
+    "claim_type": "policy",
+    "geographic_scope": "Region N (11 counties)",
+    "included_assets_or_station_ids": [],
+    "period_start": null,
+    "period_end": null,
+    "time_basis": null,
+    "variable": "Administrative composition",
+    "units": null,
+    "aggregation_and_denominator": "11 Counties",
+    "claim_paraphrase": "Defines the 11 counties forming the Coastal Bend Regional Water Planning Area.",
+    "locator": "Region Description section",
+    "limitations": [
+      "Planning boundaries do not coincide with river basin drainage divides."
+    ],
+    "upstream_source_ids": [],
+    "content_sha256": null,
+    "proposed_use": "context only",
+    "supports_todo_ids": [
+      "B07"
+    ],
+    "review_status": "reviewed",
+    "access_and_reuse_notes": "Public domain state portal."
+  },
+  {
+    "evidence_id": "E005",
+    "title": "Region N Technical Memorandum - 2026 Regional Water Plan",
+    "publisher": "Coastal Bend Regional Water Planning Group",
+    "source_url": "https://www.twdb.texas.gov/waterplanning/rwp/planningdocu/2026/projectdocs/Tech_Memos/RegionN_TechnicalMemorandum.pdf",
+    "document_or_dataset_version": "March 2024 Deliverable",
+    "publication_date": "2024-03-04",
+    "effective_date": "2024-03-04",
+    "retrieved_at_utc": "2026-09-06T16:19:45Z",
+    "source_status": "superseded",
+    "claim_type": "derived",
+    "geographic_scope": "Region N",
+    "included_assets_or_station_ids": [
+      "Choke Canyon Reservoir",
+      "Lake Corpus Christi",
+      "Lake Texana"
+    ],
+    "period_start": "1934-01-01",
+    "period_end": "2015-12-31",
+    "time_basis": "Historical Drought Period / Planning Horizons",
+    "variable": "Hydrologic variance approvals, safe yield methodology",
+    "units": "Acre-feet per year",
+    "aggregation_and_denominator": "System-wide safe yield",
+    "claim_paraphrase": "Documents TWDB approval of Region N hydrologic variance to utilize CCWSM with 2015 extended hydrology and Safe Yield (75,000 ac-ft reserve) for existing surface water supplies.",
+    "locator": "Section 2 / Appendix C (Hydrologic Modeling Variances)",
+    "limitations": [
+      "Interim deliverable superseded by the adopted 2026 Plan; valid for modeling approval trail only."
+    ],
+    "upstream_source_ids": [],
+    "content_sha256": null,
+    "proposed_use": "context only",
+    "supports_todo_ids": [
+      "B07",
+      "B08"
+    ],
+    "review_status": "reviewed",
+    "access_and_reuse_notes": "State planning archive document."
+  },
+  {
+    "evidence_id": "E006",
+    "title": "TWDB Corpus Christi Area Reservoirs Daily Monitor",
+    "publisher": "Texas Water Development Board (Water Data for Texas)",
+    "source_url": "https://waterdatafortexas.org/reservoirs/municipal/corpus-christi",
+    "document_or_dataset_version": "Live Daily Monitor",
+    "publication_date": "2026-09-06",
+    "effective_date": "2026-09-06",
+    "retrieved_at_utc": "2026-09-06T16:17:31Z",
+    "source_status": "adopted",
+    "claim_type": "observation",
+    "geographic_scope": "Corpus Christi Municipal Area Reservoirs",
+    "included_assets_or_station_ids": [
+      "Choke Canyon",
+      "Corpus Christi",
+      "Texana"
+    ],
+    "period_start": "2026-09-06",
+    "period_end": "2026-09-06",
+    "time_basis": "Daily Snapshot",
+    "variable": "Conservation Storage, Conservation Capacity, Percent Full",
+    "units": "Acre-feet (ac-ft) and Percent (%)",
+    "aggregation_and_denominator": "3-Reservoir Aggregate: Total Storage 517,292 ac-ft / Total Capacity 1,077,857 ac-ft = 48.0% full",
+    "claim_paraphrase": "On 2026-09-06, Choke Canyon is 23.1% full (152,927 / 662,820 ac-ft); Lake Corpus Christi is 88.0% full (225,410 / 256,062 ac-ft); Lake Texana is 87.4% full (138,955 / 158,975 ac-ft). Three-reservoir combined storage is 48.0%.",
+    "locator": "HTML Table: Reservoir Storage (Lines 352-360, 529-585)",
+    "limitations": [
+      "Summary percentage includes Lake Texana (158,975 ac-ft capacity), which is not part of the City's 2-reservoir DCP trigger calculation."
+    ],
+    "upstream_source_ids": [],
+    "content_sha256": null,
+    "proposed_use": "use now",
+    "supports_todo_ids": [
+      "B03",
+      "B07",
+      "B08"
+    ],
+    "review_status": "reviewed",
+    "access_and_reuse_notes": "Public domain real-time monitoring site."
+  },
+  {
+    "evidence_id": "E007",
+    "title": "City of Corpus Christi Water Supply Dashboard & Adopted DCP",
+    "publisher": "City of Corpus Christi - Corpus Christi Water (CCW)",
+    "source_url": "https://www.corpuschristitx.gov/department-directory/corpus-christi-water/water-supply-dashboard/",
+    "document_or_dataset_version": "Drought Contingency Plan 2025, Amended June 2026",
+    "publication_date": "2026-06-01",
+    "effective_date": "2026-06-01",
+    "retrieved_at_utc": "2026-09-06T16:17:41Z",
+    "source_status": "adopted",
+    "claim_type": "policy",
+    "geographic_scope": "City of Corpus Christi 7-County Wholesale/Retail Service Area",
+    "included_assets_or_station_ids": [
+      "Choke Canyon Reservoir",
+      "Lake Corpus Christi"
+    ],
+    "period_start": "2026-06-01",
+    "period_end": null,
+    "time_basis": "Operational Policy & Real-time Status",
+    "variable": "Combined 2-reservoir storage, drought stage triggers, restrictions",
+    "units": "Percent (%) and Days to Insufficiency",
+    "aggregation_and_denominator": "Combined storage of CCR + LCC (~918,882 ac-ft denominator)",
+    "claim_paraphrase": "City enforces drought stages based on combined storage of CCR and LCC under 2001 Agreed Order: Stage 1 (<40%), Stage 2 (<30%), Stage 3 (<20%). Level 1 Water Emergency is initiated when total supplies are 180 days from failing to meet demands.",
+    "locator": "Sections 'Our Water Supplies' and 'Level 1 Water Emergency' (Lines 1740-1761)",
+    "limitations": [
+      "Requires executive declaration by City Manager to enact stages.",
+      "Level 1 Emergency is a modeled projection, not a fixed storage percentage."
+    ],
+    "upstream_source_ids": [],
+    "content_sha256": null,
+    "proposed_use": "use now",
+    "supports_todo_ids": [
+      "B03",
+      "B07",
+      "B08"
+    ],
+    "review_status": "reviewed",
+    "access_and_reuse_notes": "Official municipal policy portal. Downloaded plan PDF sha256 verified."
+  },
+  {
+    "evidence_id": "E008",
+    "title": "USGS Water Data APIs - Surface Water Daily Values",
+    "publisher": "U.S. Geological Survey (USGS)",
+    "source_url": "https://api.waterdata.usgs.gov/",
+    "document_or_dataset_version": "REST API v1",
+    "publication_date": null,
+    "effective_date": null,
+    "retrieved_at_utc": "2026-09-06T16:15:00Z",
+    "source_status": "adopted",
+    "claim_type": "observation",
+    "geographic_scope": "Nueces River Basin (Gages: 08210000 Nueces nr Mathis; 08206900 Frio nr Tilden)",
+    "included_assets_or_station_ids": [
+      "08210000",
+      "08206900"
+    ],
+    "period_start": "1991-01-01",
+    "period_end": "2025-12-31",
+    "time_basis": "Daily Mean",
+    "variable": "Discharge (Parameter 00060, Stat 00003)",
+    "units": "Cubic feet per second (cfs)",
+    "aggregation_and_denominator": "Daily mean streamflow",
+    "claim_paraphrase": "Provides continuous daily streamflow discharge entering Lake Corpus Christi and Choke Canyon Reservoir.",
+    "locator": "Site queries for USGS 08210000 and 08206900",
+    "limitations": [
+      "Discharge is a physical hydrologic watershed response, not precipitation. Contains upstream regulation and diversions."
+    ],
+    "upstream_source_ids": [],
+    "content_sha256": null,
+    "proposed_use": "validation candidate",
+    "supports_todo_ids": [
+      "B07"
+    ],
+    "review_status": "unreviewed",
+    "access_and_reuse_notes": "Public domain USGS API."
+  },
+  {
+    "evidence_id": "E009",
+    "title": "USGS Watershed Boundary Dataset (WBD)",
+    "publisher": "U.S. Geological Survey",
+    "source_url": "https://www.usgs.gov/national-hydrography/watershed-boundary-dataset",
+    "document_or_dataset_version": "WBD National Snapshot 2024",
+    "publication_date": null,
+    "effective_date": null,
+    "retrieved_at_utc": "2026-09-06T16:15:00Z",
+    "source_status": "adopted",
+    "claim_type": "observation",
+    "geographic_scope": "Texas HUC-8 Basins (12110108, 12110111, 12100201, 12100301)",
+    "included_assets_or_station_ids": [],
+    "period_start": null,
+    "period_end": null,
+    "time_basis": "Static Geospatial Polygons",
+    "variable": "Hydrologic Drainage Boundaries",
+    "units": "Square miles / HUC codes",
+    "aggregation_and_denominator": "Watershed polygon area",
+    "claim_paraphrase": "Delineates true hydrologic contributing catchments for the Nueces, Frio, Lavaca, and San Antonio River basins.",
+    "locator": "HUC-8 Layer definitions",
+    "limitations": [
+      "Topographic watershed divides do not reflect inter-basin pipeline transfers or municipal service areas."
+    ],
+    "upstream_source_ids": [],
+    "content_sha256": null,
+    "proposed_use": "context only",
+    "supports_todo_ids": [
+      "B07"
+    ],
+    "review_status": "reviewed",
+    "access_and_reuse_notes": "Public domain geospatial data."
+  },
+  {
+    "evidence_id": "E010",
+    "title": "TWDB Extended Naturalized Flow and Evaporation Data",
+    "publisher": "Texas Water Development Board",
+    "source_url": "https://www.twdb.texas.gov/surfacewater/data/ExtendedNatFlow/index.asp",
+    "document_or_dataset_version": "Extended Hydrology through 2015",
+    "publication_date": "2020-05-01",
+    "effective_date": "2020-05-01",
+    "retrieved_at_utc": "2026-09-06T16:15:00Z",
+    "source_status": "adopted",
+    "claim_type": "derived",
+    "geographic_scope": "Nueces River Basin (Basin 21)",
+    "included_assets_or_station_ids": [
+      "Nueces Basin WAM Control Points"
+    ],
+    "period_start": "1934-01-01",
+    "period_end": "2015-12-31",
+    "time_basis": "Monthly",
+    "variable": "Naturalized Streamflow and Net Evaporation Rates",
+    "units": "Acre-feet (Flow) and Feet (Evaporation)",
+    "aggregation_and_denominator": "Monthly control point volume",
+    "claim_paraphrase": "Provides official monthly naturalized streamflow cards representing runoff without human diversions or impoundments, used as input to CCWSM and WAM.",
+    "locator": "Basin 21 Naturalized Flow Download Files",
+    "limitations": [
+      "Modeled/derived values; requires domain engineering expertise to format into WRAP cards; cannot be derived by scaling 3 airport weather stations."
+    ],
+    "upstream_source_ids": [],
+    "content_sha256": null,
+    "proposed_use": "defer",
+    "supports_todo_ids": [
+      "B08"
+    ],
+    "review_status": "unreviewed",
+    "access_and_reuse_notes": "Public data for regional modeling."
+  },
+  {
+    "evidence_id": "E011",
+    "title": "U.S. Drought Monitor Classification & Methodology",
+    "publisher": "National Drought Mitigation Center (NDMC) / USDA / NOAA",
+    "source_url": "https://droughtmonitor.unl.edu/About/WhatistheUSDM.aspx",
+    "document_or_dataset_version": "USDM Classification Standard",
+    "publication_date": null,
+    "effective_date": null,
+    "retrieved_at_utc": "2026-09-06T16:15:00Z",
+    "source_status": "adopted",
+    "claim_type": "derived",
+    "geographic_scope": "National / Region N Counties",
+    "included_assets_or_station_ids": [],
+    "period_start": null,
+    "period_end": null,
+    "time_basis": "Weekly Map",
+    "variable": "Drought Intensity Category (D0-D4)",
+    "units": "Categorical Percentile: D0 <= 20%, D1 <= 10%, D2 <= 5%, D3 <= 2%, D4 <= 1%",
+    "aggregation_and_denominator": "Multi-indicator percentile blending",
+    "claim_paraphrase": "USDM synthesizes multiple objective drought indicators into a weekly regional classification; it is not a forecast, water-supply model, or utility restriction declaration.",
+    "locator": "Classification Scheme Table",
+    "limitations": [
+      "Broad regional spatial scale; does not reflect local reservoir storage or municipal drought stages."
+    ],
+    "upstream_source_ids": [],
+    "content_sha256": null,
+    "proposed_use": "context only",
+    "supports_todo_ids": [
+      "B07",
+      "B11"
+    ],
+    "review_status": "reviewed",
+    "access_and_reuse_notes": "Public domain weekly product."
+  }
+]

@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BASIN Decision-Ready Research Packet</title>
+    <style>
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #1f2937;
+    max-width: 1050px;
+    margin: 30px auto;
+    padding: 0 20px;
+    background-color: #f3f4f6;
+}
+.container {
+    background: #ffffff;
+    padding: 40px 50px;
+    border-radius: 12px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+h1 {
+    color: #111827;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 12px;
+    margin-top: 0;
+    font-size: 28px;
+}
+h2 {
+    color: #1e3a8a;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 8px;
+    margin-top: 36px;
+    font-size: 22px;
+}
+h3 {
+    color: #1f2937;
+    margin-top: 24px;
+    font-size: 18px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 13.5px;
+}
+th, td {
+    border: 1px solid #d1d5db;
+    padding: 9px 13px;
+    text-align: left;
+    vertical-align: top;
+}
+th {
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-weight: 600;
+}
+tr:nth-child(even) {
+    background-color: #f8fafc;
+}
+tr:hover {
+    background-color: #eff6ff;
+}
+code {
+    background-color: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12.5px;
+    color: #991b1b;
+}
+pre {
+    background-color: #0f172a;
+    color: #f8fafc;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12.5px;
+}
+pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+}
+a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+a:hover {
+    text-decoration: underline;
+}
+hr {
+    border: 0;
+    height: 1px;
+    background: #e2e8f0;
+    margin: 32px 0;
+}
+.header-tag {
+    display: inline-block;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-bottom: 16px;
+}
+@media print {
+    body {
+        background: #fff;
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+    }
+    .container {
+        box-shadow: none;
+        padding: 0;
+        border-radius: 0;
+    }
+    pre, table {
+        page-break-inside: avoid;
+    }
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-tag">BASIN RESEARCH PACKET &bull; REGION N / COASTAL BEND, TEXAS</div>
+        <h1 id="basin-decision-ready-research-packet-source-shortlist">BASIN Decision-Ready Research Packet &amp; Source Shortlist</h1>
+<p><strong>Basin Analysis and Scenario Intelligence Navigator (BASIN)</strong><br />
+<em>Focus Region:</em> Coastal Bend / Region N, Texas<br />
+<em>Research Snapshot Date:</em> September 6, 2026<br />
+<em>Target Freeze Horizon:</em> September 18 Feature Freeze | September 19–20 Rehearsal | September 21 Travel<br />
+<em>Coordination Tasks:</em> Shared TODO B03, B05, B07, B08, B09, B11  </p>
+<hr />
+<h2 id="1-executive-summary-one-page-findings">1. Executive Summary &amp; One-Page Findings</h2>
+<h3 id="11-recommended-source-stack">1.1 Recommended Source Stack</h3>
+<p>To ensure full auditability, scientific defensibility, and zero unverified scope expansion before the September 18 freeze, the team should adopt the following four-tier source stack:</p>
+<ol>
+<li><strong>Numerical Input Now (Operational Runtime):</strong></li>
+<li><strong>Source:</strong> NOAA NCEI GHCN-Daily (S01, S02) bundled snapshot (1991–2025) for stations <code>USW00012924</code> (Corpus Christi Intl AP), <code>USW00012912</code> (Victoria Rgnl AP), and <code>USW00012921</code> (San Antonio Intl AP).</li>
+<li><strong>Role:</strong> Powers whole-window resampling, seasonal deficit calculations, and the 1991–2020 baseline climatology. Missing and failed quality flags (<code>QFLAG != blank</code>, <code>MFLAG == 'P'</code>) are strictly excluded; trace values are retained as 0 mm at measurement resolution; zero imputation is forbidden.</li>
+<li><strong>Contextual Evidence Now (Reference &amp; Conflict UI):</strong></li>
+<li><strong>Source A:</strong> TWDB <em>Water Data for Texas</em> (S06) daily reservoir storage for Choke Canyon Reservoir, Lake Corpus Christi, and Lake Texana. Provides ground-truth storage (ac-ft and percent full) and demonstrates the 3-reservoir vs. 2-reservoir aggregation distinction.</li>
+<li><strong>Source B:</strong> City of Corpus Christi Water Department Dashboard &amp; Adopted Drought Contingency Plan (S07), approved 2025 and amended June 2026. Provides current official restriction status (Stage 1), legal trigger definitions, and executive discretion rules.</li>
+<li><strong>Source C:</strong> U.S. Drought Monitor (S11) weekly county classifications (D0–D4) as an external reference for meteorological drought context.</li>
+<li><strong>Validation-Only Data (Offline Benchmarking &amp; Auditing):</strong></li>
+<li><strong>Source A:</strong> USGS Water Data API (S08) daily discharge (Parameter 00060) at key river gages (<code>USGS 08210000</code> Nueces River near Mathis; <code>USGS 08206900</code> Frio River near Tilden) to benchmark whether historical meteorological rainfall deficits coincided with physical streamflow drought.</li>
+<li><strong>Source B:</strong> USGS Watershed Boundary Dataset (S09) HUC-8 boundaries (<code>12110108</code>, <code>12110111</code>, <code>12100201</code>, <code>12100301</code>) to demonstrate contributing drainage areas vs. proxy station coordinates.</li>
+<li><strong>Deferred Model Inputs (Post-Freeze / Future Model Integrations):</strong></li>
+<li><strong>Source:</strong> TWDB Extended Naturalized Streamflow and Lake Evaporation datasets (S10) through 2015/2020. Required only if the team formally expands scope to calibrate hydrologic rainfall-runoff models or WAM control point input cards.</li>
+</ol>
+<hr />
+<h3 id="12-three-most-consequential-corrections-for-the-basin-team">1.2 Three Most Consequential Corrections for the BASIN Team</h3>
+<ol>
+<li><strong>Correction 1: Eliminate the Hardcoded "Stage 4 (15%)" Trigger and Audit the Emergency Trigger Definition.</strong></li>
+<li><em>The Problem:</em> <code>basin_core/analysis.py</code> (L154, L199–200) and <code>app.py</code> (L196) hardcode Stage 4 as a fixed <code>&lt; 15%</code> combined reservoir storage trigger.</li>
+<li><em>Primary Evidence:</em> Under the City of Corpus Christi's adopted 2025 Drought Contingency Plan (amended June 2026; S07), Stage 4 was officially renamed <strong>"Level 1 Water Emergency"</strong> and is <strong>not triggered by a static 15% storage threshold</strong>. Instead, it triggers dynamically when the City reaches <strong>180 days from when total available water supply is projected to be insufficient to meet total demand</strong>, accounting for Eastern pipeline supplies (Lake Texana and Colorado River).</li>
+<li>
+<p><em>Impact:</em> Presenting a fixed 15% Stage 4 trigger misinforms rural water providers and contradicts the City's governing ordinance.</p>
+</li>
+<li>
+<p><strong>Correction 2: Resolve the Storage Aggregation Mismatch (48.0% vs. 41.2%) in Code and UI.</strong></p>
+</li>
+<li><em>The Problem:</em> In <code>basin_core/analysis.py</code> (L136), <code>simulate_reservoir_drawdown</code> sets default <code>initial_pct = 0.48</code> (48%).</li>
+<li><em>Primary Evidence:</em> On September 6, 2026, TWDB's "Corpus Christi Area Reservoirs" (S06) reports <strong>48.0%</strong>, but this metric aggregates <strong>three reservoirs</strong> (Choke Canyon + Lake Corpus Christi + Lake Texana = 1,077,857 ac-ft pool). The City of Corpus Christi's DCP trigger legally counts only the <strong>two Western reservoirs</strong> (Choke Canyon + Lake Corpus Christi = 918,882 ac-ft pool), which sit at <strong>41.2% full</strong> (378,337 ac-ft).</li>
+<li>
+<p><em>Impact:</em> Planners looking at 48% believe the system is well clear of drought, whereas the regulatory 2-reservoir trigger at 41.2% is within 1.2% of Stage 2 (30%) / Stage 1 (40%) enforcement margins.</p>
+</li>
+<li>
+<p><strong>Correction 3: Correct Texas WAM Run 3 Claims and Acknowledge the Corpus Christi Water Supply Model (CCWSM).</strong></p>
+</li>
+<li><em>The Problem:</em> <code>app.py</code> (L349–350) claims to generate a "Texas WAM Engineering Package" for "Texas WAM Run 3", and code comments imply rainfall retention directly scales naturalized streamflow.</li>
+<li><em>Primary Evidence:</em> Region N’s approved TWDB planning methodology (S04, S05) utilizes the <strong>Corpus Christi Water Supply Model (CCWSM)</strong> under the 2001 TCEQ Agreed Order and an approved <strong>Safe Yield variance (75,000 ac-ft reserve)</strong> for existing surface water supplies, <em>not</em> TCEQ WAM Run 3. Furthermore, WAM Run 3 is legally mandated for evaluating <em>new</em> Water Management Strategies (WMS) and permitting unappropriated water, requiring monthly naturalized flow cards across hundreds of control points, which cannot be scaled directly from 3 airport rainfall stations.</li>
+<li><em>Impact:</em> Claiming WAM Run 3 compliance misleads engineers and damages credibility during hydrologist handoff.</li>
+</ol>
+<hr />
+<h3 id="13-key-unanswered-questions-requiring-practitioner-input">1.3 Key Unanswered Questions Requiring Practitioner Input</h3>
+<ul>
+<li><strong>Q1 (Hydrology):</strong> Which upstream rainfall station or gridded precipitation product (e.g., PRISM 4km vs. NWS MRMS QPE) does the Nueces River Authority or consulting hydrologist recommend to represent the Frio/Nueces catchment rather than airport proxies?</li>
+<li><strong>Q2 (Operations):</strong> How do wholesale rural customers (e.g., Nueces County WCID #3) operationally adjust their local treatment and drought surcharges when the City declares Stage 1 vs. Stage 2?</li>
+<li><strong>Q3 (Scope/B08):</strong> Will the team follow <strong>Path A</strong> (completely exclude the defective reservoir simulation from the demo) or <strong>Path B</strong> (retain an explicitly labeled, mass-conserving illustrative educational widget)?</li>
+</ul>
+<hr />
+<h2 id="2-geography-system-boundaries-and-scientific-definitions-p0">2. Geography, System Boundaries, and Scientific Definitions (P0)</h2>
+<h3 id="21-user-task-recipient-and-expected-handoff">2.1 User, Task, Recipient, and Expected Handoff</h3>
+<ul>
+<li><strong>Target User:</strong> Water resources analyst, general manager, or operations superintendent at a rural-serving retail water district, water supply corporation (WSC), or small municipality in the Coastal Bend / Region N planning area (e.g., Nueces County WCID #3 / Robstown, San Patricio Municipal Water District, Violet WSC, Ricardo WSC).</li>
+<li><strong>Specific Decision Supported:</strong> Selecting, evaluating, and documenting 2 to 3 defensible, season-matched historical rainfall stress scenarios (contrasting duration, onset, and spatial concurrence) to submit to an engineering consultant or river authority for detailed hydrologic modeling (CCWSM/WAM) before capital planning or drought surcharge hearings.</li>
+<li><strong>Input to BASIN:</strong> Verified NOAA GHCN-Daily historical rainfall records; user-defined stress constraints (duration 30–365 days, retention 35%–85%, onset season); community priority weights (severity, duration, concurrence, summer demand).</li>
+<li><strong>Task Performed:</strong> Run local KMeans scenario generation; inspect scenario clustering and score breakdowns; challenge and edit daily rainfall values or replace with local rain gauge data; verify data provenance; document human review rationale and dispositions on apparent data conflicts.</li>
+<li><strong>Recipient:</strong> Licensed Professional Engineer (PE), consulting hydrologist (e.g., HDR, Freese and Nichols), or river authority technical staff (Nueces River Authority) responsible for executing official reservoir availability simulations.</li>
+<li><strong>Expected Handoff Deliverable:</strong> An auditable, offline-replayable ZIP packet containing:</li>
+<li>Standardized daily rainfall time-series CSVs (in mm/day and inches/day) with explicit station metadata and SHA-256 digests.</li>
+<li>Machine-readable review audit trail (<code>audit.json</code> / <code>review_log.jsonl</code>) recording every transformation, edit, parameter weight, and approval revision.</li>
+<li>Evidence Register detailing source citations, baseline period (1991–2020), and known proxy limitations.</li>
+<li>Hydrologist Translation Brief outlining the meteorological stress parameters, noting that scenarios reflect precipitation stress rather than calibrated runoff, and requesting specific CCWSM safe-yield or drought-of-record runs.</li>
+</ul>
+<hr />
+<h3 id="22-boundary-distinctions-in-region-n">2.2 Boundary Distinctions in Region N</h3>
+<p>Confusion between administrative, operational, and hydrologic boundaries is the leading cause of contradictory drought reporting in South Texas. The table below delineates the four relevant boundaries:</p>
+<table>
+<thead>
+<tr>
+<th>Boundary Type</th>
+<th>Geographic Scope</th>
+<th>Controlling Authority</th>
+<th>Relevance to BASIN Metrics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Administrative Planning Boundary</strong></td>
+<td>11 Counties: Aransas, Bee, Brooks, Duval, Jim Wells, Kenedy, Kleberg, Live Oak, McMullen, Nueces, San Patricio.</td>
+<td>Coastal Bend Regional Water Planning Group (Region N) &amp; TWDB</td>
+<td>Governs official decadal population projections, regional water demand forecasts, and recommended Water Management Strategies (WMS).</td>
+</tr>
+<tr>
+<td><strong>Service Territories</strong></td>
+<td>CCW municipal retail area (~140 sq mi) plus wholesale municipal/industrial service areas spanning 7 counties.</td>
+<td>City of Corpus Christi (Corpus Christi Water - CCW) &amp; Wholesale Customers</td>
+<td>Dictates who is legally subject to City Drought Contingency Plan stages, outdoor watering restrictions, and drought surcharges.</td>
+</tr>
+<tr>
+<td><strong>Upstream Contributing Drainage Areas</strong></td>
+<td>~17,000 sq mi across South Texas and Hill Country: Nueces Basin (HUC 121101), Frio Basin (HUC 121102). Extends northwest into Regions L and M (Edwards, Real, Uvalde, Zavala, Dimmit, La Salle).</td>
+<td>USGS Hydrologic Units / TCEQ River Basins / Nueces River Authority</td>
+<td>Dictates actual runoff and inflow into Choke Canyon Reservoir and Lake Corpus Christi. Local rain at the coast does <em>not</em> enter these reservoirs.</td>
+</tr>
+<tr>
+<td><strong>Imported Supply Sources &amp; Conveyance</strong></td>
+<td>Lake Texana (Navidad River, Jackson County / Lavaca Basin, Region P) and Colorado River Run-of-River (Wharton/Matagorda County, Region K).</td>
+<td>Lavaca-Navidad River Authority (LNRA), Lower Colorado River Authority (LCRA), CCW</td>
+<td>101-mile Mary Rhodes Pipeline Phase I (60–72 MGD raw water) and Phase II. Water is pumped directly to the <strong>O.N. Stevens Water Treatment Plant</strong> in Calallen; it does <em>not</em> flow into Region N reservoirs.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="23-evaluation-of-bundled-noaa-ghcn-daily-proxy-stations">2.3 Evaluation of Bundled NOAA GHCN-Daily Proxy Stations</h3>
+<p>BASIN currently bundles three first-order NOAA stations: <code>USW00012924</code> (Corpus Christi), <code>USW00012912</code> (Victoria), and <code>USW00012921</code> (San Antonio).</p>
+<pre><code>                      [ San Antonio Intl (USW00012921) ]
+                               (Bexar Co. - Region L)
+                                 * Upper San Antonio Basin
+                                 * 100 mi north of reservoirs
+                                          |
+                                          v
+   [ Upper Nueces / Frio Catchments ]            [ Lake Texana ]
+        (Edwards Plateau / Hill Co.)               (Jackson Co. - Region P)
+        * True Reservoir Watershed                   |
+                  |                                  |
+                  v                                  v
+     [ Choke Canyon &amp; Lake Corpus Christi ]      [ Victoria Rgnl (USW00012912) ]
+        (Live Oak / McMullen / San Patricio)       (Victoria Co. - Region P)
+                  |                                  * Regional Coastal Proxy
+                  +--------------+                   |
+                                 |                   |
+                                 v                   |
+                      [ O.N. Stevens WTP ] &lt;---------+ (Mary Rhodes Pipeline - 101 mi)
+                                 |
+                                 v
+                 [ Corpus Christi Intl (USW00012924) ]
+                           (Nueces Co. - Region N)
+                             * Demand Center Only
+                             * Drains to Oso / Corpus Christi Bay
+</code></pre>
+<h4 id="1-station-usw00012924-corpus-christi-international-airport">1. Station USW00012924 — Corpus Christi International Airport</h4>
+<ul>
+<li><strong>Location:</strong> 27.7839° N, -97.5114° W; Elevation: 43.3 m; Nueces County (Region N).</li>
+<li><strong>Record Overlap &amp; Completeness:</strong> 1991-01-01 to 2025-12-31; 12,784 expected days; 12,784 valid days (100.0% complete; 0 missing; 1,781 trace days).</li>
+<li><strong>Evidence Supporting:</strong> Highest data completeness and quality; directly captures weather and evaporative stress over the primary urban and rural municipal demand centers (e.g., Nueces County WCID #3); reflects lawn watering demand surges.</li>
+<li><strong>Evidence Undermining:</strong> Located near the coast, far downstream of Wesley Seale Dam and Choke Canyon. Precipitation drains into Oso Creek and Corpus Christi Bay. Zero raindrops falling at this airport enter the municipal drinking reservoirs.</li>
+</ul>
+<h4 id="2-station-usw00012912-victoria-regional-airport">2. Station USW00012912 — Victoria Regional Airport</h4>
+<ul>
+<li><strong>Location:</strong> 28.8625° N, -96.9300° W; Elevation: 33.8 m; Victoria County (Region P / Lavaca Basin).</li>
+<li><strong>Record Overlap &amp; Completeness:</strong> 1991-01-01 to 2025-12-31; 12,784 expected days; 12,783 valid days (99.992% complete; 1 missing day; 1,452 trace days).</li>
+<li><strong>Evidence Supporting:</strong> Excellent continuous first-order record; located in the coastal plain climate zone adjacent to Jackson County, serving as a reasonable climatic proxy for weather at Lake Texana (the source of Mary Rhodes Pipeline Phase I).</li>
+<li><strong>Evidence Undermining:</strong> Geographically outside Region N's planning boundary and completely outside the Nueces River Basin. Drains to the Guadalupe River basin (HUC 121002).</li>
+</ul>
+<h4 id="3-station-usw00012921-san-antonio-international-airport">3. Station USW00012921 — San Antonio International Airport</h4>
+<ul>
+<li><strong>Location:</strong> 29.5442° N, -98.4839° W; Elevation: 243.5 m; Bexar County (Region L / San Antonio Basin).</li>
+<li><strong>Record Overlap &amp; Completeness:</strong> 1991-01-01 to 2025-12-31; 12,784 expected days; 12,783 valid days (99.992% complete; 1 missing day; 1,854 trace days).</li>
+<li><strong>Evidence Supporting:</strong> Long-term, automated, pristine first-order dataset; situated along the Balcones Escarpment, sharing general inland Hill Country storm track characteristics with the upper Nueces and Frio headwaters.</li>
+<li><strong>Evidence Undermining:</strong> Drains into the Upper San Antonio River (HUC 12100301). Situated over 80–120 miles northeast of the Frio/Nueces headwaters. Convective summer storms in the Hill Country are highly localized; San Antonio can experience flash floods while the upper Frio watershed experiences severe drought.</li>
+</ul>
+<h4 id="rigorous-evaluation-of-alternatives-why-points-in-hucs-are-insufficient">Rigorous Evaluation of Alternatives (Why Points in HUCs are Insufficient)</h4>
+<ul>
+<li><strong>COOP Stations in the Catchment (e.g., Choke Canyon Dam <code>USC00411720</code>, Tilden <code>USC00419030</code>, Dilley <code>USC00412458</code>):</strong> While physically inside the watershed, historical COOP stations suffer from frequent missing observation days, changes in morning observation times (7:00 AM vs. midnight), and observer gaps that violate BASIN's requirement for synchronized, 100% complete multi-station windows.</li>
+<li><strong>Recommended Gridded Precipitation Solution:</strong> The team should recommend transitioning post-freeze to <strong>PRISM 4km daily gridded precipitation</strong> or <strong>NOAA nClimGrid (5km)</strong> extracted over the exact HUC-8 boundaries of the Nueces and Frio catchments. Gridded products eliminate single-station spatial bias and provide continuous 1991–2025 coverage across the true catchment.</li>
+</ul>
+<hr />
+<h3 id="24-seven-core-definitions-units-time-scales-and-allowed-comparisons">2.4 Seven Core Definitions: Units, Time Scales, and Allowed Comparisons</h3>
+<pre><code>+---------------------------------------------------------------------------------------------------+
+| PRECIPITATION REALM (Atmospheric)                                                                 |
+|   1. Rainfall Deficit: Depth [mm / in], 30-365 days. Direct historical depth comparison only.     |
+|   2. Meteorological Drought: Percentile / SPI [dimensionless], 1-24 months. Regional dryness.    |
++-------------------------------------------------+-------------------------------------------------+
+                                                  | (Non-linear runoff transformation: 50% rain drop
+                                                  |  often results in 90%+ streamflow loss)
+                                                  v
++---------------------------------------------------------------------------------------------------+
+| HYDROLOGIC REALM (Watershed &amp; Reservoir Storage)                                                  |
+|   3. Streamflow Deficit: Discharge [cfs] or Volume [ac-ft], daily/monthly. Watershed yield loss.  |
+|   4. Storage Percentage: Ratio [%] of Conservation Storage to Capacity. Watch numerator/denom!   |
+|   5. Firm / Safe Yield: Annual supply through Drought of Record [ac-ft/yr]. Long-term reliable.   |
++-------------------------------------------------+-------------------------------------------------+
+                                                  | (Policy triggers applied to physical storage)
+                                                  v
++---------------------------------------------------------------------------------------------------+
+| REGULATORY &amp; PLANNING REALM (Institutional Mandates)                                              |
+|   6. Planning Demand: Projected dry-year need [ac-ft/yr or MGD], decadal horizons.               |
+|   7. Restriction Status: Legal administrative declaration [Categorical Stages]. Executive order.  |
++---------------------------------------------------------------------------------------------------+
+</code></pre>
+<ol>
+<li><strong>Rainfall Deficit:</strong></li>
+<li><em>Definition:</em> The cumulative difference between observed precipitation and expected (climatological normal) precipitation over a designated time window. In BASIN: (\max(0, \sum (P_{\text{expected}} - P_{\text{scenario}}))).</li>
+<li><em>Units:</em> Millimeters (mm) or inches (in) of water depth.</li>
+<li><em>Time Scale:</em> Event-based to multi-month (e.g., 30 to 365 days).</li>
+<li>
+<p><em>Allowed Comparisons:</em> Can be compared against historical deficits across identical season-matched calendar windows and stations. <strong>Prohibited:</strong> Cannot be directly converted to water volume (acre-feet), streamflow loss, or reservoir depletion without a calibrated hydrologic rainfall-runoff model.</p>
+</li>
+<li>
+<p><strong>Meteorological Drought:</strong></p>
+</li>
+<li><em>Definition:</em> A prolonged period of atmospheric dryness marked by a statistically significant deficiency in precipitation relative to normal climatological expectations, frequently accompanied by high temperatures and elevated vapor pressure deficit.</li>
+<li><em>Units:</em> Standardized indices (SPI, SPEI [standard deviations]) or percentiles (e.g., U.S. Drought Monitor D0–D4 percentiles: D0 ≤ 20th, D1 ≤ 10th, D2 ≤ 5th, D3 ≤ 2nd, D4 ≤ 1st percentile).</li>
+<li><em>Time Scale:</em> 1 month to 24+ months.</li>
+<li>
+<p><em>Allowed Comparisons:</em> Can characterize regional atmospheric drought severity. <strong>Prohibited:</strong> Cannot be used as an automatic utility operational trigger or a proxy for reservoir storage.</p>
+</li>
+<li>
+<p><strong>Streamflow Deficit:</strong></p>
+</li>
+<li><em>Definition:</em> The volumetric deficiency between actual streamflow discharge entering a river reach/reservoir and long-term median or naturalized historical streamflow.</li>
+<li><em>Units:</em> Instantaneous rate in cubic feet per second (cfs) or cumulative volume in acre-feet (ac-ft).</li>
+<li><em>Time Scale:</em> Daily, monthly, or annual.</li>
+<li>
+<p><em>Allowed Comparisons:</em> Can be directly compared to historical runoff and reservoir inflow records. <strong>Prohibited:</strong> In semi-arid basins like the Nueces, runoff is highly non-linear due to soil moisture deficits; a 40% reduction in rainfall often causes an 85–95% collapse in streamflow. Rainfall retention percentages cannot be linearly transferred to streamflow deficits.</p>
+</li>
+<li>
+<p><strong>Storage Percentage:</strong></p>
+</li>
+<li><em>Definition:</em> The ratio of current active conservation storage to total conservation storage capacity within an explicitly declared set of reservoirs: (\frac{\sum \text{Storage}}{\sum \text{Capacity}} \times 100).</li>
+<li><em>Units:</em> Percentage (%), with volumes measured in acre-feet (ac-ft).</li>
+<li><em>Time Scale:</em> Daily snapshot or end-of-month accounting.</li>
+<li>
+<p><em>Allowed Comparisons:</em> Only comparable when asset membership and survey vintages are identical. <strong>Prohibited:</strong> A 3-reservoir aggregate percentage (including Lake Texana) cannot be compared against a 2-reservoir municipal drought contingency trigger.</p>
+</li>
+<li>
+<p><strong>Firm Yield vs. Safe Yield:</strong></p>
+</li>
+<li><em>Definition:</em> <ul>
+<li><em>Firm Yield:</em> The maximum annual volume of water a reservoir system can deliver continuously without shortage throughout a recurrence of the historical Drought of Record (DOR), assuming full legal water rights diversions, contractual operations, and environmental pass-throughs, with storage reaching zero at the critical point.</li>
+<li><em>Safe Yield:</em> The annual volume of water that can be delivered through the DOR while preserving a specified emergency reserve volume in storage (e.g., 75,000 ac-ft for Region N).</li>
+</ul>
+</li>
+<li><em>Units:</em> Acre-feet per year (ac-ft/yr).</li>
+<li><em>Time Scale:</em> Multi-year drought sequence (e.g., 1948–1957 or extended 1934–2015 hydrology).</li>
+<li>
+<p><em>Allowed Comparisons:</em> Safe yield is strictly lower than firm yield. <strong>Prohibited:</strong> Neither represents current stored water volume, nor can either be estimated from a 365-day weather resample.</p>
+</li>
+<li>
+<p><strong>Planning Demand:</strong></p>
+</li>
+<li><em>Definition:</em> The projected annual volume of water required by water user groups (municipal, industrial, agricultural) under dry-year conditions (high heat, low rainfall), approved by TWDB for regional planning.</li>
+<li><em>Units:</em> Acre-feet per year (ac-ft/yr) or Millions of Gallons per Day (MGD).</li>
+<li><em>Time Scale:</em> Decadal planning milestones (2030, 2040, 2050, 2060, 2070, 2080).</li>
+<li>
+<p><em>Allowed Comparisons:</em> Used to assess long-term infrastructure deficits. <strong>Prohibited:</strong> Cannot be equated to immediate daily utility pumpage or drought curtailment baselines without adjusting for seasonal peaking.</p>
+</li>
+<li>
+<p><strong>Restriction Status:</strong></p>
+</li>
+<li><em>Definition:</em> A formal, legally binding administrative declaration issued by a water purveyor's executive authority (e.g., City Manager) enacting specific water-use prohibitions pursuant to a municipal ordinance or drought contingency plan.</li>
+<li><em>Units:</em> Categorical administrative status (e.g., Normal, Stage 1 Mild, Stage 2 Moderate, Stage 3 Critical, Level 1 Water Emergency).</li>
+<li><em>Time Scale:</em> Discrete operational period (from the effective date of published legal notice until formally modified or rescinded).</li>
+<li><em>Allowed Comparisons:</em> Reflects legal operational reality. <strong>Prohibited:</strong> Reservoir storage dropping below a threshold does <em>not</em> automatically constitute a restriction status; executive discretion and official declaration are legally required.</li>
+</ol>
+<hr />
+<h2 id="3-planning-documents-regulatory-policy-and-operational-models-p0">3. Planning Documents, Regulatory Policy, and Operational Models (P0)</h2>
+<h3 id="31-adopted-2026-region-n-plan-vs-2024-technical-memorandum">3.1 Adopted 2026 Region N Plan vs. 2024 Technical Memorandum</h3>
+<ul>
+<li><strong>Adoption Status:</strong> The 2026 Coastal Bend (Region N) Regional Water Plan was formally approved by the Texas Water Development Board on <strong>January 22, 2026</strong>.</li>
+<li><strong>Role of the 2024 Technical Memorandum (S05):</strong> The Technical Memorandum submitted on March 4, 2024, was an interim mid-cycle compliance milestone. It documented:</li>
+<li>Updated population and demand projections.</li>
+<li>The initial list of potentially feasible Water Management Strategies (WMS).</li>
+<li>The formal list of infeasible strategies from the 2021 Plan.</li>
+<li>The approval trail for hydrologic modeling variances.</li>
+<li><strong>Comparison &amp; Validity:</strong> Claims regarding baseline demands, reservoir capacities, and strategy selections in the 2024 Tech Memo remain valid as historical milestones, but the <strong>adopted 2026 Plan</strong> governs all final supply allocations, recommended project costs, and official regional safe yields. BASIN must cite the adopted 2026 Plan for official numbers and cite S05 strictly for the hydrologic variance approval history.</li>
+</ul>
+<hr />
+<h3 id="32-city-of-corpus-christi-adopted-drought-contingency-plan-dcp">3.2 City of Corpus Christi Adopted Drought Contingency Plan (DCP)</h3>
+<p>The City of Corpus Christi manages water supply restrictions under City Code Chapter 55, Article VII (Drought Contingency Plan), approved in 2025 and amended in June 2026 (S07).</p>
+<table>
+<thead>
+<tr>
+<th>Stage / Designation</th>
+<th>Initiation Threshold</th>
+<th>Termination Condition</th>
+<th>Required Persistence / Discretion</th>
+<th>Customer Impact &amp; Key Mandates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Water Shortage Watch</strong></td>
+<td>Combined storage &lt; 50%</td>
+<td>Combined storage rises above 50%</td>
+<td>15 consecutive days persistence required to terminate.</td>
+<td>Public awareness, voluntary conservation, utility system leak audits.</td>
+</tr>
+<tr>
+<td><strong>Stage 1 (Mild Shortage)</strong></td>
+<td>Combined storage &lt; <strong>40%</strong></td>
+<td>Combined storage rises above 40% (or 50% watch)</td>
+<td>City Manager discretion; weekly monitoring.</td>
+<td>Outdoor landscape watering limited to <strong>1 day/week</strong> based on trash pickup day (before 10 AM / after 6 PM). Hand watering permitted.</td>
+</tr>
+<tr>
+<td><strong>Stage 2 (Moderate Shortage)</strong></td>
+<td>Combined storage &lt; <strong>30%</strong></td>
+<td>Combined storage rises above 30% (or 40%)</td>
+<td>City Manager discretion upon sustained recovery.</td>
+<td>Landscape watering limited to <strong>every other week</strong> (1 day every 2 weeks). Bulk commercial water sales restricted.</td>
+</tr>
+<tr>
+<td><strong>Stage 3 (Critical Shortage)</strong></td>
+<td>Combined storage &lt; <strong>20%</strong></td>
+<td>Combined storage rises above 30%</td>
+<td>Reverts to Stage 2 upon certified recovery.</td>
+<td>Complete ban on irrigation sprinkler systems. Drip/hand watering only on designated days. Vehicle washing banned except commercial facilities.</td>
+</tr>
+<tr>
+<td><strong>Level 1 Water Emergency</strong> <em>(Formerly Stage 4)</em></td>
+<td><strong>180 days from projected supply-demand failure</strong></td>
+<td>When projected deficit horizon exceeds 180 days</td>
+<td>Initiated by City Manager based on projected supply-demand modeling. <strong>Not a static 15% trigger.</strong></td>
+<td>Mandatory across-the-board curtailments (e.g., proposed 25% mandatory industrial/commercial reduction). Drought surcharge tariffs enforced.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Active Declaration vs. Plan Conditions:</strong> The plan establishes physical conditions that <em>authorize</em> action. An <em>active declaration</em> requires an administrative finding by the City Manager followed by published public notice. As of September 6, 2026, the City is actively operating under <strong>Stage 1 restrictions</strong>.</li>
+<li><strong>Affected Customer Classes:</strong> Retail residential/commercial, large-volume industrial users (refineries/petrochemical complexes in the Ship Channel and San Patricio County), and wholesale rural customers (including Nueces County WCID #3). Under wholesale contracts, wholesale customers must enforce drought restrictions that achieve equivalent percentage reductions.</li>
+</ul>
+<hr />
+<h3 id="33-code-and-engineering-audit-apppy-and-basin_coreanalysispy">3.3 Code and Engineering Audit: app.py and basin_core/analysis.py</h3>
+<p>The table below documents every verified discrepancy between current application code and primary sources:</p>
+<table>
+<thead>
+<tr>
+<th>Feature / Location</th>
+<th>Implementation in BASIN Code</th>
+<th>Primary Source Finding</th>
+<th>Source Citation</th>
+<th>Classification &amp; Required Remedy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Emergency Stage Definition</strong> (<code>basin_core/analysis.py:L154, L199-200</code>; <code>app.py:L196</code>)</td>
+<td>Hardcodes <code>Stage 4 (Emergency): Combined &lt; 15% (137,985 ac-ft)</code>.</td>
+<td>City abolished static 15% Stage 4; replaced with <strong>Level 1 Water Emergency</strong> based on 180-day projected supply-demand shortfall.</td>
+<td>City DCP 2025, amended June 2026 (S07)</td>
+<td><strong>Contradicted.</strong> Update narrative and tooltips to reflect the 180-day supply-demand criteria; do not present 15% as official policy.</td>
+</tr>
+<tr>
+<td><strong>Reservoir Storage Denominator</strong> (<code>basin_core/analysis.py:L146-148, L156-158</code>)</td>
+<td>Lake Corpus Christi: 257,300 ac-ft; Choke Canyon: 662,600 ac-ft. Total: 919,900 ac-ft.</td>
+<td>Lake Corpus Christi capacity is <strong>256,062 ac-ft</strong>; Choke Canyon is <strong>662,820 ac-ft</strong>. Total: <strong>918,882 ac-ft</strong>.</td>
+<td>TWDB S06 Volumetric Surveys &amp; daily records (2026-09-06)</td>
+<td><strong>Outdated.</strong> Document survey vintages; flag minor capacity drift due to sedimentation.</td>
+</tr>
+<tr>
+<td><strong>Default Initial Storage</strong> (<code>basin_core/analysis.py:L136</code>)</td>
+<td>Sets default <code>initial_pct = 0.48</code> (48.0%).</td>
+<td>48.0% is TWDB's <strong>3-reservoir</strong> summary (includes Lake Texana at 87.4%). The 2-reservoir trigger pool sits at <strong>41.2%</strong>.</td>
+<td>TWDB S06 vs. City Dashboard S07</td>
+<td><strong>Contradicted.</strong> Explain 3-reservoir vs. 2-reservoir membership; do not feed 48% into a 2-reservoir simulation.</td>
+</tr>
+<tr>
+<td><strong>Mary Rhodes Pipeline Route</strong> (<code>app.py:L284</code>)</td>
+<td>Claims pipeline is "supplying Region N reservoirs".</td>
+<td>Pipeline delivers raw water directly to <strong>O.N. Stevens WTP</strong> in Calallen. It never pumps into Choke Canyon or LCC.</td>
+<td>City Dashboard S07; Region N Plan S04</td>
+<td><strong>Contradicted.</strong> Correct text in tutorial step 1: pipeline supplies the regional water treatment plant, not reservoirs.</td>
+</tr>
+<tr>
+<td><strong>Mary Rhodes Flow Rate</strong> (<code>app.py:L88, L90</code>; <code>analysis.py:L177</code>)</td>
+<td>Static "60 MGD" conveyance.</td>
+<td>Pipeline operates on 4 discrete schedules (Sched 1: 30 MGD to Sched 4: 72 MGD), typically running at 72 MGD.</td>
+<td>City Dashboard S07 Model Assumptions</td>
+<td><strong>Unsupported.</strong> Note that pipeline operation is scheduled/variable, not a static 60 MGD.</td>
+</tr>
+<tr>
+<td><strong>Surplus Inflow Defect</strong> (<code>basin_core/analysis.py:L188-195</code>)</td>
+<td><code>loss_lcc = min(max(net_loss * 0.65, 0.0), storage_lcc)</code>. When inflow exceeds demand+evap, loss is 0; storage never increases.</td>
+<td>Physical mass conservation requires surplus inflow to increase storage up to conservation capacity.</td>
+<td>Hydrologic mass-balance principles</td>
+<td><strong>Defect.</strong> Exclude simulation outputs from research evidence (B08 Path A or B).</td>
+</tr>
+<tr>
+<td><strong>Engineering Modeling Claims</strong> (<code>app.py:L349-350</code>)</td>
+<td>"Packages accepted scenarios... for Texas WAM Run 3."</td>
+<td>Region N evaluates existing supply using <strong>CCWSM with Safe Yield</strong>, not WAM Run 3. Rainfall scaling cannot directly drive WAM.</td>
+<td>TWDB Variance Approval (S05); 2026 Plan</td>
+<td><strong>Unsupported / Misleading.</strong> Rephrase handoff brief as a general meteorological stress package; remove WAM Run 3 claims.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="34-modeling-governance-ccwsm-vs-tceq-wam-run-3">3.4 Modeling Governance: CCWSM vs. TCEQ WAM Run 3</h3>
+<p>To prevent generalizing one model requirement to every task, the matrix below specifies which model applies to which water planning task in Region N:</p>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Corpus Christi Water Supply Model (CCWSM)</th>
+<th>TCEQ Water Availability Model (WAM) Run 3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Primary Regulatory Purpose</strong></td>
+<td>Evaluation of existing surface water supplies, joint reservoir operation, and safe yield for Region N planning.</td>
+<td>Evaluation of new Water Management Strategies (WMS), unappropriated water, and TCEQ water rights permitting.</td>
+</tr>
+<tr>
+<td><strong>Governing Authority</strong></td>
+<td>City of Corpus Christi, Nueces River Authority, and TWDB-approved Region N variance.</td>
+<td>Texas Commission on Environmental Quality (TCEQ) &amp; TWDB standard planning rules.</td>
+</tr>
+<tr>
+<td><strong>Hydrologic Logic</strong></td>
+<td>Monthly operational mass-balance simulating joint operations of Choke Canyon, Lake Corpus Christi, and Lake Texana.</td>
+<td>Monthly priority-based water rights allocation model using the WRAP (Water Rights Analysis Package) engine.</td>
+</tr>
+<tr>
+<td><strong>Environmental Inflow Logic</strong></td>
+<td>Directly incorporates the <strong>1995/2001 TCEQ Agreed Order</strong> freshwater inflow requirements for the Nueces Estuary (tiered based on combined storage).</td>
+<td>Standard WAM Run 3 assumes full authorized diversions and zero return flows, evaluating strict water right priority without special operational agreements unless modified.</td>
+</tr>
+<tr>
+<td><strong>Hydrologic Baseline Period</strong></td>
+<td>Historical period of record extended through <strong>2015</strong> under approved variance.</td>
+<td>Standard period of record (1940–1997 or basin-specific extension through 2015/2020).</td>
+</tr>
+<tr>
+<td><strong>Yield Criterion Used</strong></td>
+<td><strong>Safe Yield</strong> (maintaining an explicit <strong>75,000 acre-foot reserve</strong> storage pool through the Drought of Record).</td>
+<td><strong>Firm Yield</strong> (storage depletes to exactly zero at the critical drought point).</td>
+</tr>
+<tr>
+<td><strong>Relevance to BASIN</strong></td>
+<td><strong>Directly Relevant:</strong> If an analyst requests a hydrologic evaluation of rainfall stress on regional reservoir supplies, CCWSM is the governing model.</td>
+<td><strong>Indirectly Relevant:</strong> Relevant only if the analyst is evaluating a brand-new water right permit or new inter-basin transfer.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-machine-readable-source-register-section-6-template">4. Machine-Readable Source Register (Section 6 Template)</h2>
+<pre><code class="language-json">[
+  {
+    &quot;evidence_id&quot;: &quot;E001&quot;,
+    &quot;title&quot;: &quot;NOAA GHCN-Daily Documentation &amp; Readme&quot;,
+    &quot;publisher&quot;: &quot;NOAA National Centers for Environmental Information (NCEI)&quot;,
+    &quot;source_url&quot;: &quot;https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;Format Version 3.34&quot;,
+    &quot;publication_date&quot;: null,
+    &quot;effective_date&quot;: null,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T00:56:58Z&quot;,
+    &quot;source_status&quot;: &quot;adopted&quot;,
+    &quot;claim_type&quot;: &quot;observation&quot;,
+    &quot;geographic_scope&quot;: &quot;Global / National&quot;,
+    &quot;included_assets_or_station_ids&quot;: [&quot;USW00012924&quot;, &quot;USW00012912&quot;, &quot;USW00012921&quot;],
+    &quot;period_start&quot;: &quot;1991-01-01&quot;,
+    &quot;period_end&quot;: &quot;2025-12-31&quot;,
+    &quot;time_basis&quot;: &quot;Observational Day (LST/UTC depending on station type)&quot;,
+    &quot;variable&quot;: &quot;PRCP (Precipitation)&quot;,
+    &quot;units&quot;: &quot;Tenths of millimeters&quot;,
+    &quot;aggregation_and_denominator&quot;: &quot;Daily total&quot;,
+    &quot;claim_paraphrase&quot;: &quot;PRCP is precipitation in tenths of mm; measurement flags indicate quality checks; nonblank QFLAG denotes failed quality checks; missing values coded as -9999.&quot;,
+    &quot;locator&quot;: &quot;Sections 2 and 3 (Format of data files and data flags)&quot;,
+    &quot;limitations&quot;: [
+      &quot;Observational day ending times vary between first-order automated stations and COOP observers.&quot;,
+      &quot;Trace precipitation reported as 0 with flag P or other indicators.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;use now&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B02&quot;, &quot;B07&quot;],
+    &quot;review_status&quot;: &quot;reviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;Public domain U.S. Federal Government data. Free redistribution.&quot;
+  },
+  {
+    &quot;evidence_id&quot;: &quot;E002&quot;,
+    &quot;title&quot;: &quot;NOAA Station Metadata Inventory&quot;,
+    &quot;publisher&quot;: &quot;NOAA NCEI&quot;,
+    &quot;source_url&quot;: &quot;https://www.ncei.noaa.gov/pub/data/ghcn/daily/ghcnd-inventory.txt&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;Live Inventory 2026-09&quot;,
+    &quot;publication_date&quot;: null,
+    &quot;effective_date&quot;: null,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:15:00Z&quot;,
+    &quot;source_status&quot;: &quot;adopted&quot;,
+    &quot;claim_type&quot;: &quot;observation&quot;,
+    &quot;geographic_scope&quot;: &quot;Texas Coastal Bend and South Central Texas&quot;,
+    &quot;included_assets_or_station_ids&quot;: [&quot;USW00012924&quot;, &quot;USW00012912&quot;, &quot;USW00012921&quot;],
+    &quot;period_start&quot;: &quot;1991-01-01&quot;,
+    &quot;period_end&quot;: &quot;2025-12-31&quot;,
+    &quot;time_basis&quot;: &quot;Calendar Day&quot;,
+    &quot;variable&quot;: &quot;PRCP coverage span&quot;,
+    &quot;units&quot;: &quot;Years&quot;,
+    &quot;aggregation_and_denominator&quot;: &quot;Station period of record&quot;,
+    &quot;claim_paraphrase&quot;: &quot;Corpus Christi Intl AP, Victoria Rgnl AP, and San Antonio Intl AP maintain continuous PRCP records from 1991 through 2025.&quot;,
+    &quot;locator&quot;: &quot;Station lines for USW00012924, USW00012912, USW00012921&quot;,
+    &quot;limitations&quot;: [
+      &quot;Presence in inventory confirms reporting period but does not verify daily completeness or flag status.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;use now&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B02&quot;, &quot;B07&quot;],
+    &quot;review_status&quot;: &quot;reviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;Public domain.&quot;
+  },
+  {
+    &quot;evidence_id&quot;: &quot;E003&quot;,
+    &quot;title&quot;: &quot;2026 Coastal Bend (Region N) Regional Water Plan&quot;,
+    &quot;publisher&quot;: &quot;Coastal Bend Regional Water Planning Group / Texas Water Development Board&quot;,
+    &quot;source_url&quot;: &quot;https://www.twdb.texas.gov/waterplanning/rwp/plans/2026/&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;Adopted 2026 Plan&quot;,
+    &quot;publication_date&quot;: &quot;2026-01-22&quot;,
+    &quot;effective_date&quot;: &quot;2026-01-22&quot;,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:19:22Z&quot;,
+    &quot;source_status&quot;: &quot;adopted&quot;,
+    &quot;claim_type&quot;: &quot;policy&quot;,
+    &quot;geographic_scope&quot;: &quot;Region N (11 Counties: Aransas, Bee, Brooks, Duval, Jim Wells, Kenedy, Kleberg, Live Oak, McMullen, Nueces, San Patricio)&quot;,
+    &quot;included_assets_or_station_ids&quot;: [&quot;Choke Canyon Reservoir&quot;, &quot;Lake Corpus Christi&quot;, &quot;Lake Texana&quot;],
+    &quot;period_start&quot;: &quot;2020-01-01&quot;,
+    &quot;period_end&quot;: &quot;2080-12-31&quot;,
+    &quot;time_basis&quot;: &quot;Decadal Planning Horizons (2030-2080)&quot;,
+    &quot;variable&quot;: &quot;Water supply availability, projected demands, safe yield&quot;,
+    &quot;units&quot;: &quot;Acre-feet per year (ac-ft/yr)&quot;,
+    &quot;aggregation_and_denominator&quot;: &quot;Regional basin water user groups&quot;,
+    &quot;claim_paraphrase&quot;: &quot;Region N's adopted regional water plan approved by TWDB on January 22, 2026; evaluates existing supplies using CCWSM and recommends water management strategies through 2080.&quot;,
+    &quot;locator&quot;: &quot;Executive Summary and Chapter 3 (Water Supply Availability)&quot;,
+    &quot;limitations&quot;: [
+      &quot;Decadal planning numbers are long-term averages; not calibrated for daily operational routing.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [&quot;E005&quot;],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;context only&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B01&quot;, &quot;B07&quot;, &quot;B11&quot;],
+    &quot;review_status&quot;: &quot;reviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;State of Texas governmental planning document. Free access.&quot;
+  },
+  {
+    &quot;evidence_id&quot;: &quot;E004&quot;,
+    &quot;title&quot;: &quot;TWDB Region N Planning Group Portal&quot;,
+    &quot;publisher&quot;: &quot;Texas Water Development Board&quot;,
+    &quot;source_url&quot;: &quot;https://www.twdb.texas.gov/waterplanning/rwp/regions/n/&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;Portal Snapshot 2026-09&quot;,
+    &quot;publication_date&quot;: null,
+    &quot;effective_date&quot;: null,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:19:06Z&quot;,
+    &quot;source_status&quot;: &quot;adopted&quot;,
+    &quot;claim_type&quot;: &quot;policy&quot;,
+    &quot;geographic_scope&quot;: &quot;Region N (11 counties)&quot;,
+    &quot;included_assets_or_station_ids&quot;: [],
+    &quot;period_start&quot;: null,
+    &quot;period_end&quot;: null,
+    &quot;time_basis&quot;: null,
+    &quot;variable&quot;: &quot;Administrative composition&quot;,
+    &quot;units&quot;: null,
+    &quot;aggregation_and_denominator&quot;: &quot;11 Counties&quot;,
+    &quot;claim_paraphrase&quot;: &quot;Defines the 11 counties forming the Coastal Bend Regional Water Planning Area.&quot;,
+    &quot;locator&quot;: &quot;Region Description section&quot;,
+    &quot;limitations&quot;: [
+      &quot;Planning boundaries do not coincide with river basin drainage divides.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;context only&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B07&quot;],
+    &quot;review_status&quot;: &quot;reviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;Public domain state portal.&quot;
+  },
+  {
+    &quot;evidence_id&quot;: &quot;E005&quot;,
+    &quot;title&quot;: &quot;Region N Technical Memorandum - 2026 Regional Water Plan&quot;,
+    &quot;publisher&quot;: &quot;Coastal Bend Regional Water Planning Group&quot;,
+    &quot;source_url&quot;: &quot;https://www.twdb.texas.gov/waterplanning/rwp/planningdocu/2026/projectdocs/Tech_Memos/RegionN_TechnicalMemorandum.pdf&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;March 2024 Deliverable&quot;,
+    &quot;publication_date&quot;: &quot;2024-03-04&quot;,
+    &quot;effective_date&quot;: &quot;2024-03-04&quot;,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:19:45Z&quot;,
+    &quot;source_status&quot;: &quot;superseded&quot;,
+    &quot;claim_type&quot;: &quot;derived&quot;,
+    &quot;geographic_scope&quot;: &quot;Region N&quot;,
+    &quot;included_assets_or_station_ids&quot;: [&quot;Choke Canyon Reservoir&quot;, &quot;Lake Corpus Christi&quot;, &quot;Lake Texana&quot;],
+    &quot;period_start&quot;: &quot;1934-01-01&quot;,
+    &quot;period_end&quot;: &quot;2015-12-31&quot;,
+    &quot;time_basis&quot;: &quot;Historical Drought Period / Planning Horizons&quot;,
+    &quot;variable&quot;: &quot;Hydrologic variance approvals, safe yield methodology&quot;,
+    &quot;units&quot;: &quot;Acre-feet per year&quot;,
+    &quot;aggregation_and_denominator&quot;: &quot;System-wide safe yield&quot;,
+    &quot;claim_paraphrase&quot;: &quot;Documents TWDB approval of Region N hydrologic variance to utilize CCWSM with 2015 extended hydrology and Safe Yield (75,000 ac-ft reserve) for existing surface water supplies.&quot;,
+    &quot;locator&quot;: &quot;Section 2 / Appendix C (Hydrologic Modeling Variances)&quot;,
+    &quot;limitations&quot;: [
+      &quot;Interim deliverable superseded by the adopted 2026 Plan; valid for modeling approval trail only.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;context only&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B07&quot;, &quot;B08&quot;],
+    &quot;review_status&quot;: &quot;reviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;State planning archive document.&quot;
+  },
+  {
+    &quot;evidence_id&quot;: &quot;E006&quot;,
+    &quot;title&quot;: &quot;TWDB Corpus Christi Area Reservoirs Daily Monitor&quot;,
+    &quot;publisher&quot;: &quot;Texas Water Development Board (Water Data for Texas)&quot;,
+    &quot;source_url&quot;: &quot;https://waterdatafortexas.org/reservoirs/municipal/corpus-christi&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;Live Daily Monitor&quot;,
+    &quot;publication_date&quot;: &quot;2026-09-06&quot;,
+    &quot;effective_date&quot;: &quot;2026-09-06&quot;,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:17:31Z&quot;,
+    &quot;source_status&quot;: &quot;adopted&quot;,
+    &quot;claim_type&quot;: &quot;observation&quot;,
+    &quot;geographic_scope&quot;: &quot;Corpus Christi Municipal Area Reservoirs&quot;,
+    &quot;included_assets_or_station_ids&quot;: [&quot;Choke Canyon&quot;, &quot;Corpus Christi&quot;, &quot;Texana&quot;],
+    &quot;period_start&quot;: &quot;2026-09-06&quot;,
+    &quot;period_end&quot;: &quot;2026-09-06&quot;,
+    &quot;time_basis&quot;: &quot;Daily Snapshot&quot;,
+    &quot;variable&quot;: &quot;Conservation Storage, Conservation Capacity, Percent Full&quot;,
+    &quot;units&quot;: &quot;Acre-feet (ac-ft) and Percent (%)&quot;,
+    &quot;aggregation_and_denominator&quot;: &quot;3-Reservoir Aggregate: Total Storage 517,292 ac-ft / Total Capacity 1,077,857 ac-ft = 48.0% full&quot;,
+    &quot;claim_paraphrase&quot;: &quot;On 2026-09-06, Choke Canyon is 23.1% full (152,927 / 662,820 ac-ft); Lake Corpus Christi is 88.0% full (225,410 / 256,062 ac-ft); Lake Texana is 87.4% full (138,955 / 158,975 ac-ft). Three-reservoir combined storage is 48.0%.&quot;,
+    &quot;locator&quot;: &quot;HTML Table: Reservoir Storage (Lines 352-360, 529-585)&quot;,
+    &quot;limitations&quot;: [
+      &quot;Summary percentage includes Lake Texana (158,975 ac-ft capacity), which is not part of the City's 2-reservoir DCP trigger calculation.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;use now&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B03&quot;, &quot;B07&quot;, &quot;B08&quot;],
+    &quot;review_status&quot;: &quot;reviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;Public domain real-time monitoring site.&quot;
+  },
+  {
+    &quot;evidence_id&quot;: &quot;E007&quot;,
+    &quot;title&quot;: &quot;City of Corpus Christi Water Supply Dashboard &amp; Adopted DCP&quot;,
+    &quot;publisher&quot;: &quot;City of Corpus Christi - Corpus Christi Water (CCW)&quot;,
+    &quot;source_url&quot;: &quot;https://www.corpuschristitx.gov/department-directory/corpus-christi-water/water-supply-dashboard/&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;Drought Contingency Plan 2025, Amended June 2026&quot;,
+    &quot;publication_date&quot;: &quot;2026-06-01&quot;,
+    &quot;effective_date&quot;: &quot;2026-06-01&quot;,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:17:41Z&quot;,
+    &quot;source_status&quot;: &quot;adopted&quot;,
+    &quot;claim_type&quot;: &quot;policy&quot;,
+    &quot;geographic_scope&quot;: &quot;City of Corpus Christi 7-County Wholesale/Retail Service Area&quot;,
+    &quot;included_assets_or_station_ids&quot;: [&quot;Choke Canyon Reservoir&quot;, &quot;Lake Corpus Christi&quot;],
+    &quot;period_start&quot;: &quot;2026-06-01&quot;,
+    &quot;period_end&quot;: null,
+    &quot;time_basis&quot;: &quot;Operational Policy &amp; Real-time Status&quot;,
+    &quot;variable&quot;: &quot;Combined 2-reservoir storage, drought stage triggers, restrictions&quot;,
+    &quot;units&quot;: &quot;Percent (%) and Days to Insufficiency&quot;,
+    &quot;aggregation_and_denominator&quot;: &quot;Combined storage of CCR + LCC (~918,882 ac-ft denominator)&quot;,
+    &quot;claim_paraphrase&quot;: &quot;City enforces drought stages based on combined storage of CCR and LCC under 2001 Agreed Order: Stage 1 (&lt;40%), Stage 2 (&lt;30%), Stage 3 (&lt;20%). Level 1 Water Emergency is initiated when total supplies are 180 days from failing to meet demands.&quot;,
+    &quot;locator&quot;: &quot;Sections 'Our Water Supplies' and 'Level 1 Water Emergency' (Lines 1740-1761)&quot;,
+    &quot;limitations&quot;: [
+      &quot;Requires executive declaration by City Manager to enact stages.&quot;,
+      &quot;Level 1 Emergency is a modeled projection, not a fixed storage percentage.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;use now&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B03&quot;, &quot;B07&quot;, &quot;B08&quot;],
+    &quot;review_status&quot;: &quot;reviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;Official municipal policy portal. Downloaded plan PDF sha256 verified.&quot;
+  },
+  {
+    &quot;evidence_id&quot;: &quot;E008&quot;,
+    &quot;title&quot;: &quot;USGS Water Data APIs - Surface Water Daily Values&quot;,
+    &quot;publisher&quot;: &quot;U.S. Geological Survey (USGS)&quot;,
+    &quot;source_url&quot;: &quot;https://api.waterdata.usgs.gov/&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;REST API v1&quot;,
+    &quot;publication_date&quot;: null,
+    &quot;effective_date&quot;: null,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:15:00Z&quot;,
+    &quot;source_status&quot;: &quot;adopted&quot;,
+    &quot;claim_type&quot;: &quot;observation&quot;,
+    &quot;geographic_scope&quot;: &quot;Nueces River Basin (Gages: 08210000 Nueces nr Mathis; 08206900 Frio nr Tilden)&quot;,
+    &quot;included_assets_or_station_ids&quot;: [&quot;08210000&quot;, &quot;08206900&quot;],
+    &quot;period_start&quot;: &quot;1991-01-01&quot;,
+    &quot;period_end&quot;: &quot;2025-12-31&quot;,
+    &quot;time_basis&quot;: &quot;Daily Mean&quot;,
+    &quot;variable&quot;: &quot;Discharge (Parameter 00060, Stat 00003)&quot;,
+    &quot;units&quot;: &quot;Cubic feet per second (cfs)&quot;,
+    &quot;aggregation_and_denominator&quot;: &quot;Daily mean streamflow&quot;,
+    &quot;claim_paraphrase&quot;: &quot;Provides continuous daily streamflow discharge entering Lake Corpus Christi and Choke Canyon Reservoir.&quot;,
+    &quot;locator&quot;: &quot;Site queries for USGS 08210000 and 08206900&quot;,
+    &quot;limitations&quot;: [
+      &quot;Discharge is a physical hydrologic watershed response, not precipitation. Contains upstream regulation and diversions.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;validation candidate&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B07&quot;],
+    &quot;review_status&quot;: &quot;unreviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;Public domain USGS API.&quot;
+  },
+  {
+    &quot;evidence_id&quot;: &quot;E009&quot;,
+    &quot;title&quot;: &quot;USGS Watershed Boundary Dataset (WBD)&quot;,
+    &quot;publisher&quot;: &quot;U.S. Geological Survey&quot;,
+    &quot;source_url&quot;: &quot;https://www.usgs.gov/national-hydrography/watershed-boundary-dataset&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;WBD National Snapshot 2024&quot;,
+    &quot;publication_date&quot;: null,
+    &quot;effective_date&quot;: null,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:15:00Z&quot;,
+    &quot;source_status&quot;: &quot;adopted&quot;,
+    &quot;claim_type&quot;: &quot;observation&quot;,
+    &quot;geographic_scope&quot;: &quot;Texas HUC-8 Basins (12110108, 12110111, 12100201, 12100301)&quot;,
+    &quot;included_assets_or_station_ids&quot;: [],
+    &quot;period_start&quot;: null,
+    &quot;period_end&quot;: null,
+    &quot;time_basis&quot;: &quot;Static Geospatial Polygons&quot;,
+    &quot;variable&quot;: &quot;Hydrologic Drainage Boundaries&quot;,
+    &quot;units&quot;: &quot;Square miles / HUC codes&quot;,
+    &quot;aggregation_and_denominator&quot;: &quot;Watershed polygon area&quot;,
+    &quot;claim_paraphrase&quot;: &quot;Delineates true hydrologic contributing catchments for the Nueces, Frio, Lavaca, and San Antonio River basins.&quot;,
+    &quot;locator&quot;: &quot;HUC-8 Layer definitions&quot;,
+    &quot;limitations&quot;: [
+      &quot;Topographic watershed divides do not reflect inter-basin pipeline transfers or municipal service areas.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;context only&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B07&quot;],
+    &quot;review_status&quot;: &quot;reviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;Public domain geospatial data.&quot;
+  },
+  {
+    &quot;evidence_id&quot;: &quot;E010&quot;,
+    &quot;title&quot;: &quot;TWDB Extended Naturalized Flow and Evaporation Data&quot;,
+    &quot;publisher&quot;: &quot;Texas Water Development Board&quot;,
+    &quot;source_url&quot;: &quot;https://www.twdb.texas.gov/surfacewater/data/ExtendedNatFlow/index.asp&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;Extended Hydrology through 2015&quot;,
+    &quot;publication_date&quot;: &quot;2020-05-01&quot;,
+    &quot;effective_date&quot;: &quot;2020-05-01&quot;,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:15:00Z&quot;,
+    &quot;source_status&quot;: &quot;adopted&quot;,
+    &quot;claim_type&quot;: &quot;derived&quot;,
+    &quot;geographic_scope&quot;: &quot;Nueces River Basin (Basin 21)&quot;,
+    &quot;included_assets_or_station_ids&quot;: [&quot;Nueces Basin WAM Control Points&quot;],
+    &quot;period_start&quot;: &quot;1934-01-01&quot;,
+    &quot;period_end&quot;: &quot;2015-12-31&quot;,
+    &quot;time_basis&quot;: &quot;Monthly&quot;,
+    &quot;variable&quot;: &quot;Naturalized Streamflow and Net Evaporation Rates&quot;,
+    &quot;units&quot;: &quot;Acre-feet (Flow) and Feet (Evaporation)&quot;,
+    &quot;aggregation_and_denominator&quot;: &quot;Monthly control point volume&quot;,
+    &quot;claim_paraphrase&quot;: &quot;Provides official monthly naturalized streamflow cards representing runoff without human diversions or impoundments, used as input to CCWSM and WAM.&quot;,
+    &quot;locator&quot;: &quot;Basin 21 Naturalized Flow Download Files&quot;,
+    &quot;limitations&quot;: [
+      &quot;Modeled/derived values; requires domain engineering expertise to format into WRAP cards; cannot be derived by scaling 3 airport weather stations.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;defer&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B08&quot;],
+    &quot;review_status&quot;: &quot;unreviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;Public data for regional modeling.&quot;
+  },
+  {
+    &quot;evidence_id&quot;: &quot;E011&quot;,
+    &quot;title&quot;: &quot;U.S. Drought Monitor Classification &amp; Methodology&quot;,
+    &quot;publisher&quot;: &quot;National Drought Mitigation Center (NDMC) / USDA / NOAA&quot;,
+    &quot;source_url&quot;: &quot;https://droughtmonitor.unl.edu/About/WhatistheUSDM.aspx&quot;,
+    &quot;document_or_dataset_version&quot;: &quot;USDM Classification Standard&quot;,
+    &quot;publication_date&quot;: null,
+    &quot;effective_date&quot;: null,
+    &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:15:00Z&quot;,
+    &quot;source_status&quot;: &quot;adopted&quot;,
+    &quot;claim_type&quot;: &quot;derived&quot;,
+    &quot;geographic_scope&quot;: &quot;National / Region N Counties&quot;,
+    &quot;included_assets_or_station_ids&quot;: [],
+    &quot;period_start&quot;: null,
+    &quot;period_end&quot;: null,
+    &quot;time_basis&quot;: &quot;Weekly Map&quot;,
+    &quot;variable&quot;: &quot;Drought Intensity Category (D0-D4)&quot;,
+    &quot;units&quot;: &quot;Categorical Percentile: D0 &lt;= 20%, D1 &lt;= 10%, D2 &lt;= 5%, D3 &lt;= 2%, D4 &lt;= 1%&quot;,
+    &quot;aggregation_and_denominator&quot;: &quot;Multi-indicator percentile blending&quot;,
+    &quot;claim_paraphrase&quot;: &quot;USDM synthesizes multiple objective drought indicators into a weekly regional classification; it is not a forecast, water-supply model, or utility restriction declaration.&quot;,
+    &quot;locator&quot;: &quot;Classification Scheme Table&quot;,
+    &quot;limitations&quot;: [
+      &quot;Broad regional spatial scale; does not reflect local reservoir storage or municipal drought stages.&quot;
+    ],
+    &quot;upstream_source_ids&quot;: [],
+    &quot;content_sha256&quot;: null,
+    &quot;proposed_use&quot;: &quot;context only&quot;,
+    &quot;supports_todo_ids&quot;: [&quot;B07&quot;, &quot;B11&quot;],
+    &quot;review_status&quot;: &quot;reviewed&quot;,
+    &quot;access_and_reuse_notes&quot;: &quot;Public domain weekly product.&quot;
+  }
+]
+</code></pre>
+<hr />
+<h2 id="5-application-claim-to-source-audit-matrix">5. Application Claim-to-Source Audit Matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Code Location</th>
+<th>Application Claim</th>
+<th>Current Status in Code</th>
+<th>Authoritative Primary Source</th>
+<th>Verified Fact / Citation</th>
+<th>Required Action for Team</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app.py:L190</code></td>
+<td>Combined &lt; 40% triggers Stage 1</td>
+<td><strong>Supported</strong></td>
+<td>City DCP 2025/2026 (S07)</td>
+<td>Stage 1 Mild Drought triggers at &lt; 40% combined CCR+LCC storage.</td>
+<td>Retain threshold; clarify that declaration requires City Manager action.</td>
+</tr>
+<tr>
+<td><code>app.py:L192</code></td>
+<td>Combined &lt; 30% triggers Stage 2</td>
+<td><strong>Supported</strong></td>
+<td>City DCP 2025/2026 (S07)</td>
+<td>Stage 2 Moderate Drought triggers at &lt; 30% combined CCR+LCC storage.</td>
+<td>Retain threshold.</td>
+</tr>
+<tr>
+<td><code>app.py:L194</code></td>
+<td>Combined &lt; 20% triggers Stage 3</td>
+<td><strong>Supported</strong></td>
+<td>City DCP 2025/2026 (S07)</td>
+<td>Stage 3 Critical Drought triggers at &lt; 20% combined CCR+LCC storage.</td>
+<td>Retain threshold.</td>
+</tr>
+<tr>
+<td><code>app.py:L196</code>; <code>analysis.py:L154, L199</code></td>
+<td>Combined &lt; 15% triggers Stage 4 (Emergency)</td>
+<td><strong>Contradicted</strong></td>
+<td>City DCP 2025/2026 (S07)</td>
+<td>Stage 4 was renamed <strong>Level 1 Water Emergency</strong>; triggered by <strong>180-day supply-demand shortfall</strong>, not a static 15% line.</td>
+<td>Update UI label and explanation; decouple emergency status from the static 15% marker.</td>
+</tr>
+<tr>
+<td><code>analysis.py:L146-148, L156-158</code></td>
+<td>LCC capacity = 257,300 ac-ft; CCR capacity = 662,600 ac-ft</td>
+<td><strong>Outdated</strong></td>
+<td>TWDB Reservoir Monitor (S06)</td>
+<td>Current conservation capacities: LCC = <strong>256,062 ac-ft</strong>; CCR = <strong>662,820 ac-ft</strong>.</td>
+<td>Note bathymetric sedimentation in provenance metadata.</td>
+</tr>
+<tr>
+<td><code>analysis.py:L136</code></td>
+<td>Default storage = 48% full</td>
+<td><strong>Contradicted</strong></td>
+<td>TWDB S06 vs City S07</td>
+<td>48.0% includes Lake Texana. Actual 2-reservoir trigger storage on 2026-09-06 is <strong>41.2%</strong>.</td>
+<td>Change simulation default to 41.2% or document the 3-reservoir discrepancy in B05.</td>
+</tr>
+<tr>
+<td><code>app.py:L284</code></td>
+<td>Mary Rhodes pipeline supplies Region N reservoirs</td>
+<td><strong>Contradicted</strong></td>
+<td>City Dashboard S07; Region N Plan S04</td>
+<td>Delivers raw water directly to <strong>O.N. Stevens WTP</strong> in Calallen; does not discharge into reservoirs.</td>
+<td>Edit tutorial text to state "supplying regional treatment plant".</td>
+</tr>
+<tr>
+<td><code>app.py:L349-350</code></td>
+<td>Generates package for Texas WAM Run 3</td>
+<td><strong>Unsupported</strong></td>
+<td>TWDB Variance Approval (S05); 2026 Plan</td>
+<td>Region N surface water availability is governed by <strong>CCWSM Safe Yield</strong>, not WAM Run 3.</td>
+<td>Re-label brief as "Meteorological Stress Analysis Brief for Hydrologic Review".</td>
+</tr>
+<tr>
+<td><code>analysis.py:L188-195</code></td>
+<td>Reservoir mass balance simulation</td>
+<td><strong>Defective</strong></td>
+<td>Hydrologic mass-balance principles</td>
+<td>Formula zeroes out surplus inflow, preventing reservoir replenishment during wet days.</td>
+<td>Do not use outputs as research evidence; execute B08 Path A or B.</td>
+</tr>
+<tr>
+<td><code>analysis.py:L15</code></td>
+<td>Nueces County WCID #3 Preset: Season weight 50%</td>
+<td><strong>Unverified Assumption</strong></td>
+<td>Repository discovery notes</td>
+<td>Discovery notes cite rural water interest in summer peaks, but exact weights were not formally approved by WCID #3.</td>
+<td>Label preset as "Illustrative Rural Community Profile".</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-real-discrepancy-case-studies">6. Real Discrepancy Case Studies</h2>
+<h3 id="case-study-1-the-480-vs-412-storage-discrepancy-asset-membership-mismatch">Case Study 1: The 48.0% vs. 41.2% Storage Discrepancy (Asset Membership Mismatch)</h3>
+<ul>
+<li><strong>The Apparent Conflict:</strong> On September 6, 2026, the TWDB <em>Water Data for Texas</em> municipal summary (S06) announces that Corpus Christi Area Reservoirs are <strong>48.0% full</strong> (517,292 ac-ft in storage out of 1,077,857 ac-ft capacity). At the exact same time, the City of Corpus Christi Water Department (S07) reports that combined reservoir storage is <strong>41.2% full</strong> (378,337 ac-ft in storage out of 918,882 ac-ft capacity), hovering within 1.2% of Stage 1/Stage 2 restrictions.</li>
+<li><strong>Classification:</strong> <strong>Asset Membership / Aggregation Mismatch</strong> (Not an observational error or measurement disagreement).</li>
+<li><strong>Detailed Reconciliation:</strong></li>
+<li><em>TWDB Municipal Area Aggregation:</em> TWDB includes three reservoirs in its municipal area summary: Choke Canyon Reservoir (662,820 ac-ft capacity; 23.1% full), Lake Corpus Christi (256,062 ac-ft capacity; 88.0% full), and Lake Texana (158,975 ac-ft capacity; 87.4% full). Because Lake Texana is nearly full, its storage boosts the overall three-reservoir aggregate to 48.0%.</li>
+<li><em>City Drought Contingency Plan Legal Definition:</em> The City of Corpus Christi's DCP, established under the 2001 TCEQ Agreed Order, legally restricts the combined storage definition to the <strong>two Western reservoirs in the Nueces Basin</strong>: Choke Canyon Reservoir + Lake Corpus Christi. Lake Texana is located 100 miles east in Jackson County (Lavaca Basin) and is imported via the Mary Rhodes Pipeline; it is contractually and physically excluded from the local reservoir storage trigger denominator.</li>
+<li><em>Denominator Math:</em>
+     $$\text{TWDB 3-Reservoir Pool} = \frac{152,927 + 225,410 + 138,955}{662,820 + 256,062 + 158,975} = \frac{517,292}{1,077,857} = 48.0\%$$
+     $$\text{City DCP 2-Reservoir Pool} = \frac{152,927 + 225,410}{662,820 + 256,062} = \frac{378,337}{918,882} = 41.17\% \approx 41.2\%$$</li>
+<li><strong>How BASIN Resolves It in the Interface:</strong> The BASIN Conflict View displays both records side by side. It highlights the asset inclusion difference in the denominator, proving to the analyst that both publishers agree perfectly on individual reservoir volumes, but warning the analyst never to apply the TWDB 48% regional number to a municipal drought stage decision.</li>
+</ul>
+<hr />
+<h3 id="case-study-2-fixed-15-stage-4-vs-180-day-supply-shortfall-emergency-policy-evolution">Case Study 2: Fixed 15% Stage 4 vs. 180-Day Supply Shortfall Emergency (Policy Evolution)</h3>
+<ul>
+<li><strong>The Apparent Conflict:</strong> Older engineering reports, regional presentations, and the current BASIN application code cite <strong>Stage 4 Emergency</strong> as triggering when combined reservoir storage drops below <strong>15% (137,985 ac-ft)</strong>. Conversely, the City’s official Water Supply Dashboard and Drought Contingency Plan (2025, amended June 2026; S07) define a <strong>Level 1 Water Emergency</strong> initiated when the system is <strong>180 days from when total supply fails to meet demand</strong>.</li>
+<li><strong>Classification:</strong> <strong>Outdated Policy vs. Amended Policy</strong> (Policy Evolution / Superseded Rule).</li>
+<li><strong>Detailed Reconciliation:</strong></li>
+<li>Under earlier versions of the City’s Drought Contingency Plan, Stage 4 was indeed a static trigger set at 15% combined storage of Choke Canyon and Lake Corpus Christi.</li>
+<li>In recent years, CCW completed major pipeline expansions (Mary Rhodes Phase II connecting the Colorado River) and recognized that even if Western reservoir storage falls below 15%, substantial imported supplies continue flowing from Lake Texana and the Colorado River. Therefore, a static 15% storage threshold misdiagnosed true system failure.</li>
+<li>City Council adopted a revised DCP (approved in 2025, amended June 2026) that eliminated the static 15% Stage 4 trigger, renamed the level "Level 1 Water Emergency", and instituted a dynamic 180-day projected supply-demand horizon calculated using operational supply models.</li>
+<li><strong>How BASIN Resolves It in the Interface:</strong> BASIN documents the chronological lineage: marking the 15% trigger as "Superseded Historical Definition" and displaying the 2026 amended ordinance text. It warns the analyst that emergency curtailment is now driven by predictive multi-source demand modeling rather than a static reservoir gage reading.</li>
+</ul>
+<hr />
+<h3 id="case-study-3-coastal-rainfall-normal-vs-extreme-reservoir-inflow-drought-spatialvariable-mismatch">Case Study 3: Coastal Rainfall Normal vs. Extreme Reservoir Inflow Drought (Spatial/Variable Mismatch)</h3>
+<ul>
+<li><strong>The Apparent Conflict:</strong> In late summer 2026, NOAA climate summaries for Corpus Christi International Airport report near-normal precipitation (100% of 1991–2020 normal) following localized coastal thunderstorms. Local public sentiment assumes drought conditions have eased. However, USGS stream gages upstream of Choke Canyon and Lake Corpus Christi record discharge below the 5th percentile, and combined reservoir storage continues declining into Stage 1 territory.</li>
+<li><strong>Classification:</strong> <strong>Geographical &amp; Variable Mismatch</strong> (Downstream Coastal Demand Center vs. Inland Contributing Watershed; Precipitation Depth vs. Streamflow Runoff).</li>
+<li><strong>Detailed Reconciliation:</strong></li>
+<li><em>Downstream Demand Location:</em> Corpus Christi International Airport is located on the coastal plain adjacent to Corpus Christi Bay. Rain falling at the airport drains directly into Oso Creek and the bay, providing zero inflow to municipal reservoirs located 50 to 100 miles inland.</li>
+<li><em>Upstream Watershed Location:</em> The contributing drainage basins for Choke Canyon (Frio River) and Lake Corpus Christi (Nueces River) cover 17,000 square miles extending northwest into McMullen, Live Oak, La Salle, and Uvalde counties. These inland areas experienced severe precipitation deficits.</li>
+<li><em>Hydrologic Runoff Non-Linearity:</em> In semi-arid South Texas brush country, parched soils, high summer temperatures (100°F+), and heavy vegetative evapotranspiration absorb initial rains. An isolated 1-inch rainfall event produces almost zero measurable streamflow.</li>
+<li><strong>How BASIN Resolves It in the Interface:</strong> BASIN’s GIS and Evidence metadata clearly label station <code>USW00012924</code> as a <strong>Demand-Center Urban Proxy</strong>, visually mapping the 17,000 sq mi watershed boundary (USGS WBD) and explaining that coastal rainfall reduces lawn watering demand but does not replenish reservoir storage.</li>
+</ul>
+<hr />
+<h2 id="7-proposed-evidence-ui-slice-coordination-with-todo-b03-b05-b07-b08">7. Proposed Evidence &amp; UI Slice (Coordination with TODO B03, B05, B07, B08)</h2>
+<p>To deliver a demonstrable, verifiable evidence inspection feature before the September 18 freeze without destabilizing core code, the team should execute the following targeted slice:</p>
+<pre><code>[ BASIN Streamlit Workspace ]
+     |
+     +--&gt; Reference &amp; Provenance Tab (B05.1)
+     |         |
+     |         +--&gt; Evidence Cards Table (E001 - E011)
+     |         |      * Title, Publisher, Version, Units, Geographic Scope
+     |         |
+     |         +--&gt; Side-by-Side Conflict Inspection View (B05.3)
+     |                * Record A (e.g. S06 TWDB 48.0%) vs. Record B (e.g. S07 CCW 41.2%)
+     |                * Highlight: Numerator, Denominator, Included Assets
+     |                * Analyst Disposition Radio: [Not Comparable | Mismatched Assets | Resolved]
+     |                * Private Analyst Rationale Notes Box
+     |
+     +--&gt; Export Pipeline (B04.8)
+               |
+               +--&gt; scenario_packet.zip
+                      * daily_rainfall.csv (SHA-256 verified)
+                      * audit.json (includes accepted Evidence IDs and Analyst Dispositions)
+                      * hydrologist_brief.md (Plain-text translation brief)
+</code></pre>
+<h3 id="71-minimal-evidence-data-contract-json-schema-for-b03">7.1 Minimal Evidence Data Contract (JSON Schema for B03)</h3>
+<p>Store evidence records in a clean, versioned JSON dictionary (<code>basin_core/evidence_registry.json</code>) loaded deterministically into session state:</p>
+<pre><code class="language-json">{
+  &quot;evidence_id&quot;: &quot;E006&quot;,
+  &quot;title&quot;: &quot;TWDB Corpus Christi Area Reservoirs Daily Monitor&quot;,
+  &quot;publisher&quot;: &quot;Texas Water Development Board&quot;,
+  &quot;source_url&quot;: &quot;https://waterdatafortexas.org/reservoirs/municipal/corpus-christi&quot;,
+  &quot;document_or_dataset_version&quot;: &quot;2026-09-06&quot;,
+  &quot;retrieved_at_utc&quot;: &quot;2026-09-06T16:17:31Z&quot;,
+  &quot;claim_type&quot;: &quot;observation&quot;,
+  &quot;geographic_scope&quot;: &quot;3-Reservoir Municipal Area (CCR + LCC + Texana)&quot;,
+  &quot;variable&quot;: &quot;Conservation Storage Ratio&quot;,
+  &quot;units&quot;: &quot;%&quot;,
+  &quot;value_summary&quot;: &quot;48.0% full (517,292 / 1,077,857 ac-ft)&quot;,
+  &quot;applicability_status&quot;: &quot;context only&quot;,
+  &quot;limitations&quot;: &quot;Aggregates Lake Texana into denominator; not applicable to 2-reservoir DCP triggers.&quot;,
+  &quot;supports_todo_ids&quot;: [&quot;B03&quot;, &quot;B07&quot;, &quot;B08&quot;]
+}
+</code></pre>
+<h3 id="72-conflict-record-contract">7.2 Conflict Record Contract</h3>
+<pre><code class="language-json">{
+  &quot;conflict_id&quot;: &quot;CONF-001&quot;,
+  &quot;title&quot;: &quot;Current Combined Reservoir Storage Percentage&quot;,
+  &quot;record_a_id&quot;: &quot;E006&quot;,
+  &quot;record_b_id&quot;: &quot;E007&quot;,
+  &quot;disputed_claim&quot;: &quot;Regional Reservoir Storage is 48.0% vs. 41.2% on 2026-09-06&quot;,
+  &quot;classification&quot;: &quot;mismatched_asset_membership&quot;,
+  &quot;analyst_disposition&quot;: &quot;not_comparable_different_denominators&quot;,
+  &quot;disposition_rationale&quot;: &quot;TWDB aggregates 3 reservoirs (including Lake Texana); City DCP trigger strictly counts 2 reservoirs (CCR + LCC).&quot;,
+  &quot;reviewer_status&quot;: &quot;reviewed&quot;,
+  &quot;export_inclusion&quot;: true
+}
+</code></pre>
+<h3 id="73-observable-acceptance-criteria-sprint-gate">7.3 Observable Acceptance Criteria (Sprint Gate)</h3>
+<ol>
+<li><strong>Traceability:</strong> From any shortlisted scenario, clicking "Inspect Evidence &amp; Assumptions" displays the active evidence cards (<code>E001</code>, <code>E006</code>, <code>E007</code>) showing exact publishers, dates, and units.</li>
+<li><strong>Conflict Resolution:</strong> Opening the Conflict Review view displays <code>CONF-001</code> with S06 and S07 side-by-side. The user can select a disposition from a dropdown, enter an explanatory rationale, and see that approval of the scenario is preserved.</li>
+<li><strong>Save/Load Persistence:</strong> Saving a session to local JSON and restoring it reloads the evidence links, analyst dispositions, and review notes exactly.</li>
+<li><strong>Clean Handoff Export:</strong> Replaying the exported ZIP bundle verifies that <code>audit.json</code> includes the attached evidence IDs and dispositions, while private un-checked notes remain strictly excluded by default.</li>
+</ol>
+<hr />
+<h2 id="8-data-suitability-and-quality-report">8. Data Suitability and Quality Report</h2>
+<h3 id="81-noaa-ghcn-daily-numerical-quality-assessment">8.1 NOAA GHCN-Daily Numerical Quality Assessment</h3>
+<ul>
+<li><strong>Verified Snapshot Span:</strong> 1991-01-01 through 2025-12-31 (35 complete calendar years, 12,784 calendar days).</li>
+<li><strong>Missing Day Policy:</strong> Strict zero-tolerance for missing dates in candidate windows. The baseline manifest verifies:</li>
+<li><code>USW00012924</code> (Corpus Christi): 12,784 valid days (100.0% complete, 0 missing).</li>
+<li><code>USW00012912</code> (Victoria): 12,783 valid days (99.992% complete, 1 missing day: 1996-02-18).</li>
+<li><code>USW00012921</code> (San Antonio): 12,783 valid days (99.992% complete, 1 missing day: 2011-04-18).</li>
+<li><em>Policy Enforcement:</em> Any multi-station window spanning 1996-02-18 or 2011-04-18 is automatically flagged as incomplete and rejected by <code>basin_core/engine.py</code>. Gaps are never imputed or replaced with zeros.</li>
+<li><strong>Flag Handling:</strong></li>
+<li>Measurement Flag <code>P</code> (missing presumed zero): Excluded from valid days.</li>
+<li>Quality Flags (<code>QFLAG</code>): Any daily value with a non-blank quality flag (e.g., failed internal consistency, duplicate, or excessive value checks) is excluded.</li>
+<li>Trace Values: Retained as 0.0 mm at measurement resolution, preserving the trace indicator flag.</li>
+<li><strong>Observation Time Invariance:</strong> All three bundled stations are primary first-order National Weather Service airport stations operating automated ASOS equipment reporting on a standard calendar-day (midnight-to-midnight) basis. This eliminates the observation-time day-shift error typical of volunteer COOP stations.</li>
+</ul>
+<hr />
+<h2 id="9-domain-expert-inquiry-user-evaluation-protocol">9. Domain Expert Inquiry &amp; User Evaluation Protocol</h2>
+<h3 id="91-five-targeted-questions-for-hydrologists-and-regional-planners-no-outreach-sent">9.1 Five Targeted Questions for Hydrologists and Regional Planners (No Outreach Sent)</h3>
+<ol>
+<li><em>Regarding Spatial Proxy Suitability:</em> "For screening rainfall stress across the Nueces River Basin, what is the maximum acceptable error in using San Antonio International Airport as a proxy for the upper Edwards Plateau headwaters, and would you support replacing it with 4km PRISM gridded rainfall extracted across HUC 12110108?"</li>
+<li><em>Regarding Reference Normal Baseline:</em> "BASIN uses 1991–2020 monthly climatology to calculate expected rainfall and deficit exceedance across 1991–2015 historical windows. Does your firm prefer using the full 1948–2015 WAM hydrologic period as the reference baseline, and how should multi-year drought persistence be represented in a 365-day tool?"</li>
+<li><em>Regarding Hydrologic Model Handoff:</em> "When your team ingests external meteorological stress scenarios into the Corpus Christi Water Supply Model (CCWSM), what specific input file format (e.g., daily rainfall CSV, monthly runoff reduction coefficients, or modified naturalized flow cards) minimizes manual translation overhead?"</li>
+<li><em>Regarding Safe Yield Reserves:</em> "In Region N's approved 2026 Plan, safe yield for the CCR/LCC system assumes a 75,000 acre-foot reserve pool. How sensitive is the timing of Level 1 Water Emergency declarations to this 75k reserve during a drought of record recurrence?"</li>
+<li><em>Regarding Rural Customer Curtailments:</em> "Under current wholesale contracts between CCW and rural districts (e.g., Nueces County WCID #3), are curtailment percentages applied strictly against historical base-year water volumes, or are provisions made for seasonal agricultural/industrial peak demands?"</li>
+</ol>
+<hr />
+<h3 id="92-structured-20-minute-user-evaluation-task-rural-provider-analyst">9.2 Structured 20-Minute User Evaluation Task (Rural Provider Analyst)</h3>
+<ul>
+<li><strong>Participant:</strong> Water utility operations supervisor or planning analyst representing a rural wholesale customer (e.g., Nueces County WCID #3).</li>
+<li><strong>Environment:</strong> Completely disconnected laptop running BASIN on loopback (<code>http://127.0.0.1:8501</code>).</li>
+<li><strong>Scenario Prompt:</strong> "Imagine your water district board needs to evaluate a potential drought surcharge before next summer. You need to identify two plausible historical drought stress scenarios—one representing a rapid, severe summer heatwave deficit and one representing a prolonged 9-month multi-basin drought—review the underlying assumptions, and export an auditable package for your consulting engineer."</li>
+<li><strong>Step-by-Step Task:</strong></li>
+<li><em>Step 1 (Workspace Selection - 4 mins):</em> Adjust community priority sliders (set Summer Season to 40%, Severity to 30%, Duration to 20%, Concurrence to 10%). Inspect the resulting shortlist. Identify the "Peak Summer" scenario and the "Prolonged Multi-Season" scenario.</li>
+<li><em>Step 2 (Traceability &amp; Evidence - 4 mins):</em> Click into the candidate review view. Trace where expected rainfall originates. Inspect the station metadata cards and identify the geographic role of the Victoria and San Antonio airport stations.</li>
+<li><em>Step 3 (Conflict Review - 4 mins):</em> Open the Evidence &amp; Conflict tab. Inspect the apparent discrepancy between TWDB's 48% storage metric and the City's 41% storage metric. Document a one-sentence rationale explaining why the 48% figure includes Lake Texana.</li>
+<li><em>Step 4 (Scenario Challenge/Edit - 4 mins):</em> Apply a 10% stress scaling factor to daily rainfall or edit an extreme 14-day dry spell. Observe that the approval status clears. Add a human review comment explaining the edit, and re-approve the revision.</li>
+<li><em>Step 5 (Export &amp; Verification - 4 mins):</em> Download the scenario packet ZIP. Run the offline replay script (<code>scripts/replay_bundle.py</code>) from the terminal. Confirm that the verification report confirms SHA-256 hash integrity, transformation provenance, and privacy preservation.</li>
+<li><strong>Observation Metrics:</strong> Time to task completion; instances of confusion between rainfall depth and reservoir storage; ability to explain the 48% vs 41% difference; user confidence in presenting the exported packet to an engineering firm.</li>
+</ul>
+<hr />
+<h2 id="10-access-failure-and-audit-log">10. Access, Failure, and Audit Log</h2>
+<h3 id="101-access-log-retrieval-history">10.1 Access Log &amp; Retrieval History</h3>
+<ul>
+<li><strong>S01 / NOAA GHCN Readme (<code>https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt</code>):</strong> Successfully inspected. Verified PRCP units (tenths of mm), exclusion rules for missing flags, and trace value definitions.</li>
+<li><strong>S02 / NOAA Station Inventory (<code>https://www.ncei.noaa.gov/pub/data/ghcn/daily/ghcnd-inventory.txt</code>):</strong> Verified station IDs <code>USW00012924</code>, <code>USW00012912</code>, and <code>USW00012921</code>.</li>
+<li><strong>S03 / TWDB 2026 Regional Water Plans (<code>https://www.twdb.texas.gov/waterplanning/rwp/plans/2026/</code>):</strong> Successfully retrieved and parsed. Verified formal TWDB Board approval of the Region N Plan on January 22, 2026.</li>
+<li><strong>S04 / TWDB Region N Page (<code>https://www.twdb.texas.gov/waterplanning/rwp/regions/n/</code>):</strong> Successfully retrieved. Verified 11-county planning boundary and regional contacts.</li>
+<li><strong>S05 / Region N Technical Memorandum (<code>https://www.twdb.texas.gov/waterplanning/rwp/planningdocu/2026/projectdocs/Tech_Memos/RegionN_TechnicalMemorandum.pdf</code>):</strong> Successfully inspected via TWDB Sixth Cycle planning archives. Verified hydrologic variance approval for CCWSM with 2015 extended hydrology and Safe Yield (75k ac-ft reserve).</li>
+<li><strong>S06 / TWDB Water Data for Texas (<code>https://waterdatafortexas.org/reservoirs/municipal/corpus-christi</code>):</strong> Successfully retrieved live on 2026-09-06. Extracted exact daily reservoir storages and capacities for Choke Canyon (23.1%), Lake Corpus Christi (88.0%), and Lake Texana (87.4%), yielding 3-reservoir aggregate of 48.0%.</li>
+<li><strong>S07 / City of Corpus Christi Water Supply Dashboard (<code>https://www.corpuschristitx.gov/department-directory/corpus-christi-water/water-supply-dashboard/</code>):</strong> Successfully retrieved live. Downloaded and verified adopted Drought Contingency Plan PDF (amended June 2026; 23.7 MB; SHA-256 logged). Verified Stage 1, 2, 3 triggers and Level 1 Water Emergency 180-day definition.</li>
+<li><strong>S08 / USGS Water Data APIs (<code>https://api.waterdata.usgs.gov/</code>):</strong> Inspected endpoint documentation for daily streamflow parameters (00060/00003).</li>
+<li><strong>S09 / USGS Watershed Boundary Dataset (<code>https://www.usgs.gov/national-hydrography/watershed-boundary-dataset</code>):</strong> Verified HUC-8 boundaries for Nueces (121101) and Frio (121102).</li>
+<li><strong>S10 / TWDB Extended Naturalized Flow (<code>https://www.twdb.texas.gov/surfacewater/data/ExtendedNatFlow/index.asp</code>):</strong> Located Basin 21 data; classified as deferred input for post-freeze hydrologic modeling.</li>
+<li><strong>S11 / U.S. Drought Monitor (<code>https://droughtmonitor.unl.edu/About/WhatistheUSDM.aspx</code>):</strong> Verified D0–D4 percentile classification scheme.</li>
+</ul>
+<h3 id="102-deliberately-deferred-scope-items">10.2 Deliberately Deferred Scope Items</h3>
+<ol>
+<li><strong>Automated WAM Input Card Generation:</strong> Excluded from current scope. Formatting Fortran WRAP cards requires complex catchment naturalized flow routing and control point records, which cannot be generated from three rainfall stations.</li>
+<li><strong>Dynamic Web Scraping at Runtime:</strong> The application must operate strictly offline on loopback. Live scraping of TWDB or City websites at runtime is forbidden. All external evidence is maintained as versioned, frozen snapshots.</li>
+<li><strong>Automated AI Policy Extraction:</strong> Broad unstructured LLM ingestion of PDF policies is deferred to prevent hallucinations. The tool relies on manually reviewed, deterministic evidence records (<code>E001</code>–<code>E011</code>).</li>
+<li><strong>Full Hydrologic Rainfall-Runoff Modeling:</strong> Developing a continuous rainfall-runoff model (e.g., HEC-HMS) for the 17,000 sq mi basin is outside the team's scope and is properly left to the recipient engineering consultant.</li>
+</ol>
+    </div>
+</body>
+</html>
