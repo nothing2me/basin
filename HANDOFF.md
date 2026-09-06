@@ -4,30 +4,26 @@ Updated: 2026-09-06
 
 ## Current state
 
-BASIN is cloned from https://github.com/nothing2me/basin.git at ebd8d59 on main. The latest fetch completed successfully; compare output is recorded below. The shared TODO.md now divides outstanding work into 12 workstreams with subtask IDs, proposed ownership lanes, dependencies, acceptance criteria, a first parallel session, and a final demo gate. Real owners/reviewers remain unclaimed. New evidence features and reservoir scope remain proposals for team confirmation, not approved architecture changes.
-
-The existing core generates, groups, ranks, reviews and exports rainfall scenarios from a verified NOAA snapshot. Local JSON/JSONL stores sessions and audit snapshots. The main unresolved product mismatch is rainfall-only documented scope versus reservoir/engineering claims in the implementation. Evidence conflict review is not yet implemented. Prior review reproduced a surplus-inflow conservation defect in the reservoir function.
+The additional pasted research transcript has a corrected replacement at research/corrected_supplement.md. It covers every major section, removes unsupported specifics, corrects policy/definitions/station identities, supplies actual source URLs, rechecks the current code audit and distinguishes proposed features from implementation. Existing original artifacts remain unchanged for traceability.
 
 ## Files changed
 
-- TODO.md: added the shared team task board requested by the user.
-- HANDOFF.md: replaced onboarding state with the current planning checkpoint.
-- No application source, dependencies, tests or data changed. The user authorized committing and pushing these two planning documents to Basin.
+- research/corrected_supplement.md: corrected handoff, source directory, acceptance criteria and bounded outstanding verification.
+- research/README.md and research/review_findings.md: link the replacement and explain precedence.
+- research/research_agent_brief.md: update stale supplied-policy access status.
+- HANDOFF.md: current state and next action.
 
 ## Verification
 
-- git fetch origin completed successfully before planning.
-- Reviewed current git status, handoff and validation notes; used the previously reviewed implementation and supplied design/build-plan/audit/event documents.
-- Documentation validation passed: 12 workstreams, 97 unique subtasks, all workstream references and board entries resolved, no trailing whitespace. git diff --check passed; the pre-commit fetch confirmed HEAD was 0 ahead / 0 behind origin/main. This documentation change contains only TODO.md and HANDOFF.md.
-- Full pytest, offline rehearsal and GUI remain unrun in this clone; B02 owns establishing the executable baseline. Prior documented test counts are not newly verified results.
-- The earlier Windows CSV checksum issue is corrected in this clone only; B02.5 assigns the portable fresh-checkout fix. No committed CSV content was changed.
+- Read the complete additional transcript and compared its claims with reviewed policy, source assessments and current analysis.py/app.py.
+- Reopened official USDM classification, City dashboard and WBD references; no new active restriction declaration asserted.
+- Checked local links, UTF-8, existing artifact hashes, source ID mapping and authored diff whitespace.
+- Documentation-only update; no application tests run. Reservoir, model-language and export-feature work remains open in TODO.md.
 
 ## Blockers
 
-- Team must confirm scope, claim owner/reviewer names, choose the first P1 feature, and resolve the reservoir path in B01/B08.
-- Actual submitted Stage 1 answers and any newer organizer instructions remain to be located/confirmed.
-- The target demo environment and practitioner validation still require evidence; the board does not assume they are complete.
+Adopted-plan chapter review, gauge/catchment suitability, current policy applicability and the Appendix C release inconsistency remain external research gates for corresponding scientific claims. They do not block evidence UI scaffolding with explicit unknowns or baseline testing.
 
 ## Next action
 
-Team completes B01's short scope/ownership discussion. In parallel, lane A reviews assumptions/geography (B07) and drafts the evidence contract (B03); lane B establishes a reproducible test baseline (B02); lane C prepares the analyst exercise (B09) and claim inventory (B11). Coordinate shared app.py and audit-schema edits before implementation. Keep task status in TODO.md and only current state here.
+Assign the four work lists in research/review_findings.md and implement one reproducible evidence packet. Use corrected_supplement.md acceptance criteria for evidence review and private-text export handling.

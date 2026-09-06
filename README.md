@@ -54,3 +54,8 @@ The rehearsal blocks Python network connections and exercises scaling, replaceme
 Core modules live in `basin_core/`; `app.py` and `basin_ui.py` contain the interface. See [methodology](docs/methodology.md), [verification scope](docs/verification_scope.md), [build evidence](docs/build_validation.md), [practitioner exercise](docs/validation_notes.md), [demo runbook](docs/demo_runbook.md), and [shared task board](TODO.md).
 
 The actual presentation laptop, practitioner usefulness, catchment suitability and final team acceptance remain separate release gates.
+
+## Data research
+
+See the [research library](research/README.md) for source packets, policy evidence, reviewed corrections and research assignments. Read its review before using imported AI claims.
+

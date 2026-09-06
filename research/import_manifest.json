@@ -1,0 +1,41 @@
+{
+  "review_date": "2026-09-06",
+  "files": [
+    {
+      "path": "incoming/BASIN_Research_Packet.md",
+      "supplied_name": "BASIN_Research_Packet.md",
+      "bytes": 71040,
+      "sha256": "e0c465699918bda131cf8f80bc8fa1f15ddb424dc35b1e5deb28d3dc883c46cc",
+      "provenance": "User-supplied research handoff; original bytes preserved",
+      "review_status": "See review_findings.md; not approved for runtime ingestion"
+    },
+    {
+      "path": "incoming/BASIN_Research_Packet.html",
+      "supplied_name": "BASIN_Research_Packet.html",
+      "bytes": 90862,
+      "sha256": "1f7178164dee0666428eef7c7b3ee02a381a1c9d5e29921cce4c75bc5e5b7921",
+      "provenance": "User-supplied research handoff; original bytes preserved",
+      "review_status": "See review_findings.md; not approved for runtime ingestion"
+    },
+    {
+      "path": "incoming/source_register.json",
+      "supplied_name": "source_register.json",
+      "bytes": 17543,
+      "sha256": "6509d9344b4ad70c6cc6de846502665a0cc7cc3b416b9e3fbd6dc35bee874d7d",
+      "provenance": "User-supplied research handoff; original bytes preserved",
+      "review_status": "See review_findings.md; not approved for runtime ingestion"
+    },
+    {
+      "path": "sources/wat-drought-contingency-plan.pdf",
+      "supplied_name": "wat-drought-contingency-plan.pdf",
+      "bytes": 23743646,
+      "sha256": "898f9535f8b514adfa5e3bffb1b92c2ecb138282519f810c560c0f8d0443ee16",
+      "provenance": "User-supplied research handoff; original bytes preserved",
+      "review_status": "See review_findings.md; not approved for runtime ingestion"
+    }
+  ],
+  "omitted_duplicates": [
+    "Javascript example contains byte-identical packet HTML, Markdown and JSON plus dummy.txt",
+    "basin_repo contains no new application implementation compared with this checkout; HANDOFF.md differs"
+  ]
+}
