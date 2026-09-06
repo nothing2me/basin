@@ -5,7 +5,7 @@
 **Date:** September 22, 2026  
 **Institution:** Texas A&M University-Corpus Christi  
 **Project:** BASIN (*Basin Analysis and Scenario Intelligence Navigator*)  
-**Format:** 60-Minute Total Block (45-Minute Pitch + Live Demo + Physical Prop, 12-Minute Jury Defense/Q&A, 3-Minute Buffer/Wrap)
+**Format:** 60-Minute Total Block (45-Minute Pitch + Live Demo + Simulation Video, 12-Minute Jury Defense/Q&A, 3-Minute Buffer/Wrap)
 
 ---
 
@@ -17,7 +17,7 @@
 | **Speaker 1: Team Lead / Policy** | `[Member Name 1]` | Opening hook, Texas Region N problem framing, community stakes, § 1001 engineering ethics, wrap-up. |
 | **Speaker 2: Lead Hydrologist** | `[Member Name 2]` | Meteorological baseline, NOAA station proxies, Mary Rhodes pipeline, reservoir mass balance, climate warming pan evaporation. |
 | **Speaker 3: Systems & ML Engineer** | `[Member Name 3]` | Live software pilot in `BASIN.exe`, K-Means clustering, AI data center cooling stressor, verified WAM export. |
-| **Speaker 4: Physical Simulation / Prop Lead** | `[Member Name 4]` | Choreographing the dual-tank graduated cylinder physical demonstration, synchronizing physical water levels with on-screen triggers. |
+| **Speaker 4: Visual Media & Case Study Lead** | `[Member Name 4]` | Narrating the simulation demonstration video, showcasing stakeholder workflow benefits, and bridging pre-engineering scoping to field engineering decisions. |
 
 ---
 
@@ -28,7 +28,7 @@ flowchart TD
     S1["1. Framing (00:00 - 10:00 | 10 min) - Speaker 1: Coastal Bend Dilemma & 2015 Gap"]
     S2["2. Architecture (10:00 - 20:00 | 10 min) - Speaker 2: Offline Logic & Mass-Balance"]
     S3["3. Live Demo (20:00 - 38:00 | 18 min) - Speaker 3: BASIN.exe Software Pilot"]
-    S4["4. Physical Prop (38:00 - 43:00 | 5 min) - Speaker 4: Dual-Tank Graduated Cylinders"]
+    S4["4. Simulation Video (38:00 - 43:00 | 5 min) - Speaker 4: Stakeholder Impact Video & Scoping Case Study"]
     S5["5. Ethics & Specs (43:00 - 48:00 | 5 min) - Speaker 1: Texas § 1001 & Zero-Cloud Audit"]
     S6["6. Jury Defense (48:00 - 58:00 | 10 min) - All: Technical Q&A Defense"]
     S7["7. Closing (58:00 - 60:00 | 2 min) - Speaker 1: Wrap-Up & Closing Appeal"]
@@ -143,23 +143,35 @@ flowchart TD
 
 ---
 
-### Segment 4: Physical Element & Prop Synchronization [38:00 – 43:00 | 5 min]
-**Lead Demonstrator:** `[Speaker 4: Physical Simulation / Prop Lead]`  
+### Segment 4: Simulation Demonstration Video & Stakeholder Impact Case Study [38:00 – 43:00 | 5 min]
+**Lead Narrator:** `[Speaker 4: Visual Media & Case Study Lead]`  
 **Co-Narrator:** `[Speaker 2: Lead Hydrologist]`  
-**Prop Apparatus:** Two Clear Graduated Cylinders (labeled LCC and CCR), colored water, siphon tube with control valve, and demand/evaporation discharge beakers.
+**Media Asset:** High-definition rendered simulation video (`media/BASIN_Simulation_Demonstration.mp4` — 1080p60, embedded in slide deck and backed up in VLC player).
 
-#### Prop Demonstration Choreography:
-1. **The Setup (Before presentation starts):**
-   - Cylinder 1: Labeled **Lake Corpus Christi (LCC)** filled to 257 mL (representing 257k ac-ft).
-   - Cylinder 2: Labeled **Choke Canyon Reservoir (CCR)** filled to 662 mL (representing 662k ac-ft).
-   - Prominent colored marker rings at **40% (Stage 1)** and **30% (Stage 2)** combined volume.
-2. **The Demonstration (38:00 – 41:00):**
-   - Speaker 4 opens the baseline municipal valve: Water flows steadily out (representing the 180 MGD city draw).
-   - Speaker 4 introduces the second siphon tube: *"This is summer pan evaporation under a +2.0°C heatwave."*
-   - Speaker 4 introduces the third siphon tube: *"This is the 8 MGD evaporative cooling load from the AI data center."*
-3. **The Punchline (41:00 – 43:00):**
-   - Watch the water level rapidly drop past the yellow 40% Stage 1 line and plunge toward the red 30% Stage 2 line.
-   - Point to the software screen simultaneously: *"Notice how our physical cylinder hits the Stage 2 line at the exact moment BASIN's simulation hits Day 142. The physical prop proves the mass-conservation fidelity of our deterministic code."*
+#### Video Content & Narrative Runbook:
+1. **38:00 – 39:30 | Macro-to-Micro System Visualization:**
+   - **Visual on Screen:** Rendered 3D hydrologic flyover of the Nueces River Basin, showing the upstream Frio River drainage into Choke Canyon Reservoir and downstream Nueces River flow into Lake Corpus Christi, transitioning into an animated dual-pool mass-balance diagram.
+   - **Narration (`[Speaker 4]`):** 
+     > *"To understand how BASIN's intelligence transforms decision-making in the field, we simulated a 270-day severe compound drought sequence across the entire lower Nueces catchment. Watch as the dual-tank mass-balance engine processes daily inflows, surface evaporation, and municipal withdrawals in real time."*
+   - **Key Visual Elements:**
+     - Left Pool: Lake Corpus Christi (257,300 ac-ft capacity) draining under primary municipal withdrawal.
+     - Right Pool: Choke Canyon Reservoir (662,600 ac-ft capacity) maintaining strategic long-term carryover storage.
+     - Dynamic water balance overlay displaying cumulative deficit, daily inflows, and evaporation loss curves.
+
+2. **39:30 – 41:30 | Direct Stakeholder Benefits & Actionable Decisions:**
+   - **Visual on Screen:** Side-by-side split screen comparing two future pathways:
+     - **Path A (Uninformed / Reactive):** Municipal water utility operating blindly without forward scenario intelligence, reacting only after reservoirs breach Stage 2.
+     - **Path B (BASIN-Informed Proactive Governance):** Rural district and municipal operators using BASIN's stressor shortlists 90 days before summer peak.
+   - **Concrete Operational Benefits Highlighted:**
+     - **Proactive Drought Staging:** Showing water utilities declaring Stage 1 mandatory conservation 38 days *before* critical triggers are breached, conserving over 18,500 acre-feet of storage.
+     - **Industrial & AI Data Center Siting Negotiation:** Showing how water authorities use BASIN's quantitative cooling draw models (8 MGD stressor) to require hybrid closed-loop cooling or non-potable effluent reuse for new industrial facilities along the I-37 corridor, preventing municipal system failure.
+     - **Agricultural Irrigation Dispatching:** Small rural districts (e.g., Nueces County WCID #3) receiving clear risk bounds to schedule canal deliveries and crop allocations before spring planting.
+
+3. **41:30 – 43:00 | Downstream Engineering Integration (Scoping to Implementation):**
+   - **Visual on Screen:** Step-through of the exported handoff package:
+     - `rainfall.csv` and `Hydrologist_Handoff_Brief.md` flowing directly into TCEQ WAM Run 3 and HEC-ResSim input files.
+   - **Narration (`[Speaker 4]`):**
+     > *"BASIN is not a black-box model that ends when you close the laptop. It acts as the critical pre-engineering scoping bridge. By providing deterministic, defensible candidate scenarios with zero synthetic hallucinations, BASIN compresses a 6-to-12-month preliminary engineering study into an afternoon, saving small districts hundreds of thousands of dollars and giving licensed Professional Engineers mathematically sound starting points for statutory compliance."*
 
 ---
 
@@ -217,14 +229,14 @@ flowchart TD
 - [ ] **Presentation Laptop:** Dedicated Windows 11 machine running 64-bit OS.
 - [ ] **Executable Tested:** Double-click `BASIN.exe` with Wi-Fi turned OFF; verify windowed EdgeChromium WebView2 launches instantly without command prompts.
 - [ ] **Dual-Display Setup:** Set Windows display mode to **Duplicate (Win + P -> Duplicate)** so mouse navigation matches projector output exactly.
-- [ ] **Physical Props Prepped:**
-  - [ ] 2x Graduated cylinders (257 mL LCC, 662 mL CCR) with colored water.
-  - [ ] Marked tape rings at 40% (Stage 1) and 30% (Stage 2).
-  - [ ] Siphon tubes and collection beaker.
-  - [ ] Paper towels / spill mat.
+- [ ] **Simulation Video Assets Prepped:**
+  - [ ] Video file `media/BASIN_Simulation_Demonstration.mp4` embedded directly into presentation slide deck with auto-play on click.
+  - [ ] Standalone video backup opened paused at 00:00 in VLC Media Player (with hardware acceleration enabled).
+  - [ ] Projector audio/HDMI check: Confirm audio levels for video voiceover and background sound.
 - [ ] **Backup USB Drive:** Plugged in and verified containing:
   - [ ] `BASIN-demo-windows-py312.zip` (standalone distribution)
-  - [ ] 1080p screen recording of the complete 18-minute demo run (in case projector HDMI drops).
+  - [ ] `BASIN_Simulation_Demonstration.mp4` (1080p60 video backup)
+  - [ ] 1080p screen recording of the complete 18-minute software demo run (in case projector HDMI drops).
   - [ ] PDF copy of `Hydrologist_Handoff_Brief.md` and presentation slides.
 - [ ] **Terminal Diagnostics:** Run in terminal before heading to stage:
   ```powershell
