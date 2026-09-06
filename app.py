@@ -32,6 +32,13 @@ h2{font-size:1.15rem!important}h3{font-size:1rem!important}
 [data-testid="stVerticalBlock"]{gap:.7rem}
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.45rem}
 button{border-radius:4px!important}
+.tutorial-card{position:relative;background:#ffffff;border:2px solid #087e8b;border-radius:8px;padding:16px 22px;box-shadow:0 4px 16px rgba(8,126,139,0.16);margin-bottom:1.1rem}
+.tutorial-badge{background:#e0f2f1;color:#0d5952;font-weight:700;font-size:0.75rem;padding:3px 8px;border-radius:4px;letter-spacing:0.05em}
+.tutorial-tag{color:#61706d;font-size:0.72rem;font-weight:600;letter-spacing:0.06em;margin-left:8px}
+.tutorial-card.arrow-left::before{content:"";position:absolute;top:32px;left:-14px;border-width:12px 14px 12px 0;border-style:solid;border-color:transparent #087e8b transparent transparent}
+.tutorial-card.arrow-left::after{content:"";position:absolute;top:34px;left:-11px;border-width:10px 12px 10px 0;border-style:solid;border-color:transparent #ffffff transparent transparent}
+.tutorial-card.arrow-down::before{content:"";position:absolute;bottom:-14px;left:45px;border-width:14px 12px 0 12px;border-style:solid;border-color:#087e8b transparent transparent transparent}
+.tutorial-card.arrow-down::after{content:"";position:absolute;bottom:-11px;left:47px;border-width:12px 10px 0 10px;border-style:solid;border-color:#ffffff transparent transparent transparent}
 @media(max-width:700px){.block-container{padding-top:3rem}h1{font-size:1.25rem!important}}
 </style>''', unsafe_allow_html=True)
 
@@ -238,6 +245,161 @@ def switch_page(name):
     st.session_state.page = name
 
 
+TUTORIAL_STEPS = [
+    {
+        "page": "Data",
+        "tag": "INTRODUCTION & PURPOSE",
+        "arrow_dir": "down",
+        "focus": "⬇ Down · Regional Basin Map & NOAA Gauges",
+        "title": "BASIN — Decision-Support Scoping Workbench",
+        "desc": "Welcome to BASIN (Basin Analysis and Scenario Intelligence Navigator), built for the From the Ground Up 2026 AI Hackathon. In the Texas Coastal Bend (Region N), the official water supply model stops at 2015 hydrology due to consulting costs. BASIN bridges this gap by enabling regional water districts (like Nueces County WCID #3) to stress-test compound drought risk using 35 years of unmanipulated NOAA observations — running 100% locally and offline without cloud dependencies.",
+        "next_action": "Inspect the station observation network and regional reservoir proxies below, then click 'Next Step' to see how scenarios are generated."
+    },
+    {
+        "page": "Data",
+        "tag": "OBSERVATIONAL BASELINE",
+        "arrow_dir": "down",
+        "focus": "⬇ Down · Quality Metrics & Precipitation Table",
+        "title": "NOAA Station Network & Drinking Reservoir Proxies",
+        "desc": "On this Data screen, examine the South Texas Basin map and quality metrics table. BASIN anchors all simulations to long-term First-Order NOAA GHCN-Daily stations (Corpus Christi, Victoria, San Antonio) with SHA-256 integrity checks. Missing or flagged values are strictly preserved and never silently filled with zero. Station proxies reflect catchment zones for Choke Canyon Reservoir (662k ac-ft), Lake Corpus Christi (257k ac-ft), and Lake Texana.",
+        "next_action": "Click 'Next Step' to navigate to the Scenario Workspace and inspect candidate generation."
+    },
+    {
+        "page": "Workspace",
+        "tag": "SCENARIO GENERATION",
+        "arrow_dir": "left",
+        "focus": "⬅ Left · New Run Sidebar Controls",
+        "title": "Synchronized Historical Window Resampling",
+        "desc": "In the left sidebar under 'New run', BASIN generates drought candidates by extracting complete, synchronized multi-station historical windows (30 to 365 days) and applying rainfall retention scaling (e.g., 35% to 85%). This preserves real-world meteorological dynamics, storm tracks, and seasonal concurrence without artificial synthetic hallucinations.",
+        "next_action": "Look at 'Ranking weights' in the sidebar to see how community priorities shape selection."
+    },
+    {
+        "page": "Workspace",
+        "tag": "COMMUNITY PRIORITIZATION",
+        "arrow_dir": "left",
+        "focus": "⬅ Left · Ranking Weights & Community Presets",
+        "title": "Stakeholder Risk Archetype Presets",
+        "desc": "Under 'Ranking weights' in the sidebar, open the 'Community priority preset' dropdown. A Rural Water District (Nueces County WCID #3) prioritizes peak Jun–Sep summer timing (50%), whereas a River Basin Authority prioritizes multi-basin concurrence (40%). Selecting a preset automatically snaps the sliders and recalculates multi-objective scores across all candidates.",
+        "next_action": "Next, see how unsupervised machine learning organizes candidates into distinct drought clusters."
+    },
+    {
+        "page": "Workspace",
+        "tag": "UNSUPERVISED CLUSTERING",
+        "arrow_dir": "down",
+        "focus": "⬇ Down · Candidate Table & Feature Clustering",
+        "title": "K-Means Morphological Drought Profiling",
+        "desc": "Look at the Candidate table below. BASIN runs deterministic K-Means clustering across normalized duration, deficit severity, dry run length, and concurrence, assigning explainable profiles (such as 'Peak Summer Elevated Deficit' or 'Multi-Basin Concurrent Deficit'). BASIN's diverse selector guarantees that every distinct drought cluster is represented on the review shortlist, preventing 'groupthink' selection.",
+        "next_action": "Click 'Next Step' to enter the Review screen and run the physical reservoir drawdown simulation."
+    },
+    {
+        "page": "Review",
+        "tag": "PHYSICAL SIMULATION",
+        "arrow_dir": "down",
+        "focus": "⬇ Down · Physical Reservoir Simulation & Triggers",
+        "review_mode": "Reservoir simulation",
+        "title": "Real-Time Reservoir Drawdown & Drought Triggers",
+        "desc": "On this Review screen, select 'Reservoir simulation' in the series toggle. BASIN computes a daily physical mass-balance model across Lake Corpus Christi and Choke Canyon Reservoir under 180 MGD regional demand and seasonal evaporation. Click '▶ Play Simulation' to watch active storage drain day by day and observe when legal Stage 1 (40%), Stage 2 (30%), and Stage 3 (20%) drought restrictions trigger.",
+        "next_action": "Next, inspect the human-in-the-loop review gate and audit controls."
+    },
+    {
+        "page": "Review",
+        "tag": "HUMAN-IN-THE-LOOP REVIEW",
+        "arrow_dir": "left",
+        "focus": "⬅ Left · Practitioner Decision Buttons & Scaling",
+        "review_mode": "Cumulative rainfall",
+        "title": "Practitioner Override, Scaling & Daily Edits",
+        "desc": "In compliance with Texas engineering practice standards (§ 1001), AI never makes autonomous planning decisions. Water managers can Accept, Reject, apply scaling multipliers, or directly edit daily values in the 'Daily values' tab. Any modification requires an explicit rationale note, which is permanently logged in the immutable scenario audit history.",
+        "next_action": "Click 'Next Step' to proceed to the Exports screen for verified engineering handoff."
+    },
+    {
+        "page": "Exports",
+        "tag": "VERIFIED EXPORT & WAM HANDOFF",
+        "arrow_dir": "down",
+        "focus": "⬇ Down · Cryptographic Replay & Verified Export",
+        "title": "Texas WAM Modeling Brief & Cryptographic Replay",
+        "desc": "The Exports screen enforces a hard gate: all shortlisted scenarios must be reviewed and accepted before packaging. Clicking 'Build verified export' creates a self-contained ZIP bundle containing daily rainfall series, SHA-256 manifests, and 'Hydrologist_Handoff_Brief.md' with naturalized streamflow translation guidance for consulting engineers running Texas WAM / WRAP models.",
+        "next_action": "Tutorial complete! Click '✓ Finish Tutorial' to explore freely, or restart anytime from the sidebar settings."
+    }
+]
+
+
+def start_tutorial(source, names):
+    st.session_state.tutorial_active = True
+    st.session_state.tutorial_step = 0
+    st.session_state.page = TUTORIAL_STEPS[0]["page"]
+    curr_w = st.session_state.get("workspace")
+    if curr_w is None:
+        params = ScenarioParams(tuple(names), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
+        new_w = Workspace(source, params, 6)
+        st.session_state.workspace = new_w
+        save(new_w)
+    if st.session_state.get("workspace") and not st.session_state.get("inspect_id"):
+        st.session_state.inspect_id = st.session_state.workspace.selected[0]
+
+
+def tutorial_next():
+    step_idx = st.session_state.get("tutorial_step", 0)
+    if step_idx < len(TUTORIAL_STEPS) - 1:
+        next_idx = step_idx + 1
+        st.session_state.tutorial_step = next_idx
+        st.session_state.page = TUTORIAL_STEPS[next_idx]["page"]
+        curr_w = st.session_state.get("workspace")
+        if curr_w and TUTORIAL_STEPS[next_idx]["page"] == "Review":
+            if not st.session_state.get("inspect_id") and curr_w.selected:
+                st.session_state.inspect_id = curr_w.selected[0]
+        if TUTORIAL_STEPS[next_idx].get("review_mode"):
+            st.session_state.review_series_mode = TUTORIAL_STEPS[next_idx]["review_mode"]
+    else:
+        st.session_state.tutorial_active = False
+
+
+def tutorial_prev():
+    step_idx = st.session_state.get("tutorial_step", 0)
+    prev_idx = max(0, step_idx - 1)
+    st.session_state.tutorial_step = prev_idx
+    st.session_state.page = TUTORIAL_STEPS[prev_idx]["page"]
+    if TUTORIAL_STEPS[prev_idx].get("review_mode"):
+        st.session_state.review_series_mode = TUTORIAL_STEPS[prev_idx]["review_mode"]
+
+
+def tutorial_exit():
+    st.session_state.tutorial_active = False
+
+
+def render_tutorial_callout():
+    step_idx = st.session_state.get("tutorial_step", 0)
+    if step_idx >= len(TUTORIAL_STEPS):
+        st.session_state.tutorial_active = False
+        return
+    step = TUTORIAL_STEPS[step_idx]
+    arrow_cls = f"arrow-{step['arrow_dir']}"
+
+    card_html = f"""<div class="tutorial-card {arrow_cls}">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="display:flex; align-items:center;">
+          <span class="tutorial-badge">STEP {step_idx + 1} OF {len(TUTORIAL_STEPS)}</span>
+          <span class="tutorial-tag">{step['tag']}</span>
+        </div>
+        <span style="font-size:0.75rem; font-weight:700; color:#087e8b; background:#eef7f6; border:1px solid #c2dedb; padding:2px 8px; border-radius:4px;">
+          {step['focus']}
+        </span>
+      </div>
+      <h3 style="margin:0 0 8px 0; color:#123d38; font-size:1.15rem; font-weight:700;">{step['title']}</h3>
+      <p style="margin:0 0 12px 0; font-size:0.92rem; line-height:1.55; color:#233f3b;">{step['desc']}</p>
+      <div style="background:#f4fbf9; border-left:4px solid #cc9145; padding:8px 12px; border-radius:3px; font-size:0.86rem; color:#233f3b; margin-bottom:12px;">
+        👉 <b>Next action:</b> {step['next_action']}
+      </div>
+    </div>"""
+    st.markdown(card_html, unsafe_allow_html=True)
+
+    c_prev, c_next, c_exit = st.columns([1, 1.2, 1])
+    c_prev.button("◀ Previous", key="tut_prev_btn", disabled=step_idx == 0, on_click=tutorial_prev)
+    is_last = step_idx == len(TUTORIAL_STEPS) - 1
+    next_label = "✓ Finish Tutorial" if is_last else "Next Step ▶"
+    c_next.button(next_label, key="tut_next_btn", type="primary", on_click=tutorial_next)
+    c_exit.button("✕ Exit Tour", key="tut_exit_btn", on_click=tutorial_exit)
+
+
 try:
     source = load_source()
 except (OSError, ValueError, KeyError) as error:
@@ -333,12 +495,25 @@ with st.sidebar:
                     st.error(f"Cannot open run: {error}")
         else:
             st.caption("No saved runs")
+    with st.expander("Settings", expanded=st.session_state.get("tutorial_active", False)):
+        st.markdown("**Product Guided Tour**")
+        st.caption("Interactive walkthrough showcasing each stage of the scoping pipeline.")
+        st.button("Start tutorial", key="start_tutorial_btn", width="stretch",
+                  type="primary" if not st.session_state.get("tutorial_active", False) else "secondary",
+                  on_click=start_tutorial, args=(source, names))
+        if st.session_state.get("tutorial_active", False):
+            curr_step = st.session_state.get("tutorial_step", 0)
+            st.caption(f"Tour running: Step {curr_step + 1} of {len(TUTORIAL_STEPS)}")
+            st.button("Exit tutorial", key="sidebar_exit_tutorial_btn", width="stretch", on_click=tutorial_exit)
     st.divider()
     st.caption(f"Local · NOAA snapshot {source.manifest['downloaded_at'][:10]}")
 
 header, status = st.columns([3, 2])
 header.subheader(page if page != "Workspace" else "Scenario workspace")
 status.caption(f"{w.id}  /  {len(w.scenarios)} candidates  /  seed {w.params.seed}" if w else "NOAA GHCN-Daily  /  1991–2025")
+
+if st.session_state.get("tutorial_active", False):
+    render_tutorial_callout()
 
 if page == "Data" or (page == "Workspace" and w is None):
     metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
@@ -448,7 +623,7 @@ elif page == "Review":
     e.metric("Score", f"{s.score:.2f}")
     left, right = st.columns([2.2, 1])
     with left:
-        mode = st.radio("Series", ["Cumulative rainfall", "Daily rainfall", "30-day deficit", "Reservoir simulation"], horizontal=True, label_visibility="collapsed")
+        mode = st.radio("Series", ["Cumulative rainfall", "Daily rainfall", "30-day deficit", "Reservoir simulation"], horizontal=True, label_visibility="collapsed", key="review_series_mode")
         if mode == "Reservoir simulation":
             c_pace, c_init = st.columns([1, 1])
             pace_choice = c_pace.selectbox("Playback pace", ["Presentation mode (2.5 min)", "Deliberate (45 sec)", "Rapid preview (10 sec)"], label_visibility="collapsed")

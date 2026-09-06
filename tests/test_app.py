@@ -51,3 +51,59 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert next(b for b in app.button if b.label == "Build verified export").disabled
     app.sidebar.radio[0].set_value("Data").run()
     assert not app.exception
+
+
+def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
+    from basin_core.workspace import Workspace
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    assert not app.exception
+    assert "tutorial_active" not in app.session_state or not app.session_state["tutorial_active"]
+
+    # Click "Start tutorial" in Settings menu
+    start_btn = next(b for b in app.button if b.label == "Start tutorial")
+    start_btn.click().run()
+    assert not app.exception
+    assert app.session_state.tutorial_active is True
+    assert app.session_state.tutorial_step == 0
+    assert app.session_state.page == "Data"
+
+    # Step through all 8 steps across the pipeline
+    for step in range(1, 8):
+        next_btn = next(b for b in app.button if b.label == "Next Step ▶")
+        next_btn.click().run()
+        assert not app.exception
+        assert app.session_state.tutorial_step == step
+
+    assert app.session_state.tutorial_step == 7
+    assert app.session_state.page == "Exports"
+
+    # Test Previous button
+    prev_btn = next(b for b in app.button if b.label == "◀ Previous")
+    prev_btn.click().run()
+    assert not app.exception
+    assert app.session_state.tutorial_step == 6
+    assert app.session_state.page == "Review"
+
+    # Advance back to end and finish
+    next_btn = next(b for b in app.button if b.label == "Next Step ▶")
+    next_btn.click().run()
+    assert not app.exception
+    assert app.session_state.tutorial_step == 7
+
+    finish_btn = next(b for b in app.button if b.label == "✓ Finish Tutorial")
+    finish_btn.click().run()
+    assert not app.exception
+    assert app.session_state.tutorial_active is False
+
+    # Verify we can restart anytime from Settings and exit early
+    start_btn2 = next(b for b in app.button if b.label == "Start tutorial")
+    start_btn2.click().run()
+    assert not app.exception
+    assert app.session_state.tutorial_active is True
+    exit_btn = next(b for b in app.button if b.label == "✕ Exit Tour")
+    exit_btn.click().run()
+    assert not app.exception
+    assert app.session_state.tutorial_active is False
+
