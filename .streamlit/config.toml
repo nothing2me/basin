@@ -5,29 +5,30 @@ maxUploadSize = 5
 [browser]
 gatherUsageStats = false
 [theme]
+base = "light"
 font = "sans serif"
 baseRadius = "0.65rem"
 buttonRadius = "0.55rem"
 showWidgetBorder = true
 
 [theme.light]
-primaryColor = "#087F83"
-backgroundColor = "#F5F7F8"
-secondaryBackgroundColor = "#EAF0F2"
-textColor = "#20383F"
-borderColor = "#D7E1E5"
+primaryColor = "#2D6683"
+backgroundColor = "#F6F8F9"
+secondaryBackgroundColor = "#E9EEF1"
+textColor = "#202A30"
+borderColor = "#B8C2C8"
 
 [theme.light.sidebar]
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F4F5"
+backgroundColor = "#EFF3F5"
+secondaryBackgroundColor = "#E2E8EB"
 
 [theme.dark]
-primaryColor = "#0B7B79"
-backgroundColor = "#101B25"
-secondaryBackgroundColor = "#1A2A37"
-textColor = "#E0EAF0"
-borderColor = "#304553"
+primaryColor = "#2D6683"
+backgroundColor = "#151A1E"
+secondaryBackgroundColor = "#232B31"
+textColor = "#E7ECEF"
+borderColor = "#4A565E"
 
 [theme.dark.sidebar]
-backgroundColor = "#14212C"
-secondaryBackgroundColor = "#20323F"
+backgroundColor = "#11161A"
+secondaryBackgroundColor = "#20272C"

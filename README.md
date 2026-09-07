@@ -8,7 +8,7 @@ Use public NOAA observations to construct rainfall stress scenarios, compare the
 
 Use **Python 3.12, 64-bit** and the browser launcher. Extract the complete package, run **Setup BASIN.cmd** once, then **Start BASIN.cmd**. Setup installs the exact requirements from `wheelhouse/` when supplied, otherwise from the internet. After setup, the app and its coordinate overview work locally. Keep the console open; Ctrl+C stops the app.
 
-The launcher starts at port 8501 and chooses another local port if needed. Its console prints the actual address. Runtime needs no API key or account. This release supports a browser on Windows; the old tracked `BASIN.exe` and native wrapper are legacy artifacts and are excluded from the current distribution. They have not been rebuilt or accepted for this release.
+The launcher starts at port 8501 and chooses another local port if needed. Its console prints the actual address. Runtime needs no API key or account. On Windows, the rebuilt `BASIN.exe` opens the same local app in a native WebView2 window after **Setup BASIN.cmd** has created the Python environment.
 
 ```powershell
 py -3.12 -m venv .venv
@@ -20,7 +20,7 @@ The offline Windows wheel bundle is specific to CPython 3.12 x64. Python itself 
 
 ## Appearance and help
 
-Open **Settings → Appearance** in the sidebar to choose **Light**, **Dark**, or **System**. The browser remembers its native theme choice; switching appearance does not regenerate or approve scenarios. Both themes cover tables, menus, charts and the guided tour.
+BASIN starts in a soft neutral light theme with a muted blue control color. Open **Settings → Appearance** in the sidebar to choose **Light**, **Dark**, or **System**. Both appearances use accessible text and control contrast, while charts retain distinct data colors for readability. The browser remembers its native choice; switching appearance does not regenerate or approve scenarios. Both themes cover tables, menus, charts and the guided tour.
 
 The tutorial is under **Help & tutorial**, directly below the page navigation. First-time users also see **Take a tour** on the empty Workspace. The guide identifies and outlines the relevant controls and keeps navigation together above the page content.
 

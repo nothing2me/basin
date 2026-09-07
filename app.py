@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+import base64
 from contextlib import contextmanager
 from html import escape
 from datetime import datetime, timezone, timedelta
@@ -446,7 +447,7 @@ def render_tour_guide(workspace):
 <div class="tutorial-title">{escape(step['title'].split('. ', 1)[-1])}</div>
 <p class="tutorial-description">{escape(step['desc'])}</p>
 <p class="tutorial-action">{escape(directive)}</p>
-<div class="tutorial-location">Look for the teal outline: {escape(TOUR_LOCATIONS[step['target']])}</div>""", unsafe_allow_html=True)
+<div class="tutorial-location">Look for the outlined area: {escape(TOUR_LOCATIONS[step['target']])}</div>""", unsafe_allow_html=True)
         with st.container(horizontal=True, gap="small"):
             st.button("◀ Prev", key="tutorial_prev", disabled=index == 0, on_click=tutorial_prev)
             st.button("✓ Finish Tutorial" if index == len(TUTORIAL_STEPS)-1 else "Next Step ▶",
@@ -464,7 +465,7 @@ def tour_target(target_id: str):
     active = step is not None and step["target"] == target_id and st.session_state.page == step["page"]
     key = f"tour_target_{target_id}"
     if active:
-        st.markdown(f"""<style>.st-key-{key}{{outline:2px solid #239F9C;outline-offset:3px;border-radius:6px;padding:10px;box-shadow:0 0 0 5px rgba(8,126,139,.08)}}
+        st.markdown(f"""<style>.st-key-{key}{{outline:2px solid currentColor;outline-offset:3px;border-radius:6px;padding:10px;box-shadow:0 0 0 5px color-mix(in srgb,currentColor 8%,transparent)}}
 .st-key-{key} .stPlotlyChart{{min-width:0}}</style>""", unsafe_allow_html=True)
     with st.container(key=key, width="content" if target_id == "export_panel" else "stretch"):
         if active:
@@ -481,7 +482,12 @@ names = {s["id"]: s["name"].title().replace(" Intl Ap", "").replace(" Rgnl Ap", 
 w = st.session_state.get("workspace")
 
 with st.sidebar:
-    st.markdown('<div class="basin-brand"><span class="basin-symbol">≈</span><div><strong>BASIN</strong><small>Rainfall intelligence</small></div></div>', unsafe_allow_html=True)
+    logo_file = ROOT / "assets/basin-logo.png"
+    if logo_file.exists():
+        logo_data = base64.b64encode(logo_file.read_bytes()).decode("ascii")
+        st.markdown(f'<div class="basin-brand"><img src="data:image/png;base64,{logo_data}" alt="BASIN"><small>Rainfall intelligence</small></div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="basin-brand"><strong>BASIN</strong><br><small>Rainfall intelligence</small></div>', unsafe_allow_html=True)
     page = st.radio("View", ["Workspace", "Review", "Exports", "Data"], key="page", label_visibility="collapsed")
     with st.expander("Help & tutorial", expanded=st.session_state.get("tutorial_active", False)):
         st.markdown("**A guide to your workspace**")

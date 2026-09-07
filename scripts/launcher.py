@@ -157,7 +157,7 @@ def main():
             min_size=(1050, 700),
             resizable=True,
             confirm_close=False,
-            background_color="#F7F9F8"
+            background_color="#FFFFFF"
         )
         window.events.closed += terminate_server
         webview.start(gui="edgechromium")
