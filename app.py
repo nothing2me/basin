@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import calendar
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import json
 
 import pandas as pd
@@ -16,6 +16,7 @@ from basin_core.data import CachedSource, ROOT
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle
 from basin_core.workspace import Workspace
+from basin_core.uploads import TEMPLATE, preview_rainfall
 
 icon_file = ROOT / "assets/basin.ico"
 st.set_page_config(page_title="BASIN", page_icon=str(icon_file) if icon_file.exists() else "◉", layout="wide")
@@ -50,6 +51,47 @@ button{border-radius:4px!important}
 @st.cache_resource
 def load_source():
     return CachedSource()
+
+
+
+def local_rainfall_preview():
+    with st.expander("Preview your local rainfall CSV"):
+        st.caption("One station per file. Preview only: uploads do not change scenarios or the NOAA snapshot. Data stays in this browser session's local app process and is not saved to disk.")
+        st.download_button("Local rainfall template", TEMPLATE, "local-rainfall-template.csv", "text/csv")
+        station = st.text_input("Local station name", key="local_station")
+        location = st.text_input("Location description", key="local_location", help="Town, area or gauge location. This does not establish catchment suitability.")
+        unit = st.selectbox("Uploaded rainfall unit", ["Choose a unit", "mm", "inches"], key="local_unit")
+        upload = st.file_uploader("Local observations CSV · date,precipitation", type=["csv"], key="local_rainfall_file")
+        st.caption("Use YYYY-MM-DD dates. Blank rainfall means missing, not zero. Limit: 10 MB / 250,000 rows. Remove the file with the uploader's × to clear the preview.")
+        if upload is None:
+            return
+        if unit == "Choose a unit" or not station.strip() or not location.strip():
+            st.info("Enter the station, location and unit to preview this file.")
+            return
+        try:
+            preview = preview_rainfall(upload.getvalue(), station, location, unit)
+        except ValueError as error:
+            st.error(str(error))
+            return
+        st.text(f"{preview.station} — {preview.location}")
+        st.caption(f"{preview.observations[0][0]} to {preview.observations[-1][0]} · Input: {preview.unit}; charts: mm")
+        a, b, c = st.columns(3)
+        a.metric("Valid rainfall days", preview.valid_days)
+        b.metric("Missing rainfall days", preview.missing_days)
+        c.metric("Calendar coverage", f"{preview.valid_days / preview.expected_days:.1%}")
+        if preview.missing_days:
+            st.warning("Missing dates and blank values remain gaps. Totals cover available observations only.")
+        lookup = dict(preview.observations)
+        days = [preview.observations[0][0] + timedelta(days=i) for i in range(preview.expected_days)]
+        frame = pd.DataFrame({"date": days, "precip_mm": [lookup.get(day) for day in days]})
+        if frame.precip_mm.max() > 500:
+            st.warning("Values above 500 mm/day need a unit/source check. They have not been changed or excluded.")
+        fig = go.Figure(go.Scatter(x=frame.date, y=frame.precip_mm, mode="lines+markers", connectgaps=False, name="Local observations"))
+        fig.update_yaxes(title="Daily rainfall · mm")
+        st.plotly_chart(fig, width="stretch")
+        st.dataframe(frame, hide_index=True, width="stretch")
+        st.caption(f"Original file SHA-256: {preview.original_sha256}")
+        st.info("Local station suitability and historical reference are not yet established. No percentile, forecast or scenario change is produced by this preview.")
 
 
 def save(w):
@@ -492,6 +534,7 @@ header.subheader(page if page != "Workspace" else "Scenario workspace")
 status.caption(f"{w.id}  /  {len(w.scenarios)} candidates  /  seed {w.params.seed}" if w else "NOAA GHCN-Daily  /  1991–2025")
 
 if page == "Data" or (page == "Workspace" and w is None):
+    local_rainfall_preview()
     render_tour_step("data_map")
     tour_target_open("data_map")
     metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})

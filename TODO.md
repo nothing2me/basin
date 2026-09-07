@@ -39,6 +39,10 @@ Suggested three-person lanes:
 
 Any teammate may claim another lane's work after coordinating. Existing team ownership takes precedence. Communication tasks below are for the team; this board does not authorize an agent to send outreach or submissions.
 
+## CSV preview checkpoint — 2026-09-06
+
+The custom single-station CSV preview is implemented and verified with 97 integrated tests. See README for setup and docs/local_upload_and_research_plan.md for the next slices. This preview does not persist uploads or connect them to scenario generation; those tasks remain open. The user authorized publication of this checkpoint. Existing evidence and comparison work from main is retained.
+
 ## Shared board
 
 | ID | Task | Priority | Suggested lead | Owner / reviewer | Status | Dependencies |
