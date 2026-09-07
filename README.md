@@ -57,7 +57,7 @@ Session/export schema 2.0 and implementation v0.2.0 identify this workflow. Vers
 
 The rehearsal blocks Python network connections and exercises scaling, replacement, changed priorities, a rejection, evidence conflict, session restoration and privacy-default export. Browser network isolation has a separate developer harness, `scripts/browser_rehearsal.mjs`, which needs Node and Playwright; no run of it is recorded in `docs/build_validation.md`. Packages include source, tests, documentation, verified data and optional wheels; they exclude user sessions, credentials, private correspondence and legacy executable artifacts.
 
-Core modules live in `basin_core/`; `app.py` and `basin_ui.py` contain the interface. See [methodology](docs/methodology.md), [verification scope](docs/verification_scope.md), [build evidence](docs/build_validation.md), [practitioner exercise](docs/validation_notes.md), [demo runbook](docs/demo_runbook.md), and [shared task board](TODO.md).
+Core modules live in `basin_core/`; `app.py` and `basin_ui.py` contain the interface. See [competition submission & Q&A](docs/submission_record.md), [presentation plan](docs/presentation_plan.md), [methodology](docs/methodology.md), [verification scope](docs/verification_scope.md), [build evidence](docs/build_validation.md), [practitioner exercise](docs/validation_notes.md), [demo runbook](docs/demo_runbook.md), and [shared task board](TODO.md).
 
 The actual presentation laptop, practitioner usefulness, catchment suitability and final team acceptance remain separate release gates.
 
