@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import calendar
+from contextlib import contextmanager
+from html import escape
 from datetime import datetime, timezone, timedelta
 import json
 
@@ -12,6 +14,7 @@ import streamlit as st
 
 from basin_core.analysis import comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMPTIONS, simulate_reservoir_drawdown
 from basin_ui import evidence_panel, comparison_panel
+from basin_theme import apply_design, appearance_picker
 from basin_core.data import CachedSource, ROOT
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle
@@ -20,32 +23,7 @@ from basin_core.uploads import TEMPLATE, preview_rainfall
 
 icon_file = ROOT / "assets/basin.ico"
 st.set_page_config(page_title="BASIN", page_icon=str(icon_file) if icon_file.exists() else "◉", layout="wide")
-st.markdown('''<style>
-.block-container{padding-top:3.2rem;padding-bottom:1.5rem;max-width:1800px}
-[data-testid="stAppDeployButton"]{display:none}
-[data-testid="stSidebar"]{border-right:1px solid #d4dedd}
-[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
-h1{font-size:1.5rem!important;letter-spacing:.06em;font-weight:700!important}
-h2{font-size:1.15rem!important}h3{font-size:1rem!important}
-[data-testid="stMetricValue"]{font-size:1.45rem;font-variant-numeric:tabular-nums}
-[data-testid="stMetricLabel"]{font-size:.75rem;color:#61706d}
-[data-testid="stMetric"]{border-bottom:1px solid #d9e2df;padding:4px 0 10px}
-[data-testid="stCaptionContainer"]{font-size:.75rem}
-[data-testid="stVerticalBlock"]{gap:.7rem}
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.45rem}
-button{border-radius:4px!important}
-.tutorial-card{position:relative;background:#ffffff;border:2px solid #087e8b;border-radius:7px;padding:12px 16px;box-shadow:0 4px 18px rgba(8,126,139,0.18);margin-bottom:0.8rem;z-index:99}
-.tutorial-badge{background:#e0f2f1;color:#0d5952;font-weight:700;font-size:0.72rem;padding:2px 7px;border-radius:3px;letter-spacing:0.04em}
-.tutorial-tag{color:#61706d;font-size:0.7rem;font-weight:600;letter-spacing:0.05em;margin-left:6px}
-.tour-directive{background:#f4fbf9;border-left:4px solid #cc9145;padding:7px 11px;border-radius:3px;font-size:0.84rem;color:#1a3d38;margin-top:6px;margin-bottom:8px;font-weight:500}
-.tour-target-box{border:2.5px solid #087e8b!important;border-radius:8px!important;padding:6px!important;box-shadow:0 0 0 4px rgba(8,126,139,0.22),0 0 20px rgba(8,126,139,0.3)!important;animation:tour-pulse 2s infinite ease-in-out;background:rgba(8,126,139,0.02)}
-@keyframes tour-pulse{0%{box-shadow:0 0 0 3px rgba(8,126,139,0.35),0 0 10px rgba(8,126,139,0.2)}50%{box-shadow:0 0 0 6px rgba(8,126,139,0.15),0 0 22px rgba(8,126,139,0.35)}100%{box-shadow:0 0 0 3px rgba(8,126,139,0.35),0 0 10px rgba(8,126,139,0.2)}}
-.tutorial-card.arrow-left::before{content:"";position:absolute;top:28px;left:-12px;border-width:10px 12px 10px 0;border-style:solid;border-color:transparent #087e8b transparent transparent}
-.tutorial-card.arrow-left::after{content:"";position:absolute;top:30px;left:-9px;border-width:8px 10px 8px 0;border-style:solid;border-color:transparent #ffffff transparent transparent}
-.tutorial-card.arrow-down::before{content:"";position:absolute;bottom:-12px;left:35px;border-width:12px 10px 0 10px;border-style:solid;border-color:#087e8b transparent transparent transparent}
-.tutorial-card.arrow-down::after{content:"";position:absolute;bottom:-9px;left:37px;border-width:10px 8px 0 8px;border-style:solid;border-color:#ffffff transparent transparent transparent}
-@media(max-width:700px){.block-container{padding-top:3rem}h1{font-size:1.25rem!important}}
-</style>''', unsafe_allow_html=True)
+apply_design()
 
 
 @st.cache_resource
@@ -106,11 +84,11 @@ def save(w):
 def chart(fig, height=300):
     fig.update_layout(height=height, margin=dict(l=5, r=8, t=10, b=5),
                       paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                      font=dict(family="Arial", size=11, color="#42605a"),
+                      font=dict(family="Arial", size=12),
                       legend=dict(orientation="h", y=-.22),
                       colorway=["#087e8b", "#cc9145", "#638c72", "#826f9e", "#ac675d", "#4c6c94", "#858844", "#a25789"])
     fig.update_xaxes(showgrid=False, zeroline=False)
-    fig.update_yaxes(gridcolor="#e0e7e4", zeroline=False)
+    fig.update_yaxes(zeroline=False)
     return fig
 
 
@@ -124,7 +102,7 @@ def basin_map(stations_df):
     fig.update_layout(height=320, margin=dict(l=20, r=20, t=35, b=20),
                       title="Station locations · coordinate overview",
                       xaxis_title="Longitude (degrees)", yaxis_title="Latitude (degrees)",
-                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#edf2ef")
+                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
     fig.update_xaxes(range=[-99, -96.3])
     fig.update_yaxes(range=[27.3, 30.1])
     return fig
@@ -203,7 +181,7 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150):
         margin=dict(l=10, r=10, t=30, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Arial", size=11, color="#42605a"),
+        font=dict(family="Arial", size=12),
         showlegend=False,
         updatemenus=[dict(
             type="buttons",
@@ -227,7 +205,7 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150):
         )]
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
-    fig.update_yaxes(gridcolor="#e0e7e4", zeroline=False)
+    fig.update_yaxes(zeroline=False)
     return fig
 
 
@@ -259,8 +237,7 @@ TUTORIAL_STEPS = [
         "tag": "OBSERVATIONS · PROVENANCE",
         "title": "1. Inspect the Observation Sources",
         "desc": "Three provisional NOAA station proxies with a byte-verified snapshot. A checksum does not validate catchment suitability.",
-        "directive": "Inspect the station locations, missing-data policy, and completeness below.",
-        "arrow_dir": "down"
+        "directive": "Inspect the highlighted station map and completeness table. Open Snapshot metadata & quality policy for the missing-data rules.",
     },
     {
         "target": "sidebar_generator",
@@ -268,8 +245,7 @@ TUTORIAL_STEPS = [
         "tag": "SCENARIO ENGINE · RESAMPLING",
         "title": "2. Resample Historical Weather Windows",
         "desc": "Extracts synchronized multi-station historical windows (30–365 days) with retention scaling (35%–85%) with every transformation recorded.",
-        "directive": "Click 'Generate' below to compute candidates, or click 'Next Step ▶' to use current run.",
-        "arrow_dir": "down"
+        "directive": "Use New run in the left sidebar, then click Generate. Choose Next Step to keep the current run.",
     },
     {
         "target": "sidebar_presets",
@@ -277,8 +253,7 @@ TUTORIAL_STEPS = [
         "tag": "COMMUNITY PRIORITIES · WEIGHTS",
         "title": "3. Illustrative User Priorities",
         "desc": "Illustrative presets and editable weights change scores. Your reviewed shortlist stays in place until you rebuild it.",
-        "directive": "Choose a stakeholder preset from the dropdown below to recalculate scenario scores.",
-        "arrow_dir": "down"
+        "directive": "Choose a community priority preset in the highlighted Ranking weights section on the left. Scores update; rebuilding the shortlist is a separate action.",
     },
     {
         "target": "workspace_table",
@@ -286,8 +261,7 @@ TUTORIAL_STEPS = [
         "tag": "UNSUPERVISED ML · CLUSTERING",
         "title": "4. K-Means Drought Profiles",
         "desc": "Deterministic K-Means clusters candidates into explainable profiles, ensuring diverse representation across the shortlist.",
-        "directive": "Select any scenario row in the table below to inspect its deficit pattern.",
-        "arrow_dir": "down"
+        "directive": "Select a row in the highlighted candidate table, then click Inspect to open it. Choose Next Step to continue the tour.",
     },
     {
         "target": "review_simulation",
@@ -296,7 +270,6 @@ TUTORIAL_STEPS = [
         "title": "5. Explore an Illustrative Water Balance",
         "desc": "Uncalibrated two-pool experiment with assumed inflow, evaporation, demand and capacity. Its outputs are excluded from the evidence packet.",
         "directive": "Inspect assumptions, then play the conditional storage trajectory. Bands are illustrative, not official restriction dates.",
-        "arrow_dir": "down",
         "review_mode": "Reservoir simulation"
     },
     {
@@ -306,7 +279,6 @@ TUTORIAL_STEPS = [
         "title": "6. Review, Challenge and Accept Rainfall",
         "desc": "Inspect evidence, record disagreements, and edit or accept rainfall content. Acceptance is a local review decision, not professional certification.",
         "directive": "Enter an audit rationale note and click 'Accept' to approve this scenario.",
-        "arrow_dir": "down",
         "review_mode": "Cumulative rainfall"
     },
     {
@@ -315,8 +287,7 @@ TUTORIAL_STEPS = [
         "tag": "AUDITABLE HANDOFF · EXPERT REVIEW",
         "title": "7. Export a Reviewed Evidence Packet",
         "desc": "Packages reviewed rainfall, public evidence, unresolved conflicts and a readable brief. Replay checks internal consistency within its stated scope.",
-        "directive": "Click 'Build verified export' below to build the reviewed handoff ZIP.",
-        "arrow_dir": "down"
+        "directive": "Click Build verified export in the highlighted area to build the reviewed handoff ZIP.",
     }
 ]
 
@@ -364,52 +335,75 @@ def tutorial_exit():
     st.session_state.tutorial_active = False
 
 
-def render_tour_step(target_id: str):
+TOUR_LOCATIONS = {
+    "data_map": "Data: station map and completeness table",
+    "sidebar_generator": "Left sidebar: New run",
+    "sidebar_presets": "Left sidebar: Ranking weights",
+    "workspace_table": "Workspace: candidate table",
+    "review_simulation": "Review: reservoir playback chart",
+    "review_decision": "Review: note and decision controls on the right",
+    "export_panel": "Exports: build packet button",
+}
+
+
+def current_tour_step():
     if not st.session_state.get("tutorial_active", False):
+        return None
+    index = st.session_state.get("tutorial_step", 0)
+    if not 0 <= index < len(TUTORIAL_STEPS):
+        return None
+    return TUTORIAL_STEPS[index]
+
+
+def return_to_tour_step():
+    step = current_tour_step()
+    if step:
+        st.session_state.page = step["page"]
+        if step.get("review_mode"):
+            st.session_state.review_series_mode = step["review_mode"]
+
+
+def render_tour_guide(workspace):
+    step = current_tour_step()
+    if step is None:
         return
-    step_idx = st.session_state.get("tutorial_step", 0)
-    if step_idx < 0 or step_idx >= len(TUTORIAL_STEPS):
-        st.session_state.tutorial_active = False
-        return
-    step = TUTORIAL_STEPS[step_idx]
-    if step["target"] != target_id:
-        return
-
-    arrow_cls = f"arrow-{step['arrow_dir']}"
-    is_last = step_idx == len(TUTORIAL_STEPS) - 1
-    next_label = "✓ Finish Tutorial" if is_last else "Next Step ▶"
-
-    card_html = f"""<div class="tutorial-card {arrow_cls}">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span class="tutorial-badge">STEP {step_idx + 1} OF {len(TUTORIAL_STEPS)}</span>
-        <span class="tutorial-tag">{step['tag']}</span>
-      </div>
-      <h4 style="margin:0 0 6px 0; color:#123d38; font-size:1.05rem; font-weight:700;">{step['title']}</h4>
-      <p style="margin:0 0 8px 0; font-size:0.88rem; line-height:1.45; color:#233f3b;">{step['desc']}</p>
-      <div class="tour-directive">
-        👉 <b>Action:</b> {step['directive']}
-      </div>
-    </div>"""
-    st.markdown(card_html, unsafe_allow_html=True)
-
-    c_prev, c_next, c_exit = st.columns([1, 1.3, 1])
-    c_prev.button("◀ Prev", key=f"tut_prev_{target_id}", disabled=step_idx == 0, on_click=tutorial_prev)
-    c_next.button(next_label, key=f"tut_next_{target_id}", type="primary", on_click=tutorial_next)
-    c_exit.button("✕ Exit", key=f"tut_exit_{target_id}", on_click=tutorial_exit)
+    index = st.session_state.tutorial_step
+    directive = step["directive"]
+    on_page = st.session_state.page == step["page"]
+    if step["target"] == "export_panel" and workspace:
+        try:
+            workspace.exportable()
+        except ValueError:
+            directive = "Export is locked. Return to Review and accept or reject every shortlisted revision, keeping at least one accepted scenario. Then build the packet. Finishing the tutorial does not approve scenarios."
+    with st.container(key="tutorial_guide"):
+        st.markdown(f"""<div class="tutorial-meta">GUIDED TOUR &nbsp; / &nbsp; STEP {index + 1} OF {len(TUTORIAL_STEPS)}</div>
+<div class="tutorial-title">{escape(step['title'].split('. ', 1)[-1])}</div>
+<p class="tutorial-description">{escape(step['desc'])}</p>
+<p class="tutorial-action">{escape(directive)}</p>
+<div class="tutorial-location">Look for the teal outline: {escape(TOUR_LOCATIONS[step['target']])}</div>""", unsafe_allow_html=True)
+        with st.container(horizontal=True, gap="small"):
+            st.button("◀ Prev", key="tutorial_prev", disabled=index == 0, on_click=tutorial_prev)
+            st.button("✓ Finish Tutorial" if index == len(TUTORIAL_STEPS)-1 else "Next Step ▶",
+                      key="tutorial_next", type="primary", on_click=tutorial_next)
+            st.button("✕ Exit", key="tutorial_exit", on_click=tutorial_exit)
+            if not on_page:
+                st.button("Return to this step", on_click=return_to_tour_step)
+        if on_page:
+            st.markdown(f'<a href="#tour-{step["target"]}" target="_self">Go to highlighted area ↓</a>', unsafe_allow_html=True)
 
 
-def tour_target_open(target_id: str):
-    if st.session_state.get("tutorial_active", False):
-        step_idx = st.session_state.get("tutorial_step", 0)
-        if 0 <= step_idx < len(TUTORIAL_STEPS) and TUTORIAL_STEPS[step_idx]["target"] == target_id:
-            st.markdown('<div class="tour-target-box">', unsafe_allow_html=True)
-
-
-def tour_target_close(target_id: str):
-    if st.session_state.get("tutorial_active", False):
-        step_idx = st.session_state.get("tutorial_step", 0)
-        if 0 <= step_idx < len(TUTORIAL_STEPS) and TUTORIAL_STEPS[step_idx]["target"] == target_id:
-            st.markdown('</div>', unsafe_allow_html=True)
+@contextmanager
+def tour_target(target_id: str):
+    step = current_tour_step()
+    active = step is not None and step["target"] == target_id and st.session_state.page == step["page"]
+    key = f"tour_target_{target_id}"
+    if active:
+        st.markdown(f"""<style>.st-key-{key}{{outline:2px solid #239F9C;outline-offset:3px;border-radius:6px;padding:10px;box-shadow:0 0 0 5px rgba(8,126,139,.08)}}
+.st-key-{key} .stPlotlyChart{{min-width:0}}</style>""", unsafe_allow_html=True)
+    with st.container(key=key, width="content" if target_id == "export_panel" else "stretch"):
+        if active:
+            st.markdown(f'<div id="tour-{target_id}" class="tutorial-anchor tutorial-target-label">STEP {st.session_state.tutorial_step + 1} · {escape(TOUR_LOCATIONS[target_id])}</div>', unsafe_allow_html=True)
+        yield
 
 
 try:
@@ -421,27 +415,35 @@ names = {s["id"]: s["name"].title().replace(" Intl Ap", "").replace(" Rgnl Ap", 
 w = st.session_state.get("workspace")
 
 with st.sidebar:
-    st.title("BASIN")
+    st.markdown('<div class="basin-brand"><span class="basin-symbol">≈</span><div><strong>BASIN</strong><small>Rainfall intelligence</small></div></div>', unsafe_allow_html=True)
     page = st.radio("View", ["Workspace", "Review", "Exports", "Data"], key="page", label_visibility="collapsed")
+    with st.expander("Help & tutorial", expanded=st.session_state.get("tutorial_active", False)):
+        st.markdown("**A guide to your workspace**")
+        st.caption("Explore the data, compare scenarios, and learn how review and export work.")
+        st.button("Start tutorial", key="start_tutorial_btn", width="stretch",
+                  type="primary" if not st.session_state.get("tutorial_active", False) else "secondary",
+                  on_click=start_tutorial, args=(source, names))
+        if st.session_state.get("tutorial_active", False):
+            curr_step = st.session_state.get("tutorial_step", 0)
+            st.caption(f"Tour running: Step {curr_step + 1} of {len(TUTORIAL_STEPS)}")
+            st.button("Exit tutorial", key="sidebar_exit_tutorial_btn", width="stretch", on_click=tutorial_exit)
     st.divider()
     curr_target = TUTORIAL_STEPS[st.session_state.get("tutorial_step", 0)]["target"] if st.session_state.get("tutorial_active") else ""
     exp_gen = (w is None) or (curr_target == "sidebar_generator")
     with st.expander("New run", expanded=exp_gen):
-        render_tour_step("sidebar_generator")
-        tour_target_open("sidebar_generator")
-        with st.form("generate"):
-            stations = st.multiselect("Stations", list(names), default=list(w.params.stations) if w else list(names), format_func=names.get)
-            durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
-            months = st.multiselect("Onset months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
-            retention = st.slider("Rainfall retained · %", 0, 100, (35, 85), 5,
-                                  help="Multiply observed daily rainfall by this fraction at the affected stations.")
-            extent = st.selectbox("Reduction extent", ["All stations", "One station", "Mixed"])
-            a, b = st.columns(2)
-            count = a.selectbox("Candidates", [100, 300, 500, 1000], index=1)
-            size = b.selectbox("Shortlist", [3, 4, 6, 8], index=2)
-            seed = st.number_input("Seed", 0, 4294967295, w.params.seed if w else 22)
-            generate = st.form_submit_button("Generate", type="primary", width="stretch")
-        tour_target_close("sidebar_generator")
+        with tour_target("sidebar_generator"):
+            with st.form("generate", border=False):
+                stations = st.multiselect("Stations", list(names), default=list(w.params.stations) if w else list(names), format_func=names.get)
+                durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
+                months = st.multiselect("Onset months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
+                retention = st.slider("Rainfall retained · %", 0, 100, (35, 85), 5,
+                                      help="Multiply observed daily rainfall by this fraction at the affected stations.")
+                extent = st.selectbox("Reduction extent", ["All stations", "One station", "Mixed"])
+                a, b = st.columns(2)
+                count = a.selectbox("Candidates", [100, 300, 500, 1000], index=1)
+                size = b.selectbox("Shortlist", [3, 4, 6, 8], index=2)
+                seed = st.number_input("Seed", 0, 4294967295, w.params.seed if w else 22)
+                generate = st.form_submit_button("Generate", type="primary", width="stretch")
         if generate:
             try:
                 with st.spinner("Computing…"):
@@ -462,40 +464,38 @@ with st.sidebar:
     if w:
         exp_weights = (page == "Workspace") or (curr_target == "sidebar_presets")
         with st.expander("Ranking weights", expanded=exp_weights):
-            render_tour_step("sidebar_presets")
-            tour_target_open("sidebar_presets")
-            preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
-            matched = "Custom weights"
-            for p_name, p_vals in COMMUNITY_PRESETS.items():
-                if w.weights == p_vals:
-                    matched = p_name
-                    break
-            chosen_preset = st.selectbox("Community priority preset", preset_options,
-                                         index=preset_options.index(matched),
-                                         key=f"preset_select_{w.id}")
-            if chosen_preset != "Custom weights" and chosen_preset != matched:
-                new_w = dict(COMMUNITY_PRESETS[chosen_preset])
-                for k, v in new_w.items():
-                    st.session_state[f"weight_{k}"] = v
-                w.rerank(new_w)
-                save(w)
-                st.rerun()
-
-            labels = {"severity": "Severity", "duration": "Duration", "concurrence": "Concurrence", "season": "Jun–Sep timing"}
-            weights = {k: st.slider(label, 0, 100, int(w.weights[k]), key=f"weight_{k}") for k, label in labels.items()}
-            if sum(weights.values()) == 0:
-                st.error("At least one weight must be positive.")
-            elif weights != w.weights:
-                w.rerank(weights)
-                save(w)
-            if st.button("Rebuild shortlist", disabled=sum(weights.values()) == 0, width="stretch"):
-                try:
-                    w.rebuild_shortlist()
+            with tour_target("sidebar_presets"):
+                preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
+                matched = "Custom weights"
+                for p_name, p_vals in COMMUNITY_PRESETS.items():
+                    if w.weights == p_vals:
+                        matched = p_name
+                        break
+                chosen_preset = st.selectbox("Community priority preset", preset_options,
+                                             index=preset_options.index(matched),
+                                             key=f"preset_select_{w.id}")
+                if chosen_preset != "Custom weights" and chosen_preset != matched:
+                    new_w = dict(COMMUNITY_PRESETS[chosen_preset])
+                    for k, v in new_w.items():
+                        st.session_state[f"weight_{k}"] = v
+                    w.rerank(new_w)
                     save(w)
                     st.rerun()
-                except ValueError as error:
-                    st.error(str(error))
-            tour_target_close("sidebar_presets")
+
+                labels = {"severity": "Severity", "duration": "Duration", "concurrence": "Concurrence", "season": "Jun–Sep timing"}
+                weights = {k: st.slider(label, 0, 100, int(w.weights[k]), key=f"weight_{k}") for k, label in labels.items()}
+                if sum(weights.values()) == 0:
+                    st.error("At least one weight must be positive.")
+                elif weights != w.weights:
+                    w.rerank(weights)
+                    save(w)
+                if st.button("Rebuild shortlist", disabled=sum(weights.values()) == 0, width="stretch"):
+                    try:
+                        w.rebuild_shortlist()
+                        save(w)
+                        st.rerun()
+                    except ValueError as error:
+                        st.error(str(error))
         with st.expander("Private notes"):
             note = st.text_area("Provider notes", value=w.notes, key=f"provider_{w.id}", label_visibility="collapsed")
             if st.button("Save notes", width="stretch"):
@@ -516,35 +516,44 @@ with st.sidebar:
                     st.error(f"Cannot open run: {error}")
         else:
             st.caption("No saved runs")
-    with st.expander("Settings", expanded=st.session_state.get("tutorial_active", False)):
-        st.markdown("**Product Guided Tour**")
-        st.caption("Interactive walkthrough showcasing each stage of the scoping pipeline.")
-        st.button("Start tutorial", key="start_tutorial_btn", width="stretch",
-                  type="primary" if not st.session_state.get("tutorial_active", False) else "secondary",
-                  on_click=start_tutorial, args=(source, names))
-        if st.session_state.get("tutorial_active", False):
-            curr_step = st.session_state.get("tutorial_step", 0)
-            st.caption(f"Tour running: Step {curr_step + 1} of {len(TUTORIAL_STEPS)}")
-            st.button("Exit tutorial", key="sidebar_exit_tutorial_btn", width="stretch", on_click=tutorial_exit)
+    with st.expander("Settings"):
+        st.markdown("**Appearance**")
+        appearance_picker()
+        st.caption("Light, dark, or your system preference. Saved in this browser.")
     st.divider()
     st.caption(f"Local · NOAA snapshot {source.manifest['downloaded_at'][:10]}")
 
+st.markdown('<div class="basin-eyebrow">COASTAL BEND &nbsp; / &nbsp; RAINFALL EVIDENCE</div>', unsafe_allow_html=True)
 header, status = st.columns([3, 2])
 header.subheader(page if page != "Workspace" else "Scenario workspace")
 status.caption(f"{w.id}  /  {len(w.scenarios)} candidates  /  seed {w.params.seed}" if w else "NOAA GHCN-Daily  /  1991–2025")
 
+page_descriptions = {
+    "Workspace": "Explore patterns. Compare priorities. Build your shortlist.",
+    "Data": "Know where your observations come from, before drawing conclusions.",
+    "Review": "Inspect the details, challenge assumptions, and make the final call.",
+    "Exports": "Turn reviewed scenarios into a traceable evidence packet.",
+}
+st.caption(page_descriptions[page])
+render_tour_guide(w)
+
+if w is None and page == "Workspace":
+    with st.container(key="welcome"):
+        st.markdown('<div class="basin-eyebrow">YOUR FIRST EXPLORATION</div><h2 class="welcome-title">Explore rainfall.<br>Compare possibilities.</h2><p class="welcome-copy">Start with historical observations, explore what-if rainfall scenarios, and keep every assumption in view.</p>', unsafe_allow_html=True)
+        st.button("Take a tour", key="welcome_tour", type="primary", on_click=start_tutorial, args=(source, names))
+        st.caption("Or choose your stations in New run and select Generate.")
+        st.markdown('<div class="welcome-steps"><span><b>01</b> Explore the observations</span><span><b>02</b> Compare & review</span><span><b>03</b> Share the evidence</span></div>', unsafe_allow_html=True)
+
 if page == "Data" or (page == "Workspace" and w is None):
     local_rainfall_preview()
-    render_tour_step("data_map")
-    tour_target_open("data_map")
-    metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
-    quality = pd.DataFrame(source.manifest["quality"])
-    station_table = metadata.merge(quality, on="station_id")
-    st.plotly_chart(basin_map(station_table), width="stretch")
-    st.caption("Corpus Christi, Victoria and San Antonio airport observations are provisional regional proxies. These coordinates do not establish catchment coverage. Station suitability and spatial aggregation require practitioner review. The coordinate overview works offline.")
-    st.dataframe(station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
-                 hide_index=True, width="stretch", column_config={"completeness_pct": st.column_config.NumberColumn("Complete %", format="%.3f")})
-    tour_target_close("data_map")
+    with tour_target("data_map"):
+        metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
+        quality = pd.DataFrame(source.manifest["quality"])
+        station_table = metadata.merge(quality, on="station_id")
+        st.plotly_chart(basin_map(station_table), width="stretch")
+        st.caption("Corpus Christi, Victoria and San Antonio airport observations are provisional regional proxies. These coordinates do not establish catchment coverage. Station suitability and spatial aggregation require practitioner review. The coordinate overview works offline.")
+        st.dataframe(station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
+                     hide_index=True, width="stretch", column_config={"completeness_pct": st.column_config.NumberColumn("Complete %", format="%.3f")})
     left, right = st.columns([3, 1])
     station_view = left.multiselect("Observed rainfall", list(names), default=list(names), format_func=names.get)
     interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"])
@@ -591,7 +600,7 @@ elif page == "Workspace":
                          hover_data=["Score", "Onset", "Concurrence %"], color_continuous_scale="Teal")
         shortlist_rows = view[view.Shortlist]
         fig.add_trace(go.Scatter(x=shortlist_rows["Days"], y=shortlist_rows["Deficit mm"], mode="markers",
-                                marker=dict(size=14, symbol="circle-open", line=dict(width=2), color="#233f3b"),
+                                marker=dict(size=14, symbol="circle-open", line=dict(width=2), color="#37AFA6"),
                                 text=shortlist_rows.ID, name="Shortlist", hovertemplate="%{text}<extra>Shortlist</extra>"))
         fig.update_layout(coloraxis_colorbar=dict(title="Group", thickness=8))
         st.plotly_chart(chart(fig, 290), width="stretch")
@@ -615,11 +624,9 @@ elif page == "Workspace":
     if only_selected:
         filtered = filtered[filtered.Shortlist]
     filtered = filtered.sort_values(["Score", "ID"], ascending=[False, True]).reset_index(drop=True)
-    render_tour_step("workspace_table")
-    tour_target_open("workspace_table")
-    selection = st.dataframe(filtered, hide_index=True, width="stretch", height=min(430, 40+len(filtered)*35),
-                             on_select="rerun", selection_mode="single-row", key=f"candidates_{w.id}")
-    tour_target_close("workspace_table")
+    with tour_target("workspace_table"):
+        selection = st.dataframe(filtered, hide_index=True, width="stretch", height=min(430, 40+len(filtered)*35),
+                                 on_select="rerun", selection_mode="single-row", key=f"candidates_{w.id}")
     rows = selection.selection.rows
     if rows and rows[0] < len(filtered):
         selected_id = filtered.iloc[rows[0]].ID
@@ -664,10 +671,8 @@ elif page == "Review":
                 st.json(RESERVOIR_ASSUMPTIONS)
             sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active)
 
-            render_tour_step("review_simulation")
-            tour_target_open("review_simulation")
-            st.plotly_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms), width="stretch")
-            tour_target_close("review_simulation")
+            with tour_target("review_simulation"):
+                st.plotly_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms), width="stretch")
 
             s1 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 40), None)
             s2 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 30), None)
@@ -690,32 +695,30 @@ elif page == "Review":
             st.plotly_chart(chart(fig, 320), width="stretch")
             st.caption(f"Matched rainfall reference: {f['benchmark_mm']:.1f} mm ({f['benchmark_mm']/25.4:.2f} in) · n={f['benchmark_n']} · {'exceeded' if f['beyond_rainfall_reference'] else 'not exceeded'} · 30-day windows: {f['eligible_concurrence_days']}")
     with right:
-        render_tour_step("review_decision")
-        tour_target_open("review_decision")
-        st.markdown(f"**{s.id}** ({getattr(s, 'cluster_name', f'Group {s.cluster}')}) / revision {s.revision} / {s.status}")
-        note = st.text_area("Review note", key=f"note_{s.id}_{w.id}", height=90)
-        a, b = st.columns(2)
-        if a.button("Accept", type="primary", width="stretch"):
-            s.review(True, note)
-            save(w)
-            st.rerun()
-        if b.button("Reject", width="stretch"):
-            try:
-                s.review(False, note)
+        with tour_target("review_decision"):
+            st.markdown(f"**{s.id}** ({getattr(s, 'cluster_name', f'Group {s.cluster}')}) / revision {s.revision} / {s.status}")
+            note = st.text_area("Review note", key=f"note_{s.id}_{w.id}", height=90)
+            a, b = st.columns(2)
+            if a.button("Accept", type="primary", width="stretch"):
+                s.review(True, note)
                 save(w)
                 st.rerun()
-            except ValueError as error:
-                st.error(str(error))
-        with st.expander("Scale rainfall"):
-            factor = st.number_input("Multiplier", 0.0, 2.0, 0.8, 0.05, key=f"edit_{s.id}_{w.id}")
-            if st.button("Apply multiplier", width="stretch"):
+            if b.button("Reject", width="stretch"):
                 try:
-                    w.edit(s.id, note, factor=factor)
+                    s.review(False, note)
                     save(w)
                     st.rerun()
                 except ValueError as error:
                     st.error(str(error))
-        tour_target_close("review_decision")
+            with st.expander("Scale rainfall"):
+                factor = st.number_input("Multiplier", 0.0, 2.0, 0.8, 0.05, key=f"edit_{s.id}_{w.id}")
+                if st.button("Apply multiplier", width="stretch"):
+                    try:
+                        w.edit(s.id, note, factor=factor)
+                        save(w)
+                        st.rerun()
+                    except ValueError as error:
+                        st.error(str(error))
         with st.expander("Replace from CSV"):
             st.download_button("CSV template", s.series.rename_axis("date").to_csv(), f"{s.id}-template.csv", "text/csv")
             upload = st.file_uploader("Daily rainfall · mm", type="csv", key=f"replacement_{w.id}_{s.id}")
@@ -792,16 +795,14 @@ elif page == "Exports":
     except ValueError as error:
         ready = False
         st.warning(str(error))
-    render_tour_step("export_panel")
-    tour_target_open("export_panel")
-    if st.button("Build verified export", type="primary", disabled=not ready):
-        try:
-            payload = export_bundle(w, share)
-            report = verify_bundle(payload)
-            st.session_state.packet = {"data": payload, "fingerprint": json.dumps(w.record(share), sort_keys=True), "share": share, "report": report}
-        except (ValueError, AssertionError, OSError) as error:
-            st.error(f"Verification failed: {error}")
-    tour_target_close("export_panel")
+    with tour_target("export_panel"):
+        if st.button("Build verified export", type="primary", disabled=not ready):
+            try:
+                payload = export_bundle(w, share)
+                report = verify_bundle(payload)
+                st.session_state.packet = {"data": payload, "fingerprint": json.dumps(w.record(share), sort_keys=True), "share": share, "report": report}
+            except (ValueError, AssertionError, OSError) as error:
+                st.error(f"Verification failed: {error}")
     packet = st.session_state.get("packet")
     if packet and packet["share"] == share and packet["fingerprint"] == json.dumps(w.record(share), sort_keys=True):
         st.download_button("Download ZIP", packet["data"], f"BASIN-{w.id}.zip", "application/zip", type="primary")

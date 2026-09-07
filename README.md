@@ -18,6 +18,12 @@ py -3.12 -m venv .venv
 
 The offline Windows wheel bundle is specific to CPython 3.12 x64. Python itself must be installed beforehand. macOS/Linux require their own dependency installation and validation; `start_basin.sh` is provided without a presentation-support claim.
 
+## Appearance and help
+
+Open **Settings → Appearance** in the sidebar to choose **Light**, **Dark**, or **System**. The browser remembers its native theme choice; switching appearance does not regenerate or approve scenarios. Both themes cover tables, menus, charts and the guided tour.
+
+The tutorial is under **Help & tutorial**, directly below the page navigation. First-time users also see **Take a tour** on the empty Workspace. The guide identifies and outlines the relevant controls and keeps navigation together above the page content.
+
 ## Analyst workflow
 
 1. **Data:** inspect provisional stations, completeness, flags, observation history and the snapshot manifest.

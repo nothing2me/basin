@@ -61,8 +61,8 @@ def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
     assert not app.exception
     assert "tutorial_active" not in app.session_state or not app.session_state["tutorial_active"]
 
-    # Click "Start tutorial" in Settings menu
-    start_btn = next(b for b in app.button if b.label == "Start tutorial")
+    # Start from the first-run invitation; restart later through Help.
+    start_btn = next(b for b in app.button if b.label == "Take a tour")
     start_btn.click().run()
     assert not app.exception
     assert app.session_state.tutorial_active is True
@@ -78,6 +78,18 @@ def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
 
     assert app.session_state.tutorial_step == 6
     assert app.session_state.page == "Exports"
+
+    # The tour must explain the review gate, never silently approve demo data.
+    assert next(b for b in app.button if b.label == "Build verified export").disabled
+    assert any("Export is locked" in m.value for m in app.markdown)
+    assert all(app.session_state.workspace.get(i).status == "unreviewed"
+               for i in app.session_state.workspace.selected)
+
+    # Manual navigation keeps a way back to the active step.
+    app.sidebar.radio[0].set_value("Data").run()
+    next(b for b in app.button if b.label == "Return to this step").click().run()
+    assert app.session_state.page == "Exports"
+    assert app.session_state.tutorial_step == 6
 
     # Test Previous button
     prev_btn = next(b for b in app.button if b.label == "◀ Prev")
@@ -97,7 +109,7 @@ def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
     assert not app.exception
     assert app.session_state.tutorial_active is False
 
-    # Verify we can restart anytime from Settings and exit early
+    # Verify we can restart anytime from Help and exit early
     start_btn2 = next(b for b in app.button if b.label == "Start tutorial")
     start_btn2.click().run()
     assert not app.exception

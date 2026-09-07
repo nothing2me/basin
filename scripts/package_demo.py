@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wheels", action="store_true", help="Include downloaded Windows CPython 3.12 wheels")
     args = parser.parse_args()
-    files = [ROOT / name for name in ["README.md", "LICENSE", "app.py", "basin_ui.py", "pytest.ini", ".gitattributes", "requirements.txt", "Start BASIN.cmd", "Setup BASIN.cmd", "start_basin.sh", ".streamlit/config.toml"]]
+    files = [ROOT / name for name in ["README.md", "LICENSE", "app.py", "basin_ui.py", "basin_theme.py", "pytest.ini", ".gitattributes", "requirements.txt", "Start BASIN.cmd", "Setup BASIN.cmd", "start_basin.sh", ".streamlit/config.toml"]]
     for directory in ["basin_core", "scripts", "tests", "data", "docs", "assets"]:
         if (ROOT / directory).exists():
             files.extend(p for p in (ROOT / directory).rglob("*") if p.is_file() and "__pycache__" not in p.parts and p.suffix in [".py", ".csv", ".json", ".md", ".ico", ".png"])

@@ -43,6 +43,16 @@ Any teammate may claim another lane's work after coordinating. Existing team own
 
 The custom single-station CSV preview is implemented and verified with 97 integrated tests. See README for setup and docs/local_upload_and_research_plan.md for the next slices. This preview does not persist uploads or connect them to scenario generation; those tasks remain open. The user authorized publication of this checkpoint. Existing evidence and comparison work from main is retained.
 
+## Tutorial layout checkpoint — 2026-09-06 (local, in review)
+
+B11 usability fix: a single guide now appears at the top of the main area, with grouped navigation and explicit target locations. Real Streamlit containers outline the actual widgets; the disconnected HTML strips and decorative arrows were removed. Sidebar instructions no longer displace the controls. The export step explains the review gate, and manual navigation offers a return to the current step.
+
+Implementation: `app.py`; regression coverage: `tests/test_app.py`. Local browser inspection covers the guide and target layout. Teammate review is still pending; this does not complete B11's pitch, video or event-format tasks. Refresh BASIN and restart the tutorial to review. No commit or push has been made for this checkpoint.
+
+## Appearance checkpoint — 2026-09-06 (local, in review)
+
+B11 usability: coordinated native Light/Dark/System themes; refreshed spacing, typography, metric cards and first-run invitation. Help & tutorial moved directly below navigation; Settings now holds Appearance. The theme choice is browser-local and does not modify scenarios. Package builder includes `basin_theme.py`. Workflow/tutorial/upload regression checks passed (22 tests); browser visual review and teammate acceptance remain distinct. No P0 scientific or presentation-validation tasks are closed by this visual update.
+
 ## Shared board
 
 | ID | Task | Priority | Suggested lead | Owner / reviewer | Status | Dependencies |
