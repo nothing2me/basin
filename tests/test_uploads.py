@@ -82,6 +82,21 @@ def test_preview_ui_does_not_create_or_modify_a_scenario(monkeypatch):
     assert not app.exception
     assert "workspace" not in app.session_state or app.session_state.workspace is None
     assert next(m for m in app.metric if m.label == "Missing rainfall days").value == "2"
+    app.selectbox(key="upload_reference_station").set_value("USW00012924").run()
+    assert any("blocked until" in item.value for item in app.info)
+    next(x for x in app.selectbox if x.label == "Relationship to uploaded station").set_value("Different station: regional proxy only")
+    next(x for x in app.checkbox if x.label.startswith("I checked that the daily")).check().run()
+    assert not app.exception
+    assert any("No dates" in item.value for item in app.warning)
+    payload[0] = b"date,precipitation\n2024-06-01,0\n2024-06-02,1"
+    app.run()
+    assert any("blocked until" in item.value for item in app.info)
+    next(x for x in app.selectbox if x.label == "Relationship to uploaded station").set_value("Different station: regional proxy only")
+    next(x for x in app.checkbox if x.label.startswith("I checked that the daily")).check().run()
+    assert not app.exception
+    assert next(m for m in app.metric if m.label == "Paired valid days").value == "2 / 2"
+    next(x for x in app.checkbox if x.label.startswith("Include my uploaded values")).check().run()
+    assert not app.exception
     payload[0] = b"date,precipitation\n2026-01-01,-1"
     app.run()
     assert not app.exception

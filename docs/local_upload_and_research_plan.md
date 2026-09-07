@@ -390,3 +390,7 @@ Files changed in this planning session: this document and HANDOFF.md. The resear
 ### Implementation checkpoint — first local slice
 
 A0 baseline checks completed; see build_validation.md. A1/A2 now have a preview-only single-station CSV path in the Data/initial Workspace view, with explicit units/location, bounded parser, errors, gap counts and chart/table. No confirmation/import persistence or scenario mutation is performed; this slice intentionally stops at preview. New parser/UI tests pass. Next: user sample/usability feedback, then A3 local-station/reference behavior and versioned persistence. Stage A and Stage B remain incomplete.
+
+### Part B first slice — 2026-09-06, upstream 5e17706
+
+Implemented a descriptive same-date comparison in the existing upload preview: explicit public station selection, user-declared station relationship/daily basis, paired valid-day totals/difference, missingness, chart/table and opt-in numerical JSON report. Changed input identity resets acknowledgments. No new source downloads, inferred geography, seasonal baseline, scenario mutation or saved evidence integration. B0/B1/B2/B3 are partially implemented; B4/B5 and full Part B acceptance remain open. The existing 1991–2025 NOAA snapshot is the only numerical reference; unknown suitability blocks the comparison until the user supplies the declared review basis, which is not independent validation.

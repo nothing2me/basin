@@ -20,6 +20,7 @@ from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle
 from basin_core.workspace import Workspace
 from basin_core.uploads import TEMPLATE, preview_rainfall
+from basin_core.rainfall_comparison import compare_rainfall
 
 icon_file = ROOT / "assets/basin.ico"
 st.set_page_config(page_title="BASIN", page_icon=str(icon_file) if icon_file.exists() else "◉", layout="wide")
@@ -70,6 +71,71 @@ def local_rainfall_preview():
         st.dataframe(frame, hide_index=True, width="stretch")
         st.caption(f"Original file SHA-256: {preview.original_sha256}")
         st.info("Local station suitability and historical reference are not yet established. No percentile, forecast or scenario change is produced by this preview.")
+        uploaded_reference_comparison(preview)
+
+
+
+
+def uploaded_reference_comparison(preview):
+    st.subheader("Compare with public rainfall")
+    reference_source = load_source()
+    registry = {item["id"]: item for item in reference_source.manifest["stations"]}
+    station_id = st.selectbox("Public reference station", ["Choose a station", *registry],
+                              format_func=lambda value: value if value not in registry else f"{registry[value]['name']} ({value})",
+                              key="upload_reference_station")
+    if station_id not in registry:
+        st.caption("Select a station deliberately. BASIN does not infer the closest station or catchment suitability.")
+        return
+    metadata = registry[station_id]
+    st.write({"Reference": metadata["name"], "Latitude": metadata["latitude"], "Longitude": metadata["longitude"],
+              "Snapshot period": f"{reference_source.manifest['start']} to {reference_source.manifest['end']}"})
+    st.caption("Source: NOAA GHCN-Daily, bundled snapshot. This is a same-date comparison, not a seasonal normal or an official drought category.")
+    st.markdown(f"[Source documentation]({reference_source.manifest['documentation']})")
+    token = f"{preview.original_sha256}_{preview.unit}_{preview.station}_{preview.location}_{station_id}"
+    relationship = st.selectbox("Relationship to uploaded station", ["Not established", "Same physical station (user confirmed)", "Different station: regional proxy only"], key=f"relationship_{token}")
+    daily = st.checkbox("I checked that the daily observation periods are comparable", key=f"daily_basis_{token}", help="Dates alone do not prove the gauges observe the same 24-hour period. Leave unchecked if unknown.")
+    st.warning("Nearby or regional stations may experience different rain. A difference does not show which dataset is correct, establish catchment rainfall or predict a shortage.")
+    if relationship == "Not established" or not daily:
+        st.info("Comparison is blocked until the location relationship and daily basis are reviewed. You can still inspect the uploaded data above.")
+        return
+    relation = "same_station" if relationship.startswith("Same") else "regional_proxy"
+    series = reference_source.select([station_id])[station_id]
+    reference = {day.date(): None if pd.isna(value) else float(value) for day, value in series.items()}
+    try:
+        result = compare_rainfall(preview, reference, relationship=relation, daily_basis_confirmed=daily)
+    except ValueError as error:
+        st.warning(str(error))
+        return
+    a, b, c = st.columns(3)
+    a.metric("Paired valid days", f"{result.paired_days} / {len(result.rows)}")
+    b.metric("Uploaded total on paired days · mm", f"{result.upload_total_mm:.2f}")
+    c.metric("Reference total on paired days · mm", f"{result.reference_total_mm:.2f}")
+    st.write(f"Uploaded minus reference: {result.difference_mm:+.2f} mm")
+    if result.relative_difference_pct is None:
+        st.caption("Relative difference unavailable: the reference total is zero.")
+    else:
+        st.caption(f"Relative difference: {result.relative_difference_pct:+.2f}% of the reference total, not a forecast probability.")
+    st.caption(f"{len(result.rows) - result.paired_days} days excluded from both totals because one or both values are missing. No gaps are filled.")
+    frame = pd.DataFrame(result.rows, columns=["date", "uploaded_mm", "reference_mm"])
+    fig = go.Figure()
+    for field, label in [("uploaded_mm", "Uploaded rainfall"), ("reference_mm", "NOAA reference")]:
+        fig.add_trace(go.Scatter(x=frame.date, y=frame[field], name=label, connectgaps=False))
+    fig.update_yaxes(title="Daily rainfall · mm")
+    st.plotly_chart(fig, width="stretch")
+    st.dataframe(frame, hide_index=True, width="stretch")
+    st.caption("Review only: this comparison is not saved to the workspace, attached to a scenario or covered by the scenario ZIP verifier.")
+    include = st.checkbox("Include my uploaded values in a downloadable comparison report", key=f"share_comparison_{token}_{relation}")
+    if include:
+        report = {"schema_version": "rainfall-comparison-1", "method": "paired-valid-calendar-days-v1",
+                  "upload_sha256": preview.original_sha256, "uploaded_input_unit": preview.unit,
+                  "reference_snapshot_sha256": reference_source.manifest["sha256"], "reference_station_id": station_id,
+                  "reference_source": reference_source.manifest["documentation"], "relationship_declared_by_user": relation,
+                  "daily_basis_confirmed_by_user": True, "units": "mm", "paired_days": result.paired_days,
+                  "upload_total_mm": result.upload_total_mm, "reference_total_mm": result.reference_total_mm,
+                  "difference_mm": result.difference_mm, "relative_difference_pct": result.relative_difference_pct,
+                  "limitations": "Descriptive same-date comparison; geography and daily basis are user declarations, not independently validated. No forecast, climatology or scenario approval.",
+                  "rows": [{"date": str(day), "uploaded_mm": x, "reference_mm": y} for day, x, y in result.rows]}
+        st.download_button("Download comparison JSON", json.dumps(report, indent=2, allow_nan=False), "rainfall-comparison.json", "application/json")
 
 
 def save(w):

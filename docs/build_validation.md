@@ -72,3 +72,13 @@ Commit `83d593d` on `main`, working tree clean, `origin/main` at the same commit
 - `scripts/evaluate_selection.py`: 9 configurations written to `output/selection-evaluation.json` — seeds 7, 22 and 91 across the multiple-duration, mixed-perturbation and single-station profiles, silhouettes 0.246 to 0.416. This is a diagnostic comparison, not evidence of user benefit.
 
 These runs repeat existing automated checks on one machine at one commit. They do not repeat the offline wheel installation, the timing and memory measurements or the browser inspections recorded in the sections above, and they establish no practitioner validation, teammate review or presentation-device readiness. Documentation only was edited in this pass: `TODO.md`, `HANDOFF.md`, `README.md` and this file.
+
+## Part B first comparison slice — 2026-09-06
+
+Fetched/fast-forwarded to 5e17706. Latest upstream baseline: 97 tests passed. After comparison implementation: `.venv/Scripts/python.exe -m pytest -q --basetemp=tmp/pytest-partb-final --tb=short`: **105 passed**. Additional UI coverage then exercised successful paired totals/report opt-in and reset after changing the upload; upload/comparison subset: **28 passed**. No production code changed after the full suite.
+
+Fresh snapshot checkout passed. Offline demo verified 5 scenarios and 500 audit records; explicit replay passed. Source package built. These scenario checks do not cover the new separate comparison report, whose arithmetic, blocking and UI states are checked in the new tests. Windows Python 3.12.14. No new dependency or scientific-validity claim. Video/presentation contradictions and unperformed human/laptop gates from upstream reconciliation remain open.
+
+Part B is a bounded descriptive comparison, not completed scenario/evidence integration. User-declared same-station/proxy and daily-basis review, exact paired-date totals, missing-day exclusion, zero-reference handling and explicit numerical download opt-in are implemented. No private upload is committed or automatically transmitted. Diff whitespace passed.
+
+Publication integrated concurrent upstream 106842a (submission record, logos and README link) by clean rebase. No tested application code changed in that upstream commit; no redundant test rerun was performed.

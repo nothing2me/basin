@@ -342,3 +342,7 @@ Acceptance: the team agrees the frozen build is demonstrable as delivered, with 
 - Region N technical memorandum, including distinctions among model applications: https://www.twdb.texas.gov/waterplanning/rwp/planningdocu/2026/projectdocs/Tech_Memos/RegionN_TechnicalMemorandum.pdf
 
 Original private attachments remain outside the repository. This board records actionable work without reproducing correspondence or personal information.
+
+## Part B upload-comparison checkpoint — 2026-09-06
+
+A first descriptive uploaded-versus-NOAA same-date comparison is implemented, with explicit applicability declarations, paired-day arithmetic and opt-in report download. This extends the CSV preview only. Saved upload evidence, scenario linkage, seasonal baseline validation and scenario-packet replay integration are not complete. Existing B03/B04/B05 review gates and named-human assignments remain unchanged. See docs/local_upload_and_research_plan.md for the bounded next steps.

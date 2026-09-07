@@ -74,7 +74,7 @@ Open **Data → Preview your local rainfall CSV** (also visible in the initial W
 
 The preview reports valid/missing days, converts values to mm and shows a chart/table plus the original file hash. Blank values and absent dates remain gaps. Invalid dates, duplicate dates, negative/non-finite values and malformed files are rejected. Removing the file clears its preview. The example is illustrative, not verified historical station data.
 
-**Current scope: preview only.** Uploads are not saved to disk, added to scenarios, assigned historical percentiles or included in exports. PDF ingestion, new-station scenarios and research comparisons are planned next. The existing Review-page CSV replacement is a separate workflow requiring matching scenario dates/stations. The updated app also has manual evidence records and scenario comparisons; those do not yet ingest this local upload. Local app processes are single-user and not an authenticated company server.
+**Current scope: preview only.** Uploads are not saved to disk, added to scenarios, assigned historical percentiles or included in exports. PDF ingestion, new-station scenarios and persisted research comparisons are planned next. A descriptive same-date public rainfall comparison is now available below the preview. The existing Review-page CSV replacement is a separate workflow requiring matching scenario dates/stations. The updated app also has manual evidence records and scenario comparisons; those do not yet ingest this local upload. Local app processes are single-user and not an authenticated company server.
 
 See [the implementation plan](docs/local_upload_and_research_plan.md) and [verified build status](docs/build_validation.md). The plan includes future work; its unchecked tasks are not available features.
 
@@ -83,3 +83,11 @@ See [the implementation plan](docs/local_upload_and_research_plan.md) and [verif
 Stop BASIN with Ctrl+C in its server console **before pulling updates**. Pull the latest main, run Setup BASIN.cmd if dependencies changed (or when unsure), then run Start BASIN.cmd again. Refresh the browser at the address printed by the launcher and restore a saved session or generate a new run. Unsaved in-memory work is not preserved by a restart; save before updating when the current app is functioning.
 
 If you see `AttributeError: 'Workspace' object has no attribute 'selection_reason'` or a missing `evidence` attribute after an update, restart the server, not just the browser tab. An old process may retain an earlier Workspace class or session object while loading newer interface code. The current source includes these members. Use the Python/browser launcher above; the legacy downloaded executable is not rebuilt by git pull.
+
+## Part B: compare uploaded rainfall with public data
+
+In **Data → Preview your local rainfall CSV**, upload data within the bundled NOAA period (1991–2025), then use **Compare with public rainfall**. Choose one public station deliberately, declare whether it is the same physical station or only a regional proxy, and confirm that daily observation periods are comparable. Leave these unconfirmed when unknown; BASIN then blocks calculation.
+
+The comparison shows daily series and totals on dates where both datasets have valid values. Missing days are excluded from both totals. The signed difference is uploaded minus reference; relative difference is unavailable when the reference total is zero. This is not a seasonal normal, historical percentile, catchment calibration or shortage prediction. A regional difference does not establish which source is correct.
+
+You may explicitly opt in to download a separate comparison JSON containing the numerical rows, method, reference station/snapshot hash, original upload hash and user-declared comparison basis. It omits the entered station/location text and does not include the original uploaded file. Numerical rows may still be private. This report is not the scenario ZIP and is not covered by that verifier. It is not saved to a session or attached to scenario approval. Full Part B integration remains open in the plan.
