@@ -15,7 +15,7 @@
 - Run `.venv\Scripts\python.exe -m pytest -q` and `.venv\Scripts\python.exe scripts/demo_smoke.py`. The rehearsal blocks network sockets, generates 500 candidates, edits, approves and replays six exports. Automated approvals are not practitioner validation.
 - Rehearse with Wi-Fi off and the actual projector. Test downloads and sidebar session restoration after a refresh.
 - Copy the kit to USB. Distribution excludes private notes and sessions; back up the local workspace separately if needed.
-- Record a backup video using the final demo build. No video has been recorded by this build.
+- Record a backup video using the final demo build. No recording of the demo build exists. `media/BASIN_Simulation_Demonstration.mp4` is a separately rendered simulation film and does not substitute for it.
 - Team review of AI-assisted code, dependencies, disclosure, final pitch and new organizer instructions remains necessary.
 
 ## Recovery

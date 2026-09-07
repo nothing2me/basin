@@ -26,7 +26,7 @@ Python 3.12.14 virtual environment created at .venv; pinned requirements install
 
 Initial pytest runs encountered Windows default-temp permissions and duplicate collection from the temporary baseline copy. Explicit local basetemp resolved permissions; the baseline snapshot was moved outside the repo afterward. These were test setup issues, not silently skipped application tests.
 
-New capability is preview only: Data (or initial Workspace) → Preview your local rainfall CSV. One station, exact date/precipitation columns, explicit mm/inches, location description, bounded parsing, missing-day coverage, chart/table and original hash. Files stay in Streamlit process memory, not persistent workspace storage. No scenario, reference, PDF or export integration yet. Private data persistence and source suitability remain future work. All changes remain local, uncommitted and unpushed.
+New capability is preview only: Data (or initial Workspace) → Preview your local rainfall CSV. One station, exact date/precipitation columns, explicit mm/inches, location description, bounded parsing, missing-day coverage, chart/table and original hash. Files stay in Streamlit process memory, not persistent workspace storage. No scenario, reference, PDF or export integration yet. Private data persistence and source suitability remain future work. That checkpoint was local at the time of writing; it was superseded by the published integration recorded in the next section.
 
 ## Published CSV preview integration — 2026-09-06
 
@@ -49,14 +49,26 @@ After pulling the schema 2.0 changes while the older server was still running, t
 
 `.venv/Scripts/python.exe -m pytest -q tests/test_app.py --basetemp=tmp/pytest-restart-check --tb=short`: **2 passed**. Server restarted successfully on loopback port 8501. README now documents stopping before pull, restarting afterward, saved-session recovery and the distinction from legacy executable artifacts. Tests verify fresh-process UI workflows; they do not establish preservation of unsaved in-memory work across updates.
 
-## Local tutorial layout correction — 2026-09-06
+## Tutorial layout correction — 2026-09-06 (published in `83d593d`)
 
 Replaced disconnected HTML target wrappers with keyed Streamlit containers. The guide appears once above the main content; navigation stays grouped and sidebar controls retain their space. Target labels and jump links replace decorative arrows. Export instructions explain the outstanding review gate, and manual navigation can return to the active step.
 
-Verification: `.venv/Scripts/python.exe -m pytest -q tests/test_app.py --basetemp=tmp/pytest-tutorial-final --tb=short`: **2 passed in 17.43 seconds**, covering the full product workflow and seven-step tour, export gating, manual-page recovery, previous/next, finish and restart. In-app browser inspection checked actual outlines and guide placement on desktop, including generator, review and export; the review jump link was exercised. `git diff --check` passed. No core model change; full suite was not repeated for this layout change. Teammate review and other viewport/device validation remain pending. Changes are local and unpushed.
+Verification: `.venv/Scripts/python.exe -m pytest -q tests/test_app.py --basetemp=tmp/pytest-tutorial-final --tb=short`: **2 passed in 17.43 seconds**, covering the full product workflow and seven-step tour, export gating, manual-page recovery, previous/next, finish and restart. In-app browser inspection checked actual outlines and guide placement on desktop, including generator, review and export; the review jump link was exercised. `git diff --check` passed. No core model change; full suite was not repeated for this layout change. Teammate review and other viewport/device validation remain pending. Published in `83d593d`.
 
 ## Appearance and onboarding — 2026-09-06
 
 Native coordinated Light/Dark/System themes now style widgets, menus and canvas tables. Plotly labels/backgrounds inherit native theming. CSS adds brand, page hierarchy, metric cards, first-run invitation and theme-aware tour surfaces. Help & tutorial is directly below navigation; Settings contains browser-only shortcuts to the native theme choices. No server-global theme mutation or workspace reload occurs on a theme change. The shortcuts depend on the pinned Streamlit menu test IDs and provide a native-menu fallback if unavailable.
 
-`.venv/Scripts/python.exe -m pytest -q tests/test_app.py tests/test_uploads.py --basetemp=tmp/pytest-appearance-final --tb=short`: **22 passed in 20.45 seconds**. Tutorial coverage starts through the first-run invitation and restarts through Help. Browser inspection checked light and dark first-run/table/chart/tour contrast; switching Light to Dark retained run `4857c0cc575c`, 300 candidates, seed 22, and tutorial step 1. Source packaging succeeded and inclusion of `basin_theme.py` was checked. Diff whitespace checks passed. Native theme persistence is browser-local. Other viewport/device validation and teammate review remain pending; changes are unpushed.
+`.venv/Scripts/python.exe -m pytest -q tests/test_app.py tests/test_uploads.py --basetemp=tmp/pytest-appearance-final --tb=short`: **22 passed in 20.45 seconds**. Tutorial coverage starts through the first-run invitation and restarts through Help. Browser inspection checked light and dark first-run/table/chart/tour contrast; switching Light to Dark retained run `4857c0cc575c`, 300 candidates, seed 22, and tutorial step 1. Source packaging succeeded and inclusion of `basin_theme.py` was checked. Diff whitespace checks passed. Native theme persistence is browser-local. Other viewport/device validation and teammate review remain pending. Published in `83d593d`.
+
+## Documentation reconciliation checks — 2026-09-06
+
+Commit `83d593d` on `main`, working tree clean, `origin/main` at the same commit. Windows 11 Pro, CPython 3.12.14 in the repository `.venv`; dependencies already installed from the pinned `requirements.txt`, no installation performed in this pass. Commands were run as `.venv/Scripts/python.exe <command>` from the repository root.
+
+- `-m pytest -q --basetemp=tmp/pytest-doc-reconcile --tb=short`: **97 passed** in 60.26 s.
+- `scripts/check_snapshot_checkout.py`: verified. A fresh clone reproduces observation SHA-256 `672c23f8335093cdba84608c53ade768a9737e4088e60d95c04965257e0178a0` with the recorded `data/observations.csv: eol: lf` attribute.
+- `scripts/demo_smoke.py`: verified; network-blocked rehearsal completed and rewrote `output/BASIN-rehearsal.zip`.
+- `scripts/replay_bundle.py output/BASIN-rehearsal.zip`: verified. Run `5cf371d39eb2`, 5 accepted scenarios, 500 audit records replayed, `implementation_matches_current: true`.
+- `scripts/evaluate_selection.py`: 9 configurations written to `output/selection-evaluation.json` — seeds 7, 22 and 91 across the multiple-duration, mixed-perturbation and single-station profiles, silhouettes 0.246 to 0.416. This is a diagnostic comparison, not evidence of user benefit.
+
+These runs repeat existing automated checks on one machine at one commit. They do not repeat the offline wheel installation, the timing and memory measurements or the browser inspections recorded in the sections above, and they establish no practitioner validation, teammate review or presentation-device readiness. Documentation only was edited in this pass: `TODO.md`, `HANDOFF.md`, `README.md` and this file.

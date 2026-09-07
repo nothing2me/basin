@@ -1,5 +1,14 @@
 # BASIN: 60-Minute Finalist Showcase Presentation Plan & Runbook
 
+> **Reconciliation notice — 2026-09-06 (documentation pass, no narrative rewritten).** This plan predates commit `0be1933` and the current release path, and several passages below describe capabilities the build does not have. Resolve them under B11.4 and B11.7 before rehearsing; the wording is left intact so the team, not a documentation pass, decides what the pitch says.
+>
+> - **Climate-warming and data-centre stressors** (Segment 2 framing, the mass-balance equation, Action 5, the industrial-siting case study and Q&A item 3) were removed from the product in `0be1933`. There is no "Climate Warming & Data Center Demand Stressors" expander, no +2.0 °C control and no 8 MGD cooling slider to demonstrate.
+> - **`BASIN.exe`** (speaker table, Segment 3 heading and display note, the offline Q&A answer, the equipment checklist) is a legacy artifact. The supported path for this release is the browser launcher via `Start BASIN.cmd`; the executable is not rebuilt or distributed. See `README.md` and B10.1.
+> - **GIS overlays** — the Mary Rhodes pipeline route and I-37 corridor infrastructure map described in Segment 3 — are not in the current Data view, which shows station coordinates only.
+> - **"Verified WAM export" and "§ 1001 engineering sign-off"** overstate the packet. `docs/verification_scope.md` limits verification to internal consistency, and the handoff brief states that acceptance is a local rainfall-content review, not professional certification, and that retention cannot be applied directly to naturalized streamflow.
+> - **Reservoir figures** shown live come from the illustrative, uncalibrated experiment, which is excluded from the evidence packet and from every verification claim.
+> - **Format and roster:** this plan describes a 60-minute block with four speakers, while `docs/demo_runbook.md` describes a three-minute demo. B11.7 must confirm the real format against organizer communication, and the team currently has three members.
+
 **Event:** *From the Ground Up 2026 AI Hackathon — Finalist Showcase*  
 **Location:** Pleasanton, CA  
 **Date:** September 22, 2026  
@@ -138,7 +147,7 @@ flowchart TD
     - `[CLICK: 'Accept']`: Show status change to `accepted` and revision locking.
     - Demonstrate multiplier scaling or daily value editor. Show that modifying a single daily value clears approval and increments revision, strictly enforcing audit provenance.
   - `[CLICK: View -> Exports]`
-  - `[CLICK: 'Build verified export']`: Packages `rainfall.csv`, `shortlist.csv`, `audit.json`, and `Hydrologist_Handoff_Brief.md`.
+  - `[CLICK: 'Build verified export']`: Packages `daily_rainfall.csv`, `shortlist.csv`, `audit.json`, and `Hydrologist_Handoff_Brief.md`.
   - Download and open the ZIP: Show the Texas WAM Run 3 translation brief ready for professional engineers.
 
 ---
@@ -169,7 +178,7 @@ flowchart TD
 
 3. **41:30 – 43:00 | Downstream Engineering Integration (Scoping to Implementation):**
    - **Visual on Screen:** Step-through of the exported handoff package:
-     - `rainfall.csv` and `Hydrologist_Handoff_Brief.md` flowing directly into TCEQ WAM Run 3 and HEC-ResSim input files.
+     - `daily_rainfall.csv` and `Hydrologist_Handoff_Brief.md` flowing directly into TCEQ WAM Run 3 and HEC-ResSim input files. (No interoperability test with either tool has been performed; see B09.6.)
    - **Narration (`[Speaker 4]`):**
      > *"BASIN is not a black-box model that ends when you close the laptop. It acts as the critical pre-engineering scoping bridge. By providing deterministic, defensible candidate scenarios with zero synthetic hallucinations, BASIN compresses a 6-to-12-month preliminary engineering study into an afternoon, saving small districts hundreds of thousands of dollars and giving licensed Professional Engineers mathematically sound starting points for statutory compliance."*
 
@@ -207,7 +216,7 @@ flowchart TD
    **Response (`[Speaker 1]`):** *"Yes. In September 2026, the Texas Senate Committee on Water, Agriculture, and Rural Affairs held hearings on this exact crisis. A single hyperscale data center using evaporative cooling consumes 1.5 to 5+ MGD of freshwater that is permanently evaporated into the atmosphere. In a system with a 180 MGD baseline demand during a Stage 2 drought, an additional 8 MGD draw accelerates critical trigger breaches by over five weeks."*
 
 4. **Judge:** *"How does this work without internet? What if a user needs updated NOAA data?"*  
-   **Response (`[Speaker 3]`):** *"BASIN ships with an embedded, verified NOAA GHCN-Daily snapshot through 2025. When field operators have scheduled internet access, the CLI ingestion script (`fetch_snapshot.py`) downloads updated stations and verifies SHA-256 hashes. Once in the field or in an emergency operations center during a hurricane or grid outage, BASIN runs completely disconnected inside `BASIN.exe`."*
+   **Response (`[Speaker 3]`):** *"BASIN ships with an embedded, verified NOAA GHCN-Daily snapshot through 2025. When field operators have scheduled internet access, the CLI ingestion script (`scripts/fetch_noaa.py`) downloads updated stations and verifies SHA-256 hashes. Once in the field or in an emergency operations center during a hurricane or grid outage, BASIN runs completely disconnected inside `BASIN.exe`."*
 
 5. **Judge:** *"What prevents a user from tampering with historical data?"*  
    **Response (`[Speaker 3]`):** *"Every baseline snapshot is hashed with SHA-256. If a single number in `observations.csv` is altered, BASIN detects the checksum mismatch on boot and halts. Furthermore, every practitioner edit in the workbench generates an immutable revision entry in `audit.json` with timestamps, author notes, and diffs."*
