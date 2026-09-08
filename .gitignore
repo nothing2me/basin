@@ -7,3 +7,4 @@ output/
 wheelhouse/
 *.log
 .env
+*.exe
