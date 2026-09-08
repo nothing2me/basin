@@ -1,0 +1,41 @@
+{
+  "schema_version": "2.0-standalone-hydrology",
+  "created_at": "2026-09-08T07:07:31.059111+00:00",
+  "author": "Consulting Hydrologist for Region N Regional Water Planning Group",
+  "geographic_scope": "Nueces River Basin / Coastal Bend Region N (Texas)",
+  "system": {
+    "reservoirs": [
+      {
+        "id": "LCC",
+        "name": "Lake Corpus Christi",
+        "capacity_acft": 257300.0
+      },
+      {
+        "id": "CCR",
+        "name": "Choke Canyon Reservoir",
+        "capacity_acft": 662600.0
+      }
+    ],
+    "total_capacity_acft": 919900.0,
+    "stage3_critical_reserve_pct": 20.0,
+    "stage3_critical_reserve_acft": 183980.0
+  },
+  "dataset_source": "NOAA NCEI GHCN-Daily (USW00012912, USW00012921, USW00012924)",
+  "source_checksum": "672c23f8335093cdba84608c53ade768a9737e4088e60d95c04965257e0178a0",
+  "files": {
+    "README.md": "ec0cf56b0fa48fd64e1d4c20316c5f85bce58d5d7d2a9a2a63ebeac973da6e3c",
+    "audit_trail.jsonl": "bf569b04a8f1288ea12f5ae0be9ebd07460cb1c7df7c96815e66078700a390ed",
+    "daily_drawdown_2011_drought.csv": "55d7403cef532aa3d43874b6972cf419d1ec61a5702f78478df8dd4a38ab8085",
+    "daily_drawdown_all_scenarios.csv": "92f98114daab5d69b7910607295421687c59e6e5f67c66d8fbe8c7ef53ca2fbc",
+    "scenario_summary.csv": "672066b3f6df48c406697ec32c2ce105d3db05a21951f1a7e037be835947cd38",
+    "verify_packet.py": "9f1a12ca63ddd6c5c75dfdf2e794fafbc48331712e0daf309180f5ff76cea912"
+  },
+  "stress_tiers": [
+    "100%",
+    "80%",
+    "60%",
+    "40%"
+  ],
+  "conservation_mandate": "15% emergency reduction (demand reduced from 370.0 to 314.5 ac-ft/day)",
+  "verification_instruction": "Run `python verify_packet.py` to cryptographically replay simulations and verify zero numerical drift."
+}
