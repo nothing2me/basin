@@ -149,6 +149,8 @@ def main():
     # Launch native desktop window using pywebview (WebView2 embedded in native Win32 window)
     try:
         import webview
+        webview.settings["ALLOW_DOWNLOADS"] = True
+        webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True
         window = webview.create_window(
             title="BASIN — Basin Analysis and Scenario Intelligence Navigator",
             url=target_url,

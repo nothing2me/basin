@@ -1120,7 +1120,18 @@ elif page == "Exports":
     with st.expander("Read the report preview", expanded=True):
         if accepted_preview:
             st.caption("Draft preview of currently accepted revisions. Building the packet still requires every shortlisted revision to be reviewed.")
-            st.markdown(generate_brief(w, accepted_preview))
+            brief_preview_text = generate_brief(w, accepted_preview)
+            col_prev_a, col_prev_b = st.columns([3, 1])
+            with col_prev_b:
+                st.download_button(
+                    "📄 Download Brief (.md)",
+                    brief_preview_text.encode("utf-8"),
+                    f"Hydrologist_Handoff_Brief_{w.id}.md",
+                    "text/markdown",
+                    key=f"dl_brief_preview_{w.id}",
+                    width="stretch",
+                )
+            st.markdown(brief_preview_text)
         else:
             st.info("No accepted scenarios yet. In Review, inspect a scenario and choose Accept to see its report here.")
             st.button("Go to Review", on_click=switch_page, args=("Review",))
@@ -1165,16 +1176,50 @@ elif page == "Exports":
                 switch_page("Review")
                 st.rerun()
     with tour_target("export_panel"):
+        if not ready:
+            st.warning("⚠️ **Export locked:** Review decisions required before generating verified bundle. Use '✅ Accept all shortlisted for export' above to unlock.")
+        elif bool(w.custom_uploads) and not share_custom:
+            st.warning("⚠️ **Custom Evidence Consent Required:** Check 'Include custom numerical inputs and source metadata' above to enable verified export.")
         if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (bool(w.custom_uploads) and not share_custom)):
             try:
                 payload = export_bundle(w, share, include_custom=share_custom)
                 report = verify_bundle(payload)
-                st.session_state.packet = {"data": payload, "fingerprint": json.dumps(w.record(share, include_custom=share_custom), sort_keys=True), "share": share, "custom": share_custom, "report": report}
+                out_dir = ROOT / "output"
+                out_dir.mkdir(parents=True, exist_ok=True)
+                zip_path = out_dir / f"BASIN-{w.id}.zip"
+                zip_path.write_bytes(payload)
+                brief_text = generate_brief(w, w.exportable())
+                brief_path = out_dir / f"Hydrologist_Handoff_Brief_{w.id}.md"
+                brief_path.write_text(brief_text, encoding="utf-8")
+                st.session_state.packet = {
+                    "data": payload,
+                    "brief_text": brief_text,
+                    "saved_zip": str(zip_path.name),
+                    "saved_brief": str(brief_path.name),
+                    "fingerprint": json.dumps(w.record(share, include_custom=share_custom), sort_keys=True),
+                    "share": share,
+                    "custom": share_custom,
+                    "report": report
+                }
+                st.success(f"✅ Verified bundle generated and saved to disk: `output/{zip_path.name}`")
             except (ValueError, AssertionError, OSError) as error:
                 st.error(f"Verification failed: {error}")
     packet = st.session_state.get("packet")
     if packet and (not w.custom_uploads or share_custom) and packet.get("custom", False) == share_custom and packet["share"] == share and packet["fingerprint"] == json.dumps(w.record(share, include_custom=share_custom), sort_keys=True):
-        st.download_button("Download ZIP", packet["data"], f"BASIN-{w.id}.zip", "application/zip", key=f"dl_zip_{w.id}", type="primary")
+        st.success(f"✅ **Verified Export Package Ready!** Saved to disk: `output/{packet.get('saved_zip', f'BASIN-{w.id}.zip')}`")
+        col_dl1, col_dl2, col_dl3 = st.columns([1, 1, 1])
+        with col_dl1:
+            st.download_button("📥 Download ZIP", packet["data"], f"BASIN-{w.id}.zip", "application/zip", key=f"dl_zip_{w.id}", type="primary", width="stretch")
+        with col_dl2:
+            brief_bytes = packet.get("brief_text", "").encode("utf-8") if packet.get("brief_text") else b""
+            st.download_button("📄 Download Brief (.md)", brief_bytes, f"Hydrologist_Handoff_Brief_{w.id}.md", "text/markdown", key=f"dl_brief_export_{w.id}", width="stretch")
+        with col_dl3:
+            if st.button("📂 Open Output Folder", key=f"btn_open_out_folder_{w.id}", width="stretch"):
+                import subprocess, sys
+                out_folder = ROOT / "output"
+                if sys.platform == "win32":
+                    subprocess.Popen(["explorer", str(out_folder.resolve())])
+        st.caption(f"📁 Local copies on disk: `output/{packet.get('saved_zip', f'BASIN-{w.id}.zip')}` and `output/{packet.get('saved_brief', f'Hydrologist_Handoff_Brief_{w.id}.md')}`")
         st.json(packet["report"])
         st.caption(f"{packet['report']['scenarios_replayed']} revisions verified · daily_rainfall.csv / shortlist.csv / audit.json / input snapshot / checksums")
     with st.expander("Run resource usage"):
