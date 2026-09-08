@@ -123,3 +123,244 @@ def comparison_panel(w, save):
                 if save(w): st.success("Comparison saved with candidate revisions, rainfall digests and both weight configurations.")
         else:
             st.info("Use at least one positive weight and an eligible candidate.")
+
+
+def fallback_query_route(w, prompt: str) -> str:
+    """Deterministic routing to tools when Ollama is offline or as fallback."""
+    import re
+    from basin_core.assistant import render_tool_result, TOOL_LIST_HELP
+    from basin_core.tools import (
+        describe_scenario,
+        compare_scenarios,
+        explain_ranking,
+        check_concurrence,
+        run_sensitivity,
+        summarize_evidence,
+        describe_cluster,
+        check_export_readiness,
+        get_data_provenance,
+    )
+
+    p = prompt.lower().strip()
+    id_matches = re.findall(r"\b[bB]-\d+\b", prompt)
+    for s in w.scenarios:
+        if s.id.lower() in p and s.id not in id_matches:
+            id_matches.append(s.id)
+
+    default_id = id_matches[0] if id_matches else (w.selected[0] if w.selected else w.scenarios[0].id)
+
+    # 1. Multi-tier stress spectrum sweep check
+    if any(k in p for k in ["spectrum", "stress spectrum", "multi-tier", "tiers", "tipping point", "sweep"]):
+        from basin_core.tools import run_stress_spectrum
+        year = 2011
+        year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
+        if year_match:
+            year = int(year_match.group(1))
+        conservation_pct = 0.0
+        cons_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:conservation|mandate|cut)", p)
+        if cons_match:
+            conservation_pct = float(cons_match.group(1))
+        res = run_stress_spectrum(w, scenario_id=default_id if id_matches else "",
+                                  year=year, conservation_pct=conservation_pct)
+        return render_tool_result("run_stress_spectrum", res)
+
+    # 2. Infrastructure / Reservoir survival check
+    if any(k in p for k in ["survive", "infrastructure", "reservoir", "drawdown", "capacity", "storage", "restriction"]):
+        from basin_core.tools import test_reservoir_infrastructure
+        year = 2011
+        year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
+        if year_match:
+            year = int(year_match.group(1))
+        reduction = 0.0
+        pct_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:lower|less|reduction|drier)?", p)
+        if pct_match:
+            reduction = float(pct_match.group(1))
+        res = test_reservoir_infrastructure(w, scenario_id=default_id if id_matches else "",
+                                            year=year, rainfall_reduction_pct=reduction)
+        return render_tool_result("test_reservoir_infrastructure", res)
+
+    # 2. Find scenarios by year
+    year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
+    if year_match and (not id_matches or any(k in p for k in ["scenarios", "find", "list", "show", "search", "events", "years"])):
+        from basin_core.tools import find_scenarios_by_year
+        year = int(year_match.group(1))
+        res = find_scenarios_by_year(w, year=year)
+        return render_tool_result("find_scenarios_by_year", res)
+    elif any(k in p for k in ["recent", "modern", "years", "from 20", "from 19"]):
+        from basin_core.tools import find_scenarios_by_year
+        year = int(year_match.group(1)) if year_match else 2011
+        res = find_scenarios_by_year(w, year=year)
+        return render_tool_result("find_scenarios_by_year", res)
+
+    if any(k in p for k in ["readiness", "export ready", "can i export", "blocker"]):
+        res = check_export_readiness(w)
+        return render_tool_result("check_export_readiness", res)
+
+    if any(k in p for k in ["compare", "vs", "versus", "difference"]):
+        if len(id_matches) >= 2:
+            id1, id2 = id_matches[0], id_matches[1]
+        elif len(w.selected) >= 2:
+            id1, id2 = w.selected[0], w.selected[1]
+        else:
+            id1, id2 = w.scenarios[0].id, w.scenarios[1].id
+        id3 = id_matches[2] if len(id_matches) >= 3 else ""
+        res = compare_scenarios(w, id1, id2, id3)
+        return render_tool_result("compare_scenarios", res)
+
+    if any(k in p for k in ["stress", "concurrence", "simultaneous"]):
+        res = check_concurrence(w, default_id)
+        return render_tool_result("check_concurrence", res)
+
+    if any(k in p for k in ["rank", "score", "why did", "position"]):
+        res = explain_ranking(w, default_id)
+        return render_tool_result("explain_ranking", res)
+
+    if any(k in p for k in ["sensitivity", "weight", "what if", "priority"]):
+        res = run_sensitivity(w)
+        return render_tool_result("run_sensitivity", res)
+
+    if any(k in p for k in ["evidence", "conflict", "source", "disagreement", "citation"]):
+        res = summarize_evidence(w, default_id)
+        return render_tool_result("summarize_evidence", res)
+
+    if any(k in p for k in ["cluster", "profile", "group"]):
+        cid = 0
+        digit_match = re.search(r"group\s*(\d+)|cluster\s*(\d+)", p)
+        if digit_match:
+            cid = int(digit_match.group(1) or digit_match.group(2))
+        res = describe_cluster(w, cid)
+        return render_tool_result("describe_cluster", res)
+
+    if any(k in p for k in ["provenance", "noaa", "data source", "station", "manifest", "data come from", "where does this data"]):
+        res = get_data_provenance(w)
+        return render_tool_result("get_data_provenance", res)
+
+    if any(k in p for k in ["scenario", "tell me about", "profile", "deficit"]) or id_matches:
+        res = describe_scenario(w, default_id)
+        return render_tool_result("describe_scenario", res)
+
+    return f"**BASIN Analyst Assistant**\n\nNo exact tool matched your query. All answers must be grounded in verified tools:\n\n{TOOL_LIST_HELP}"
+
+
+def assistant_panel(w, source=None, names=None):
+    """Render the slide-out assistant panel with right-side tab, open by default."""
+    from basin_core.assistant import check_ollama, run_assistant, run_tool_directly
+    from basin_core.tools import TOOL_REGISTRY
+
+    st.session_state.setdefault("assistant_open", True)
+    st.session_state.setdefault("assistant_messages", [])
+    st.session_state.setdefault("assistant_history", [])
+
+    is_open = st.session_state.assistant_open
+    tab_class = "assistant_tab_open" if is_open else "assistant_tab_closed"
+    tab_label = "▶ Close AI" if is_open else "◀ AI Assistant"
+
+    with st.container(key=tab_class):
+        if st.button(tab_label, key="assistant_tab_btn", help="Toggle BASIN AI Assistant"):
+            st.session_state.assistant_open = not is_open
+            st.rerun()
+
+    if not is_open:
+        return
+
+    if w is None and source is not None:
+        from basin_core.engine import ScenarioParams
+        from basin_core.workspace import Workspace
+        station_ids = list(names.keys()) if names else list(source.daily.columns)
+        params = ScenarioParams(tuple(station_ids), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
+        w = Workspace(source, params, 6)
+
+    if w is None:
+        return
+
+    with st.container(key="assistant_drawer"):
+        h_col, c_col = st.columns([5, 1])
+        h_col.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
+        h_col.markdown('<div class="basin-assistant-sub">Grounded verification queries · Strict templates · Zero hallucinations</div>', unsafe_allow_html=True)
+        if c_col.button("✕", key="assistant_close_x", help="Close Assistant"):
+            st.session_state.assistant_open = False
+            st.rerun()
+
+        status = check_ollama()
+        if status["available"] and status["selected"]:
+            st.markdown(f'<div class="basin-assistant-badge" style="color:#009E73">● Active: {status["selected"]} (Local Ollama)</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="basin-assistant-badge" style="color:#E69F00">● Direct Tool Execution (Deterministic Local Engine)</div>', unsafe_allow_html=True)
+
+        st.caption("Quick Queries")
+        q1, q2, q3, q4 = st.columns(4)
+        preset_prompt = None
+        if q1.button("📋 Top #1", key="quick_top1", width="stretch", help="Profile the top-ranked scenario"):
+            sid = w.selected[0] if w.selected else w.scenarios[0].id
+            preset_prompt = f"Tell me about scenario {sid}"
+        if q2.button("⚖️ Compare", key="quick_compare", width="stretch", help="Compare top shortlisted scenarios"):
+            preset_prompt = "Compare the top shortlisted scenarios"
+        if q3.button("⚡ Sens.", key="quick_sens", width="stretch", help="Test ranking weight sensitivities"):
+            preset_prompt = "Run sensitivity test on ranking weights"
+        if q4.button("📦 Export", key="quick_export", width="stretch", help="Check export readiness"):
+            preset_prompt = "Is the workspace ready for export?"
+
+        chat_box = st.container(height=380)
+        with chat_box:
+            if not st.session_state.assistant_messages:
+                st.info(
+                    "**Hydrologist Assistant Ready.**\n\n"
+                    "Ask about scenario profiles, compare candidates, check station stress, "
+                    "or test priority weights.\n\n"
+                    "Every response is computed from actual workspace data."
+                )
+            for msg in st.session_state.assistant_messages:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+        user_input = st.chat_input("Ask about scenarios, rainfall, or tests...", key="assistant_chat_input")
+        active_query = preset_prompt or user_input
+
+        if active_query:
+            st.session_state.assistant_messages.append({"role": "user", "content": active_query})
+            with st.spinner("Analyzing workspace data..."):
+                if status["available"] and status["selected"]:
+                    try:
+                        reply, new_hist = run_assistant(w, active_query, st.session_state.assistant_history)
+                        st.session_state.assistant_history = new_hist
+                        st.session_state.assistant_messages.append({"role": "assistant", "content": reply})
+                    except Exception:
+                        reply = fallback_query_route(w, active_query)
+                        st.session_state.assistant_messages.append({"role": "assistant", "content": reply})
+                else:
+                    reply = fallback_query_route(w, active_query)
+                    st.session_state.assistant_messages.append({"role": "assistant", "content": reply})
+            st.rerun()
+
+        f_col1, f_col2 = st.columns([2, 1])
+        if f_col2.button("Clear chat", key="assistant_clear_chat", width="stretch"):
+            st.session_state.assistant_messages = []
+            st.session_state.assistant_history = []
+            st.rerun()
+
+        with st.expander("🛠️ Direct Tool Runner (Manual)", expanded=False):
+            st.caption("Select and execute any analysis tool directly without natural language processing.")
+            tool_name = st.selectbox("Select Tool", list(TOOL_REGISTRY.keys()), key="direct_tool_select")
+            if st.button("Execute Tool", key="direct_tool_run", type="primary"):
+                try:
+                    sid = w.selected[0] if w.selected else w.scenarios[0].id
+                    if tool_name in ("describe_scenario", "explain_ranking", "check_concurrence", "summarize_evidence"):
+                        args = {"scenario_id": sid}
+                    elif tool_name == "compare_scenarios":
+                        id1 = w.selected[0] if w.selected else w.scenarios[0].id
+                        id2 = w.selected[1] if len(w.selected) > 1 else (w.scenarios[1].id if len(w.scenarios) > 1 else id1)
+                        args = {"scenario_id_1": id1, "scenario_id_2": id2}
+                    elif tool_name == "describe_cluster":
+                        args = {"cluster_id": 0}
+                    elif tool_name == "query_rainfall":
+                        stn = w.source.manifest["stations"][0]["id"]
+                        args = {"station_id": stn, "start_date": "2011-01-01", "end_date": "2011-12-31"}
+                    else:
+                        args = {}
+                    tool_out = run_tool_directly(w, tool_name, args)
+                    st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}"})
+                    st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
+                    st.rerun()
+                except Exception as ex:
+                    st.error(f"Error running {tool_name}: {ex}")
+

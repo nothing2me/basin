@@ -64,6 +64,23 @@ button:focus-visible,a:focus-visible{outline:2px solid currentColor!important;ou
 .basin-theme-status{font-size:.75rem;line-height:1.4;margin:6px 0 0;opacity:.8}
 @media(max-width:800px){.block-container{padding:1.4rem 1rem 1.5rem}.st-key-welcome{padding:20px}.welcome-title{font-size:1.65rem!important}.st-key-tutorial_guide{padding:14px}h3{font-size:1.3rem!important}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+.st-key-assistant_drawer{position:fixed!important;top:0!important;right:0!important;width:480px!important;max-width:92vw!important;height:100vh!important;background:color-mix(in srgb,var(--background-color,#1e262c) 98%,#000)!important;border-left:2px solid color-mix(in srgb,currentColor 16%,transparent)!important;box-shadow:-8px 0 35px rgba(0,0,0,.45)!important;z-index:99998!important;padding:1.25rem 1.25rem 2rem!important;overflow-y:auto!important;animation:basinFastSlideIn .1s cubic-bezier(0,0,.2,1)!important;will-change:transform}
+@keyframes basinFastSlideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+body:has(.st-key-assistant_drawer) .block-container,body:has(.st-key-assistant_drawer) [data-testid="stMainBlockContainer"]{margin-right:485px!important;max-width:calc(100% - 495px)!important;padding-right:1.5rem!important;transition:margin-right .08s ease-out!important}
+@media(max-width:950px){body:has(.st-key-assistant_drawer) .block-container,body:has(.st-key-assistant_drawer) [data-testid="stMainBlockContainer"]{margin-right:0!important;max-width:100%!important}}
+.st-key-assistant_tab_closed,.st-key-assistant_tab_open{position:fixed!important;top:50%!important;transform:translateY(-50%)!important;width:42px!important;max-width:42px!important;height:120px!important;min-height:120px!important;overflow:visible!important;z-index:99999!important;pointer-events:none!important;margin:0!important;padding:0!important}
+.st-key-assistant_tab_closed *,.st-key-assistant_tab_open *{pointer-events:none!important}
+.st-key-assistant_tab_closed > div,.st-key-assistant_tab_open > div{width:42px!important;margin:0!important;padding:0!important}
+.st-key-assistant_tab_closed [data-testid="stElementContainer"],.st-key-assistant_tab_open [data-testid="stElementContainer"]{width:42px!important;margin:0!important;padding:0!important}
+.st-key-assistant_tab_closed button,.st-key-assistant_tab_open button{pointer-events:auto!important;width:42px!important;margin:0!important}
+.st-key-assistant_tab_closed{right:0!important}
+.st-key-assistant_tab_open{right:480px!important}
+@media(max-width:550px){.st-key-assistant_tab_open{right:92vw!important}.st-key-assistant_drawer{width:92vw!important}}
+.st-key-assistant_tab_closed button,.st-key-assistant_tab_open button{border-radius:12px 0 0 12px!important;padding:18px 8px!important;writing-mode:vertical-rl!important;text-orientation:mixed!important;transform:none!important;font-size:.78rem!important;font-weight:700!important;letter-spacing:.1em!important;text-transform:uppercase!important;background:#356273!important;color:#fff!important;border:1px solid color-mix(in srgb,#fff 20%,transparent)!important;border-right:none!important;box-shadow:-4px 0 16px rgba(0,0,0,.35)!important;cursor:pointer!important;min-height:120px!important}
+.st-key-assistant_tab_closed button:hover,.st-key-assistant_tab_open button:hover{background:#2878A0!important;box-shadow:-6px 0 20px rgba(40,120,160,.45)!important}
+.basin-assistant-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:650;background:color-mix(in srgb,currentColor 8%,transparent);border:1px solid color-mix(in srgb,currentColor 16%,transparent);margin-bottom:.5rem}
+.basin-assistant-title{font-size:1.15rem;font-weight:700;letter-spacing:-.02em;margin:0 0 2px}
+.basin-assistant-sub{font-size:.78rem;opacity:.8;margin:0 0 .85rem;line-height:1.4}
 </style>""")
 
 

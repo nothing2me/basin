@@ -80,9 +80,8 @@ def test_plain_language_four_stage_workflow(tmp_path, monkeypatch):
     assert any(item.value == "2. Build scenarios" for item in app.subheader)
     assert any("Decision summary" in item.value for item in app.markdown)
     assert any("Why it ranked here" in item.value for item in app.caption)
-    assert {metric.label for metric in app.metric} >= {
-        "Scenarios to review", "Approved for export"
-    }
+    assert any("scenarios selected for review" in item.value for item in app.caption)
+    assert any("approved for export" in item.value for item in app.caption)
 
     app.sidebar.radio[0].set_value("Review").run()
     assert not app.exception

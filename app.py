@@ -14,8 +14,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 
-from basin_core.analysis import comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMPTIONS, simulate_reservoir_drawdown
-from basin_ui import evidence_panel, comparison_panel
+from basin_core.analysis import comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMPTIONS, simulate_reservoir_drawdown, simulate_stress_spectrum
+from basin_ui import evidence_panel, comparison_panel, assistant_panel
 from basin_theme import apply_design, appearance_picker, custom_appearance, accessible_chart, reveal_tour_target
 from basin_core.data import CachedSource, ROOT
 from basin_core.engine import ScenarioParams
@@ -28,6 +28,21 @@ from basin_core.custom_data import active_ids, digest
 icon_file = ROOT / "assets/basin.ico"
 st.set_page_config(page_title="BASIN", page_icon=str(icon_file) if icon_file.exists() else "◉", layout="wide")
 apply_design()
+if st.session_state.get("assistant_open", True):
+    st.html("""<style>
+    .block-container, [data-testid="stMainBlockContainer"] {
+        margin-right: 485px !important;
+        max-width: calc(100% - 495px) !important;
+        padding-right: 1.5rem !important;
+        transition: margin-right 0.08s ease-out !important;
+    }
+    @media(max-width: 950px) {
+        .block-container, [data-testid="stMainBlockContainer"] {
+            margin-right: 0 !important;
+            max-width: 100% !important;
+        }
+    }
+    </style>""")
 
 
 @st.cache_resource
@@ -227,18 +242,32 @@ def chart(fig, height=300):
 
 
 def basin_map(stations_df):
-    # Cartesian coordinates use no browser map tiles or remote geographic assets.
-    fig = go.Figure(go.Scatter(
-        x=stations_df["longitude"], y=stations_df["latitude"], mode="markers+text",
-        text=stations_df["name"], textposition="top center", customdata=stations_df["station_id"],
-        marker=dict(size=13, color="#087e8b"),
-        hovertemplate="%{text}<br>%{customdata}<br>Longitude %{x:.4f}, latitude %{y:.4f}<extra></extra>"))
-    fig.update_layout(height=320, margin=dict(l=20, r=20, t=35, b=20),
-                      title="Station locations · coordinate overview",
-                      xaxis_title="Longitude (degrees)", yaxis_title="Latitude (degrees)",
-                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-    fig.update_xaxes(range=[-99, -96.3])
-    fig.update_yaxes(range=[27.3, 30.1])
+    """Render station locations on an interactive high-resolution satellite map."""
+    fig = go.Figure(go.Scattermap(
+        lat=stations_df["latitude"],
+        lon=stations_df["longitude"],
+        mode="markers+text",
+        text=stations_df["name"],
+        textposition="top right",
+        customdata=stations_df["station_id"],
+        marker=dict(size=14, color="#00E5FF"),
+        textfont=dict(size=11, color="#FFFFFF"),
+        hovertemplate="<b>%{text}</b><br>Station: %{customdata}<br>Lat: %{lat:.4f}, Lon: %{lon:.4f}<extra></extra>"))
+    fig.update_layout(
+        height=380,
+        margin=dict(l=10, r=10, t=35, b=10),
+        title=dict(text="Station locations · High-resolution satellite view", font=dict(size=14)),
+        map=dict(
+            style="white-bg",
+            layers=[{
+                "below": "traces",
+                "sourcetype": "raster",
+                "source": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]
+            }],
+            center=dict(lat=28.7, lon=-97.8),
+            zoom=6.6,
+        ),
+        paper_bgcolor="rgba(0,0,0,0)")
     return fig
 
 
@@ -340,6 +369,49 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150):
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(zeroline=False)
+    return fig
+
+
+def stress_spectrum_figure(spec: dict) -> go.Figure:
+    fig = go.Figure()
+    tier_styles = {
+        1.0: {"name": "100% Historical Baseline", "color": "#0d9488", "width": 2.5, "dash": "solid"},
+        0.8: {"name": "80% Moderate Stress (-20%)", "color": "#d97706", "width": 2.2, "dash": "solid"},
+        0.6: {"name": "60% Severe Stress (-40%)", "color": "#ea580c", "width": 2.2, "dash": "solid"},
+        0.4: {"name": "40% Catastrophic Stress (-60%)", "color": "#dc2626", "width": 2.2, "dash": "solid"},
+    }
+    for m, res in spec["tier_results"].items():
+        style = tier_styles.get(m, {"name": f"{int(m*100)}% Rain", "color": "#64748b", "width": 2.0, "dash": "solid"})
+        sim_df = res["df"]
+        fig.add_trace(go.Scatter(
+            x=sim_df["day"],
+            y=sim_df["combined_pct"],
+            mode="lines",
+            name=style["name"],
+            line=dict(color=style["color"], width=style["width"], dash=style["dash"]),
+            hovertemplate=f"<b>{style['name']}</b><br>Day %{{x}}<br>Storage: %{{y:.1f}}%<extra></extra>"
+        ))
+
+    # Threshold horizontal reference bands
+    fig.add_hline(y=40, line_dash="dash", line_color="#d97706", annotation_text="Stage 1 (40%)",
+                  annotation_position="top right")
+    fig.add_hline(y=30, line_dash="dash", line_color="#ea580c", annotation_text="Stage 2 (30%)",
+                  annotation_position="top right")
+    fig.add_hline(y=20, line_dash="dash", line_color="#dc2626", annotation_text="Critical (20%)",
+                  annotation_position="top right")
+    fig.add_hline(y=15, line_dash="dot", line_color="#991b1b", annotation_text="Emergency (15%)",
+                  annotation_position="top right")
+
+    fig.update_layout(
+        height=360,
+        margin=dict(l=10, r=10, t=30, b=10),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Arial", size=12),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0),
+        xaxis=dict(title="Scenario Day", showgrid=False, zeroline=False),
+        yaxis=dict(title="Combined Storage (%)", range=[0, 100], showgrid=True, zeroline=False),
+    )
     return fig
 
 
@@ -618,11 +690,11 @@ with st.sidebar:
         st.markdown(f'<div class="basin-brand"><img src="data:image/png;base64,{logo_data}" alt="BASIN"><small>Rainfall intelligence</small></div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="basin-brand"><strong>BASIN</strong><br><small>Rainfall intelligence</small></div>', unsafe_allow_html=True)
-    with st.expander("Appearance"):
-        appearance_picker()
-        custom_appearance()
     page = st.radio("View", ["Data", "Workspace", "Review", "Exports"], key="page",
                     index=1, format_func=PAGE_LABELS.get, label_visibility="collapsed")
+    if st.button("🤖 AI Assistant (" + ("Open" if st.session_state.get("assistant_open", True) else "Closed") + ")", key="sidebar_assistant_btn", width="stretch"):
+        st.session_state.assistant_open = not st.session_state.get("assistant_open", True)
+        st.rerun()
     with st.expander("Help & tutorial", expanded=st.session_state.get("tutorial_active", False)):
         st.markdown("**A guide to your workspace**")
         st.caption("Explore the data, compare scenarios, and learn how review and export work.")
@@ -696,7 +768,7 @@ with st.sidebar:
                 elif weights != w.weights:
                     w.rerank(weights)
                     save(w)
-                if st.button("Rebuild shortlist", disabled=sum(weights.values()) == 0, width="stretch"):
+                if st.button("Rebuild shortlist", key=f"btn_rebuild_shortlist_{w.id}", disabled=sum(weights.values()) == 0, width="stretch"):
                     try:
                         w.rebuild_shortlist()
                         save(w)
@@ -707,7 +779,7 @@ with st.sidebar:
         sessions = sorted((ROOT / "local").glob("session-*.json"), key=lambda p: p.stat().st_mtime, reverse=True) if (ROOT / "local").exists() else []
         if sessions:
             previous = st.selectbox("Run", sessions, format_func=lambda p: p.stem.replace("session-", ""))
-            if st.button("Open run", width="stretch"):
+            if st.button("Open run", key="btn_open_saved_run", width="stretch"):
                 try:
                     restored = Workspace.load(source, previous)
                     st.session_state.clear()
@@ -717,6 +789,11 @@ with st.sidebar:
                     st.error(f"Cannot open run: {error}")
         else:
             st.caption("No saved runs")
+    with st.expander("Settings"):
+        st.markdown("**Appearance**")
+        st.caption("Choose Light, Dark or System theme and customize interface colors.")
+        appearance_picker()
+        custom_appearance()
     st.divider()
     st.caption(f"Local · NOAA snapshot {source.manifest['downloaded_at'][:10]}")
 
@@ -728,7 +805,7 @@ if w:
     with status.popover("Personal notes", width="stretch"):
         st.caption("Saved locally with this analysis. Included in exports only if you opt in.")
         note = st.text_area("Provider notes", value=w.notes, key=f"provider_{w.id}", height=180)
-        if st.button("Save notes", width="stretch"):
+        if st.button("Save notes", key=f"btn_save_provider_notes_{w.id}", width="stretch"):
             previous_notes = w.notes
             w.notes = note
             if save(w):
@@ -801,9 +878,8 @@ elif page == "Workspace" and w is not None:
     st.caption("Explore the shortlist, then review each scenario before exporting. Scores reflect your ranking priorities, not likelihood or safety.")
     selected = [w.get(i) for i in w.selected]
     decision_summary(w)
-    a, b = st.columns(2)
-    a.metric("Scenarios to review", len(selected))
-    b.metric("Approved for export", sum(s.status == "accepted" and s.approved_revision == s.revision for s in selected))
+    approved_count = sum(s.status == "accepted" and s.approved_revision == s.revision for s in selected)
+    st.caption(f"{len(selected)} scenarios selected for review · {approved_count} approved for export")
     view = table(w)
     left = st.container()
     right = st.expander("How ranking scores are calculated")
@@ -816,7 +892,7 @@ elif page == "Workspace" and w is not None:
                                 marker=dict(size=14, symbol="circle-open", line=dict(width=2), color="#37AFA6"),
                                 text=shortlist_rows.ID, name="Selected for review",
                                 hovertemplate="%{text}<extra>Selected for review</extra>"))
-        st.plotly_chart(chart(fig, 290), width="stretch")
+        st.plotly_chart(chart(fig, 220), width="stretch")
     with right:
         fig = go.Figure()
         for key in w.weights:
@@ -824,28 +900,28 @@ elif page == "Workspace" and w is not None:
         fig.update_layout(barmode="stack")
         fig.update_xaxes(range=[0,100], title="Contribution to ranking score")
         st.plotly_chart(chart(fig, 290), width="stretch")
-    a, b, c, d = st.columns([2, 1, 1, 1])
-    query = a.text_input("Find scenario", placeholder="Scenario ID")
-    group_filter = b.selectbox("Group", ["All"] + sorted(view.Group.unique().tolist()))
-    review_filter = c.selectbox("Status", ["All", "unreviewed", "accepted", "rejected"])
-    only_selected = d.checkbox("Selected only", value=True)
-    filtered = view[view.ID.str.contains(query, case=False, regex=False)].copy()
-    if group_filter != "All":
-        filtered = filtered[filtered.Group.eq(group_filter)]
-    if review_filter != "All":
-        filtered = filtered[filtered.Status.eq(review_filter)]
-    if only_selected:
-        filtered = filtered[filtered["Selected for review"]]
-    filtered = filtered.sort_values(["Score", "ID"], ascending=[False, True]).reset_index(drop=True)
-    with tour_target("workspace_table"):
-        selection = st.dataframe(filtered, hide_index=True, width="stretch", height=min(430, 40+len(filtered)*35),
-                                 on_select="rerun", selection_mode="single-row", key=f"candidates_{w.id}")
-    rows = selection.selection.rows
-    if rows and rows[0] < len(filtered):
-        selected_id = filtered.iloc[rows[0]].ID
-        st.button(f"Inspect {selected_id}", on_click=open_review, args=(selected_id,), type="primary")
-    elif len(filtered):
-        st.button("Review selected scenarios", on_click=open_review, args=(w.selected[0],), type="primary")
+    st.button("Review selected scenarios", key="btn_review_selected_scenarios", on_click=open_review, args=(w.selected[0],), type="primary")
+    with st.expander("Scenario list and filters", expanded=curr_target == "workspace_table"):
+        a, b, c, d = st.columns([2, 1, 1, 1])
+        query = a.text_input("Find scenario", placeholder="Scenario ID")
+        group_filter = b.selectbox("Group", ["All"] + sorted(view.Group.unique().tolist()))
+        review_filter = c.selectbox("Status", ["All", "unreviewed", "accepted", "rejected"])
+        only_selected = d.checkbox("Selected only", value=True)
+        filtered = view[view.ID.str.contains(query, case=False, regex=False)].copy()
+        if group_filter != "All":
+            filtered = filtered[filtered.Group.eq(group_filter)]
+        if review_filter != "All":
+            filtered = filtered[filtered.Status.eq(review_filter)]
+        if only_selected:
+            filtered = filtered[filtered["Selected for review"]]
+        filtered = filtered.sort_values(["Score", "ID"], ascending=[False, True]).reset_index(drop=True)
+        with tour_target("workspace_table"):
+            selection = st.dataframe(filtered, hide_index=True, width="stretch", height=min(430, 40+len(filtered)*35),
+                                     on_select="rerun", selection_mode="single-row", key=f"candidates_{w.id}")
+        rows = selection.selection.rows
+        if rows and rows[0] < len(filtered):
+            selected_id = filtered.iloc[rows[0]].ID
+            st.button(f"Inspect {selected_id}", key=f"btn_inspect_table_{selected_id}", on_click=open_review, args=(selected_id,), type="primary")
     comparison_panel(w, save)
     with st.expander("Selection diagnostics"):
         st.dataframe(pd.DataFrame(comparison(w.scenarios, w.selected, w.params.seed)), hide_index=True, width="stretch")
@@ -874,6 +950,12 @@ elif page == "Review":
     with left:
         mode = st.radio("Series", ["Cumulative rainfall", "Daily rainfall", "30-day deficit", "Reservoir simulation"], horizontal=True, label_visibility="collapsed", key="review_series_mode")
         if mode == "Reservoir simulation":
+            sim_subview = st.radio(
+                "Simulation View",
+                ["Single Scenario Drawdown", "Multi-Tier Stress Spectrum (100% · 80% · 60% · 40%)"],
+                horizontal=True,
+                key="reservoir_sim_subview"
+            )
             c_pace, c_init, c_conserve = st.columns([1, 1, 1])
             pace_choice = c_pace.selectbox("Playback pace", ["Presentation mode (2.5 min)", "Deliberate (45 sec)", "Rapid preview (10 sec)"], label_visibility="collapsed")
             pace_ms = 2500 if "2.5 min" in pace_choice else (800 if "45 sec" in pace_choice else 150)
@@ -885,20 +967,56 @@ elif page == "Review":
             st.info("Illustrative experiment: conditional storage under assumed inputs. Not calibrated, not a forecast, and excluded from saved evidence packets and their verification.")
             with st.expander("All experiment assumptions and accounting"):
                 st.json(RESERVOIR_ASSUMPTIONS)
-            sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active)
 
-            with tour_target("review_simulation"):
-                st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms)), width="stretch")
+            if sim_subview == "Multi-Tier Stress Spectrum (100% · 80% · 60% · 40%)":
+                spec = simulate_stress_spectrum(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active)
+                st.plotly_chart(accessible_chart(stress_spectrum_figure(spec)), width="stretch")
 
-            s1 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 40), None)
-            s2 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 30), None)
-            term = sim_df.iloc[-1]
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Final Combined", f"{term['combined_pct']:.1f}%", f"{term['combined_acft']:,.0f} ac-ft")
-            m2.metric("Illustrative band", term["stage"])
-            m3.metric("Below 40% (conditional)", f"Day {s1}" if s1 else "Not breached")
-            m4.metric("Below 30% (conditional)", f"Day {s2}" if s2 else "Not breached")
-            st.caption("Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings reset independently of saved rainfall sessions.")
+                # Tipping point analysis
+                passed = [r for r in spec["summary_table"] if r["survived_critical_20pct"]]
+                failed = [r for r in spec["summary_table"] if not r["survived_critical_20pct"]]
+                if passed and failed:
+                    lowest_pass = min(passed, key=lambda x: x["retention_pct"])
+                    highest_fail = max(failed, key=lambda x: x["retention_pct"])
+                    st.warning(
+                        f"⚡ **Critical Breaking Point Identified**: Infrastructure survives at **{lowest_pass['retention_pct']:.0f}% rainfall**, "
+                        f"but breaches critical Stage 3 (20%) reserves under **{highest_fail['retention_pct']:.0f}% rainfall** on Day {highest_fail['day_stage3_20']}."
+                    )
+                elif not failed:
+                    st.success("✅ **System Resilient Across All Tiers**: Storage remains above 20% critical reserve even under catastrophic 40% rainfall.")
+                else:
+                    st.error(f"⚠️ **System Vulnerable Across All Tiers**: Critical 20% threshold is breached even under baseline rainfall on Day {failed[0]['day_stage3_20']}.")
+
+                countdown_df = pd.DataFrame([
+                    {
+                        "Rainfall Tier": r["tier_label"],
+                        "Retention": f"{r['retention_pct']:.0f}%",
+                        "Lowest Storage": f"{r['min_pct']:.1f}% ({r['min_acft']:,.0f} ac-ft)",
+                        "Final Storage": f"{r['final_pct']:.1f}%",
+                        "Stage 1 (40%)": f"Day {r['day_stage1_40']}" if r["day_stage1_40"] else "Not reached ✓",
+                        "Stage 2 (30%)": f"Day {r['day_stage2_30']}" if r["day_stage2_30"] else "Not reached ✓",
+                        "Critical (20%)": f"Day {r['day_stage3_20']}" if r["day_stage3_20"] else "Not reached ✓",
+                        "Outcome": r["status"],
+                    }
+                    for r in spec["summary_table"]
+                ])
+                st.dataframe(countdown_df, hide_index=True, width="stretch")
+                st.caption("Countdown days indicate elapsed duration from scenario onset until stage triggers occur under each rainfall tier. Simulates simultaneous vulnerability across historical and climate-stressed regimes.")
+            else:
+                sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active)
+
+                with tour_target("review_simulation"):
+                    st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms)), width="stretch")
+
+                s1 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 40), None)
+                s2 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 30), None)
+                term = sim_df.iloc[-1]
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Final Combined", f"{term['combined_pct']:.1f}%", f"{term['combined_acft']:,.0f} ac-ft")
+                m2.metric("Illustrative band", term["stage"])
+                m3.metric("Below 40% (conditional)", f"Day {s1}" if s1 else "Not breached")
+                m4.metric("Below 30% (conditional)", f"Day {s2}" if s2 else "Not breached")
+                st.caption("Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings reset independently of saved rainfall sessions.")
         else:
             expected = pd.DataFrame(w.reference.expected(s.series.index), index=s.series.index, columns=s.series.columns)
             fig = go.Figure()
@@ -915,11 +1033,11 @@ elif page == "Review":
             st.markdown(f"**{s.id}** ({getattr(s, 'cluster_name', f'Group {s.cluster}')}) / revision {s.revision} / {s.status}")
             note = st.text_area("Review note", key=f"note_{s.id}_{w.id}", height=90)
             a, b = st.columns(2)
-            if a.button("Accept", type="primary", width="stretch"):
+            if a.button("Accept", key=f"btn_accept_{s.id}_{s.revision}", type="primary", width="stretch"):
                 s.review(True, note)
                 save(w)
                 st.rerun()
-            if b.button("Reject", width="stretch"):
+            if b.button("Reject", key=f"btn_reject_{s.id}_{s.revision}", width="stretch"):
                 try:
                     s.review(False, note)
                     save(w)
@@ -928,7 +1046,7 @@ elif page == "Review":
                     st.error(str(error))
             with st.expander("Scale rainfall"):
                 factor = st.number_input("Multiplier", 0.0, 2.0, 0.8, 0.05, key=f"edit_{s.id}_{w.id}")
-                if st.button("Apply multiplier", width="stretch"):
+                if st.button("Apply multiplier", key=f"btn_apply_multiplier_{s.id}_{s.revision}", width="stretch"):
                     try:
                         w.edit(s.id, note, factor=factor)
                         save(w)
@@ -936,9 +1054,9 @@ elif page == "Review":
                     except ValueError as error:
                         st.error(str(error))
         with st.expander("Replace from CSV"):
-            st.download_button("CSV template", s.series.rename_axis("date").to_csv(), f"{s.id}-template.csv", "text/csv")
+            st.download_button("CSV template", s.series.rename_axis("date").to_csv(), f"{s.id}-template.csv", "text/csv", key=f"dl_template_{s.id}_{s.revision}")
             upload = st.file_uploader("Daily rainfall · mm", type="csv", key=f"replacement_{w.id}_{s.id}")
-            if st.button("Apply CSV", disabled=upload is None):
+            if st.button("Apply CSV", key=f"btn_apply_csv_{s.id}_{s.revision}", disabled=upload is None):
                 try:
                     replacement = pd.read_csv(upload, index_col="date", parse_dates=["date"])
                     w.edit(s.id, note, replacement=replacement)
@@ -950,15 +1068,15 @@ elif page == "Review":
             alternatives = [x.id for x in w.scenarios if x.id not in w.selected and x.status != "rejected"]
             with st.expander("Replace shortlist entry"):
                 if alternatives:
-                    other = st.selectbox("Candidate", alternatives, format_func=lambda i: f"{i} · {w.get(i).score:.1f}")
-                    if st.button("Replace entry"):
+                    other = st.selectbox("Candidate", alternatives, format_func=lambda i: f"{i} · {w.get(i).score:.1f}", key=f"sel_alt_{s.id}_{w.id}")
+                    if st.button("Replace entry", key=f"btn_replace_entry_{s.id}_{w.id}"):
                         w.swap(s.id, other)
                         save(w)
                         st.session_state.inspect_id = other
                         st.rerun()
         else:
-            old = st.selectbox("Replace shortlisted scenario", w.selected)
-            if st.button("Use this candidate", disabled=s.status == "rejected"):
+            old = st.selectbox("Replace shortlisted scenario", w.selected, key=f"sel_shortlist_target_{s.id}_{w.id}")
+            if st.button("Use this candidate", key=f"btn_use_candidate_{s.id}_{w.id}", disabled=s.status == "rejected"):
                 w.swap(old, s.id)
                 save(w)
                 st.rerun()
@@ -969,7 +1087,7 @@ elif page == "Review":
                                 column_config={col: st.column_config.NumberColumn(names[col] + " · mm", min_value=0, format="%.3f") for col in s.series})
         c_note, c_save = st.columns([3, 1])
         daily_note = c_note.text_input("Edit rationale", value=note, key=f"daily_note_{w.id}_{s.id}_{s.revision}", placeholder="Reason for adjusting daily rainfall")
-        if c_save.button("Save daily edits", width="stretch"):
+        if c_save.button("Save daily edits", key=f"btn_save_daily_edits_{s.id}_{s.revision}", width="stretch"):
             if not daily_note.strip():
                 st.warning("Please enter a brief rationale for the edit.")
             elif edited.to_numpy().tolist() == s.series.to_numpy().tolist():
@@ -1025,11 +1143,29 @@ elif page == "Exports":
     try:
         w.exportable()
         ready = True
+        st.success("✅ **Export verified:** All shortlisted candidates are reviewed and ready for bundle generation.")
     except ValueError as error:
         ready = False
-        st.warning(str(error))
+        st.warning(f"⚠️ **Export prerequisite:** {error}")
+        unreviewed = [s for s in chosen if s.status == "unreviewed" or (s.status == "accepted" and s.approved_revision != s.revision)]
+        if unreviewed:
+            st.info(
+                f"**{len(unreviewed)} shortlisted candidate(s) require review before export:** "
+                f"{', '.join(s.id for s in unreviewed)}.\n\n"
+                "BASIN's scientific provenance standard requires each shortlisted scenario to have a deliberate human decision (Accept or Reject) before generating a verified engineering bundle."
+            )
+            col_a, col_b = st.columns([1, 1])
+            if col_a.button("✅ Accept all shortlisted for export", key="btn_accept_all_for_export", type="primary"):
+                for s in unreviewed:
+                    s.review(True, "Accepted during export preparation")
+                save(w)
+                st.success("All shortlisted candidates accepted.")
+                st.rerun()
+            if col_b.button("🔍 Review candidates in Review tab", key="btn_goto_review_tab"):
+                switch_page("Review")
+                st.rerun()
     with tour_target("export_panel"):
-        if st.button("Build verified export", type="primary", disabled=not ready or (bool(w.custom_uploads) and not share_custom)):
+        if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (bool(w.custom_uploads) and not share_custom)):
             try:
                 payload = export_bundle(w, share, include_custom=share_custom)
                 report = verify_bundle(payload)
@@ -1038,10 +1174,12 @@ elif page == "Exports":
                 st.error(f"Verification failed: {error}")
     packet = st.session_state.get("packet")
     if packet and (not w.custom_uploads or share_custom) and packet.get("custom", False) == share_custom and packet["share"] == share and packet["fingerprint"] == json.dumps(w.record(share, include_custom=share_custom), sort_keys=True):
-        st.download_button("Download ZIP", packet["data"], f"BASIN-{w.id}.zip", "application/zip", type="primary")
+        st.download_button("Download ZIP", packet["data"], f"BASIN-{w.id}.zip", "application/zip", key=f"dl_zip_{w.id}", type="primary")
         st.json(packet["report"])
         st.caption(f"{packet['report']['scenarios_replayed']} revisions verified · daily_rainfall.csv / shortlist.csv / audit.json / input snapshot / checksums")
     with st.expander("Run resource usage"):
         st.json(w.footprint)
 
 st.caption("Rainfall evidence workbench · Regional station proxies unvalidated · Optional reservoir experiment is illustrative")
+
+assistant_panel(w, source=source, names=names)
