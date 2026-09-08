@@ -22,7 +22,7 @@ The offline Windows wheel bundle is specific to CPython 3.12 x64. Python itself 
 
 Start with **Try an example** to open an unapproved rainfall scenario, or **Use my data** for CSV preview and comparison. Advanced scenario settings remain in the sidebar.
 
-Open **Appearance** near the top of the sidebar for Light, Dark or System. Three horizontal color pickers control buttons, selected options and the sidebar; choose **Apply colors** to apply drafts or **Reset colors** to restore defaults. Custom choices last for the current session; the native theme choice is remembered by the browser. **Color-blind mode** uses a consistent interface accent and chart colors with line styles, shapes and patterns. This is an accessibility aid, not a complete accessibility certification.
+Open **Settings** in the sidebar for Light, Dark or System appearance and color customization. Three horizontal color pickers control buttons, selected options and the sidebar; choose **Apply colors** to apply drafts or **Reset colors** to restore defaults. Custom choices last for the current session; the native theme choice is remembered by the browser. **Color-blind mode** uses a consistent interface accent and chart colors with line styles, shapes and patterns. This is an accessibility aid, not a complete accessibility certification.
 
 **Take a tour** or **Help & tutorial** starts the guided walkthrough. Instructions appear beside the highlighted target and the app scrolls to it automatically. **Personal notes** is available at the top right of an active analysis; notes save locally and are excluded from exports unless explicitly included. **Exports** offers a readable brief preview before building the verified packet. Previewing does not bypass approval requirements.
 

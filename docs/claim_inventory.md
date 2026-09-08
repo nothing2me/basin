@@ -30,7 +30,7 @@ Claim states used here:
 | Claim | Current state | Evidence and boundary |
 |---|---|---|
 | Users can trace assumptions, compare evidence records and preserve unresolved disagreements. | Implemented and internally verified | Schema 2.0 evidence/conflict records, save/restore tests and privacy-aware export. The app does not decide which source is true. |
-| Local rainfall CSVs can be previewed without changing the workspace. | Implemented and internally verified | Bounded parser and Streamlit tests. The parser/README say 10 MB while Streamlit is configured for 5 MB; the effective limit must be reconciled before release. |
+| Local rainfall CSVs can be previewed without changing the workspace. | Implemented and internally verified | Bounded parser and Streamlit tests. The parser, README and `.streamlit/config.toml` are aligned to 10 MB (`maxUploadSize = 10`). |
 | Uploaded rainfall can be compared descriptively with one selected bundled NOAA station. | Implemented and internally verified | Same-date paired-valid-day calculation, blocking declarations, zero-reference handling and opt-in JSON report. Geography and observation-day compatibility are user declarations, not independent validation. |
 | Upload comparison results enter saved scenarios and the verified ZIP. | Excluded from the current slice | Uploads and comparison reports are not persisted, attached to scenarios or covered by scenario packet replay. |
 | The evidence packet is internally consistent and replayable within a declared scope. | Internally verified | File inventory/hashes, source identity, transformations, revisions, accepted IDs, rainfall values, features, ranking components, evidence links, privacy defaults and regenerated brief are checked. Bundles are unsigned and do not prove source authenticity. |
@@ -42,7 +42,7 @@ Claim states used here:
 | Claim | Current state | Evidence and boundary |
 |---|---|---|
 | Python calculation paths can run with network sockets blocked. | Internally verified | `scripts/demo_smoke.py`. Browser/native UI network isolation remains untested on the presentation laptop. |
-| A branded native Windows executable exists. | Implemented and observed locally | Tracked `BASIN.exe` matches `origin/main`; browser launcher remains a fallback. Clean reproducible PyInstaller/pywebview build dependencies and presentation-device execution remain open. |
+| A branded native Windows executable exists. | Implemented and observed locally | Tracked `BASIN.exe` matches `origin/main`; browser launcher remains a fallback. Clean reproducible build dependencies are pinned in `requirements-build.txt`; presentation-device execution remains open. |
 | Local notes and uploads stay on the operator's device unless explicitly exported. | Implemented with stated limits | Loopback server, ignored local storage, no telemetry, private-note opt-in. Local files are not encrypted and the app is single-operator, not an authenticated multiuser service. |
 | Application controls are readable in coordinated light/dark themes and plots retain distinct colors. | Implemented and observed locally | Current Streamlit theme/CSS, prior desktop visual review and UI tests. Projector and presentation-resolution review remain open. |
 | The source kit excludes private sessions, notes and correspondence. | Internally verified for the recorded package | Package inspection is historical and must be repeated for the frozen kit. The tracked executable is a separate release artifact. |
