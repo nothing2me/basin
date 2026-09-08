@@ -12,7 +12,7 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
     assert not app.exception
     assert "A clearer starting point" not in str(app.markdown)
-    next(b for b in app.button if b.label == "Generate").click().run()
+    next(b for b in app.button if b.label == "Create rainfall scenarios").click().run()
     assert not app.exception
     w = app.session_state.workspace
     assert len(w.scenarios) == 300
@@ -58,6 +58,39 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert not app.exception
 
 
+def test_plain_language_four_stage_workflow(tmp_path, monkeypatch):
+    from basin_core.workspace import Workspace
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+
+    assert not app.exception
+    assert app.session_state.page == "Workspace"
+    assert app.sidebar.radio[0].options == ["1. Check data", "2. Build scenarios", "3. Review choices", "4. Share results"]
+    assert any(item.value == "2. Build scenarios" for item in app.subheader)
+    assert any("Which rainfall scenarios deserve review?" in item.value for item in app.markdown)
+    assert next(slider for slider in app.sidebar.slider if slider.label == "Rainfall compared with original · %")
+    assert next(box for box in app.sidebar.selectbox if box.label == "Where reduced rainfall occurs")
+    assert next(box for box in app.sidebar.selectbox if box.label == "Scenarios to test")
+    assert next(box for box in app.sidebar.selectbox if box.label == "Scenarios to review")
+
+    next(button for button in app.button if button.label == "Create rainfall scenarios").click().run()
+    assert not app.exception
+    assert app.session_state.page == "Workspace"
+    assert any(item.value == "2. Build scenarios" for item in app.subheader)
+    assert any("Decision summary" in item.value for item in app.markdown)
+    assert any("Why it ranked here" in item.value for item in app.caption)
+    assert {metric.label for metric in app.metric} >= {
+        "Scenarios to review", "Approved for export"
+    }
+
+    app.sidebar.radio[0].set_value("Review").run()
+    assert not app.exception
+    assert any(item.value == "3. Review choices" for item in app.subheader)
+    assert any("Stations stressed together" in item.value for item in app.markdown)
+    assert any("How unusual vs history" in item.value for item in app.markdown)
+
+
 def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
     from basin_core.workspace import Workspace
     original_save = Workspace.save
@@ -66,15 +99,15 @@ def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
     assert not app.exception
     assert "tutorial_active" not in app.session_state or not app.session_state["tutorial_active"]
 
-    # Start from the first-run invitation; restart later through Help.
-    start_btn = next(b for b in app.button if b.label == "Take a tour")
+    # Start from Help on the first stage; restart there again later.
+    start_btn = next(b for b in app.button if b.label == "Start tutorial")
     start_btn.click().run()
     assert not app.exception
     assert app.session_state.tutorial_active is True
     assert app.session_state.tutorial_step == 0
     assert app.session_state.page == "Data"
 
-    # Step through all 7 steps across the pipeline
+    # Step through all 7 guided steps across the pipeline.
     for step in range(1, 7):
         next_btn = next(b for b in app.button if b.label == "Next Step ▶")
         next_btn.click().run()

@@ -9,20 +9,20 @@ import streamlit as st
 
 def apply_design():
     st.html("""<style>
-.block-container{padding:2.5rem 2.8rem 2rem;max-width:1560px}
+.block-container{padding:1.75rem 2.8rem 2rem;max-width:1560px}
 [data-testid="stAppDeployButton"]{display:none}
 [data-testid="stHeader"]{background:transparent}
 [data-testid="stSidebar"]{border-right:1px solid color-mix(in srgb,currentColor 12%,transparent)}
 [data-testid="stSidebarUserContent"]{padding-top:.25rem!important}
-[data-testid="stVerticalBlock"]{gap:1rem}
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.65rem}
-.basin-brand{margin:0 0 .7rem}
-.basin-brand img{display:block;width:100%;height:auto;margin-bottom:.55rem;background:#20292E;padding:10px;border-radius:8px;box-sizing:border-box}
+[data-testid="stVerticalBlock"]{gap:.7rem}
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.5rem}
+.basin-brand{margin:0 0 .65rem}
+.basin-brand img{display:block;width:min(100%,220px);height:auto;margin-bottom:.35rem;background:#20292E;padding:10px;border-radius:8px;box-sizing:border-box}
 .basin-brand small{font-size:.73rem;opacity:.85;letter-spacing:.08em;text-transform:uppercase}
 .basin-eyebrow{font-size:.67rem;font-weight:700;letter-spacing:.14em;opacity:.85;margin-top:8px}
 h1,h2,h3{letter-spacing:-.025em}
 h3{font-size:1.6rem!important;font-weight:650!important}
-[data-testid="stMetric"]{border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:13px;padding:16px 18px;background:color-mix(in srgb,currentColor 2%,transparent)}
+[data-testid="stMetric"]{border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:13px;padding:11px 14px;background:color-mix(in srgb,currentColor 2%,transparent)}
 [data-testid="stMetricValue"]{font-size:1.7rem;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.025em}
 [data-testid="stMetricLabel"]{font-size:.76rem;opacity:.78}
 [data-testid="stCaptionContainer"]{font-size:.78rem}
@@ -43,6 +43,9 @@ button:focus-visible,a:focus-visible{outline:2px solid currentColor!important;ou
 .welcome-copy{max-width:610px;line-height:1.6;opacity:.8;font-size:1rem}
 .welcome-steps{display:flex;flex-wrap:wrap;gap:14px 32px;padding-top:18px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);font-size:.8rem;opacity:.85}
 .welcome-steps b{font-variant-numeric:tabular-nums;color:inherit;margin-right:8px}
+.st-key-decision_summary{padding:10px 14px!important;border-color:color-mix(in srgb,currentColor 18%,transparent)!important;background:color-mix(in srgb,currentColor 2%,transparent)}
+.st-key-decision_summary [data-testid="stMarkdownContainer"] p{margin-bottom:0}
+.st-key-decision_summary [data-testid="stCaptionContainer"]{margin-top:0}
 .st-key-tutorial_guide{background:color-mix(in srgb,currentColor 4%,transparent);border:1px solid color-mix(in srgb,currentColor 30%,transparent);border-left:4px solid currentColor;border-radius:12px;padding:18px 22px;margin:4px 0 12px}
 [data-testid="stSidebar"] .st-key-tutorial_guide{padding:10px;margin:0}
 [data-testid="stSidebar"] .tutorial-description,[data-testid="stSidebar"] .tutorial-location{display:none}
@@ -59,7 +62,7 @@ button:focus-visible,a:focus-visible{outline:2px solid currentColor!important;ou
 .basin-theme-picker button{font:inherit;font-size:.8rem;cursor:pointer;flex:1;border:1px solid color-mix(in srgb,currentColor 20%,transparent);border-radius:8px;background:transparent;color:inherit;padding:9px 4px}
 .basin-theme-picker button:hover{background:color-mix(in srgb,#356273 24%,transparent)}
 .basin-theme-status{font-size:.75rem;line-height:1.4;margin:6px 0 0;opacity:.8}
-@media(max-width:800px){.block-container{padding:2.4rem 1rem 1.5rem}.st-key-welcome{padding:20px}.welcome-title{font-size:1.65rem!important}.st-key-tutorial_guide{padding:14px}h3{font-size:1.3rem!important}}
+@media(max-width:800px){.block-container{padding:1.4rem 1rem 1.5rem}.st-key-welcome{padding:20px}.welcome-title{font-size:1.65rem!important}.st-key-tutorial_guide{padding:14px}h3{font-size:1.3rem!important}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>""")
 

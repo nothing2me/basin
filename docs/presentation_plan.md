@@ -1,255 +1,222 @@
-# BASIN: 60-Minute Finalist Showcase Presentation Plan & Runbook
+# BASIN finalist showcase presentation plan
 
-> **Reconciliation notice — 2026-09-06 (documentation pass, no narrative rewritten).** This plan predates commit `0be1933` and the current release path, and several passages below describe capabilities the build does not have. Resolve them under B11.4 and B11.7 before rehearsing; the wording is left intact so the team, not a documentation pass, decides what the pitch says.
->
-> - **Climate-warming and data-centre stressors** (Segment 2 framing, the mass-balance equation, Action 5, the industrial-siting case study and Q&A item 3) were removed from the product in `0be1933`. There is no "Climate Warming & Data Center Demand Stressors" expander, no +2.0 °C control and no 8 MGD cooling slider to demonstrate.
-> - **`BASIN.exe`** (speaker table, Segment 3 heading and display note, the offline Q&A answer, the equipment checklist) is a legacy artifact. The supported path for this release is the browser launcher via `Start BASIN.cmd`; the executable is not rebuilt or distributed. See `README.md` and B10.1.
-> - **GIS overlays** — the Mary Rhodes pipeline route and I-37 corridor infrastructure map described in Segment 3 — are not in the current Data view, which shows station coordinates only.
-> - **"Verified WAM export" and "§ 1001 engineering sign-off"** overstate the packet. `docs/verification_scope.md` limits verification to internal consistency, and the handoff brief states that acceptance is a local rainfall-content review, not professional certification, and that retention cannot be applied directly to naturalized streamflow.
-> - **Reservoir figures** shown live come from the illustrative, uncalibrated experiment, which is excluded from the evidence packet and from every verification claim.
-> - **Format and roster:** this plan describes a 60-minute block with four speakers, while `docs/demo_runbook.md` describes a three-minute demo. B11.7 must confirm the real format against organizer communication, and the team currently has three members.
+Updated: 2026-09-07 | Product baseline: `f78d692` on `main`
 
-**Event:** *From the Ground Up 2026 AI Hackathon — Finalist Showcase*  
-**Location:** Pleasanton, CA  
-**Date:** September 22, 2026  
-**Institution:** Texas A&M University-Corpus Christi  
-**Project:** BASIN (*Basin Analysis and Scenario Intelligence Navigator*)  
-**Format:** 60-Minute Total Block (45-Minute Pitch + Live Demo + Simulation Video, 12-Minute Jury Defense/Q&A, 3-Minute Buffer/Wrap)
+## Confirmed event context
 
----
+- Event: From the Ground Up 2026 AI Hackathon finalist showcase
+- Location: Pleasanton, California
+- Date: September 22, 2026
+- Expected travel day: September 21, subject to later organizer instructions
+- Team: Noah Wilborn, Mohammed Asad Khan and Misha Stegall
+- Judging themes: impact, feasibility, community centeredness, innovation and clarity
 
-## Speaker Roles & Responsibilities (Template)
-*Customize these assignments to match your team's roster:*
+The supplied organizer materials do not specify the finalist presentation length, required deck/demo format, A/V setup or exact submission mechanism. The three-minute demonstration below is the team's compact working version, not an official time limit. Confirm and record the actual format under TODO B11.7 before final rehearsal.
 
-| Role | Default Assignment | Key Responsibilities |
-| :--- | :--- | :--- |
-| **Speaker 1: Team Lead / Policy** | `[Member Name 1]` | Opening hook, Texas Region N problem framing, community stakes, § 1001 engineering ethics, wrap-up. |
-| **Speaker 2: Lead Hydrologist** | `[Member Name 2]` | Meteorological baseline, NOAA station proxies, Mary Rhodes pipeline, reservoir mass balance, climate warming pan evaporation. |
-| **Speaker 3: Systems & ML Engineer** | `[Member Name 3]` | Live software pilot in `BASIN.exe`, K-Means clustering, AI data center cooling stressor, verified WAM export. |
-| **Speaker 4: Visual Media & Case Study Lead** | `[Member Name 4]` | Narrating the simulation demonstration video, showcasing stakeholder workflow benefits, and bridging pre-engineering scoping to field engineering decisions. |
+## What BASIN is
 
----
+BASIN helps a Region N or rural-serving water analyst turn public rainfall evidence into a small set of transparent rainfall-stress scenarios, challenge assumptions, and hand a reviewable packet to a hydrologist for deeper analysis.
 
-## Master Time-Block Schedule (60 Minutes)
+BASIN does not predict reservoir levels, water deliveries, safe yield, shortage probability or restriction dates. Its three airport stations are provisional regional proxies pending practitioner review. The optional reservoir view is a separate uncalibrated illustration and is excluded from the evidence packet.
 
-```mermaid
-flowchart TD
-    S1["1. Framing (00:00 - 10:00 | 10 min) - Speaker 1: Coastal Bend Dilemma & 2015 Gap"]
-    S2["2. Architecture (10:00 - 20:00 | 10 min) - Speaker 2: Offline Logic & Mass-Balance"]
-    S3["3. Live Demo (20:00 - 38:00 | 18 min) - Speaker 3: BASIN.exe Software Pilot"]
-    S4["4. Simulation Video (38:00 - 43:00 | 5 min) - Speaker 4: Stakeholder Impact Video & Scoping Case Study"]
-    S5["5. Ethics & Specs (43:00 - 48:00 | 5 min) - Speaker 1: Texas § 1001 & Zero-Cloud Audit"]
-    S6["6. Jury Defense (48:00 - 58:00 | 10 min) - All: Technical Q&A Defense"]
-    S7["7. Closing (58:00 - 60:00 | 2 min) - Speaker 1: Wrap-Up & Closing Appeal"]
+The sentence judges should remember:
 
-    S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
-```
+> BASIN turns a disputed starting point into a transparent request for the right expert analysis.
 
----
+## The presentation argument
 
-## Detailed Minute-by-Minute Segment Runbook
+1. **Problem:** Region N's current planning model does not include newer conditions after its hydrologic record ends, while smaller providers have limited resources for exploratory specialist work.
+2. **Current gap:** The step before formal modeling can begin with scattered evidence, conflicting assumptions and no shared explanation of which stress patterns deserve attention.
+3. **Product:** BASIN uses public observations, deterministic scenario construction, local KMeans grouping and explainable priorities to create a diverse shortlist.
+4. **Human control:** A user can compare, challenge, edit, reject or replace scenarios. Changed rainfall invalidates prior acceptance.
+5. **Handoff:** The export contains rainfall, assumptions, evidence, unresolved issues and audit history for expert review.
+6. **Boundary:** Verification establishes internal consistency within its published contract. It does not certify scientific validity or professional approval.
 
-### Segment 1: The Crisis, The Gap, and The Stakes [00:00 – 10:00 | 10 min]
-**Lead Speaker:** `[Speaker 1: Team Lead / Policy]`  
-**Visual Support:** Title Slide / Region N Drought Map Slide
+## Compact three-minute demonstration
 
-#### Minute-by-Minute Flow:
-* **00:00 – 02:00 | The Hook & Introductions:**
-  - Introduce the team from Texas A&M University-Corpus Christi.
-  - State the opening challenge: *"In South Texas, water is not an abstract environmental debate; it is an existential economic constraint. In the Texas Coastal Bend (Region N), 600,000 residents and industrial hubs depend on two interconnected reservoirs: Lake Corpus Christi and Choke Canyon Reservoir."*
-* **02:00 – 05:00 | The 2015 Hydrology Blind Spot:**
-  - Explain why existing planning is outdated: Official state water availability models (Texas WAM Run 3) stop at **2015 hydrology** because commissioning full engineering consulting runs costs hundreds of thousands of dollars and takes 6 to 18 months.
-  - Small rural water districts (like Nueces County WCID #3) cannot afford custom engineering contracts for preliminary scoping.
-* **05:00 – 08:00 | The Compound Triple-Threat (Drought + Climate + AI):**
-  - **Meteorological Drought:** Long-duration rainfall deficits.
-  - **Global Warming:** South Texas summer temperatures exceeding 100°F drive pan evaporation to 8–10 inches/month, losing more water to the sky than municipal water taps draw.
-  - **AI & Industrial Expansion:** Hyperscale data centers and semiconductor manufacturing expanding along the I-37 corridor rely on evaporative cooling towers consuming millions of gallons of potable water daily.
-* **08:00 – 10:00 | The Solution Thesis (BASIN):**
-  - Introducing **BASIN**: A 100% offline, local pre-engineering scoping workbench that lets water managers stress-test 35 years of unmanipulated NOAA observations in seconds, without cloud bills, API tokens, or synthetic hallucinations.
+This route should fit one presentation viewport per stage after B13. Until that refactor lands, use the current Data, Workspace, Review and Exports navigation names.
 
----
+### 0:00-0:25 - Frame the decision
 
-### Segment 2: Hydrologic Architecture & Methodology [10:00 – 20:00 | 10 min]
-**Lead Speaker:** `[Speaker 2: Lead Hydrologist]`  
-**Visual Support:** Architecture Diagram / Hydrology Methodology Slide
+Say: “A small provider does not need BASIN to declare a water emergency. They need a clear way to tell a hydrologist which plausible rainfall stresses should be examined first and why.”
 
-#### Minute-by-Minute Flow:
-* **10:00 – 13:00 | Observational Integrity & Zero Synthetic Hallucinations:**
-  - Show why Generative LLMs should *never* generate synthetic weather sequences for civil infrastructure.
-  - BASIN uses **Synchronized Historical Window Resampling**: Extracting real multi-station 30-day to 365-day storm windows from 1991–2025 NOAA GHCN-Daily records. Storm tracks, seasonal concurrence, and spatial correlations are preserved intact.
-  - Cryptographic data provenance: Every station snapshot is SHA-256 hashed. Missing records are preserved as true missing values, never silently imputed with zero.
-* **13:00 – 16:00 | Unsupervised K-Means Morphological Profiling:**
-  - How BASIN handles 300 to 1,000 resampled drought candidates:
-  - Normalized 4D feature vectors: Duration, deficit severity, dry-spell run length, and multi-basin concurrence.
-  - Deterministic K-Means clustering assigns explainable profiles (e.g., *"Peak Summer Elevated Deficit"* vs. *"Multi-Basin Concurrent Deficit"*).
-  - Diverse selector algorithm guarantees representation across all clusters on the shortlist, eliminating single-mode "groupthink" selection.
-* **16:00 – 20:00 | Physical Mass-Balance Governing Equations:**
-  - Explain the dual-tank reservoir system:
-    - **Lake Corpus Christi (LCC):** 257,300 ac-ft terminal pool (Nueces River).
-    - **Choke Canyon Reservoir (CCR):** 662,600 ac-ft carryover pool (Frio River).
-    - **Combined Pool:** 919,900 ac-ft.
-  - Net daily storage balance:
-    $$\Delta S = \text{Catchment Inflow} - \text{Evaporative Loss} - \text{Municipal Draw} - \text{Data Center Cooling Draw}$$
-  - Drought Contingency Plan (DCP) triggers:
-    - Stage 1 (Mild Drought): Combined $< 40\%$ (367,960 ac-ft)
-    - Stage 2 (Moderate Drought): Combined $< 30\%$ (275,970 ac-ft)
-    - Stage 3 (Critical / Mandatory Cutbacks): Combined $< 20\%$ (183,980 ac-ft)
+Show the BASIN title and the four-stage workflow. State that the tool runs locally and uses public NOAA rainfall plus user-controlled priorities.
 
----
+### 0:25-0:55 - Check the evidence
 
-### Segment 3: Live Software Pilot in BASIN.exe [20:00 – 38:00 | 18 min]
-**Lead Pilot:** `[Speaker 3: Systems & ML Engineer]`  
-**Co-Narrators:** `[Speaker 1 & Speaker 2]`  
-**Display:** Live Native Desktop Window (`BASIN.exe` projected in full 1080p/4K)
+Open **Data**.
 
-#### Live Demo Choreography (Step-by-Step Screen Actions):
+- Identify the 1991-2025 public snapshot and its recorded hash.
+- Point out that Corpus Christi, Victoria and San Antonio airports are provisional regional proxies.
+- If demonstrating a local upload, show the preview and same-date public comparison only. State that it is descriptive and not yet persisted into scenario packets.
 
-* **20:00 – 23:00 | Action 1: Data View & GIS Infrastructure Map**
-  - `[CLICK: View -> Data]`
-  - Highlight the South Texas Basin Map: Point out Corpus Christi (USW00012924), Victoria (USW00012912), and San Antonio (USW00012921).
-  - Trace the **Mary Rhodes Phase 1 Pipeline**: The 101-mile raw water aqueduct delivering 60 MGD from Lake Texana directly to O.N. Stevens Water Treatment Plant.
-  - Show the **I-37 Industrial Corridor**: Highlight where power and data center infrastructure is expanding.
-  - Verify data integrity: Point to the SHA-256 snapshot checksum and station completeness percentages.
+Do not describe station coordinates as catchment coverage or an affected-area map.
 
-* **23:00 – 26:00 | Action 2: Sidebar Scenario Generation & Community Presets**
-  - `[CLICK: View -> Workspace]`
-  - `[SIDEBAR: Open 'New run']`: Show multi-station selection, durations (90, 180, 270 days), 35%–85% rainfall retention, 300 candidates, seed 22.
-  - `[CLICK: 'Generate']`: The 300-candidate scenario workspace compiles in under 1.2 seconds locally.
-  - `[SIDEBAR: Open 'Ranking weights']`:
-    - Select **"Rural Water District (Nueces County WCID #3)"**: Watch the sliders automatically snap to 50% Jun–Sep summer crop timing.
-    - Select **"River Basin Authority"**: Watch weights snap to 40% multi-basin concurrence.
-    - Show real-time re-ranking of all 300 candidates.
+### 0:55-1:30 - Build and compare scenarios
 
-* **26:00 – 29:00 | Action 3: Workspace Candidate Table & Feature Clustering**
-  - Hover over the 2D feature scatterplot (Days vs. Deficit mm colored by K-Means cluster).
-  - Point to the candidate table: Show how the diverse selector ensured that Group 0, Group 1, Group 2, etc. all have representatives shortlisted.
-  - Select candidate row 1: Click **"Inspect [ID]"** to transition to the Review view.
+Open **Workspace** and generate the prepared run.
 
-* **29:00 – 33:00 | Action 4: Physical Reservoir Simulation & Real-Time Playback**
-  - `[CLICK: Series -> 'Reservoir simulation']`
-  - Explain the dual-tank interface: Left bar shows active storage in LCC & CCR; right line shows cumulative percentage trajectory.
-  - Set playback pace to **"Rapid preview (10 sec)"** or **"Deliberate (45 sec)"**.
-  - `[CLICK: '▶ Play Simulation']`: Let the audience watch the gauge drain day-by-day.
-  - Note the exact day when storage crosses the **Stage 1 (40%)** and **Stage 2 (30%)** threshold lines!
+- Use 300 candidates, six scenarios to review and seed 22.
+- Explain that historical windows remain synchronized across selected stations.
+- Show two or three scenarios and “Why this scenario ranked here.”
+- Change one illustrative priority and show that scores can change while the reviewed shortlist stays in place until an explicit rebuild.
 
-* **33:00 – 36:00 | Action 5: The Climate & AI Data Center Stressor Test**
-  - Open the **"🌡️ Climate Warming & Data Center Demand Stressors"** expander.
-  - Narrate: *"Now, let's see what happens if global warming intensifies summer heat by +2.0°C and a new hyperscale AI data center cluster adds 8 MGD of evaporative cooling demand."*
-  - `[SLIDER: Global warming anomaly -> +2.0°C]`
-  - `[SLIDER: AI data center cooling -> 8.0 MGD]`
-  - **The Climax Metric:** Point directly to the red deltas:
-    > **Stage 2 Breach (<30%): Day 142 (↓ 38 days earlier!)**
-  - Emphasize to the judges: *"This single stress test gives water boards quantitative proof of how AI infrastructure accelerates municipal drought curfews."*
+Say: “The clustering narrows repetition; the analyst still controls what survives.”
 
-* **36:00 – 38:00 | Action 6: Human Engineering Sign-Off (§ 1001) & Verified WAM Export**
-  - In the right column, demonstrate practitioner control:
-    - Add review note: `"Evaluated under +8 MGD industrial cooling load; accepted for baseline firm yield review."`
-    - `[CLICK: 'Accept']`: Show status change to `accepted` and revision locking.
-    - Demonstrate multiplier scaling or daily value editor. Show that modifying a single daily value clears approval and increments revision, strictly enforcing audit provenance.
-  - `[CLICK: View -> Exports]`
-  - `[CLICK: 'Build verified export']`: Packages `daily_rainfall.csv`, `shortlist.csv`, `audit.json`, and `Hydrologist_Handoff_Brief.md`.
-  - Download and open the ZIP: Show the Texas WAM Run 3 translation brief ready for professional engineers.
+### 1:30-2:15 - Challenge and review
 
----
+Open **Review**.
 
-### Segment 4: Simulation Demonstration Video & Stakeholder Impact Case Study [38:00 – 43:00 | 5 min]
-**Lead Narrator:** `[Speaker 4: Visual Media & Case Study Lead]`  
-**Co-Narrator:** `[Speaker 2: Lead Hydrologist]`  
-**Media Asset:** High-definition rendered simulation video (`media/BASIN_Simulation_Demonstration.mp4` — 1080p60, embedded in slide deck and backed up in VLC player).
+- Trace one metric to its source and limitation.
+- Record or show one unresolved assumption.
+- Edit one scenario or apply a prepared multiplier and show that prior acceptance clears.
+- Accept the revised rainfall content and reject another scenario with a reason.
 
-#### Video Content & Narrative Runbook:
-1. **38:00 – 39:30 | Macro-to-Micro System Visualization:**
-   - **Visual on Screen:** Rendered 3D hydrologic flyover of the Nueces River Basin, showing the upstream Frio River drainage into Choke Canyon Reservoir and downstream Nueces River flow into Lake Corpus Christi, transitioning into an animated dual-pool mass-balance diagram.
-   - **Narration (`[Speaker 4]`):** 
-     > *"To understand how BASIN's intelligence transforms decision-making in the field, we simulated a 270-day severe compound drought sequence across the entire lower Nueces catchment. Watch as the dual-tank mass-balance engine processes daily inflows, surface evaporation, and municipal withdrawals in real time."*
-   - **Key Visual Elements:**
-     - Left Pool: Lake Corpus Christi (257,300 ac-ft capacity) draining under primary municipal withdrawal.
-     - Right Pool: Choke Canyon Reservoir (662,600 ac-ft capacity) maintaining strategic long-term carryover storage.
-     - Dynamic water balance overlay displaying cumulative deficit, daily inflows, and evaporation loss curves.
+Say: “Acceptance records the analyst's rainfall-content decision. It is not engineering sign-off.”
 
-2. **39:30 – 41:30 | Direct Stakeholder Benefits & Actionable Decisions:**
-   - **Visual on Screen:** Side-by-side split screen comparing two future pathways:
-     - **Path A (Uninformed / Reactive):** Municipal water utility operating blindly without forward scenario intelligence, reacting only after reservoirs breach Stage 2.
-     - **Path B (BASIN-Informed Proactive Governance):** Rural district and municipal operators using BASIN's stressor shortlists 90 days before summer peak.
-   - **Concrete Operational Benefits Highlighted:**
-     - **Proactive Drought Staging:** Showing water utilities declaring Stage 1 mandatory conservation 38 days *before* critical triggers are breached, conserving over 18,500 acre-feet of storage.
-     - **Industrial & AI Data Center Siting Negotiation:** Showing how water authorities use BASIN's quantitative cooling draw models (8 MGD stressor) to require hybrid closed-loop cooling or non-potable effluent reuse for new industrial facilities along the I-37 corridor, preventing municipal system failure.
-     - **Agricultural Irrigation Dispatching:** Small rural districts (e.g., Nueces County WCID #3) receiving clear risk bounds to schedule canal deliveries and crop allocations before spring planting.
+Keep the reservoir experiment out of the compact route. If judges ask, show it later with the complete illustrative disclaimer.
 
-3. **41:30 – 43:00 | Downstream Engineering Integration (Scoping to Implementation):**
-   - **Visual on Screen:** Step-through of the exported handoff package:
-     - `daily_rainfall.csv` and `Hydrologist_Handoff_Brief.md` flowing directly into TCEQ WAM Run 3 and HEC-ResSim input files. (No interoperability test with either tool has been performed; see B09.6.)
-   - **Narration (`[Speaker 4]`):**
-     > *"BASIN is not a black-box model that ends when you close the laptop. It acts as the critical pre-engineering scoping bridge. By providing deterministic, defensible candidate scenarios with zero synthetic hallucinations, BASIN compresses a 6-to-12-month preliminary engineering study into an afternoon, saving small districts hundreds of thousands of dollars and giving licensed Professional Engineers mathematically sound starting points for statutory compliance."*
+### 2:15-2:45 - Produce the handoff
 
----
+Open **Exports**.
 
-### Segment 5: Ethics, Texas Law (§ 1001), & Zero-Cloud Audit [43:00 – 48:00 | 5 min]
-**Lead Speaker:** `[Speaker 1: Team Lead / Policy]`  
-**Visual Support:** Legal / Ethical Compliance Slide
+- Show which evidence and unresolved issues will be included.
+- Leave private notes excluded.
+- Build the packet and identify `daily_rainfall.csv`, `shortlist.csv`, the readable brief and audit record.
+- State that replay checks dates, stations, transformations, revisions, accepted IDs, calculations, evidence links and privacy defaults.
 
-#### Key Arguments to Deliver:
-* **Texas Engineering Practice Act (§ 1001) Compliance:**
-  - AI does *not* make binding municipal engineering decisions. BASIN is explicitly a **decision-support pre-engineering scoping workbench**.
-  - It generates candidate scenarios and organizes them for human review.
-  - Final firm yield determinations and TCEQ regulatory filings remain the exclusive domain of licensed Professional Engineers (P.E.).
-* **Zero-Cloud Environmental & Privacy Footprint:**
-  - BASIN runs 100% locally: **0 cloud inference calls, 0 network packets, 0 API latency**.
-  - Energy footprint: Measured at **0.004 to 0.018 Wh per complete 500-candidate run** (less energy than searching Google three times).
-  - Paradox resolved: We do not consume massive cloud data center power and water to model water scarcity. BASIN runs on an ordinary laptop completely offline.
+Say: “The packet gives the recipient both the proposed rainfall and the reasons to question it.”
 
----
+### 2:45-3:00 - Close on value
 
-### Segment 6: Jury Defense & FAQ Playbook [48:00 – 58:00 | 10 min]
-**Lead Responders:** All Team Members  
-**Preparation:** Anticipate and shut down the most challenging judge inquiries.
+Say: “BASIN does not replace the hydrologist. It helps rural-serving communities arrive at that conversation with explicit priorities, visible uncertainty and evidence another person can inspect.”
 
-#### Top 5 Judge Questions & Exact Recommended Responses:
+Name the next validation step: TAMUCC practitioner review and an independent recipient test.
 
-1. **Judge:** *"Why did you use K-Means clustering instead of an LLM or deep generative network?"*  
-   **Response (`[Speaker 3]`):** *"Water planning for civil infrastructure requires strict mathematical determinism, audit reproducibility, and zero hallucination. An LLM cannot guarantee conservation of mass or exact historical storm tracking. Deterministic K-Means operates directly on physical feature vectors (deficit, duration, concurrence) to eliminate groupthink while remaining 100% reproducible and verifiable under Texas § 1001 standards."*
+## Expansion modules for a longer official slot
 
-2. **Judge:** *"Rainfall is not streamflow. How does a consulting engineer translate rainfall deficits into reservoir inflows?"*  
-   **Response (`[Speaker 2]`):** *"Exactly correct—rainfall is the meteorological driver, while runoff depends on soil moisture and catchment conditions. That is why BASIN exports `Hydrologist_Handoff_Brief.md` alongside the daily rainfall CSV. It documents the naturalized streamflow translation factors, antecedent moisture assumptions, and quadrangle evaporation indices specifically formatted for immediate import into Texas WAM Run 3 and HEC-ResSim."*
+Use only the modules that fit the organizer-confirmed schedule. Preserve the compact demo as one uninterrupted section.
 
-3. **Judge:** *"Are data centers really significant enough to accelerate reservoir drought triggers in Region N?"*  
-   **Response (`[Speaker 1]`):** *"Yes. In September 2026, the Texas Senate Committee on Water, Agriculture, and Rural Affairs held hearings on this exact crisis. A single hyperscale data center using evaporative cooling consumes 1.5 to 5+ MGD of freshwater that is permanently evaporated into the atmosphere. In a system with a 180 MGD baseline demand during a Stage 2 drought, an additional 8 MGD draw accelerates critical trigger breaches by over five weeks."*
+### Problem and community context - 1 to 2 minutes
 
-4. **Judge:** *"How does this work without internet? What if a user needs updated NOAA data?"*  
-   **Response (`[Speaker 3]`):** *"BASIN ships with an embedded, verified NOAA GHCN-Daily snapshot through 2025. When field operators have scheduled internet access, the CLI ingestion script (`scripts/fetch_noaa.py`) downloads updated stations and verifies SHA-256 hashes. Once in the field or in an emergency operations center during a hurricane or grid outage, BASIN runs completely disconnected inside `BASIN.exe`."*
+- Explain the post-2015 planning-record gap using the submitted problem statement.
+- Describe the intended users: Region N technical participants, consulting hydrologists, WCIDs and rural-serving wholesale providers.
+- Summarize the three anonymous discovery responses as a small convenience sample: conflicting assumptions, difficult-to-audit evidence, desire for explanations and local control.
+- Do not claim those responses are product validation or representative statistics.
 
-5. **Judge:** *"What prevents a user from tampering with historical data?"*  
-   **Response (`[Speaker 3]`):** *"Every baseline snapshot is hashed with SHA-256. If a single number in `observations.csv` is altered, BASIN detects the checksum mismatch on boot and halts. Furthermore, every practitioner edit in the workbench generates an immutable revision entry in `audit.json` with timestamps, author notes, and diffs."*
+### Method and architecture - 1 to 2 minutes
 
----
+- Public NOAA GHCN-Daily snapshot, kept local with a recorded hash.
+- Complete synchronized historical windows; no silent zero imputation.
+- Rainfall-retention transformation, not streamflow scaling.
+- Local KMeans groups similar feature patterns; deterministic scoring applies user weights.
+- The diverse shortlist covers groups before using global score fills.
+- Saved comparisons and KMeans labels are recorded/hash-checked but excluded from semantic replay certification.
 
-### Segment 7: Wrap-Up & Closing Appeal [58:00 – 60:00 | 2 min]
-**Lead Speaker:** `[Speaker 1: Team Lead / Policy]`
+### Verification and privacy - 1 minute
 
-#### Closing Script:
-> *"Judges, the goal of AI in civil infrastructure should not be to replace human engineers, but to give community water districts the intelligence they need before a drought crisis occurs.  
-> With BASIN, Texas Region N gains an immediate, zero-cost, 100% offline workbench to stress-test compound drought, global warming, and AI infrastructure demands.  
-> Thank you, and we welcome any further technical questions."*
+- Local loopback application with no product LLM or cloud inference.
+- Private notes excluded from packets unless explicitly included.
+- Bundle verifier checks internal consistency and current source identity.
+- Unsigned hashes do not prove source authenticity or prevent coordinated fabrication.
 
----
+### Validation and next steps - 1 minute
 
-## Pre-Show Equipment & Rehearsal Checklist
+- Automated suite, fresh-checkout snapshot, offline smoke and packet replay pass on the development machine.
+- Practitioner catchment/method review, recipient interoperability, actual presentation-laptop testing and measured user benefit remain open.
+- The local upload comparison is useful descriptive review but is not yet part of scenario persistence or packet replay.
 
-- [ ] **Presentation Laptop:** Dedicated Windows 11 machine running 64-bit OS.
-- [ ] **Executable Tested:** Double-click `BASIN.exe` with Wi-Fi turned OFF; verify windowed EdgeChromium WebView2 launches instantly without command prompts.
-- [ ] **Dual-Display Setup:** Set Windows display mode to **Duplicate (Win + P -> Duplicate)** so mouse navigation matches projector output exactly.
-- [ ] **Simulation Video Assets Prepped:**
-  - [ ] Video file `media/BASIN_Simulation_Demonstration.mp4` embedded directly into presentation slide deck with auto-play on click.
-  - [ ] Standalone video backup opened paused at 00:00 in VLC Media Player (with hardware acceleration enabled).
-  - [ ] Projector audio/HDMI check: Confirm audio levels for video voiceover and background sound.
-- [ ] **Backup USB Drive:** Plugged in and verified containing:
-  - [ ] `BASIN-demo-windows-py312.zip` (standalone distribution)
-  - [ ] `BASIN_Simulation_Demonstration.mp4` (1080p60 video backup)
-  - [ ] 1080p screen recording of the complete 18-minute software demo run (in case projector HDMI drops).
-  - [ ] PDF copy of `Hydrologist_Handoff_Brief.md` and presentation slides.
-- [ ] **Terminal Diagnostics:** Run in terminal before heading to stage:
-  ```powershell
-  .venv\Scripts\pytest -q
-  .venv\Scripts\python.exe scripts/demo_smoke.py
-  ```
-  *(Confirm 77 passed and verified: true).*
+## Three-person speaking lanes
+
+Each teammate must claim their own lane; these are roles rather than assigned names.
+
+| Lane | Responsibilities |
+|---|---|
+| Problem and community | Open with the specific Region N decision gap, intended users, community control and impact boundary. |
+| Product and method | Explain data, scenario construction, grouping/ranking and the live build/compare steps in plain language. |
+| Review, verification and close | Demonstrate challenge/edit/export, state verification limits, describe validation status and lead questions. |
+
+Every teammate should be able to explain the complete workflow, proxy-station limitation, privacy choice, clustering rationale and reservoir boundary.
+
+## Judging-criteria map
+
+| Criterion | Demonstrated evidence | Honest limit or proposed benefit |
+|---|---|---|
+| Impact | Submitted Region N planning gap and three anonymous discovery responses; packet focuses a request for analysis. | Faster or fairer planning is a proposed benefit until a baseline user exercise measures it. |
+| Feasibility | Laptop-scale local implementation, 105-test suite, offline calculation rehearsal, open CSV/Markdown/JSON outputs. | Presentation-device and direct downstream-model interoperability tests remain open. |
+| Community centeredness | Users control priorities, edits, rejection, final shortlist, unresolved dispositions and private-note sharing. | Practitioner sessions must show that intended users understand and value those controls. |
+| Innovation | Diverse scenario grouping plus auditable human challenge creates a bridge between public evidence and expert modeling. | KMeans does not make a scenario scientifically correct and should not be sold as autonomous judgment. |
+| Clarity | Four-stage workflow, plain-language labels, decision summary and explicit recipient action. | B13 usability refactor and unassisted testing remain required before claiming success. |
+
+## Claims to show and claims to avoid
+
+### Supported in the demonstration
+
+- Public snapshot identity and provisional station metadata
+- Transparent rainfall construction and matched rainfall reference
+- Deterministic grouping/ranking on a fixed candidate pool
+- Side-by-side scenario and evidence comparison
+- Human edit, rejection, approval invalidation and unresolved conflict
+- Privacy-aware evidence packet and declared replay scope
+- Local runtime with browser fallback and a tracked native executable
+
+### Do not claim
+
+- Catchment-calibrated rainfall, streamflow or reservoir inflow
+- Drought probability or official USDM category
+- Forecast reservoir levels, safe yield, deliveries or restriction dates
+- Verified WAM Run 3 or HEC-ResSim direct import
+- Engineering sign-off, source authenticity or professional certification
+- Measured community outcome, time savings or environmental benefit
+- GIS pipeline/corridor overlays, drought heatmap playback, climate-warming controls or data-center demand stressors
+- Four team members, a team hydrologist or credentials no teammate actually holds
+
+## Judge questions and concise answers
+
+**Why is this AI?**
+BASIN uses local unsupervised KMeans to group many scenario patterns, then deterministic scoring and diversity rules to produce an explainable shortlist. The user controls priorities and the final decision.
+
+**Why not give the data directly to a hydrologist?**
+That remains the final destination. BASIN structures the earlier conversation: which plausible stresses to examine, why they were chosen, what changed, and which assumptions remain disputed.
+
+**Are the airport stations the actual source catchments?**
+No. They are provisional regional demonstration proxies. A practitioner must choose suitable gauges, gridded products or catchment aggregation before operational use.
+
+**Does a 40% rainfall-retention scenario mean 40% streamflow?**
+No. Rainfall retention changes the rainfall series only. Rainfall-runoff translation requires a separate reviewed hydrologic model.
+
+**Does the reservoir animation predict restrictions?**
+No. It is an uncalibrated educational accounting experiment with illustrative coefficients and thresholds, excluded from the packet and verification claim.
+
+**What does “verified” mean?**
+The replay confirms internal agreement among the packet's files, source snapshot, transformations, revisions, accepted IDs, calculations, evidence links and brief. It does not prove sources are true or scientifically suitable.
+
+**Does the product send private data to AI services?**
+No product LLM or cloud inference is used. The app runs on loopback and keeps local notes/uploads on the device unless the operator explicitly exports them. Local storage is not encrypted.
+
+**Can the packet be loaded directly into WAM or HEC-ResSim?**
+That direct interoperability has not been tested. The current packet uses open CSV, JSON and Markdown for a hydrologist to inspect and adapt.
+
+**What evidence shows usefulness?**
+Discovery responses support the problem. Product usefulness still requires the planned novice, practitioner and recipient exercises; the team does not claim measured improvement yet.
+
+## Final preparation checklist
+
+- [ ] Record the organizer-confirmed presentation length, deck/demo format, A/V constraints and submission mechanism.
+- [ ] Claim three speaking lanes and rehearse handoffs.
+- [ ] Complete B13 labels, decision summary and one-viewport guided path.
+- [ ] Have the TAMUCC professional review geography, method and reservoir wording.
+- [ ] Have a recipient open and interpret the CSV/brief without coaching.
+- [ ] Rebuild and run the accepted executable on the presentation laptop.
+- [ ] Rehearse with network disabled and the actual projector.
+- [ ] Confirm downloads, saved-session recovery, occupied-port behavior and browser fallback.
+- [ ] Review AI-use disclosure and third-party materials as a team.
+- [ ] Build one final packet and manually inspect its assumptions, unresolved issues, privacy state and replay result.
+- [ ] Record a backup video from the exact accepted build.
+- [ ] Copy the versioned release, packet, deck and video to the agreed backup media.
+
+## Source of truth
+
+Use `docs/claim_inventory.md` for current claim status, `docs/demo_runbook.md` for the compact interaction sequence, `docs/verification_scope.md` for packet verification boundaries, `docs/methodology.md` for scientific definitions, and `TODO.md` for acceptance state.
+
+The Stage 1 answers and tie-breaker response in `docs/submission_record.md` are historical submitted wording. Preserve them as submitted; address unmet commitments through the task board and presentation boundaries rather than silently rewriting that record.

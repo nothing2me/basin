@@ -13,7 +13,7 @@ def evidence_panel(w, scenario, save):
     attached = w.evidence_refs[scenario.id]
     st.subheader("Evidence and assumptions")
     metric_sources = {"Observed rainfall": "noaa-snapshot", "Station suitability": "station-suitability",
-                      "Deficit and rainfall construction": "rainfall-method", "Reference percentile and station stress": "matched-reference",
+                      "Deficit and rainfall construction": "rainfall-method", "How unusual vs history and station stress": "matched-reference",
                       "Ranking weights": "ranking-assumption"}
     metric = st.selectbox("Trace a metric or assumption", list(metric_sources), key=f"trace_{key}")
     source = registry[metric_sources[metric]]
@@ -99,18 +99,20 @@ def comparison_panel(w, save):
                 f = s.features
                 rows[identifier] = {"Source dates": f"{s.provenance['source_start']} to {s.provenance['source_end']}",
                                     "Days": f["duration_days"], "Deficit mm/station": round(f["deficit_mm"], 2),
-                                    "Station stress fraction": round(f["concurrence"], 3), "Reference sample n": f["benchmark_n"],
-                                    "Reference percentile": round(f["historical_percentile"], 3),
+                                    "Stations stressed together": round(f["concurrence"], 3), "Reference sample n": f["benchmark_n"],
+                                    "How unusual vs history": round(f["historical_percentile"], 3),
                                     "Score": round(s.score, 2), "Revision": s.revision, "Status": s.status,
-                                    "Selection reason": w.selection_reason(identifier),
-                                    **{f"Score: {k}": round(v, 2) for k, v in s.components.items()}}
+                                    "Why this scenario ranked here": w.selection_reason(identifier),
+                                    **{f"Ranking contribution: {k}": round(v, 2) for k, v in s.components.items()}}
             st.dataframe(pd.DataFrame(rows), width="stretch")
             st.caption("Profile names describe feature patterns. With one station, concurrence means that station's stress frequency. Approval concerns rainfall content; it does not endorse later priority settings.")
         else:
             st.info("Select two or three candidates to compare their measurements and review state.")
         st.write("Preview alternative priorities on the same candidate pool")
         columns = st.columns(4)
-        weights = {k: col.slider(k.title() + " alternative", 0, 100, int(w.weights[k]), key=f"alt_{w.id}_{k}")
+        weight_labels = {"severity": "How unusual vs history", "duration": "Longer scenarios",
+                         "concurrence": "Stations stressed together", "season": "June–September timing"}
+        weights = {k: col.slider(weight_labels[k] + " alternative", 0, 100, int(w.weights[k]), key=f"alt_{w.id}_{k}")
                    for col, k in zip(columns, w.weights)}
         if sum(weights.values()) > 0 and any(s.status != "rejected" for s in w.scenarios):
             result = w.compare_weights(weights)

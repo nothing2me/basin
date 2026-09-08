@@ -349,10 +349,60 @@ def table(w):
                           "Days": s.features["duration_days"], "Onset": calendar.month_abbr[s.features["onset_month"]],
                           "Deficit mm": round(s.features["deficit_mm"], 2),
                           "Deficit in": round(s.features["deficit_mm"] / 25.4, 2),
-                          "Concurrence %": round(s.features["concurrence"] * 100, 1),
-                          "Reference percentile": round(s.features["historical_percentile"] * 100, 1),
+                          "Stations stressed together %": round(s.features["concurrence"] * 100, 1),
+                          "How unusual vs history %": round(s.features["historical_percentile"] * 100, 1),
                           "Dry spell days": s.features["max_dry_days"],
-                          "Revision": s.revision, "Status": s.status, "Shortlist": s.id in w.selected} for s in w.scenarios])
+                          "Revision": s.revision, "Status": s.status,
+                          "Selected for review": s.id in w.selected} for s in w.scenarios])
+
+
+PAGE_LABELS = {
+    "Data": "1. Check data",
+    "Workspace": "2. Build scenarios",
+    "Review": "3. Review choices",
+    "Exports": "4. Share results",
+}
+
+
+PAGE_QUESTIONS = {
+    "Data": "Can I trust and use these observations?",
+    "Workspace": "Which rainfall scenarios deserve review?",
+    "Review": "Does this scenario survive human challenge?",
+    "Exports": "What evidence should the recipient receive?",
+}
+
+
+PAGE_ACTIONS = {
+    "Data": "Check source identity, coverage, location and limitations before building scenarios.",
+    "Workspace": "Compare the selected scenarios, then open one for review.",
+    "Review": "Inspect the evidence, record a rationale, and accept, reject or revise the rainfall.",
+    "Exports": "Confirm the privacy choice, build the packet, and download the verified files.",
+}
+
+
+def decision_summary(w):
+    lead = w.get(w.selected[0])
+    evidence_count = len(w.evidence_refs.get(lead.id, []))
+    unresolved = sum(conflict["status"] == "unresolved" for conflict in w.conflicts)
+    approved = sum(
+        scenario.status == "accepted" and scenario.approved_revision == scenario.revision
+        for scenario in (w.get(identifier) for identifier in w.selected)
+    )
+    limitation = (
+        f"{unresolved} unresolved evidence disagreement(s)"
+        if unresolved else "Station suitability remains provisional"
+    )
+    next_action = (
+        "Share the reviewed results"
+        if approved == len(w.selected) else f"Review {len(w.selected) - approved} remaining scenario(s)"
+    )
+    with st.container(key="decision_summary", border=True):
+        st.markdown("**Decision summary**")
+        st.caption(
+            f"Scenario to review: **{lead.id}** · Why it ranked here: "
+            f"**{w.selection_reason(lead.id)}** · Evidence used: **{evidence_count} records**"
+        )
+        st.caption(f"Material limitation: **{limitation}** · Next action: **{next_action}**")
 
 
 def open_review(identifier):
@@ -571,7 +621,8 @@ with st.sidebar:
     with st.expander("Appearance"):
         appearance_picker()
         custom_appearance()
-    page = st.radio("View", ["Workspace", "Review", "Exports", "Data"], key="page", label_visibility="collapsed")
+    page = st.radio("View", ["Data", "Workspace", "Review", "Exports"], key="page",
+                    index=1, format_func=PAGE_LABELS.get, label_visibility="collapsed")
     with st.expander("Help & tutorial", expanded=st.session_state.get("tutorial_active", False)):
         st.markdown("**A guide to your workspace**")
         st.caption("Explore the data, compare scenarios, and learn how review and export work.")
@@ -593,12 +644,12 @@ with st.sidebar:
                 months = st.multiselect("Starting months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
                 retention = st.slider("Rainfall compared with original · %", 0, 100, (35, 85), 5,
                                       help="Multiply observed daily rainfall by this fraction at the affected stations.")
-                extent = st.selectbox("Reduction extent", ["All stations", "One station", "Mixed"])
+                extent = st.selectbox("Where reduced rainfall occurs", ["All stations", "One station", "Mixed"])
                 a, b = st.columns(2)
-                count = a.selectbox("Candidates", [100, 300, 500, 1000], index=1)
-                size = b.selectbox("Shortlist", [3, 4, 6, 8], index=2)
-                seed = st.number_input("Seed", 0, 4294967295, w.params.seed if w else 22)
-                generate = st.form_submit_button("Generate", type="primary", width="stretch")
+                count = a.selectbox("Scenarios to test", [100, 300, 500, 1000], index=1)
+                size = b.selectbox("Scenarios to review", [3, 4, 6, 8], index=2)
+                seed = st.number_input("Repeatable run seed", 0, 4294967295, w.params.seed if w else 22)
+                generate = st.form_submit_button("Create rainfall scenarios", type="primary", width="stretch")
         if generate:
             try:
                 with st.spinner("Computing…"):
@@ -637,7 +688,8 @@ with st.sidebar:
                     save(w)
                     st.rerun()
 
-                labels = {"severity": "Severity", "duration": "Duration", "concurrence": "Concurrence", "season": "Jun–Sep timing"}
+                labels = {"severity": "How unusual vs history", "duration": "Longer scenarios",
+                          "concurrence": "Stations stressed together", "season": "June–September timing"}
                 weights = {k: st.slider(label, 0, 100, int(w.weights[k]), key=f"weight_{k}") for k, label in labels.items()}
                 if sum(weights.values()) == 0:
                     st.error("At least one weight must be positive.")
@@ -670,7 +722,7 @@ with st.sidebar:
 
 st.markdown('<div class="basin-eyebrow">COASTAL BEND &nbsp; / &nbsp; RAINFALL EVIDENCE</div>', unsafe_allow_html=True)
 header, status = st.columns([3, 2])
-header.subheader(page if page != "Workspace" else "Scenario workspace")
+header.subheader(PAGE_LABELS[page])
 status.caption(f"{w.id}  /  {len(w.scenarios)} candidates  /  seed {w.params.seed}" if w else "NOAA GHCN-Daily  /  1991–2025")
 if w:
     with status.popover("Personal notes", width="stretch"):
@@ -685,13 +737,8 @@ if w:
                 w.notes = previous_notes
 
 
-page_descriptions = {
-    "Workspace": "Explore patterns. Compare priorities. Build your shortlist.",
-    "Data": "Know where your observations come from, before drawing conclusions.",
-    "Review": "Inspect the details, challenge assumptions, and make the final call.",
-    "Exports": "Turn reviewed scenarios into a traceable evidence packet.",
-}
-st.caption(page_descriptions[page])
+st.markdown(f"**{PAGE_QUESTIONS[page]}**")
+st.caption(PAGE_ACTIONS[page])
 if current_tour_step() and page != current_tour_step()["page"]:
     render_tour_guide(w)
 
@@ -703,7 +750,7 @@ if w is None and page == "Workspace":
         secondary.button("Use my data", on_click=switch_page, args=("Data",), width="stretch")
         st.caption("The example uses historical NOAA observations and illustrative rainfall reductions. It is not a forecast.")
         st.button("Take a tour", key="welcome_tour", on_click=start_tutorial, args=(source, names))
-        st.markdown('<div class="welcome-steps"><span><b>01</b> Explore the observations</span><span><b>02</b> Compare & review</span><span><b>03</b> Share the evidence</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="welcome-steps"><span><b>01</b> Check data</span><span><b>02</b> Build scenarios</span><span><b>03</b> Review choices</span><span><b>04</b> Share results</span></div>', unsafe_allow_html=True)
 
 if page == "Data":
     saved_custom_panel(w)
@@ -714,8 +761,9 @@ if page == "Data":
         station_table = metadata.merge(quality, on="station_id")
         st.plotly_chart(accessible_chart(basin_map(station_table)), width="stretch")
         st.caption("Corpus Christi, Victoria and San Antonio airport observations are provisional regional proxies. These coordinates do not establish catchment coverage. Station suitability and spatial aggregation require practitioner review. The coordinate overview works offline.")
-        st.dataframe(station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
-                     hide_index=True, width="stretch", column_config={"completeness_pct": st.column_config.NumberColumn("Complete %", format="%.3f")})
+        with st.expander("Station details and completeness"):
+            st.dataframe(station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
+                         hide_index=True, width="stretch", column_config={"completeness_pct": st.column_config.NumberColumn("Complete %", format="%.3f")})
     left, right = st.columns([3, 1])
     station_view = left.multiselect("Observed rainfall", list(names), default=list(names), format_func=names.get)
     interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"])
@@ -752,6 +800,7 @@ elif page == "Workspace" and w is not None:
     st.markdown("**Which rainfall scenarios deserve a closer look?**")
     st.caption("Explore the shortlist, then review each scenario before exporting. Scores reflect your ranking priorities, not likelihood or safety.")
     selected = [w.get(i) for i in w.selected]
+    decision_summary(w)
     a, b = st.columns(2)
     a.metric("Scenarios to review", len(selected))
     b.metric("Approved for export", sum(s.status == "accepted" and s.approved_revision == s.revision for s in selected))
@@ -760,33 +809,33 @@ elif page == "Workspace" and w is not None:
     right = st.expander("How ranking scores are calculated")
     with left:
         fig = px.scatter(view, x="Days", y="Deficit mm", hover_name="ID",
-                         hover_data=["Group", "Score", "Onset", "Concurrence %"],
+                         hover_data=["Group", "Score", "Onset", "Stations stressed together %"],
                          labels={"Days": "Scenario duration · days", "Deficit mm": "Rainfall shortfall from reference · mm"})
-        shortlist_rows = view[view.Shortlist]
+        shortlist_rows = view[view["Selected for review"]]
         fig.add_trace(go.Scatter(x=shortlist_rows["Days"], y=shortlist_rows["Deficit mm"], mode="markers",
                                 marker=dict(size=14, symbol="circle-open", line=dict(width=2), color="#37AFA6"),
-                                text=shortlist_rows.ID, name="Shortlist", hovertemplate="%{text}<extra>Shortlist</extra>"))
-        fig.update_layout(coloraxis_colorbar=dict(title="Group", thickness=8))
+                                text=shortlist_rows.ID, name="Selected for review",
+                                hovertemplate="%{text}<extra>Selected for review</extra>"))
         st.plotly_chart(chart(fig, 290), width="stretch")
     with right:
         fig = go.Figure()
         for key in w.weights:
             fig.add_trace(go.Bar(name=key.title(), y=[s.id for s in selected], x=[s.components[key] for s in selected], orientation="h"))
         fig.update_layout(barmode="stack")
-        fig.update_xaxes(range=[0,100], title="Score contributions")
+        fig.update_xaxes(range=[0,100], title="Contribution to ranking score")
         st.plotly_chart(chart(fig, 290), width="stretch")
     a, b, c, d = st.columns([2, 1, 1, 1])
     query = a.text_input("Find scenario", placeholder="Scenario ID")
     group_filter = b.selectbox("Group", ["All"] + sorted(view.Group.unique().tolist()))
     review_filter = c.selectbox("Status", ["All", "unreviewed", "accepted", "rejected"])
-    only_selected = d.checkbox("Shortlist only", value=True)
+    only_selected = d.checkbox("Selected only", value=True)
     filtered = view[view.ID.str.contains(query, case=False, regex=False)].copy()
     if group_filter != "All":
         filtered = filtered[filtered.Group.eq(group_filter)]
     if review_filter != "All":
         filtered = filtered[filtered.Status.eq(review_filter)]
     if only_selected:
-        filtered = filtered[filtered.Shortlist]
+        filtered = filtered[filtered["Selected for review"]]
     filtered = filtered.sort_values(["Score", "ID"], ascending=[False, True]).reset_index(drop=True)
     with tour_target("workspace_table"):
         selection = st.dataframe(filtered, hide_index=True, width="stretch", height=min(430, 40+len(filtered)*35),
@@ -796,7 +845,7 @@ elif page == "Workspace" and w is not None:
         selected_id = filtered.iloc[rows[0]].ID
         st.button(f"Inspect {selected_id}", on_click=open_review, args=(selected_id,), type="primary")
     elif len(filtered):
-        st.button("Review shortlist", on_click=open_review, args=(w.selected[0],))
+        st.button("Review selected scenarios", on_click=open_review, args=(w.selected[0],), type="primary")
     comparison_panel(w, save)
     with st.expander("Selection diagnostics"):
         st.dataframe(pd.DataFrame(comparison(w.scenarios, w.selected, w.params.seed)), hide_index=True, width="stretch")
@@ -817,8 +866,8 @@ elif page == "Review":
     b.metric("Duration · days", f["duration_days"])
     with st.expander("Reference and ranking details"):
         st.write(f"Rainfall shortfall: {f['deficit_mm']/25.4:.2f} inches")
-        st.write(f"Station stress frequency / concurrence: {f['concurrence']:.1%}")
-        st.write(f"Reference percentile: {f['historical_percentile']:.0%}")
+        st.write(f"{'Station stress frequency' if len(s.series.columns) == 1 else 'Stations stressed together'}: {f['concurrence']:.1%}")
+        st.write(f"How unusual vs history: {f['historical_percentile']:.0%}")
         st.write(f"Ranking score: {s.score:.2f} (priority, not probability)")
     left = st.container()
     right = st.container()
@@ -934,7 +983,7 @@ elif page == "Review":
                     st.error(str(error))
     with evidence_tab:
         st.dataframe(pd.DataFrame({"Station": list(s.provenance["retention_by_station"]),
-                                   "Initial rainfall retained": list(s.provenance["retention_by_station"].values()),
+                                   "Scenario rainfall (fraction of observed)": list(s.provenance["retention_by_station"].values()),
                                    "Current deficit mm": [f["station_deficits_mm"][i] for i in s.provenance["retention_by_station"]]}),
                      hide_index=True, width="stretch")
         evidence_panel(w, s, save)
@@ -958,7 +1007,9 @@ elif page == "Exports":
             st.info("No accepted scenarios yet. In Review, inspect a scenario and choose Accept to see its report here.")
             st.button("Go to Review", on_click=switch_page, args=("Review",))
     with st.expander("Shortlist details"):
-        st.dataframe(table(w).query("Shortlist").drop(columns="Shortlist"), hide_index=True, width="stretch")
+        selected_table = table(w)
+        selected_table = selected_table[selected_table["Selected for review"]].drop(columns="Selected for review")
+        st.dataframe(selected_table, hide_index=True, width="stretch")
     share = st.checkbox("Include provider notes and free-text review notes", value=False)
     st.caption("Packet includes rainfall, metrics, public evidence, scenario links and all conflict dispositions. Private evidence annotations follow the same opt-in. Reservoir results are excluded.")
     share_custom = False

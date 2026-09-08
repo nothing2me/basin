@@ -125,9 +125,9 @@ Version changes to persisted meaning. Load legacy 1.0 sessions only through an e
 
 Owner role: core/validation. Existing board: B02/B04/B10.
 
-- [ ] Confirm an isolated Python 3.12 environment and pinned requirements.
-- [ ] Run existing tests, offline demo smoke and packet replay; record actual results in docs/build_validation.md.
-- [ ] Verify bundled observation checksum and Windows line-ending behavior.
+- [x] Confirm an isolated Python 3.12 environment and pinned application requirements. Native executable build-only dependency pinning remains open under root-board B10.2.
+- [x] Run existing tests, offline demo smoke and packet replay; record actual results in docs/build_validation.md. Rechecked 2026-09-07: 105 tests and both rehearsals passed.
+- [x] Verify bundled observation checksum and Windows line-ending behavior. Rechecked 2026-09-07 with the fresh-checkout verifier.
 - [ ] Separate baseline failures from new-feature failures and assign known claim defects before the demo.
 
 Acceptance: the current rainfall pipeline can be exercised locally, or a specific baseline repair is completed before dependent feature work.
@@ -136,11 +136,11 @@ Acceptance: the current rainfall pipeline can be exercised locally, or a specifi
 
 Owner role: interface/data. Existing board: B03/B05.
 
-- [ ] Separate “Inspect local observations” from “Replace this scenario's rainfall.”
-- [ ] Provide sample/template CSV, required metadata and unit guidance.
-- [ ] Preview station count, rows, period, unit, proposed conversions and validation findings.
+- [x] Separate “Inspect local observations” from “Replace this scenario's rainfall.” The preview does not mutate the workspace; replacement remains a Review action.
+- [x] Provide sample/template CSV, required metadata and unit guidance.
+- [x] Preview the single station, valid/missing rows, period, unit conversion and validation findings.
 - [ ] Require confirmation before the upload changes workspace data.
-- [ ] Cancel or failed preview must leave prior sources/scenarios unchanged.
+- [x] Cancel or failed preview leaves prior sources/scenarios unchanged; covered through the Streamlit workflow test.
 
 Acceptance: the user understands whether the upload is observation evidence or a change to a scenario and can cancel safely.
 
@@ -148,11 +148,11 @@ Acceptance: the user understands whether the upload is observation evidence or a
 
 Owner role: data/core. Existing board: B03/B07.
 
-- [ ] Set bounded inputs; proposed starting limits are 10 MB and 250,000 CSV rows, to be measured on the demo laptop.
-- [ ] Validate encoding, columns, unambiguous dates, station-day uniqueness, finite numerical values and nonnegative rainfall.
-- [ ] Reject conflicting duplicates; do not silently average or keep the last row.
-- [ ] Preserve gaps/blanks as missing; no zero imputation or interpolation by default.
-- [ ] Convert inches to mm only when explicitly selected and record the conversion.
+- [ ] Align and test the effective input bounds: the parser/README currently state 10 MB and 250,000 rows, while `.streamlit/config.toml` caps uploads at 5 MB. Choose one documented file limit and measure it on the demo laptop.
+- [x] Validate encoding, columns, unambiguous dates, station-day uniqueness, finite numerical values and nonnegative rainfall.
+- [x] Reject conflicting duplicates; do not silently average or keep the last row.
+- [x] Preserve gaps/blanks as missing; no zero imputation or interpolation by default.
+- [x] Convert inches to mm only when explicitly selected and retain the selected input unit in the preview/comparison metadata.
 - [ ] Flag unusually high values for review instead of silently clamping them.
 - [ ] Record sorting/reindexing and preserve original bytes and quality flags.
 - [ ] Show blocking errors separately from review warnings with actionable row examples.

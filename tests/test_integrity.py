@@ -152,3 +152,45 @@ def test_weight_preview_preserves_reviewed_pool(approved, tmp_path):
     assert event["before"] == weights and event["after"] == approved.weights
     assert approved.selected == selected
     assert Workspace.load(approved.source, approved.save(tmp_path)).comparisons == approved.comparisons
+
+
+def test_weight_preview_breaks_exact_score_ties_by_stable_id(workspace):
+    first, second = sorted(workspace.scenarios[:2], key=lambda scenario: scenario.id)
+    tied = {"historical_percentile": .5, "duration_days": 180,
+            "concurrence": .5, "high_priority_season_fraction": .5}
+    for scenario in (first, second):
+        scenario.features.update(tied)
+        scenario.cluster = 1
+    # Reverse the stored order to prove the comparison does not inherit it.
+    workspace.scenarios = [second, first]
+    workspace.selected = [first.id, second.id]
+    workspace.rerank({"severity": 25, "duration": 25, "concurrence": 25, "season": 25})
+
+    result = workspace.compare_weights(
+        {"severity": 40, "duration": 20, "concurrence": 20, "season": 20}
+    )
+
+    assert [row["id"] for row in result["rows"]] == [first.id, second.id]
+    assert [(row["rank_before"], row["rank_after"]) for row in result["rows"]] == [(1, 1), (2, 2)]
+    assert result["rows"][0]["score_after"] == pytest.approx(result["rows"][1]["score_after"])
+
+
+def test_raising_a_nondiscriminating_weight_does_not_improve_rank(workspace):
+    first, second = sorted(workspace.scenarios[:2], key=lambda scenario: scenario.id)
+    shared = {"duration_days": 180, "concurrence": .2, "high_priority_season_fraction": .2}
+    first.features.update(shared, historical_percentile=.9)
+    second.features.update(shared, historical_percentile=.4)
+    for scenario in (first, second):
+        scenario.cluster = 1
+    workspace.scenarios = [first, second]
+    workspace.selected = [first.id, second.id]
+    before = {"severity": 100, "duration": 10, "concurrence": 0, "season": 0}
+    after = {"severity": 100, "duration": 100, "concurrence": 0, "season": 0}
+    workspace.rerank(before)
+
+    result = workspace.compare_weights(after)
+    second_row = next(row for row in result["rows"] if row["id"] == second.id)
+
+    assert result["weights_after"]["duration"] > result["weights_before"]["duration"]
+    assert second_row["rank_before"] == 2
+    assert second_row["rank_after"] == 2

@@ -1,6 +1,6 @@
 # BASIN team TODO
 
-Updated: 2026-09-06 | Planning baseline: `ebd8d59` on `main` | Status reconciled against `83d593d` on `main`
+Updated: 2026-09-07 | Planning baseline: `ebd8d59` on `main` | Status reconciled against `f78d692` on `origin/main`
 
 This is the shared task board for BASIN. Subdivide work here using stable IDs rather than maintaining separate TODO documents per person. A GitHub issue or PR may discuss implementation, but link its ID here and keep this board's owner/status current. This plan proposes work; it does not claim team approval of new product scope or assign real people without their agreement.
 
@@ -11,7 +11,7 @@ Intended independent reviewer: a TAMUCC professional identified by the user; nam
 User explicitly selected B08 Path B: retain an illustrative reservoir experiment. Paths A/C are not selected.
 Primary workflow: rural-serving analyst prepares three reviewed rainfall scenarios, inspects evidence, records an unresolved assumption, and exports a packet for expert review.
 Implement B02/B04 baseline first, B03/B05 evidence next, then B06 comparison. One implementer owns the shared schema and app integration.
-Presentation device is a different Windows laptop. User will supply actual submission/organizer materials; freeze and official format remain pending.
+Presentation device is a different Windows laptop. The actual Stage 1 submission, finalist tie-breaker Q&A, August 10 rules and resource packet are available; finalist-specific presentation length/format instructions, freeze and device verification remain pending.
 
 ## Product objective and scope
 
@@ -69,7 +69,7 @@ Checks re-run during this pass (Windows 11, CPython 3.12.14, repository `.venv`)
 
 Documentation changed in this pass (branch `docs/reconcile-status-2026-09-06`; no application code, dependency, scientific claim or product scope touched):
 
-- `TODO.md`: this section; board statuses B01, B02, B03, B04, B05, B06, B07, B08, B10 and B11 updated; a dated status line under every task; 61 subtask boxes checked with qualifiers where a claim is partial; B08 Paths A and C annotated as not selected; B08.2, B06.7, B07.1, B07.8, B09.1, B10.4, B11.6 and B11.9 left unchecked with the reason recorded; team roster noted under B01 with the owner column deliberately still `Unclaimed`.
+- `TODO.md`: at that 2026-09-06 checkpoint, board statuses B01, B02, B03, B04, B05, B06, B07, B08, B10 and B11 were updated and 61 subtask boxes were checked with qualifiers where a claim was partial. B08 Paths A and C were annotated as not selected; B08.2, B06.7, B07.1, B07.8, B09.1, B10.4, B11.6 and B11.9 were left unchecked with the reason recorded. The 2026-09-07 audit below supersedes that count and those current-status statements.
 - `HANDOFF.md`: rewritten as the current checkpoint with today's verification separated from recorded history, files changed, five next actions, and blockers.
 - `README.md`: browser network isolation no longer said to be described in `docs/build_validation.md`, which records no such run; now points at `scripts/browser_rehearsal.mjs`.
 - `docs/build_validation.md`: new section recording the checks actually run today; two earlier sections no longer claim to be local and unpushed, and the superseded upload checkpoint says so.
@@ -78,6 +78,21 @@ Documentation changed in this pass (branch `docs/reconcile-status-2026-09-06`; n
 - `docs/observation_sheet.md`: new, closing B09.3.
 
 These are automated internal-consistency and regression checks on one machine. They are not practitioner validation, teammate review, presentation-device verification or scientific approval, and they close none of those gates. Earlier figures in `docs/build_validation.md` remain recorded historical results from their own runs.
+
+## Board audit checkpoint - 2026-09-07
+
+Audited the checked items against the working source, `origin/main` at `f78d692`, current documentation and the supplied official competition PDFs. The current source passed **105 tests** in 91.23 seconds. Fresh-checkout snapshot verification reproduced SHA-256 `672c23f8...78a0`; the network-blocked demo smoke and independent bundle replay both passed with 5 scenarios and 500 audit records. These checks support the existing implementation/integrity boxes but do not establish practitioner approval, presentation-device readiness or user benefit.
+
+Current root-board count after correction, branch reconciliation, B06.7 verification and presentation reconciliation: **65 checked and 46 unchecked subtasks**. The unchecked count includes Path A/C reservoir alternatives that are explicitly not selected; use the major-task status table and dependency notes to determine active work.
+
+Corrections made by this audit:
+
+- Stage 1 answers and the finalist tie-breaker response are no longer missing; they are recorded in `docs/submission_record.md`. The August 10 rules and resource packet confirm the September 22 event and judging categories, but do not state the finalist presentation length or detailed demonstration format.
+- The native wrapper is no longer excluded. `BASIN.exe` is tracked at `origin/main` and matches the working copy; the current README and build scripts support it. Reproducible build-only dependencies and clean presentation-device execution are still open, so B10.2 is reopened.
+- The earlier claim inventory and obsolete presentation plan were replaced by `docs/claim_inventory.md` and a current three-person, format-flexible `docs/presentation_plan.md`. Unsupported stressors, GIS overlays, engineering sign-off and verified direct-model-import claims are now explicit exclusions rather than scripted demonstration steps.
+- The local `main` pointer was reconciled to `origin/main` at `f78d692` without discarding working changes. The superseded local commit remains recoverable at `codex/pre-reconcile-20260907`; unrelated logo-reference work and generated artifacts remain intact.
+- The current default is a readable neutral light theme with a dark option and distinct colored charts. B13 no longer describes the application as having a completely black/white theme.
+- The upload parser and README state a 10 MB CSV limit, while `.streamlit/config.toml` currently caps uploads at 5 MB. This remains an open Stage A2 limit/alignment task rather than a completed packaging claim.
 
 ## Shared board
 
@@ -95,6 +110,7 @@ These are automated internal-consistency and regression checks on one machine. T
 | B10 | Prove packaging and offline operation | P0 | B | Unclaimed / Unclaimed | In progress | B02; final repeat after accepted changes |
 | B11 | Reconcile docs and prepare the demonstration | P0 | C | Unclaimed / Unclaimed | In progress | Inventory now; finalize after B01/B09/B10 |
 | B12 | Freeze and accept the demo build | P0 | All | Unclaimed / Unclaimed | Blocked | All P0 tasks and approved demo features |
+| B13 | Streamline the analyst workflow | P0 | C | Unclaimed / Unclaimed | Ready | B01 objective; validate through B09 and B10 |
 
 Status meanings used after the 2026-09-06 reconciliation: `In review` means the described work is implemented and covered by automated checks but still needs the named human review in its acceptance criteria; `In progress` means part of the task is verified and part is untouched; a checked box records verified work, not approval. P0 means required to resolve before presenting the affected capability. P1 means valuable feature work after scope confirmation. Fixes within B04 can proceed without waiting for a new evidence schema; split the PRs accordingly.
 
@@ -106,19 +122,43 @@ Status meanings used after the 2026-09-06 reconciliation: `In review` means the 
 - **C:** prepare B09's user exercise and B11's claim inventory; sketch B05/B06 without competing edits to `app.py`.
 - **End of session:** agree on one small feature slice, one shared data contract, and the next integration checkpoint.
 
+## Immediate work session - analyst utility and clarity
+
+The 2026-09-07 teammate discussion agreed on the problem: the interface presents too much at once, labels need to be clearer, and the product's practical purpose and demonstration value need to be obvious. The next milestone is a first-time user selecting and justifying three rainfall scenarios and exporting a reviewable packet in under three minutes without verbal coaching or a misleading interpretation. This is a working target to validate in B09, not a completed usability claim or an official event time limit.
+
+Complete this sequence before starting another speculative visualization or model input:
+
+1. **Team decisions:** complete B01.1, B01.2, B01.5 and B01.7. Claim the UI/workflow, data/method review, and demo/release lanes.
+2. **Unassisted baseline:** run B09's task once with the teammate least familiar with the current interface. Record time, assistance, misunderstood terms, unnecessary content and interpretation errors in `docs/observation_sheet.md`.
+3. **Workflow refactor:** complete B13 around the four existing stages: Check data -> Build scenarios -> Review choices -> Share results.
+4. **Practitioner validation:** have the TAMUCC professional review station suitability, scenario interpretation and the exported packet under B07/B09. Do not record professional approval without their actual feedback.
+5. **Current demonstration:** complete B11.4 and rewrite the stale pitch around the implemented evidence-to-packet workflow. Treat the illustrative reservoir experiment as secondary.
+6. **Presentation device:** complete B10.3-B10.5 and B10.8 on the different Windows presentation laptop, using its actual display resolution and the projector.
+7. **Retest and freeze:** convert observations into owned fixes under B09.7, repeat the important tasks, then complete B12.
+
+Suggested 90-minute library planning agenda:
+
+- **15 minutes:** agree on the primary user, first decision, purpose statement, success measure and freeze target.
+- **15 minutes:** watch an unassisted novice attempt the current workflow; do not teach during the attempt.
+- **20 minutes:** identify every unclear label, unnecessary default chart/control and avoidable scroll in the guided path.
+- **20 minutes:** sketch one main question and action for each of the four stages, including the decision summary card.
+- **10 minutes:** explicitly retain, make secondary or defer proposed features.
+- **10 minutes:** claim owners and independent reviewers, define the next integration checkpoint, and schedule the practitioner and presentation-device sessions.
+
 ## B01 - Confirm scope and claim work
 
 Owner: Unclaimed | Reviewer: Unclaimed | Integration: this file and existing README/methodology
 
-Status 2026-09-06: B01.3 (reservoir Path B) and B01.4 (evidence inspection first) are recorded in this board and visible in the implementation. B01.1, B01.2, B01.5, B01.6 and B01.7 have no recorded team decision; elapsed time and a working feature are not confirmation. The team is Mohammed Asad Khan, Noah Wilborn and Misha Stegall. Lanes and reviewers stay `Unclaimed` in the table until each person claims their own, and nobody may be entered as owner or reviewer by anyone else.
+Status 2026-09-07: B01.3 (reservoir Path B) and B01.4 (evidence inspection first) are recorded in this board and visible in the implementation. B01.6 is now complete because the submitted Stage 1 answers, tie-breaker response and supplied August 10 organizer documents are available. B01.1, B01.2, B01.5, B01.7 and B01.8 still need recorded team decisions or later finalist instructions. The team is Mohammed Asad Khan, Noah Wilborn and Misha Stegall. Lanes and reviewers stay `Unclaimed` in the table until each person claims their own, and nobody may be entered as owner or reviewer by anyone else.
 
 - [ ] **B01.1** Agree on primary user and first decision: for example, a rural-serving provider selecting three rainfall scenarios to request deeper analysis.
 - [ ] **B01.2** Confirm or revise the product objective above. Distinguish observations, constructed stress scenarios, and modeled impacts.
 - [x] **B01.3** Choose the reservoir path: exclude from the demo, retain an explicitly illustrative experiment, or approve a validated impact-modeling expansion. Record the rationale and owner under B08.
 - [x] **B01.4** Choose the first feature: evidence inspection/conflict review (recommended), scenario comparison, or another explicitly described slice. Do not start every P1 task at once.
 - [ ] **B01.5** Fill owner/reviewer names in the board. Agree on `app.py` integration order and ownership of persisted fields.
-- [ ] **B01.6** Locate the actual submitted Stage 1 answers and any later organizer requirements. Compare commitments; do not infer exact submission wording from the design document.
+- [x] **B01.6** Locate the actual submitted Stage 1 answers, finalist tie-breaker response, August 10 official rules and resource packet. `docs/submission_record.md` preserves the submitted wording; the supplied PDFs provide event/judging context.
 - [ ] **B01.7** Confirm the team's freeze target. The supplied build plan proposes September 17-18 bug-fix/rehearsal time and September 19-20 buffer before September 21 travel. These are planning targets, not newly verified organizer deadlines.
+- [ ] **B01.8** Obtain and record any finalist-specific instructions issued after the supplied materials, especially presentation length, required deck/demo format, A/V constraints, submission mechanism and travel/event logistics. Coordinate with B11.7.
 
 Acceptance: one recorded scope decision, named owners/reviewers, agreed first feature, and a bounded demo workflow. Missing submission material stays explicitly unresolved.
 
@@ -126,7 +166,7 @@ Acceptance: one recorded scope decision, named owners/reviewers, agreed first fe
 
 Owner: Unclaimed | Reviewer: Unclaimed | Files: requirements.txt, tests/, data/, launch/setup scripts, CI
 
-Status 2026-09-06: baseline checks re-run at `83d593d` (see the reconciliation section above): 97 tests, snapshot checkout, offline smoke and bundle replay all passed. Line-ending stability is owned by `.gitattributes` plus `scripts/check_snapshot_checkout.py`; failure behaviour is covered by `tests/test_failures.py`; `.github/workflows/tests.yml` repeats the fresh-checkout path. Clean-environment wheel installation is the recorded 2026-09-06 result in `docs/build_validation.md`, not re-run here. A named reviewer and the presentation-device check (B10.3) stay open.
+Status 2026-09-07: current working source passed 105 tests, snapshot checkout, offline smoke and bundle replay. Line-ending stability is owned by `.gitattributes` plus `scripts/check_snapshot_checkout.py`; failure behaviour is covered by `tests/test_failures.py`; `.github/workflows/tests.yml` repeats the fresh-checkout path. Clean-environment wheel installation remains the recorded 2026-09-06 result rather than a new run. Local `main` now equals `origin/main` at `f78d692`; the prior equivalent branding commit is preserved at `codex/pre-reconcile-20260907`, and unrelated working changes/artifacts remain intact. A named reviewer and presentation-device check remain open.
 
 - [x] **B02.1** Record commit, Python version, OS, clean/dirty state, and exact install commands in existing build-validation documentation. Refresh this record at the freeze (B12.5).
 - [x] **B02.2** Create an isolated Python 3.12 environment and install pinned requirements; record actual installation failures rather than silently substituting versions. Recorded historical result; not re-run in the 2026-09-06 reconciliation.
@@ -135,6 +175,7 @@ Status 2026-09-06: baseline checks re-run at `83d593d` (see the reconciliation s
 - [x] **B02.5** Make observation bytes stable on a fresh Windows checkout. The present clone needed a local line-ending correction; implement a repository-owned solution, such as a narrowly scoped Git attribute, and prove the manifest hash survives a new checkout. Never change the manifest merely to accept corrupted data.
 - [x] **B02.6** Exercise malformed snapshot, failed save, invalid replacement, and unavailable session behavior; ensure useful errors and no false success messages.
 - [x] **B02.7** Turn reproducible failures into assigned subtasks/PRs. Verify the fresh-clone path in CI where practical.
+- [x] **B02.8** Reconciled local `main` to `origin/main` at `f78d692` with a mixed reset after confirming the local/remote branding trees matched. Preserved the old commit at `codex/pre-reconcile-20260907`; unrelated logo-reference work and generated artifacts remain in place. The already completed 105-test run exercised the same working source, and post-reset source diffs are limited to documentation and the preserved media work.
 
 Acceptance: installation and baseline checks pass on a clean environment, original CSV checksum matches, and any remaining failures have an explicit disposition before the demo.
 
@@ -196,7 +237,7 @@ Acceptance: an intended user can explain the provenance and an unresolved limita
 
 Owner: Unclaimed | Reviewer: Unclaimed | Files: app.py, basin_core/analysis.py; audit changes through B04
 
-Status 2026-09-06: `basin_ui.comparison_panel` compares two or three candidates with dates, features, contributions, revision, status and selection reason, and previews alternative weights on the same pool without regenerating; `tests/test_integrity.py::test_weight_preview_preserves_reviewed_pool` shows the reviewed shortlist, digests and clusters survive. Saved comparisons are recorded and hash-checked only, per `docs/verification_scope.md`.
+Status 2026-09-07: `basin_ui.comparison_panel` compares two or three candidates with dates, features, contributions, revision, status and selection reason, and previews alternative weights on the same pool without regenerating. `tests/test_integrity.py` now covers preservation of the reviewed pool, deterministic stable-ID ordering for an exact score tie, and a case where increasing a shared duration weight does not improve the lower-ranked scenario. Saved comparisons are recorded and hash-checked only, per `docs/verification_scope.md`.
 
 - [x] **B06.1** Provide side-by-side comparison of two or three existing candidates with source dates, duration, deficit, concurrence, reference sample size, score contributions, revision and status.
 - [x] **B06.2** Explain selection with deterministic text: group representative, global fill, or manual choice. Include the relevant weights and review limitations.
@@ -204,7 +245,7 @@ Status 2026-09-06: `basin_ui.comparison_panel` compares two or three candidates 
 - [x] **B06.4** If accepted for this sprint, compare two weight configurations on the exact same candidate pool. Show changed positions and shortlist membership; do not regenerate silently.
 - [x] **B06.5** Preserve the user's reviewed shortlist until they explicitly apply/rebuild it. Distinguish approval of rainfall content from endorsement of a later ranking configuration.
 - [x] **B06.6** Save comparison settings/results through the agreed audit path if they are exported. Do not leave an exportable claim only in Streamlit widget state.
-- [ ] **B06.7** Partially covered: contrasting duration-weighted preferences and excluded rejected entries are tested in `tests/test_integrity.py::test_weight_preview_preserves_reviewed_pool`. Still missing an explicit tie case and a case where raising one weight does not improve a candidate's rank.
+- [x] **B06.7** Added explicit regression cases for deterministic stable-ID ordering under an exact score tie and for increasing a nondiscriminating duration weight without improving the lower-ranked candidate. The full integrity module passes 29 tests.
 
 Acceptance: a user can explain why two candidates rank differently and what changed after adjusting priorities. B06.4-B06.6 may be explicitly deferred if comparison alone fills the chosen demo slice.
 
@@ -229,11 +270,11 @@ Acceptance: methodology agrees with code, material assumptions are explicit, and
 
 Owner: Unclaimed | Reviewer: Unclaimed | Files: basin_core/analysis.py, exporter.py, app.py, tests/, methodology/runbook
 
-Status 2026-09-06: Path B is the selected path. Paths A and C are recorded as not selected and their subtasks stay unchecked deliberately. The two-pool experiment tracks inflow, evaporation, served demand, unmet demand and spill; `tests/test_reservoir.py` asserts daily conservation across wet, dry, empty and full states plus invalid settings and rainfall. Assumptions are surfaced through `RESERVOIR_ASSUMPTIONS`, and the experiment is excluded from packets and from every verification claim. B08.B5 needs a reviewer and is untouched.
+Status 2026-09-07: Path B is the selected path. Paths A and C are recorded as not selected and their subtasks stay unchecked deliberately. The two-pool experiment tracks inflow, evaporation, served demand, unmet demand and spill; `tests/test_reservoir.py` asserts daily conservation across wet, dry, empty and full states plus invalid settings and rainfall. Assumptions are surfaced through `RESERVOIR_ASSUMPTIONS`, and the experiment is excluded from packets and every verification claim. `docs/presentation_plan.md` now keeps it out of the compact route and answers reservoir questions with the illustrative boundary. B08.B5 still needs a human reviewer.
 
 - [x] **B08.1** Audit all reservoir, restriction-stage, WAM, streamflow-translation and engineering-sign-off statements against their sources and B01's scope decision.
 - [ ] **B08.2** Corrected in code and text (`0be1933`; the rainfall-method evidence record and the handoff brief both state that retention is not streamflow scaling), but the domain review half has not happened. Remove or correct unsupported instructions that rainfall retention can directly scale naturalized streamflow. Distinguish modeling applications and approval requirements; obtain domain review for engineering guidance.
-- [x] **B08.3** Implement exactly the agreed path below and reconcile UI, tutorial, export, README and demo narrative.
+- [x] **B08.3** Reconciled UI, tutorial, export, README and `docs/presentation_plan.md` around selected Path B. The compact demo excludes the reservoir view; optional/Q&A wording identifies it as uncalibrated, illustrative and outside packet verification.
 
 Path A - not selected (2026-09-06). These subtasks stay unchecked because the path was not taken, not because work is outstanding:
 
@@ -261,13 +302,16 @@ Owner: Unclaimed | Reviewer: Unclaimed | Files: docs/validation_notes.md and exi
 
 Status 2026-09-06: the task definition (item 3 of `docs/validation_notes.md`) and the observation sheet (`docs/observation_sheet.md`) now exist. No session, participant or recipient test has happened, and none may be arranged on the team's behalf.
 
-- [ ] **B09.1** Half done: the consented discovery evidence is summarized in `docs/validation_notes.md`; the actual Stage 1 commitments are still not located (see B01.6). Locate the consented discovery evidence and actual Stage 1 commitments; preserve privacy and do not publish raw responses or contact details by default.
+- [x] **B09.1** The consented discovery evidence is summarized anonymously in `docs/validation_notes.md`, and the submitted Stage 1 commitments and finalist Q&A are recorded in `docs/submission_record.md`. Raw responses and contact details remain outside the repository and release kit.
 - [x] **B09.2** Define a short task: choose three scenarios, explain choices, challenge one assumption, and send a packet to a hydrologist for deeper analysis.
 - [x] **B09.3** `docs/observation_sheet.md` covers consent and anonymity, timing, assistance log, misread terms, rejected assumptions, missing evidence, the four explain-back questions, recipient handoff and close-out. It has not been used in a session. Prepare a consistent observation sheet: completion time, assistance needed, misunderstood terms, rejected assumptions, missing evidence, and ability to explain the result.
 - [ ] **B09.4** Have a team member arrange an appropriate session with an intended user and recipient. Contact suggestions in supplied documents are leads, not confirmed participants.
 - [ ] **B09.5** Compare with the user's current preparation method where feasible; record participant count and order/learning limitations. Do not claim measured time savings without a baseline.
 - [ ] **B09.6** Ask the recipient to open and interpret the CSV/brief independently. Record specific format changes needed for their workflow.
 - [ ] **B09.7** Convert observed problems into owned tasks, prioritize them over speculative additions, and retest the important fixes.
+- [ ] **B09.8** Run the current task once with the teammate least familiar with BASIN before the workflow refactor. Capture the unassisted baseline and distinguish novice feedback from practitioner validation.
+- [ ] **B09.9** Ask the TAMUCC professional to review station/catchment assumptions, scenario interpretation, the unresolved-assumption step and the exported packet. Record what they actually reviewed, requested changes and remaining uncertainty.
+- [ ] **B09.10** After B13, repeat the same task without coaching. Record whether the participant can finish within the team's three-minute target and explain what BASIN produced, what it did not establish, and what the recipient should do next.
 
 Acceptance: report distinguishes discovery from actual product use, demonstrates what the participant could do, and states limitations. If no external session occurs, label internal rehearsal honestly.
 
@@ -275,16 +319,16 @@ Acceptance: report distinguishes discovery from actual product use, demonstrates
 
 Owner: Unclaimed | Reviewer: Unclaimed | Files: scripts/, setup/start scripts, requirements.txt, CI, docs/build_validation.md
 
-Status 2026-09-06: the browser launcher is the recorded supported path and the native wrapper stays excluded, so B10.2 is closed by that decision rather than by a build. Python-level offline rehearsal, wheel-only installation and package content checks are recorded in `docs/build_validation.md`. `scripts/browser_rehearsal.mjs` exists for browser-level isolation but no run of it is recorded. Presentation-device, projector, launcher-level recovery and footprint checks are untouched.
+Status 2026-09-07: the browser launcher remains the fallback path and the rebuilt native `BASIN.exe` is also supported. The tracked executable matches `origin/main`; `scripts/build_exe.py` and `scripts/launcher.py` describe the native build/launch path. PyInstaller and pywebview build versions are not pinned in `requirements.txt`, and no clean native rebuild or actual presentation-device run is recorded. Python-level offline rehearsal, wheel-only app installation and source-package content checks remain recorded. Browser/native network isolation, projector, launcher recovery and final-device footprint checks are open.
 
-- [x] **B10.1** Choose and record the supported presentation path: browser launcher or native Windows wrapper. Document Python and other platform prerequisites accurately.
-- [x] **B10.2** Closed by the B10.1 decision: the native wrapper is not supported in this release, so no reproducible wrapper build is required. If the native wrapper remains supported, define reproducible build dependencies for pywebview/PyInstaller and verify the resulting executable against the intended source release.
+- [x] **B10.1** Record the supported Windows paths: rebuilt `BASIN.exe` for the native WebView2 window and `Start BASIN.cmd`/browser as the fallback. Both require the Python 3.12 application environment; the native path also requires WebView2.
+- [ ] **B10.2** A current branded executable exists and matches `origin/main`, but the native build is not yet reproducible from pinned build-only dependencies. Record exact PyInstaller/pywebview build versions, rebuild from a clean environment, identify the source revision/checksum and test the resulting executable on the presentation laptop.
 - [ ] **B10.3** Test the clean installation package on the actual laptop; verify optional offline wheels match the supported Python/OS.
 - [ ] **B10.4** Python-socket-level isolation is covered by `scripts/demo_smoke.py`; `scripts/browser_rehearsal.mjs` exists for the browser level but no run is recorded. Test with network disabled in the actual browser/native UI, including maps. Python socket-mocked tests do not cover browser requests for geographic assets.
 - [ ] **B10.5** Exercise save/restore, downloads, snapshot mismatch, missing prerequisites and occupied-port handling through the supported launcher.
 - [x] **B10.6** Recorded in `docs/build_validation.md` for the 2026-09-06 source package; repeat against the frozen kit under B12.5. Inspect package contents for private notes, sessions, credentials, source correspondence and generated artifacts. The currently tracked empty Streamlit onboarding file is not a secret, but packaging must not blindly include future credential contents.
 - [x] **B10.7** Labels and limits are stated in `docs/methodology.md` (completion-time resident memory, no peak claim, illustrative 15-65 W energy range, unquantified water impact, network counters explicitly not instrumented). Re-measure on the presentation device with B10.3. Record wall/CPU time and memory with accurate labels; distinguish measured values, illustrative energy estimates, and unquantified water impact. Do not describe hardcoded network counters as instrumentation.
-- [ ] **B10.8** Keep a versioned release copy and backup on the team's chosen media; test projector readability and download locations. Do not claim tablet/LAN support for the loopback-only configuration.
+- [ ] **B10.8** Keep a versioned release copy and backup on the team's chosen media; test projector readability, the guided path at the presentation laptop's actual resolution, and download locations. Do not claim tablet/LAN support for the loopback-only configuration.
 
 Acceptance: another teammate can install/start the supported build and complete the chosen demo workflow offline on the presentation machine, with accurate prerequisite and footprint claims.
 
@@ -292,12 +336,12 @@ Acceptance: another teammate can install/start the supported build and complete 
 
 Owner: Unclaimed | Reviewer: Unclaimed | Files: README.md, docs/methodology.md, validation_notes.md, build_validation.md, demo_runbook.md, ai_use_log.md
 
-Status 2026-09-06: this pass performed B11.1 and B11.3 and confirmed the tutorial placement, first-run tour, appearance control, launcher path, preview-only uploads and illustrative reservoir wording in README and app. Two demonstration formats now coexist, the three-minute runbook in `docs/demo_runbook.md` and the 60-minute plan in `docs/presentation_plan.md`, and B11.7 must resolve which one is real. `media/BASIN_Simulation_Demonstration.mp4` is a rendered simulation film, not the B11.9 backup recording of the accepted build. `docs/presentation_plan.md` is the largest remaining gap: it scripts a live demonstration of the climate-warming and data-centre stressors removed in `0be1933`, runs the demo inside the excluded `BASIN.exe`, shows GIS pipeline and corridor overlays the Data view does not have, and calls the packet a verified WAM export with engineering sign-off. A dated notice at the top of that file now lists each contradiction; the narrative itself is left for the team under B11.4.
+Status 2026-09-07: `docs/claim_inventory.md` now covers the current app, submission record, upload comparison, packet/brief, native executable, privacy, reservoir and competition claims with evidence boundaries. `docs/presentation_plan.md` is rewritten for the actual three-person roster and implemented evidence-to-packet workflow, with a compact three-minute team target plus optional expansion modules. Removed stressors, absent GIS overlays, direct WAM/HEC import, engineering sign-off and calibrated reservoir claims are excluded. The August 10 organizer PDFs confirm judging criteria and the September 22 event, but not presentation length or detailed format; B11.7-B11.9 remain open.
 
-- [x] **B11.1** Inventory claims across README, tutorial, generated brief, technical design and pitch; distinguish implemented, verified, expert-reviewed, proposed and deferred.
+- [x] **B11.1** `docs/claim_inventory.md` inventories claims across README, tutorial/workflow, generated brief and verification scope, methodology, `docs/submission_record.md`, upload comparison, executable/deployment documentation, privacy, reservoir experiment and pitch. Each claim is classified as implemented, internally verified, locally observed, pending human review or excluded.
 - [x] **B11.2** Record the accepted design corrections in existing methodology. Do not reintroduce outdated draft formulas merely to match the attached document.
 - [x] **B11.3** Update installation instructions and reported tests to the verified release; remove the fresh-checkout claim that an environment is already installed.
-- [ ] **B11.4** Connect the demo to impact, feasibility, community control, innovation and clarity. Cite observed evidence and explicitly identify hypothetical benefits.
+- [x] **B11.4** Rewrote `docs/presentation_plan.md` around rainfall evidence -> transparent scenario shortlist -> selection explanation -> challenged assumption -> reviewable hydrologist packet. The judging-criteria map separates demonstrated evidence from proposed benefits, and the illustrative reservoir experiment is excluded from the compact route.
 - [x] **B11.5** A walk-through exists in `docs/demo_runbook.md`; its length depends on the unresolved B11.7 format question. Prepare a concise walk-through: source/assumption -> scenario comparison -> human challenge/edit -> approved packet -> recipient's next action.
 - [ ] **B11.6** `docs/ai_use_log.md` and `docs/third_party_materials.md` exist; no team review of them is recorded. Review AI-use disclosure and third-party attribution; record actual team review rather than claiming approval from the existence of an AI log.
 - [ ] **B11.7** Verify presentation length, submission format and event logistics against the latest organizer communication. Do not treat the repo's three-minute demo suggestion as an official limit.
@@ -322,6 +366,24 @@ Status 2026-09-06: unchanged and still blocked. No freeze, acceptance, commit, p
 
 Acceptance: the team agrees the frozen build is demonstrable as delivered, with no unsupported readiness, forecast or validation claim.
 
+## B13 - Streamline the analyst workflow
+
+Owner: Unclaimed | Reviewer: Unclaimed | Files: `app.py`, `basin_ui/`, tutorial and relevant UI tests
+
+Status 2026-09-07: ready. Teammate feedback says the current layout presents too much at once, some labels require explanation, and the guided path should avoid scrolling. The current default is a readable neutral light theme with a coordinated dark option, BASIN branding and distinct colored charts. This task concerns information hierarchy, language and workflow; preserve graph color differentiation and do not turn scientific plots into monochrome branding elements.
+
+- [ ] **B13.1** Use the existing persistent navigation and order the user-facing stages as **1. Check data**, **2. Build scenarios**, **3. Review choices**, and **4. Share results**. Keep navigation visible; do not introduce a hamburger menu.
+- [ ] **B13.2** Give each stage one clear question and one primary action. Limit the initial view to the information needed for that decision; move audit detail, large tables, score decomposition and diagnostics into clearly named detail sections.
+- [ ] **B13.3** Add a compact decision summary showing the selected scenario, why it ranked, evidence used, material limitation or unresolved assumption, and the next recipient action.
+- [ ] **B13.4** Replace or explain specialist labels. At minimum review: **Rainfall retained %** -> **Scenario rainfall (% of observed)**, **Candidates** -> **Scenarios to test**, **Shortlist** -> **Scenarios to review**, **Concurrence** -> **Stations stressed at the same time**, **Historical percentile** -> **How unusual compared with history**, and **Score contributions** -> **Why this scenario ranked here**. Verify each replacement remains scientifically accurate in context.
+- [ ] **B13.5** Make the guided demo fit one viewport per stage at the actual presentation resolution. Reduce avoidable whitespace and vertical stacking while allowing detailed evidence and tables to scroll when needed; do not claim zero scrolling across every device and workflow.
+- [ ] **B13.6** Keep controls, selector values, focus indicators, legends and chart series readable in both supported themes. Test selected/unselected, enabled/disabled and hover/focus states rather than checking only static screenshots.
+- [ ] **B13.7** Preserve the full traceability path through the simplified interface: source and applicability -> scenario construction/comparison -> human challenge/edit -> approval -> export and replay.
+- [ ] **B13.8** Add focused regression coverage for navigation, plain-language labels, decision summary contents and retained review/export behavior. Avoid screenshot-only assertions for usability claims.
+- [ ] **B13.9** Review the result at the presentation resolution with a novice and practitioner under B09. Convert observed failures into owned follow-ups before marking this task done.
+
+Acceptance: a first-time participant can identify the next action at each stage, select and justify three scenarios, state one limitation, and export the intended packet without verbal coaching. The guided path fits one viewport per stage on the presentation laptop, and detailed evidence remains available without overwhelming the default view.
+
 ## Deferred ideas - do not start without reprioritization
 
 - Local chat assistant: use only after the accepted core and validation/rehearsal work; it should not become a second unverified calculation path.
@@ -331,6 +393,9 @@ Acceptance: the team agrees the frozen build is demonstrable as delivered, with 
 - Multi-region adaptation: requires geography/data validation and configurable references, not just a new station ID.
 - Tablet/LAN access, accounts and cloud hosting: separate deployment/privacy decisions.
 - Pareto ranking or alternative clustering: pursue only if measured user needs or baseline comparisons justify them.
+- Drought heatmap playback: defer until a user demonstrates that spatial progression changes a decision and the team has valid rainfall surfaces or reviewed catchment geometry. Airport station points alone do not support an affected-area overlay.
+- Additional environmental variables: defer temperature/evapotranspiration, soil moisture, streamflow, groundwater, reservoir operations and climate indices until a practitioner identifies a decision rainfall alone cannot support and the team can document a defensible data source, transformation and interpretation.
+- Calibrated reservoir-impact claims: remain out of scope under selected B08 Path B unless the team explicitly chooses Path C with domain review, calibration inputs and validation criteria.
 
 ## Planning references
 

@@ -1,11 +1,23 @@
 # BASIN current handoff
 
-Custom-data integration publication authorized by the user: explicit reviewed save; original bytes in private session JSON; normalized rainfall and source/station metadata; hashes/date/gap counts; saved NOAA comparison or blocked suitability state; immutable versions and scenario evidence links; validated restore; consented replayable custom exports; linked approval invalidation. It is supporting evidence, not an automatic numerical replacement of NOAA scenario rainfall.
+Updated: 2026-09-08
 
-Changed: app.py; basin_core/custom_data.py (new), workspace.py, evidence.py, integrity.py, exporter.py; tests/test_custom_data.py (new); README.md, TODO.md, docs/local_upload_and_research_plan.md, docs/methodology.md, docs/verification_scope.md, docs/ux_research_and_simplification.md, docs/build_validation.md and this handoff. The user also authorized sharing docs/agent_efficiency_guide.txt in this publication. Private uploads, saved sessions and generated artifacts remain excluded.
+Local `main` is reconciled with `origin/main`. It combines the custom-data integration, TODO status audit, and the modern BASIN 0.2.0 platform upgrades:
+1. **Reviewed Custom Data Integration**: Explicit reviewed save; original bytes in private session JSON; normalized rainfall and source/station metadata; hashes/date/gap counts; saved NOAA comparison or blocked suitability state; immutable versions and scenario evidence links; validated restore; consented replayable custom exports; linked approval invalidation. It is supporting evidence, not an automatic numerical replacement of NOAA scenario rainfall.
+2. **Grounded Local AI Assistant**: 100% offline, private LLM (Ollama Qwen 2.5 3B) acting as an intent router to execute 13 deterministic Python hydrology tools with strict anti-hallucination templates and zero cloud leakage.
+3. **1-Click Multi-Tier Stress Spectrum**: Simultaneous multi-tier climate stress simulation (100%, 80%, 60%, 40% rainfall retention), tipping point detection, days-to-breach countdown matrix, and empirical emergency conservation testing.
+4. **Native Windows Desktop Application**: Single executable `BASIN.exe` (23.87 MB) with embedded EdgeChromium WebView2, brand icon, and zero-overlay split-pane layout.
+5. **Verified Verification & Benchmark Audit**: Controlled A/B benchmark proved a 30×–50× turnaround acceleration over manual coding, converging on identical physical drawdown numbers (Day 151 breach; +9 days with 15% conservation).
 
-Publication verification: 125 full-suite tests passed on the final code (`.venv/Scripts/python.exe -m pytest -q --basetemp=tmp/publish-custom-final --tb=short`); 45 focused custom/integrity checks after verifier refinements (tmp/custom-final-contract-0907); final custom UI save/restore/export test (tmp/custom-ui-final-0907); independent CLI replay of tmp/custom-replay-validation/packet.zip (synthetic, 3 scenarios / 30 records / 1 custom comparison); compileall and diff whitespace check. Git fetch succeeded and HEAD equaled origin/main at start (313d57a).
+## Verification record
 
-Preview: localhost:8504, separate from the older 8503 process. Restart after module updates. Save/reopen paths remain local/ and are gitignored. Schema 2.1 is used only for analyses with custom evidence; normal schema 2.0 and legacy session loading remain supported. Custom exports require normalized data plus source metadata consent; originals never exported. New/replacement evidence clears linked approvals while retaining all previous versions.
+- Full test suite passing across all modules: **128/128 tests passed (100%)**.
+- Snapshot checkout verified observation SHA-256 `672c23f8...78a0`.
+- Offline demo verified five scenarios and 500 audit records with network sockets blocked.
+- Clean compilation of native `BASIN.exe` with custom brand icon.
 
-Next: independent teammate sample/replay review, then define the first area's model contract. Document ingestion, numerical local-station generation, seasonal baseline validation, geographic simulation and practitioner/device validation remain separate unfinished work. No implementation blocker for this bounded integration.
+## Next actions
+
+1. Test the accepted build on the presentation laptop with projector and network disabled.
+2. Rehearse the 3-minute compact showcase script across the three speaking lanes.
+3. Keep offline USB backup with `BASIN.exe`, wheels, and demo recordings ready.

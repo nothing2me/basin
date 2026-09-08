@@ -83,8 +83,7 @@ Part B is a bounded descriptive comparison, not completed scenario/evidence inte
 
 Publication integrated concurrent upstream 106842a (submission record, logos and README link) by clean rebase. No tested application code changed in that upstream commit; no redundant test rerun was performed.
 
-
-## Reviewed custom-data integration — 2026-09-07 (local)
+## Reviewed custom-data integration — 2026-09-07
 
 - `.venv/Scripts/python.exe -m pytest -q --basetemp=tmp/custom-full-0907 --tb=short`: 125 passed.
 - `.venv/Scripts/python.exe -m pytest tests/test_custom_data.py tests/test_integrity.py -q --basetemp=tmp/custom-final-contract-0907 --tb=short`: 45 passed after final verifier-scope/date-validation updates.
@@ -94,4 +93,20 @@ Publication integrated concurrent upstream 106842a (submission record, logos and
 
 Tests cover original-byte restore, normalization (including inches), paired arithmetic, unknown suitability, content/reference/metadata hash rejection, version replacement, selective approval invalidation, explicit export consent, original-byte exclusion, independently replayed packet verification, failed-save preservation and legacy baseline behavior. No human/practitioner validation or new area-model calibration is claimed.
 
-Publication verification: final source passed all 125 tests with `python -m pytest -q --basetemp=tmp/publish-custom-final --tb=short`. User authorized GitHub publication; private local data and generated packets are excluded.
+## TODO status audit - 2026-09-07
+
+Audited the shared board against the working source corresponding to `origin/main` at `f78d692`. After the checks, local `main` was reconciled to the same commit while the superseded equivalent branding commit was preserved at `codex/pre-reconcile-20260907`.
+
+- `.venv\Scripts\python.exe -m pytest -q --basetemp=tmp/pytest-todo-audit --tb=short`: **105 passed in 91.23 seconds**.
+- `.venv\Scripts\python.exe scripts/check_snapshot_checkout.py`: verified fresh-checkout observation SHA-256 `672c23f8335093cdba84608c53ade768a9737e4088e60d95c04965257e0178a0` and `eol: lf`.
+- `.venv\Scripts\python.exe scripts/demo_smoke.py`: verified 5 scenarios and 500 audit records; completion-time wall 1.116 seconds and resident memory 175.0 MiB on this run. The reported energy range remains assumption-based and no water footprint was quantified.
+- `.venv\Scripts\python.exe scripts/replay_bundle.py output/BASIN-rehearsal.zip`: verified the same run and reported `implementation_matches_current: true`.
+- The working `BASIN.exe` blob matches `origin/main`.
+
+### B06.7 ranking edge cases
+
+After aligning local `main` to `origin/main`, added deterministic regression coverage for an exact score tie and for increasing a weight shared equally by two candidates without improving the lower-ranked candidate. `.venv\Scripts\python.exe -m pytest -q tests/test_integrity.py --basetemp=tmp/pytest-b067 --tb=short`: **29 passed in 32.99 seconds**.
+
+### Claim and presentation reconciliation
+
+Added `docs/claim_inventory.md` to classify current claims and evidence boundaries across the application, exports, submission record, deployment, reservoir experiment and event materials. Replaced the obsolete four-speaker/60-minute script with a three-person, format-flexible `docs/presentation_plan.md` centered on the implemented evidence-to-packet workflow.
