@@ -196,3 +196,79 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
                         "net_loss_acft": requested_demand + potential_evap - inflow,
                         "balance_error_acft": combined - (beginning + inflow - actual_evap - served - spill)})
     return pd.DataFrame(records)
+
+
+def simulate_stress_spectrum(series: pd.DataFrame,
+                             tiers: tuple[float, ...] = (1.0, 0.8, 0.6, 0.4),
+                             initial_pct: float = 0.48,
+                             conservation_pct: float = 0.0,
+                             pipeline_active: bool = True) -> dict:
+    """Simulate reservoir storage drawdown across multiple rainfall stress tiers simultaneously.
+
+    tiers: tuple of rainfall retention multipliers (e.g. 1.0 = 100%, 0.8 = 80%, 0.6 = 60%, 0.4 = 40%).
+    Returns a dict containing simulation results for each tier, combined trajectory dataframes,
+    and a summary table of threshold breach countdowns.
+    """
+    tier_results = {}
+    summary_rows = []
+
+    tier_labels = {
+        1.0: "100% Historical Baseline",
+        0.8: "80% Moderate Stress (-20%)",
+        0.6: "60% Severe Stress (-40%)",
+        0.4: "40% Catastrophic Stress (-60%)",
+    }
+
+    for mult in tiers:
+        m = float(mult)
+        scaled_series = series * m
+        sim_df = simulate_reservoir_drawdown(
+            scaled_series,
+            initial_pct=initial_pct,
+            conservation_pct=conservation_pct,
+            pipeline_active=pipeline_active
+        )
+        min_pct = round(float(sim_df["combined_pct"].min()), 1)
+        min_acft = round(float(sim_df["combined_acft"].min()), 0)
+        final_pct = round(float(sim_df["combined_pct"].iloc[-1]), 1)
+        final_acft = round(float(sim_df["combined_acft"].iloc[-1]), 0)
+
+        day_b1 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= 40.0), None)
+        day_b2 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= 30.0), None)
+        day_b3 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= 20.0), None)
+        day_b4 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= 15.0), None)
+        survived = bool(min_pct > 20.0)
+
+        label = tier_labels.get(round(m, 2), f"{int(round(m * 100))}% ({(100 - int(round(m * 100))):+d}% Rain)")
+
+        row = {
+            "tier_multiplier": m,
+            "tier_label": label,
+            "retention_pct": round(m * 100, 1),
+            "reduction_pct": round((1.0 - m) * 100, 1),
+            "min_pct": min_pct,
+            "min_acft": min_acft,
+            "final_pct": final_pct,
+            "final_acft": final_acft,
+            "day_stage1_40": day_b1,
+            "day_stage2_30": day_b2,
+            "day_stage3_20": day_b3,
+            "day_emergency_15": day_b4,
+            "survived_critical_20pct": survived,
+            "status": "✅ Survived" if survived else "❌ Breached (Stage 3)",
+        }
+        summary_rows.append(row)
+        tier_results[m] = {
+            "df": sim_df,
+            "metrics": row,
+        }
+
+    return {
+        "tier_results": tier_results,
+        "summary_table": summary_rows,
+        "duration_days": len(series),
+        "initial_pct": round(initial_pct * 100, 1),
+        "conservation_pct": round(conservation_pct * 100, 1),
+        "pipeline_active": pipeline_active,
+    }
+
