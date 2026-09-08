@@ -1,0 +1,4 @@
+# Pinned build-only dependencies for BASIN.exe compilation via scripts/build_exe.py
+pyinstaller==6.21.0
+pyinstaller-hooks-contrib==2026.6
+pywebview==6.2.1
