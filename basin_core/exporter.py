@@ -27,6 +27,13 @@ FILES = {'daily_rainfall.csv', 'shortlist.csv', 'audit.json', 'Hydrologist_Hando
          'snapshot/observations.csv', 'snapshot/manifest.json', 'methodology.md', 'README.txt'}
 
 
+def verification_scope(version):
+    if version == "2.1":
+        return {"checks": CHECKS + ["custom normalized rainfall, metadata hashes, version links and paired-day comparison replay", "custom evidence changes invalidate linked scenario approvals", "explicit custom data consent and original-byte exclusion"],
+                "excluded": [item.replace("saved comparison results", "saved ranking comparison results") for item in EXCLUDED] + ["original custom CSV byte identity without the private original; user-declared geographic and daily suitability"]}
+    return {"checks": CHECKS, "excluded": EXCLUDED}
+
+
 def dumps(value):
     return json.dumps(value, indent=2, allow_nan=False).encode()
 
@@ -80,6 +87,12 @@ def generate_brief(workspace, accepted):
               'Inspect daily_rainfall.csv and the matched references, challenge the listed assumptions, and decide what further data or modeling is appropriate. Scenario dates identify historical source days. The separate illustrative reservoir experiment is excluded from this packet.', '',
               'Replay: `python scripts/replay_bundle.py path/to/bundle.zip`.', '',
               'Verification checks internal consistency, not authenticity or scientific validity. Grouping, selection history and saved comparisons are recorded and hash-checked only. Unsigned hashes do not protect against coordinated changes. Public evidence and dispositions are included; private annotations only appear in audit.json when opted in.']
+    if getattr(workspace, "custom_uploads", []):
+        lines += ["", "## Custom rainfall evidence", "",
+                  "Included with separate custom-data consent: normalized observations, source metadata, review rationale and all saved comparison versions in audit.json. Original CSV bytes and filenames are excluded. The original byte hash is recorded, not independently verified without those bytes.",
+                  "Comparisons are replayed against the bundled NOAA snapshot. They support scenario review; they do not replace scenario rainfall, establish catchment suitability or calibrate a model."]
+        for record in workspace.custom_uploads:
+            lines.append("- " + text_cell(record["id"]) + ": " + text_cell(record["station"]) + "; " + text_cell(record["comparison"]["status"]) + "; linked scenarios: " + ", ".join(record["scenario_ids"]))
     return '\n'.join(lines) + '\n'
 
 
@@ -94,9 +107,9 @@ def rainfall_rows(s):
     return frame
 
 
-def export_bundle(workspace, include_notes=False):
+def export_bundle(workspace, include_notes=False, include_custom=False):
     accepted = workspace.exportable()
-    audit = workspace.record(include_notes)
+    audit = workspace.record(include_notes, include_custom=include_custom)
     reconstruct_audit(workspace.source, audit, require_export=True)
     files = {'daily_rainfall.csv': pd.concat([rainfall_rows(s) for s in accepted]).to_csv(index=False, lineterminator='\n').encode(),
              'shortlist.csv': pd.DataFrame([summary_record(s) for s in accepted]).to_csv(index=False, lineterminator='\n').encode(),
@@ -104,11 +117,13 @@ def export_bundle(workspace, include_notes=False):
              'snapshot/observations.csv': workspace.source.raw, 'snapshot/manifest.json': dumps(workspace.source.manifest),
              'methodology.md': (ROOT / 'docs/methodology.md').read_bytes(),
              'README.txt': b'BASIN rainfall scenarios for expert review. Historical dates are source labels, not forecasts.\nReplay with BASIN 0.2: python scripts/replay_bundle.py path/to/bundle.zip\nSee the handoff brief for verification scope, assumptions and unresolved issues. The reservoir experiment is excluded.\n'}
-    manifest = {'schema_version': SCHEMA, 'basin_version': __version__, 'run_id': workspace.id,
+    manifest = {'schema_version': audit['schema_version'], 'basin_version': __version__, 'run_id': workspace.id,
                 'accepted_ids': [s.id for s in accepted], 'private_notes_included': include_notes,
-                'implementation': implementation_identity(), 'verification_scope': {'checks': CHECKS, 'excluded': EXCLUDED},
+                'implementation': implementation_identity(), 'verification_scope': verification_scope(audit['schema_version']),
                 'software': {p: importlib.metadata.version(p) for p in ['numpy', 'pandas', 'scikit-learn', 'streamlit']},
                 'files': {n: hashlib.sha256(b).hexdigest() for n, b in files.items()}}
+    if workspace.custom_uploads:
+        manifest['custom_data_included'] = True
     files['bundle_manifest.json'] = dumps(manifest)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
@@ -124,25 +139,29 @@ def _verify(payload):
         if sum(f.file_size for f in archive.infolist()) > 100_000_000:
             raise ValueError('Bundle is too large')
         manifest = json.loads(archive.read('bundle_manifest.json'))
-        if manifest['schema_version'] != SCHEMA or manifest['basin_version'] != __version__:
+        if manifest['schema_version'] not in (SCHEMA, '2.1') or manifest['basin_version'] != __version__:
             raise ValueError('Unsupported bundle version; restore the original session and re-export with BASIN 0.2')
         if set(manifest['files']) != FILES:
             raise ValueError('Missing file checksums')
         for name, digest in manifest['files'].items():
             if hashlib.sha256(archive.read(name)).hexdigest() != digest: raise ValueError(f'Checksum mismatch: {name}')
-        if manifest['verification_scope'] != {'checks': CHECKS, 'excluded': EXCLUDED}:
+        if manifest['verification_scope'] != verification_scope(manifest['schema_version']):
             raise ValueError('Verification scope mismatch')
         identity = manifest['implementation']
         if hashlib.sha256(json.dumps(identity['files'], sort_keys=True).encode()).hexdigest() != identity['sha256']:
             raise ValueError('Implementation identity is internally inconsistent')
         source = CachedSource(raw=archive.read('snapshot/observations.csv'), manifest=json.loads(archive.read('snapshot/manifest.json')))
         audit = json.loads(archive.read('audit.json'))
-        if audit['schema_version'] != SCHEMA or audit['id'] != manifest['run_id']:
+        if audit['schema_version'] != manifest['schema_version'] or audit['id'] != manifest['run_id']:
             raise ValueError('Audit schema or run identity mismatch')
         if type(manifest['private_notes_included']) is not bool:
             raise ValueError('Invalid privacy choice')
         if not manifest['private_notes_included'] and public_copy(audit) != audit:
             raise ValueError('Private annotations included despite privacy setting')
+        if 'custom_originals' in audit:
+            raise ValueError('Original private CSV bytes must not appear in a packet')
+        if audit['schema_version'] == '2.1' and manifest.get('custom_data_included') is not True:
+            raise ValueError('Custom data consent is missing')
         params, reference, scenarios = reconstruct_audit(source, audit, require_export=True)
         by_id = {s.id: s for s in scenarios}
         accepted = [by_id[i] for i in audit['selected'] if by_id[i].status == 'accepted']
@@ -161,10 +180,11 @@ def _verify(payload):
             raise ValueError('Shortlist summary inventory mismatch')
         for row, wanted in zip(summary.to_dict('records'), expected_summary): compare_values(row, wanted, 'Shortlist summary')
         view = SimpleNamespace(**{k: audit[k] for k in ('id', 'created_at', 'weights', 'evidence', 'evidence_refs', 'conflicts')})
+        view.custom_uploads = audit.get('custom_uploads', [])
         if archive.read('Hydrologist_Handoff_Brief.md') != generate_brief(view, accepted).encode():
             raise ValueError('Handoff brief differs from audited content')
         return {'verified': True, 'run_id': audit['id'], 'scenarios_replayed': len(accepted),
-                'audit_records_replayed': len(scenarios), 'checks': CHECKS, 'excluded': EXCLUDED,
+                'audit_records_replayed': len(scenarios), 'custom_comparisons_replayed': len(audit.get('custom_uploads', [])), 'checks': manifest['verification_scope']['checks'], 'excluded': manifest['verification_scope']['excluded'],
                 'implementation_matches_current': identity == implementation_identity()}
 
 

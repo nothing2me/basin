@@ -82,3 +82,16 @@ Fresh snapshot checkout passed. Offline demo verified 5 scenarios and 500 audit 
 Part B is a bounded descriptive comparison, not completed scenario/evidence integration. User-declared same-station/proxy and daily-basis review, exact paired-date totals, missing-day exclusion, zero-reference handling and explicit numerical download opt-in are implemented. No private upload is committed or automatically transmitted. Diff whitespace passed.
 
 Publication integrated concurrent upstream 106842a (submission record, logos and README link) by clean rebase. No tested application code changed in that upstream commit; no redundant test rerun was performed.
+
+
+## Reviewed custom-data integration — 2026-09-07 (local)
+
+- `.venv/Scripts/python.exe -m pytest -q --basetemp=tmp/custom-full-0907 --tb=short`: 125 passed.
+- `.venv/Scripts/python.exe -m pytest tests/test_custom_data.py tests/test_integrity.py -q --basetemp=tmp/custom-final-contract-0907 --tb=short`: 45 passed after final verifier-scope/date-validation updates.
+- Final saved-data UI presentation: `tests/test_custom_data.py::test_upload_ui_save_restore_and_export_consent`, basetemp tmp/custom-ui-final-0907: passed.
+- `scripts/replay_bundle.py tmp/custom-replay-validation/packet.zip`: verified 3 scenarios, 30 audit records, 1 custom comparison; current implementation identity matched. Inputs are synthetic software-test data, not observations used for a scientific claim.
+- `python -m compileall -q basin_core app.py` and `git diff --check`: passed.
+
+Tests cover original-byte restore, normalization (including inches), paired arithmetic, unknown suitability, content/reference/metadata hash rejection, version replacement, selective approval invalidation, explicit export consent, original-byte exclusion, independently replayed packet verification, failed-save preservation and legacy baseline behavior. No human/practitioner validation or new area-model calibration is claimed.
+
+Publication verification: final source passed all 125 tests with `python -m pytest -q --basetemp=tmp/publish-custom-final --tb=short`. User authorized GitHub publication; private local data and generated packets are excluded.

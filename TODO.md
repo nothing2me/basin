@@ -346,3 +346,21 @@ Original private attachments remain outside the repository. This board records a
 ## Part B upload-comparison checkpoint — 2026-09-06
 
 A first descriptive uploaded-versus-NOAA same-date comparison is implemented, with explicit applicability declarations, paired-day arithmetic and opt-in report download. This extends the CSV preview only. Saved upload evidence, scenario linkage, seasonal baseline validation and scenario-packet replay integration are not complete. Existing B03/B04/B05 review gates and named-human assignments remain unchanged. See docs/local_upload_and_research_plan.md for the bounded next steps.
+
+
+## B13 — Reviewed custom rainfall evidence integration (publication authorized)
+
+Status: In review. Implementer: Codex; independent reviewer unassigned. Scope: persisted supporting evidence for existing scenarios, not numerical new-station generation or geographic simulation.
+
+- [x] Explicit review/local storage consent; save normalized inputs and original bytes without filenames.
+- [x] Source identity, hashes, units, date/gap counts and station/provider metadata retained.
+- [x] Public-versus-custom comparison saved and replayed against the exact bundled snapshot.
+- [x] Appropriate-reference reasoning or unresolved suitability recorded; blocked comparisons remain blocked.
+- [x] Exact evidence versions linked to chosen scenarios; previous versions retained.
+- [x] Save/reopen validates originals, normalized records, comparisons and links.
+- [x] Separate export consent includes all required normalized versions and metadata; original bytes excluded.
+- [x] New/replacement evidence increments affected scenario revisions and clears approvals; renewed review required.
+- [x] Negative tests for malformed/tampered records, false comparison totals, invalid links/version chains and save failure.
+- [ ] Independent teammate exercise using their own consented sample and exported packet.
+
+Verification: 125 full-suite tests passed; 45 custom/integrity checks passed after final verifier scope updates; final integrated UI test passed; independent CLI replay passed for a synthetic custom-data packet. Updated README, methodology, verification contract and upload plan explain schema 2.1 and backward compatibility. User authorized publication of this integration. Existing P0 practitioner and presentation-device gates remain open.

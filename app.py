@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+from copy import deepcopy
 import base64
 from contextlib import contextmanager
 from html import escape
@@ -22,6 +23,7 @@ from basin_core.exporter import export_bundle, verify_bundle, generate_brief
 from basin_core.workspace import Workspace
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
+from basin_core.custom_data import active_ids, digest
 
 icon_file = ROOT / "assets/basin.ico"
 st.set_page_config(page_title="BASIN", page_icon=str(icon_file) if icon_file.exists() else "◉", layout="wide")
@@ -36,7 +38,7 @@ def load_source():
 
 def local_rainfall_preview():
     with st.expander("Upload and observe your custom CSV."):
-        st.caption("One station per file. Preview only: uploads do not change scenarios or the NOAA snapshot. Data stays in this browser session's local app process and is not saved to disk.")
+        st.caption("One station per file. Preview only: uploads do not change scenarios or the NOAA snapshot. Preview stays in this session until you explicitly save reviewed evidence to an active analysis.")
         st.download_button("Local rainfall template", TEMPLATE, "local-rainfall-template.csv", "text/csv")
         station = st.text_input("Local station name", key="local_station")
         location = st.text_input("Location description", key="local_location", help="Town, area or gauge location. This does not establish catchment suitability.")
@@ -72,12 +74,12 @@ def local_rainfall_preview():
         st.dataframe(frame, hide_index=True, width="stretch")
         st.caption(f"Original file SHA-256: {preview.original_sha256}")
         st.info("Local station suitability and historical reference are not yet established. No percentile, forecast or scenario change is produced by this preview.")
-        uploaded_reference_comparison(preview)
+        uploaded_reference_comparison(preview, upload.getvalue())
 
 
 
 
-def uploaded_reference_comparison(preview):
+def uploaded_reference_comparison(preview, raw):
     st.subheader("Compare with public rainfall")
     reference_source = load_source()
     registry = {item["id"]: item for item in reference_source.manifest["stations"]}
@@ -96,6 +98,8 @@ def uploaded_reference_comparison(preview):
     relationship = st.selectbox("Relationship to uploaded station", ["Not established", "Same physical station (user confirmed)", "Different station: regional proxy only"], key=f"relationship_{token}")
     daily = st.checkbox("I checked that the daily observation periods are comparable", key=f"daily_basis_{token}", help="Dates alone do not prove the gauges observe the same 24-hour period. Leave unchecked if unknown.")
     st.warning("Nearby or regional stations may experience different rain. A difference does not show which dataset is correct, establish catchment rainfall or predict a shortage.")
+    relation = "not_established" if relationship == "Not established" else "same_station" if relationship.startswith("Same") else "regional_proxy"
+    persist_custom_panel(preview, raw, station_id, relation, daily, token)
     if relationship == "Not established" or not daily:
         st.info("Comparison is blocked until the location relationship and daily basis are reviewed. You can still inspect the uploaded data above.")
         return
@@ -124,7 +128,7 @@ def uploaded_reference_comparison(preview):
     fig.update_yaxes(title="Daily rainfall · mm")
     st.plotly_chart(accessible_chart(fig), width="stretch")
     st.dataframe(frame, hide_index=True, width="stretch")
-    st.caption("Review only: this comparison is not saved to the workspace, attached to a scenario or covered by the scenario ZIP verifier.")
+    st.caption("This is a live preview. Save reviewed evidence above to retain a version, link it to scenarios and include it in a consented verified packet.")
     include = st.checkbox("Include my uploaded values in a downloadable comparison report", key=f"share_comparison_{token}_{relation}")
     if include:
         report = {"schema_version": "rainfall-comparison-1", "method": "paired-valid-calendar-days-v1",
@@ -137,6 +141,69 @@ def uploaded_reference_comparison(preview):
                   "limitations": "Descriptive same-date comparison; geography and daily basis are user declarations, not independently validated. No forecast, climatology or scenario approval.",
                   "rows": [{"date": str(day), "uploaded_mm": x, "reference_mm": y} for day, x, y in result.rows]}
         st.download_button("Download comparison JSON", json.dumps(report, indent=2, allow_nan=False), "rainfall-comparison.json", "application/json")
+
+
+def persist_custom_panel(preview, raw, reference_station, relationship, daily, token):
+    workspace = st.session_state.get("workspace")
+    if workspace is None:
+        st.info("To retain this upload, first create or open an analysis from Workspace. Preview alone does not save it.")
+        return
+    with st.expander("Save reviewed upload into this analysis"):
+        st.caption("Links this comparison as supporting evidence; does not replace NOAA scenario rainfall. Saving or replacing evidence clears affected scenario approvals. Unknown suitability can be recorded without calculating a comparison.")
+        active = active_ids(workspace.custom_uploads)
+        versions = {r["id"]: r for r in workspace.custom_uploads}
+        with st.form("save_custom_" + digest(token)):
+            previous = st.selectbox("Evidence version to replace", ["New evidence", *sorted(active)],
+                                    format_func=lambda i: i if i == "New evidence" else versions[i]["station"] + " · " + i[-8:])
+            chosen = st.multiselect("Scenarios supported by this evidence", [s.id for s in workspace.scenarios], default=workspace.selected)
+            provider = st.text_input("Source / provider")
+            basis = st.text_input("Observation-day definition", help="Timezone and daily reporting window, or explicitly explain what is unknown.")
+            rationale = st.text_area("Why this reference is appropriate, or what remains uncertain")
+            reviewed = st.checkbox("I reviewed the upload and declarations and consent to saving the original bytes and metadata locally")
+            submit = st.form_submit_button("Save reviewed evidence")
+        if submit:
+            try:
+                if previous != "New evidence" and sorted(chosen) != versions[previous]["scenario_ids"]:
+                    raise ValueError("Replacing a version must retain its scenario links. Select the same scenarios shown in Saved custom evidence.")
+                candidate = deepcopy(workspace)
+                candidate.save_custom_upload(raw, reviewed=reviewed, station=preview.station, location=preview.location,
+                                             unit=preview.unit, provider=provider, observation_basis=basis,
+                                             reference_station=reference_station, relationship=relationship, daily_confirmed=daily,
+                                             rationale=rationale, scenario_ids=chosen,
+                                             supersedes="" if previous == "New evidence" else previous)
+                if save(candidate):
+                    st.session_state.workspace = candidate
+                    st.session_state.pop("packet", None)
+                    st.rerun()
+            except ValueError as error:
+                st.error(str(error))
+
+
+def saved_custom_panel(workspace):
+    if not workspace or not workspace.custom_uploads:
+        return
+    with st.expander("Saved custom evidence", expanded=True):
+        active = active_ids(workspace.custom_uploads)
+        versions = {r["id"]: r for r in workspace.custom_uploads}
+        identifier = st.selectbox("Saved upload version", list(versions), format_func=lambda i: versions[i]["station"] + " · " + i[-8:] + (" · current" if i in active else " · superseded"))
+        record = versions[identifier]
+        st.markdown("**" + record["station"].replace("*", "") + "**")
+        st.caption(f"{record['start']} to {record['end']} · original unit: {record['input_unit']} · linked scenarios: {', '.join(record['scenario_ids'])}")
+        with st.expander("Source identity and suitability details"):
+            st.write({k: record[k] for k in ("id", "station", "location", "provider", "input_unit", "start", "end", "original_sha256", "normalized_sha256", "reference_station", "relationship", "observation_basis", "rationale", "scenario_ids")})
+        result = record["comparison"]
+        st.caption("Supporting evidence only; original rainfall scenarios are unchanged. Original bytes remain local. Review decisions must be renewed after a version change.")
+        if result["status"] == "calculated":
+            st.write({k: result[k] for k in ("paired_days", "upload_total_mm", "reference_total_mm", "difference_mm")})
+            frame = pd.DataFrame(result["rows"], columns=["date", "uploaded_mm", "reference_mm"])
+            fig = go.Figure()
+            for field in ("uploaded_mm", "reference_mm"):
+                fig.add_trace(go.Scatter(x=frame.date, y=frame[field], name=field, connectgaps=False))
+            st.plotly_chart(chart(fig), width="stretch")
+        else:
+            st.info("Comparison unavailable: " + result["reason"])
+            frame = pd.DataFrame(record["observations"], columns=["date", "uploaded_mm"])
+        st.dataframe(frame, hide_index=True, width="stretch")
 
 
 def save(w):
@@ -639,6 +706,7 @@ if w is None and page == "Workspace":
         st.markdown('<div class="welcome-steps"><span><b>01</b> Explore the observations</span><span><b>02</b> Compare & review</span><span><b>03</b> Share the evidence</span></div>', unsafe_allow_html=True)
 
 if page == "Data":
+    saved_custom_panel(w)
     local_rainfall_preview()
     with tour_target("data_map"):
         metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
@@ -893,6 +961,10 @@ elif page == "Exports":
         st.dataframe(table(w).query("Shortlist").drop(columns="Shortlist"), hide_index=True, width="stretch")
     share = st.checkbox("Include provider notes and free-text review notes", value=False)
     st.caption("Packet includes rainfall, metrics, public evidence, scenario links and all conflict dispositions. Private evidence annotations follow the same opt-in. Reservoir results are excluded.")
+    share_custom = False
+    if w.custom_uploads:
+        st.warning("This analysis contains custom evidence. Replay requires all saved normalized upload versions, station/location/source metadata and suitability rationale. Original CSV bytes are excluded. This consent is separate from private notes.")
+        share_custom = st.checkbox("Include custom numerical inputs and source metadata in this replayable export", key="custom_export_" + digest(w.custom_uploads))
     unresolved = [c for c in w.conflicts if c["status"] == "unresolved"]
     if unresolved:
         st.warning(f"{len(unresolved)} unresolved evidence disagreement(s) will be included for the recipient.")
@@ -906,15 +978,15 @@ elif page == "Exports":
         ready = False
         st.warning(str(error))
     with tour_target("export_panel"):
-        if st.button("Build verified export", type="primary", disabled=not ready):
+        if st.button("Build verified export", type="primary", disabled=not ready or (bool(w.custom_uploads) and not share_custom)):
             try:
-                payload = export_bundle(w, share)
+                payload = export_bundle(w, share, include_custom=share_custom)
                 report = verify_bundle(payload)
-                st.session_state.packet = {"data": payload, "fingerprint": json.dumps(w.record(share), sort_keys=True), "share": share, "report": report}
+                st.session_state.packet = {"data": payload, "fingerprint": json.dumps(w.record(share, include_custom=share_custom), sort_keys=True), "share": share, "custom": share_custom, "report": report}
             except (ValueError, AssertionError, OSError) as error:
                 st.error(f"Verification failed: {error}")
     packet = st.session_state.get("packet")
-    if packet and packet["share"] == share and packet["fingerprint"] == json.dumps(w.record(share), sort_keys=True):
+    if packet and (not w.custom_uploads or share_custom) and packet.get("custom", False) == share_custom and packet["share"] == share and packet["fingerprint"] == json.dumps(w.record(share, include_custom=share_custom), sort_keys=True):
         st.download_button("Download ZIP", packet["data"], f"BASIN-{w.id}.zip", "application/zip", type="primary")
         st.json(packet["report"])
         st.caption(f"{packet['report']['scenarios_replayed']} revisions verified · daily_rainfall.csv / shortlist.csv / audit.json / input snapshot / checksums")

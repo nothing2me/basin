@@ -25,3 +25,8 @@ Negative tests recompute hashes after changing audit records, approval digests, 
 Version 1.0 bundles require re-export from their original sessions. Version 1.0 sessions can migrate after validating source identity, rainfall content and review history. Migration adds provisional evidence and normalizes the CSV index label in digests. It does not invent historical expert approval.
 
 Independent review procedure: create a packet with a multiplier, CSV replacement, rejection, changed weights and unresolved evidence conflict. Have the intended reviewer replay it using the documented environment, inspect the CSV/brief without coaching, and record any disagreement in `validation_notes.md`. Automated checks do not complete that human review gate.
+
+
+## Schema 2.1 extension
+
+The existing 2.0 checks and packet inventory remain supported. For 2.1, audit.json also holds versioned custom normalized rainfall, metadata and comparison records. The verifier checks canonical record identity, date/unit/gap metadata, recomputed paired-day comparison (or blocked state), reference snapshot, evidence descriptions, version links, scenario re-review transitions and custom-data consent. Original CSV bytes are excluded and their original hash is a recorded identity, not an externally verified original. The existing exclusion for saved comparisons applies to ranking comparisons, not the new replayed rainfall comparisons. Private-note inclusion is independent of custom numerical/metadata inclusion.

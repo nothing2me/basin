@@ -216,7 +216,7 @@ Implemented: three horizontally arranged color pickers with Apply; Personal note
 | Tutorial navigation and adjacent guidance | Implemented | Narrow/mobile navigation exercise |
 | Personal notes across analysis pages | Implemented as popover | Optional persistent desktop dock |
 | Readable report preview and verified packet | Implemented | Recipient usability review |
-| Custom CSV validation and public-reference comparison | Implemented as preview/comparison | Persist reviewed comparison evidence and link it to scenario replay |
+| Custom CSV validation and public-reference comparison | Implemented with reviewed persistence, scenario evidence links and schema 2.1 replay | Independent teammate exercise; numerical local-station models remain separate |
 | User document ingestion | Not implemented | File types, provenance, review and private export handling |
 | Area-specific simulation visuals | Not implemented | Define area geometry, model inputs/units, baseline, policy assumptions, calibration and uncertainty; then render baseline-versus-scenario results |
 

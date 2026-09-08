@@ -44,7 +44,7 @@ def validate_evidence(records, references, conflicts, scenario_ids):
             raise ValueError("Evidence title, publisher, source, geography and description are required")
         locator = record["source_locator"]
         url = urlparse(locator)
-        if not ((url.scheme in ("https", "http") and url.netloc) or re.fullmatch(r"docs/[A-Za-z0-9_-]+\.md", locator)):
+        if not ((url.scheme in ("https", "http") and url.netloc) or re.fullmatch(r"docs/[A-Za-z0-9_-]+\.md", locator) or re.fullmatch(r"custom://[0-9a-f]{64}", locator)):
             raise ValueError("Evidence source must be an HTTP(S) URL or a docs/*.md reference")
         if record["kind"] not in KINDS or record["review_status"] not in STATUSES:
             raise ValueError("Unsupported evidence kind or review status")

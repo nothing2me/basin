@@ -1,3 +1,5 @@
+> Current integration checkpoint (2026-09-07): reviewed upload persistence, source/normalized hashes, metadata and uncertainty, saved comparisons, scenario evidence links, restore, explicit custom-data export consent, replay and approval invalidation are implemented in schema 2.1; the user authorized publication. This is supporting evidence integration, not new-station rainfall generation or a calibrated area model. Historical planning checkboxes below cover a larger scope and are not all closed.
+
 # Local plan: custom inputs and research-backed comparisons
 
 Date: 2026-09-06. Baseline: ff3ff0f. Owner: BASIN upload/evidence workflow; named team owners remain unassigned.
@@ -394,3 +396,17 @@ A0 baseline checks completed; see build_validation.md. A1/A2 now have a preview-
 ### Part B first slice — 2026-09-06, upstream 5e17706
 
 Implemented a descriptive same-date comparison in the existing upload preview: explicit public station selection, user-declared station relationship/daily basis, paired valid-day totals/difference, missingness, chart/table and opt-in numerical JSON report. Changed input identity resets acknowledgments. No new source downloads, inferred geography, seasonal baseline, scenario mutation or saved evidence integration. B0/B1/B2/B3 are partially implemented; B4/B5 and full Part B acceptance remain open. The existing 1991–2025 NOAA snapshot is the only numerical reference; unknown suitability blocks the comparison until the user supplies the declared review basis, which is not independent validation.
+
+
+### Completed bounded custom-data integration
+
+- [x] Save only after review and explicit local-storage consent; rejected input leaves the analysis unchanged.
+- [x] Preserve original bytes locally, original/normalized hashes, dates, units and station/source metadata.
+- [x] Save same-date comparison results or an honest blocked status when suitability is unknown.
+- [x] Preserve declared daily basis and reference suitability/uncertainty rationale.
+- [x] Attach exact versions as supporting evidence to chosen existing scenarios.
+- [x] Restore original bytes, normalized data, comparisons, links and review history.
+- [x] Require separate consent for custom values and metadata in replayable packets; original files excluded.
+- [x] New/replacement custom evidence invalidates linked approvals; rainfall edits continue to invalidate their own revisions.
+
+Follow-on work remains: numerical local-station models, validated seasonal baselines, document ingestion, geographic simulations, practitioner validation. Source metadata and rationale are intentionally covered by custom-data consent rather than silently treated as public or dropped from replay context. All saved versions are included, including superseded versions required by review history.

@@ -10,6 +10,7 @@ import pandas as pd
 from basin_core.analysis import WeightedSumRanking
 from basin_core.engine import Reference, Scenario, ScenarioParams, rainfall_digest
 from basin_core.evidence import validate_evidence
+from basin_core.custom_data import validate_records, validate_links
 
 
 def compare_values(actual, expected, label):
@@ -74,6 +75,11 @@ def reconstruct_record(record, reference, legacy=False):
             reference.features(frame)
             revision += 1
             status, approval = "unreviewed", None
+        elif action == "custom evidence changed":
+            if legacy:
+                raise ValueError("Legacy audit cannot contain custom evidence changes")
+            revision += 1
+            status, approval = "unreviewed", None
         elif action in ("accepted", "rejected"):
             status = action
             approval = revision if action == "accepted" else None
@@ -119,6 +125,12 @@ def reconstruct_audit(source, audit, legacy=False, require_export=False):
         compare_values(record["components"], scenario.components, "Score components")
     if not legacy:
         validate_evidence(audit["evidence"], audit["evidence_refs"], audit["conflicts"], ids)
+    custom = audit.get("custom_uploads", [])
+    if (audit["schema_version"] == "2.1") != bool(custom):
+        raise ValueError("Custom upload schema mismatch")
+    validate_records(custom, source)
+    if not legacy:
+        validate_links(custom, audit["evidence_refs"], audit["evidence"], scenarios)
     if require_export:
         chosen = [s for s in scenarios if s.id in selected]
         if any(s.status == "unreviewed" for s in chosen) or not any(s.status == "accepted" for s in chosen):

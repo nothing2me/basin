@@ -38,7 +38,7 @@ ZIP: daily rainfall (mm/day), summary CSV, full candidate audit, public evidence
 
 Schema 2.0 uses canonical rainfall CSV digests with the index label `date`. Schema 1.0 sessions validate legacy digests before in-memory migration; originals remain untouched until saved. Legacy bundles must be re-exported, not silently certified with the new verifier. Unsigned hashes do not prevent coordinated tampering.
 
-Provider notes and all free-text review notes are local and excluded by default. One explicit export opt-in includes both. Input uploads stay in the local process. Session JSON and append-only review logs are in gitignored local/. The local process binds loopback and has telemetry disabled; no automatic fetching, cloud inference, or utility connections. Local storage is not encrypted. This is a single-operator tool, not an authenticated shared server.
+Provider notes and all free-text review notes are local and excluded by default. One explicit export opt-in includes both. Preview uploads stay in the local process until explicit reviewed-save consent. Schema 2.1 sessions then retain original bytes locally and normalized rainfall evidence. A separate custom-data export consent covers normalized values and station/source/suitability metadata; original CSV bytes are excluded from packets. Session JSON and append-only review logs are in gitignored local/. The local process binds loopback and has telemetry disabled; no automatic fetching, cloud inference, or utility connections. Local storage is not encrypted. This is a single-operator tool, not an authenticated shared server.
 
 ## Footprint and limitations
 
@@ -72,3 +72,14 @@ The three airport stations offer long, nearly complete public regional records a
 NOAA's documentation was checked on September 6: PRCP is in tenths of millimeters, -9999 denotes missing values, MFLAG P means missing presumed zero, T indicates trace, and blank QFLAG indicates no failed quality check. BASIN conservatively excludes any nonblank quality flag, retains trace as zero at reported resolution with the trace flag, and does not substitute multiday totals or fill gaps. [NOAA GHCN-Daily README](https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt).
 
 The Region N technical memorandum distinguishes the Corpus Christi Water Supply Model from Nueces WAM Run 3 uses. The former includes system operations and hydrology through 2015; the document identifies different applications and limitations of Run 3. BASIN therefore provides no generic WAM work order or direct precipitation-to-streamflow scaling instruction. [Region N memorandum, printed pages 7–11 and hydrologic variance attachment](https://www.twdb.texas.gov/waterplanning/rwp/planningdocu/2026/projectdocs/Tech_Memos/RegionN_TechnicalMemorandum.pdf).
+
+
+## Versioned custom rainfall evidence (schema 2.1)
+
+Custom uploads are supporting evidence, not numerical drivers of existing NOAA scenarios. Original bytes are base64-encoded under content-derived IDs in the local session's custom_originals map; normalized observations, explicit input units, parser version, date/gap counts, station/location/provider, daily basis, rationale and reference snapshot identity are separate custom_uploads records. No uploaded filename becomes a path. Per analysis: at most 20 versions, approximately 30 MB original-byte budget and 40 MB normalized-record budget.
+
+The saved comparison uses paired valid calendar days only, with no gap filling. Unknown applicability or no paired dates records a blocked result and its reason. All results are recomputed on load/export replay; original-byte normalization is additionally checked on local restore. Each record has a canonical SHA-256 covering its content and comparison. Hashes establish internal identity, not source authenticity.
+
+Replacing a record adds an immutable successor with the same scenario links. Both versions remain auditable. A custom-evidence-change event increments every linked scenario revision, leaves rainfall values unchanged and clears approval. Replay checks the evidence version transitions and requires renewed review. Private note edits do not change numerical inputs or this evidence binding.
+
+Schema 2.0 packets retain their original interpretation. Schema 2.1 explicitly includes normalized custom values and descriptive metadata only with custom-data consent. The public snapshot in the packet supplies reference values for comparison replay. Original CSV bytes are not exported, so their original hash is recorded rather than independently verified by a recipient. Geographic applicability, observation-period declarations and scientific usefulness remain unvalidated by these checks.

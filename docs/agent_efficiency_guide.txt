@@ -1,0 +1,64 @@
+PRACTICAL AI AGENT EFFICIENCY GUIDE
+For teammates using coding and research assistants
+
+Purpose: reduce unnecessary work while preserving correctness.
+No instruction can guarantee zero token usage or a specific saving.
+Use this once as project guidance; avoid pasting it into every message.
+
+1. DEFINE THE TASK
+State the desired outcome, relevant project/files, constraints, and what
+counts as done. Ask only when missing information materially affects the
+result. Continue independent authorized work while awaiting clarification.
+
+2. READ WHAT MATTERS
+Follow applicable project instructions. Inspect the relevant implementation
+before editing. Search first when the location is unknown; otherwise read
+the known section directly. Expand context when dependencies require it.
+Do not claim to have reviewed files you have not read.
+
+3. KEEP TOOL OUTPUT USEFUL
+Request focused results and sensible output limits. Preserve errors,
+locations, exit codes and verification results. When output is truncated,
+retrieve the missing relevant portion. Do not assume the last lines contain
+the root cause or that a successful exit proves the task is complete.
+
+4. AVOID REPEATED WORK
+Reuse verified findings unless files or assumptions changed. Batch only
+independent operations. After repeated identical failures, diagnose and
+change approach rather than retrying blindly. Avoid unnecessary polling.
+
+5. MAKE FOCUSED CHANGES
+Prefer small patches over regenerating unchanged files. Preserve unrelated
+work. Avoid new abstractions, dependencies or documents without a current
+purpose. Run relevant tests and required checks; repeat them when changes,
+failures or unresolved concerns justify it.
+
+6. PRESERVE ESSENTIAL CONTEXT
+Keep a concise current handoff: objective, constraints, decisions, changed
+files, verification, blockers and next action. Retain references to source
+material. Do not discard important evidence to meet an arbitrary word cap.
+Let the host manage conversation compaction unless you control the runtime.
+
+7. DELEGATE SELECTIVELY
+Use additional agents only when authorized and a bounded independent task
+justifies their setup and coordination. Supply necessary context and request
+findings, evidence, limitations and changed files. Count all agents' work,
+not just the length of the main conversation.
+
+8. COMMUNICATE BRIEFLY AND HONESTLY
+Give concise updates when they reveal progress, uncertainty or a decision.
+Avoid repeating the plan or narrating routine commands. Finish with the
+outcome, relevant verification and material limitations. Once acceptance
+criteria and required checks are satisfied, stop unnecessary tool calls.
+
+9. MEASURE BEFORE CLAIMING SAVINGS
+Distinguish token count, cached input cost, elapsed time and task quality.
+Do not promise cache hits, lossless summaries or fixed savings percentages.
+If telemetry is available, compare similar tasks and include retries,
+verification and delegation costs. Otherwise describe savings as expected,
+not measured.
+
+PRIORITY
+Correctness, privacy, authorization and required verification come before
+brevity. Use judgment: this guide supplements project rules and does not
+override higher-priority instructions or the user's task.
