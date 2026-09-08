@@ -16,10 +16,10 @@ def apply_design():
 [data-testid="stSidebarUserContent"]{padding-top:.25rem!important}
 [data-testid="stVerticalBlock"]{gap:1rem}
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.65rem}
-.basin-brand{margin:0 0 1.8rem}
-.basin-brand img{display:block;width:min(100%,230px);height:auto;margin-bottom:.55rem}
-.basin-brand small{font-size:.73rem;opacity:.68;letter-spacing:.08em;text-transform:uppercase}
-.basin-eyebrow{font-size:.67rem;font-weight:700;letter-spacing:.14em;opacity:.62;margin-top:8px}
+.basin-brand{margin:0 0 .7rem}
+.basin-brand img{display:block;width:100%;height:auto;margin-bottom:.55rem;background:#20292E;padding:10px;border-radius:8px;box-sizing:border-box}
+.basin-brand small{font-size:.73rem;opacity:.85;letter-spacing:.08em;text-transform:uppercase}
+.basin-eyebrow{font-size:.67rem;font-weight:700;letter-spacing:.14em;opacity:.85;margin-top:8px}
 h1,h2,h3{letter-spacing:-.025em}
 h3{font-size:1.6rem!important;font-weight:650!important}
 [data-testid="stMetric"]{border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:13px;padding:16px 18px;background:color-mix(in srgb,currentColor 2%,transparent)}
@@ -28,34 +28,38 @@ h3{font-size:1.6rem!important;font-weight:650!important}
 [data-testid="stCaptionContainer"]{font-size:.78rem}
 [data-testid="stSidebar"] [role="radiogroup"]{gap:5px}
 [data-testid="stSidebar"] [role="radiogroup"] label{border-radius:9px;padding:7px 10px;margin:0;transition:background .15s ease}
-[data-testid="stSidebar"] [role="radiogroup"] label:has([aria-checked="true"]){background:color-mix(in srgb,#2D6683 28%,transparent);font-weight:650}
+[data-testid="stSidebar"] [role="radiogroup"] label:has([aria-checked="true"]){background:color-mix(in srgb,#356273 28%,transparent);font-weight:650}
 [data-testid="stExpander"]{border-radius:11px!important}
 [data-testid="stExpander"] details summary{font-size:.86rem;padding-block:10px}
 [data-testid="stDataFrame"],[data-testid="stDataEditor"]{border-radius:11px;overflow:hidden}
 [data-testid="stButton"] button,[data-testid="stDownloadButton"] button{font-size:.86rem;font-weight:550;min-height:2.5rem}
 [data-testid="stButton"] button[kind="primary"],[data-testid="stFormSubmitButton"] button[kind="primary"],[data-testid="stDownloadButton"] button[kind="primary"],button[data-testid="stBaseButton-primary"]{color:#fff!important}
 [data-testid="stButton"] button[kind="primary"] *,[data-testid="stFormSubmitButton"] button[kind="primary"] *,[data-testid="stDownloadButton"] button[kind="primary"] *,button[data-testid="stBaseButton-primary"] *{color:#fff!important}
-[data-tag]{background:#2D6683!important;color:#fff!important}
+[data-tag]{background:#356273!important;color:#fff!important}
 [data-tag] *{color:#fff!important}
-button:focus-visible,a:focus-visible{outline:2px solid #6FA8C2!important;outline-offset:3px}
+button:focus-visible,a:focus-visible{outline:2px solid currentColor!important;outline-offset:3px}
 .st-key-welcome{padding:30px 34px;border:1px solid color-mix(in srgb,currentColor 24%,transparent);border-radius:18px;background:color-mix(in srgb,currentColor 3%,transparent);margin:6px 0 16px}
-.welcome-title{font-size:2.4rem!important;line-height:1.15!important;margin:8px 0 14px!important;font-weight:650!important}
+.welcome-title{font-size:2rem!important;line-height:1.25!important;margin:8px 0 14px!important;font-weight:650!important}
 .welcome-copy{max-width:610px;line-height:1.6;opacity:.8;font-size:1rem}
 .welcome-steps{display:flex;flex-wrap:wrap;gap:14px 32px;padding-top:18px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);font-size:.8rem;opacity:.85}
 .welcome-steps b{font-variant-numeric:tabular-nums;color:inherit;margin-right:8px}
 .st-key-tutorial_guide{background:color-mix(in srgb,currentColor 4%,transparent);border:1px solid color-mix(in srgb,currentColor 30%,transparent);border-left:4px solid currentColor;border-radius:12px;padding:18px 22px;margin:4px 0 12px}
-.tutorial-meta{font-size:.67rem;letter-spacing:.09em;opacity:.65;margin-bottom:7px}
+[data-testid="stSidebar"] .st-key-tutorial_guide{padding:10px;margin:0}
+[data-testid="stSidebar"] .tutorial-description,[data-testid="stSidebar"] .tutorial-location{display:none}
+[data-testid="stSidebar"] .tutorial-title{font-size:.9rem}
+[data-testid="stSidebar"] .tutorial-action{font-size:.8rem;line-height:1.4}
+.tutorial-meta{font-size:.67rem;letter-spacing:.09em;opacity:.85;margin-bottom:7px}
 .tutorial-title{font-size:1.06rem;font-weight:650;margin:0 0 6px}
-.tutorial-description{font-size:.83rem;opacity:.72;margin:0 0 10px;line-height:1.5;max-width:960px}
+.tutorial-description{font-size:.83rem;opacity:.85;margin:0 0 10px;line-height:1.5;max-width:960px}
 .tutorial-action{font-size:.88rem;margin:0 0 10px;line-height:1.5}
 .tutorial-location,.tutorial-target-label{font-size:.75rem;font-weight:650;opacity:.85;line-height:1.4}
 .tutorial-anchor{scroll-margin-top:5rem}
 .st-key-tutorial_guide a{color:inherit;text-decoration-color:currentColor;text-underline-offset:3px}
 .basin-theme-picker{display:flex;gap:6px}
 .basin-theme-picker button{font:inherit;font-size:.8rem;cursor:pointer;flex:1;border:1px solid color-mix(in srgb,currentColor 20%,transparent);border-radius:8px;background:transparent;color:inherit;padding:9px 4px}
-.basin-theme-picker button:hover{background:color-mix(in srgb,#2D6683 24%,transparent)}
+.basin-theme-picker button:hover{background:color-mix(in srgb,#356273 24%,transparent)}
 .basin-theme-status{font-size:.75rem;line-height:1.4;margin:6px 0 0;opacity:.8}
-@media(max-width:800px){.block-container{padding:2.4rem 1rem 1.5rem}.st-key-welcome{padding:20px}.welcome-title{font-size:1.9rem!important}.st-key-tutorial_guide{padding:14px}h3{font-size:1.3rem!important}}
+@media(max-width:800px){.block-container{padding:2.4rem 1rem 1.5rem}.st-key-welcome{padding:20px}.welcome-title{font-size:1.65rem!important}.st-key-tutorial_guide{padding:14px}h3{font-size:1.3rem!important}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>""")
 
@@ -108,3 +112,115 @@ def appearance_picker():
 })();
 </script>
 """, unsafe_allow_javascript=True)
+
+
+def accent_foreground(color: str) -> str:
+    """Choose the higher-contrast black or white label for an RGB accent."""
+    channels = [int(color[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    linear = [v / 12.92 if v <= .04045 else ((v + .055) / 1.055) ** 2.4 for v in channels]
+    light = sum(v * weight for v, weight in zip(linear, (.2126, .7152, .0722)))
+    return "#000000" if (light + .05) / .05 >= 1.05 / (light + .05) else "#FFFFFF"
+
+
+COLOR_DEFAULTS = {"accent": "#356273", "selection": "#2878A0", "sidebar": "#6088A5"}
+
+
+def reset_colors():
+    for name, value in COLOR_DEFAULTS.items():
+        st.session_state[f"appearance_{name}"] = value
+        st.session_state[f"draft_{name}"] = value
+    st.session_state["appearance_colorblind"] = False
+
+
+def custom_appearance():
+    for name, value in COLOR_DEFAULTS.items():
+        st.session_state.setdefault(f"appearance_{name}", value)
+        st.session_state.setdefault(f"draft_{name}", st.session_state[f"appearance_{name}"])
+    with st.form("appearance_colors", border=False):
+        buttons, selected, sidebar = st.columns(3, gap="small")
+        buttons.color_picker("Buttons", key="draft_accent")
+        selected.color_picker("Selected", key="draft_selection")
+        sidebar.color_picker("Sidebar", key="draft_sidebar")
+        if st.form_submit_button("Apply colors", width="stretch"):
+            for name in COLOR_DEFAULTS:
+                st.session_state[f"appearance_{name}"] = st.session_state[f"draft_{name}"]
+            st.success("Colors applied")
+    st.toggle("Color-blind mode", key="appearance_colorblind",
+              help="Applies a consistent blue interface accent and chart colors with shapes, line styles and patterns. Turn off to restore your custom colors.")
+    st.button("Reset colors", on_click=reset_colors)
+    st.caption("Color choices last for this session. Light/Dark/System is saved in this browser.")
+    enabled = st.session_state.appearance_colorblind
+    accent = "#356273" if enabled else st.session_state.appearance_accent
+    selection = "#0072B2" if enabled else st.session_state.appearance_selection
+    sidebar = "#6088A5" if enabled else st.session_state.appearance_sidebar
+    foreground = accent_foreground(accent)
+    selected_text = accent_foreground(selection)
+    st.html(f"""<style>
+button[kind="primary"],button[data-testid="stBaseButton-primary"] {{background:{accent}!important;border-color:{accent}!important;color:{foreground}!important}}
+button[kind="primary"] *,button[data-testid="stBaseButton-primary"] * {{color:{foreground}!important}}
+[data-tag] {{background:{selection}!important;color:{selected_text}!important}}
+[data-tag] * {{color:{selected_text}!important}}
+.st-key-welcome {{border:1px solid color-mix(in srgb,{accent} 45%,currentColor);background:color-mix(in srgb,{accent} 5%,transparent)}}
+[data-testid="stSidebar"] {{background-image:linear-gradient(color-mix(in srgb,{sidebar} 14%,transparent),color-mix(in srgb,{sidebar} 14%,transparent));border-right:3px solid {sidebar}}}
+[data-testid="stSidebar"] [role="radiogroup"] label:has([aria-checked="true"]) {{background:color-mix(in srgb,{selection} 18%,transparent);box-shadow:inset 3px 0 {selection};font-weight:700}}
+[role="radio"][aria-checked="true"] {{border-color:{selection}!important;background-color:{selection}!important}}
+input[type="radio"],input[type="checkbox"] {{accent-color:{selection}}}
+</style>""")
+
+
+def accessible_chart(fig):
+    if not st.session_state.get("appearance_colorblind", False):
+        return fig
+    colors = ["#0072B2", "#E69F00", "#56B4E9", "#CC79A7", "#D55E00", "#009E73"]
+    dashes = ["solid", "dash", "dot", "dashdot", "longdash", "longdashdot"]
+    symbols = ["circle", "square", "diamond", "cross", "triangle-up", "x"]
+    for index, trace in enumerate(fig.data):
+        color = colors[index % len(colors)]
+        if trace.type == "scatter":
+            trace.line.color = color
+            trace.line.dash = dashes[index % len(dashes)]
+            trace.marker.color = color
+            trace.marker.symbol = symbols[index % len(symbols)]
+        elif trace.type == "bar":
+            patterns = ["", "/", "x", "-", ".", "|"]
+            if isinstance(trace.marker.color, (tuple, list)):
+                trace.marker.color = colors[:len(trace.marker.color)]
+                trace.marker.pattern.shape = patterns[:len(trace.marker.color)]
+            else:
+                trace.marker.color = color
+                trace.marker.pattern.shape = patterns[index % 6]
+    for frame in getattr(fig, "frames", ()):
+        accessible_chart(frame)
+    return fig
+
+
+def reveal_tour_target(target_id: str, visit: str):
+    # Only internal target identifiers enter this script. Observe late Streamlit
+    # rendering, then disconnect; do not repeatedly steal focus on widget edits.
+    import json
+    st.html("""<script>(() => {
+const id = """ + json.dumps("tour-" + target_id) + """;
+const visit = """ + json.dumps(visit) + """;
+if (window.basinTourVisit === visit) return;
+let observer, timer;
+function reveal() {
+ const target = document.getElementById(id);
+ if (!target) return false;
+ const sidebar = target.closest('[data-testid="stSidebar"]');
+ if (sidebar && sidebar.getAttribute('aria-expanded') === 'false') {
+   document.querySelector('[data-testid="stExpandSidebarButton"] button, button[data-testid="stExpandSidebarButton"]')?.click();
+ }
+ let parent = target.parentElement;
+ while (parent) { if (parent.tagName === 'DETAILS') parent.open = true; parent = parent.parentElement; }
+ if (!target.getClientRects().length) return false;
+ observer?.disconnect(); clearTimeout(timer);
+ requestAnimationFrame(() => { target.scrollIntoView({block:'start', behavior:'instant'}); target.tabIndex = -1; target.focus({preventScroll:true}); });
+ window.basinTourVisit = visit;
+ return true;
+}
+if (!reveal()) {
+ observer = new MutationObserver(reveal);
+ observer.observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['aria-expanded','open','style']});
+ timer = setTimeout(() => observer.disconnect(), 5000);
+}
+})();</script>""", unsafe_allow_javascript=True)

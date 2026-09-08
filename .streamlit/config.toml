@@ -12,20 +12,20 @@ buttonRadius = "0.55rem"
 showWidgetBorder = true
 
 [theme.light]
-primaryColor = "#2D6683"
-backgroundColor = "#F6F8F9"
-secondaryBackgroundColor = "#E9EEF1"
-textColor = "#202A30"
+primaryColor = "#356273"
+backgroundColor = "#F3F6FA"
+secondaryBackgroundColor = "#E2EAF2"
+textColor = "#20292E"
 borderColor = "#B8C2C8"
 
 [theme.light.sidebar]
-backgroundColor = "#EFF3F5"
-secondaryBackgroundColor = "#E2E8EB"
+backgroundColor = "#E6EDF4"
+secondaryBackgroundColor = "#D5E0EA"
 
 [theme.dark]
-primaryColor = "#2D6683"
-backgroundColor = "#151A1E"
-secondaryBackgroundColor = "#232B31"
+primaryColor = "#356273"
+backgroundColor = "#171C20"
+secondaryBackgroundColor = "#252D33"
 textColor = "#E7ECEF"
 borderColor = "#4A565E"
 

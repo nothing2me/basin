@@ -16,6 +16,9 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert not app.exception
     w = app.session_state.workspace
     assert len(w.scenarios) == 300
+    next(t for t in app.text_area if t.label == "Provider notes").set_value("Private planning note").run()
+    next(b for b in app.button if b.label == "Save notes").click().run()
+    assert w.notes == "Private planning note"
     app.sidebar.radio[0].set_value("Workspace").run()
     assert not app.exception
     preset_box = next((s for s in app.sidebar.selectbox if s.label == "Community priority preset"), None)
@@ -39,6 +42,8 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     app.sidebar.radio[0].set_value("Exports").run()
     next(b for b in app.button if b.label == "Build verified export").click().run()
     assert not app.exception
+    assert any("Rainfall Scenario Handoff" in m.value for m in app.markdown)
+    assert app.session_state.packet["share"] is False
     assert app.session_state.packet["report"]["verified"]
     assert b"Hydrologist_Handoff_Brief.md" in app.session_state.packet["data"]
     app.sidebar.radio[0].set_value("Review").run()
@@ -119,3 +124,54 @@ def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
     assert not app.exception
     assert app.session_state.tutorial_active is False
 
+
+
+def test_first_use_example_is_reviewable_not_approved(tmp_path, monkeypatch):
+    from basin_core.workspace import Workspace
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    assert not app.exception
+    assert not app.get("file_uploader")
+    assert not app.get("plotly_chart")
+    next(b for b in app.button if b.label == "Try an example").click().run()
+    assert not app.exception
+    assert app.session_state.page == "Review"
+    workspace = app.session_state.workspace
+    assert workspace.params.seed == 22
+    assert len(workspace.selected) == 6
+    assert all(workspace.get(i).status == "unreviewed" for i in workspace.selected)
+    app.sidebar.radio[0].set_value("Exports").run()
+    assert next(b for b in app.button if b.label == "Build verified export").disabled
+
+
+def test_custom_colors_reset_and_accessible_charts(tmp_path, monkeypatch):
+    from basin_core.workspace import Workspace
+    from basin_theme import accent_foreground
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    assert accent_foreground("#FFFFFF") == "#000000"
+    assert accent_foreground("#000000") == "#FFFFFF"
+    assert accent_foreground("#356273") == "#FFFFFF"
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    app.color_picker(key="draft_accent").set_value("#FFFF00")
+    app.color_picker(key="draft_selection").set_value("#AA44CC")
+    app.color_picker(key="draft_sidebar").set_value("#334455")
+    assert app.session_state.appearance_accent == "#356273"
+    next(b for b in app.button if b.label == "Apply colors").click().run()
+    assert app.session_state.appearance_accent == "#FFFF00"
+    assert app.session_state.appearance_selection == "#AA44CC"
+    assert app.session_state.appearance_sidebar == "#334455"
+    app.toggle(key="appearance_colorblind").set_value(True).run()
+    next(b for b in app.button if b.label == "Try an example").click().run()
+    assert not app.exception
+    workspace = app.session_state.workspace
+    before = [(s.id, s.score, s.status) for s in workspace.scenarios]
+    next(r for r in app.radio if "Reservoir simulation" in r.options).set_value("Reservoir simulation").run()
+    assert not app.exception
+    assert app.session_state.appearance_colorblind
+    next(b for b in app.button if b.label == "Reset colors").click().run()
+    assert not app.exception
+    assert app.session_state.appearance_accent == "#356273"
+    assert not app.session_state.appearance_colorblind
+    assert before == [(s.id, s.score, s.status) for s in workspace.scenarios]

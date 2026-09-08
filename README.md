@@ -20,9 +20,13 @@ The offline Windows wheel bundle is specific to CPython 3.12 x64. Python itself 
 
 ## Appearance and help
 
-BASIN starts in a soft neutral light theme with a muted blue control color. Open **Settings → Appearance** in the sidebar to choose **Light**, **Dark**, or **System**. Both appearances use accessible text and control contrast, while charts retain distinct data colors for readability. The browser remembers its native choice; switching appearance does not regenerate or approve scenarios. Both themes cover tables, menus, charts and the guided tour.
+Start with **Try an example** to open an unapproved rainfall scenario, or **Use my data** for CSV preview and comparison. Advanced scenario settings remain in the sidebar.
 
-The tutorial is under **Help & tutorial**, directly below the page navigation. First-time users also see **Take a tour** on the empty Workspace. The guide identifies and outlines the relevant controls and keeps navigation together above the page content.
+Open **Appearance** near the top of the sidebar for Light, Dark or System. Three horizontal color pickers control buttons, selected options and the sidebar; choose **Apply colors** to apply drafts or **Reset colors** to restore defaults. Custom choices last for the current session; the native theme choice is remembered by the browser. **Color-blind mode** uses a consistent interface accent and chart colors with line styles, shapes and patterns. This is an accessibility aid, not a complete accessibility certification.
+
+**Take a tour** or **Help & tutorial** starts the guided walkthrough. Instructions appear beside the highlighted target and the app scrolls to it automatically. **Personal notes** is available at the top right of an active analysis; notes save locally and are excluded from exports unless explicitly included. **Exports** offers a readable brief preview before building the verified packet. Previewing does not bypass approval requirements.
+
+After pulling updates, restart the running app to load changed Python modules and theme configuration. Saved analyses remain in the local directory; save notes before stopping the process. See [UX research and foundation checklist](docs/ux_research_and_simplification.md) for implementation status and remaining area-model work.
 
 ## Analyst workflow
 

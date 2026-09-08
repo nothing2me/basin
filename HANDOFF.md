@@ -1,32 +1,10 @@
 # BASIN current handoff
 
-Updated: 2026-09-06
+Current local foundation: horizontal three-color Apply form, global color-blind styling switch, calmer first use, automatic adjacent tutorial, full-width Review, top-right Personal notes popover, and Exports brief preview using the packet's renderer. Notes remain private by default. Files changed this UI phase: app.py, basin_theme.py, .streamlit/config.toml, tests/test_app.py, tests/test_uploads.py, README.md, docs/ux_research_and_simplification.md, HANDOFF.md. Publication authorized by the user on 2026-09-07; this checkpoint is included in the UI foundation commit.
 
-## Current state
+Verified: full suite **107 passed**, `.venv/Scripts/python.exe -m pytest -q --basetemp=tmp/publish-ui-0907 --tb=short`; `git diff --check`. Prior browser checks covered chart rendering, themes, tutorial focus/scroll and horizontal color controls. Git fetch succeeded with network permission; HEAD and origin/main were equal before this commit. No private uploads, local sessions, generated outputs or environment files staged. Restart the app after pulling to load theme and module changes.
 
-Fetched and fast-forwarded main to 5e17706, preserving theme/tour, video and documentation reconciliation commits. Reviewed source and current gaps; upstream baseline passed 97 tests. Added the first Part B uploaded-versus-public rainfall comparison in the existing preview.
 
-The user explicitly selects a bundled NOAA station and declares station relationship and daily observation compatibility. Unknown declarations/no overlapping valid dates block calculation. Totals use paired valid days only. UI shows differences, gaps and an opt-in numerical comparison report. This does not save uploads, mutate scenarios or create a verified scenario packet.
+Next: check the foundation checklist in docs/ux_research_and_simplification.md, obtain user feedback, then persist custom comparison evidence and define one area's baseline/scenario model before geographic simulation visuals. Document ingestion, calibrated area simulation, full Part B linkage and full accessibility/practitioner validation remain unfinished. Notes popover is not an always-open dock.
 
-## Changes
-
-- basin_core/rainfall_comparison.py: pure paired-day calculation and eligibility checks.
-- app.py: comparison review controls, daily chart, totals and report download.
-- tests/test_rainfall_comparison.py and tests/test_uploads.py: arithmetic, gaps, blocking, zero denominator, bad reference and UI state-reset checks.
-- README.md, TODO.md, docs/local_upload_and_research_plan.md and docs/build_validation.md: current scope and verification.
-
-## Remaining work and team gates
-
-Full Part B remains incomplete: persisted evidence/disposition, scenario linkage and packet replay integration are next. User declarations are not independent spatial validation. Preserve upstream open gates: team owner/reviewer assignments, reconciliation against the newly added docs/submission_record.md, demonstration format/script reconciliation, practitioner exercise and presentation-laptop verification. The simulation video is not an accepted-build backup recording.
-
-## Next action
-
-Try the 2024 illustrative example in the upload preview and review the NOAA comparison limitations. Then attach reviewed comparison evidence through the existing schema 2.0 contract, with appropriate approval/privacy behavior. Keep private inputs out of Git.
-
-## Verification
-
-105 full-suite tests passed; expanded upload/comparison UI subset passed 28 tests. Fresh snapshot checkout, offline smoke, explicit scenario replay and source packaging passed. No private samples staged. See docs/build_validation.md for boundaries and exact results.
-
-## Concurrent upstream update
-
-Integrated 106842a during publication: docs/submission_record.md now records Stage 1 answers and finalist Q&A, with new logo concepts. Submission material is now available for reconciliation, rather than missing. This documentation/media-only commit changed no tested application code; comparison changes rebased cleanly.
+Clarification pending: user approved a later pasted-text.txt proposal, but only original Required Reading and research/sample attachments have been identified. Do not interpret that as approval of unidentified scope. No blocker for implemented UI work. Private uploads and local sessions stay out of Git.

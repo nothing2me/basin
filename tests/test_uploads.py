@@ -76,6 +76,7 @@ def test_preview_ui_does_not_create_or_modify_a_scenario(monkeypatch):
 
     monkeypatch.setattr(st, "file_uploader", uploaded)
     app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=60).run()
+    app.sidebar.radio[0].set_value("Data").run()
     app.text_input(key="local_station").set_value("Private local gauge")
     app.text_input(key="local_location").set_value("My town")
     app.selectbox(key="local_unit").set_value("mm").run()

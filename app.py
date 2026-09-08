@@ -15,10 +15,10 @@ import streamlit as st
 
 from basin_core.analysis import comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMPTIONS, simulate_reservoir_drawdown
 from basin_ui import evidence_panel, comparison_panel
-from basin_theme import apply_design, appearance_picker
+from basin_theme import apply_design, appearance_picker, custom_appearance, accessible_chart, reveal_tour_target
 from basin_core.data import CachedSource, ROOT
 from basin_core.engine import ScenarioParams
-from basin_core.exporter import export_bundle, verify_bundle
+from basin_core.exporter import export_bundle, verify_bundle, generate_brief
 from basin_core.workspace import Workspace
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
@@ -35,7 +35,7 @@ def load_source():
 
 
 def local_rainfall_preview():
-    with st.expander("Preview your local rainfall CSV"):
+    with st.expander("Upload and observe your custom CSV."):
         st.caption("One station per file. Preview only: uploads do not change scenarios or the NOAA snapshot. Data stays in this browser session's local app process and is not saved to disk.")
         st.download_button("Local rainfall template", TEMPLATE, "local-rainfall-template.csv", "text/csv")
         station = st.text_input("Local station name", key="local_station")
@@ -68,7 +68,7 @@ def local_rainfall_preview():
             st.warning("Values above 500 mm/day need a unit/source check. They have not been changed or excluded.")
         fig = go.Figure(go.Scatter(x=frame.date, y=frame.precip_mm, mode="lines+markers", connectgaps=False, name="Local observations"))
         fig.update_yaxes(title="Daily rainfall · mm")
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(accessible_chart(fig), width="stretch")
         st.dataframe(frame, hide_index=True, width="stretch")
         st.caption(f"Original file SHA-256: {preview.original_sha256}")
         st.info("Local station suitability and historical reference are not yet established. No percentile, forecast or scenario change is produced by this preview.")
@@ -122,7 +122,7 @@ def uploaded_reference_comparison(preview):
     for field, label in [("uploaded_mm", "Uploaded rainfall"), ("reference_mm", "NOAA reference")]:
         fig.add_trace(go.Scatter(x=frame.date, y=frame[field], name=label, connectgaps=False))
     fig.update_yaxes(title="Daily rainfall · mm")
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(accessible_chart(fig), width="stretch")
     st.dataframe(frame, hide_index=True, width="stretch")
     st.caption("Review only: this comparison is not saved to the workspace, attached to a scenario or covered by the scenario ZIP verifier.")
     include = st.checkbox("Include my uploaded values in a downloadable comparison report", key=f"share_comparison_{token}_{relation}")
@@ -156,7 +156,7 @@ def chart(fig, height=300):
                       colorway=["#087e8b", "#cc9145", "#638c72", "#826f9e", "#ac675d", "#4c6c94", "#858844", "#a25789"])
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(zeroline=False)
-    return fig
+    return accessible_chart(fig)
 
 
 def basin_map(stations_df):
@@ -359,7 +359,18 @@ TUTORIAL_STEPS = [
 ]
 
 
+def start_example(source, names):
+    """Open a reproducible example without approving any scenario."""
+    params = ScenarioParams(tuple(names), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
+    workspace = Workspace(source, params, 6)
+    st.session_state.workspace = workspace
+    st.session_state.page = "Review"
+    st.session_state.inspect_id = workspace.selected[0]
+    save(workspace)
+
+
 def start_tutorial(source, names):
+    st.session_state.tutorial_visit = st.session_state.get("tutorial_visit", 0) + 1
     st.session_state.tutorial_active = True
     st.session_state.tutorial_step = 0
     st.session_state.page = TUTORIAL_STEPS[0]["page"]
@@ -425,6 +436,7 @@ def current_tour_step():
 def return_to_tour_step():
     step = current_tour_step()
     if step:
+        st.session_state.tutorial_visit = st.session_state.get("tutorial_visit", 0) + 1
         st.session_state.page = step["page"]
         if step.get("review_mode"):
             st.session_state.review_series_mode = step["review_mode"]
@@ -447,7 +459,7 @@ def render_tour_guide(workspace):
 <div class="tutorial-title">{escape(step['title'].split('. ', 1)[-1])}</div>
 <p class="tutorial-description">{escape(step['desc'])}</p>
 <p class="tutorial-action">{escape(directive)}</p>
-<div class="tutorial-location">Look for the outlined area: {escape(TOUR_LOCATIONS[step['target']])}</div>""", unsafe_allow_html=True)
+<div class="tutorial-location">Current section: {escape(TOUR_LOCATIONS[step['target']])}</div>""", unsafe_allow_html=True)
         with st.container(horizontal=True, gap="small"):
             st.button("◀ Prev", key="tutorial_prev", disabled=index == 0, on_click=tutorial_prev)
             st.button("✓ Finish Tutorial" if index == len(TUTORIAL_STEPS)-1 else "Next Step ▶",
@@ -455,8 +467,7 @@ def render_tour_guide(workspace):
             st.button("✕ Exit", key="tutorial_exit", on_click=tutorial_exit)
             if not on_page:
                 st.button("Return to this step", on_click=return_to_tour_step)
-        if on_page:
-            st.markdown(f'<a href="#tour-{step["target"]}" target="_self">Go to highlighted area ↓</a>', unsafe_allow_html=True)
+
 
 
 @contextmanager
@@ -470,6 +481,8 @@ def tour_target(target_id: str):
     with st.container(key=key, width="content" if target_id == "export_panel" else "stretch"):
         if active:
             st.markdown(f'<div id="tour-{target_id}" class="tutorial-anchor tutorial-target-label">STEP {st.session_state.tutorial_step + 1} · {escape(TOUR_LOCATIONS[target_id])}</div>', unsafe_allow_html=True)
+            render_tour_guide(st.session_state.get("workspace"))
+            reveal_tour_target(target_id, f"{st.session_state.get('tutorial_visit', 0)}:{st.session_state.tutorial_step}:{target_id}")
         yield
 
 
@@ -488,12 +501,15 @@ with st.sidebar:
         st.markdown(f'<div class="basin-brand"><img src="data:image/png;base64,{logo_data}" alt="BASIN"><small>Rainfall intelligence</small></div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="basin-brand"><strong>BASIN</strong><br><small>Rainfall intelligence</small></div>', unsafe_allow_html=True)
+    with st.expander("Appearance"):
+        appearance_picker()
+        custom_appearance()
     page = st.radio("View", ["Workspace", "Review", "Exports", "Data"], key="page", label_visibility="collapsed")
     with st.expander("Help & tutorial", expanded=st.session_state.get("tutorial_active", False)):
         st.markdown("**A guide to your workspace**")
         st.caption("Explore the data, compare scenarios, and learn how review and export work.")
         st.button("Start tutorial", key="start_tutorial_btn", width="stretch",
-                  type="primary" if not st.session_state.get("tutorial_active", False) else "secondary",
+                  type="secondary",
                   on_click=start_tutorial, args=(source, names))
         if st.session_state.get("tutorial_active", False):
             curr_step = st.session_state.get("tutorial_step", 0)
@@ -501,14 +517,14 @@ with st.sidebar:
             st.button("Exit tutorial", key="sidebar_exit_tutorial_btn", width="stretch", on_click=tutorial_exit)
     st.divider()
     curr_target = TUTORIAL_STEPS[st.session_state.get("tutorial_step", 0)]["target"] if st.session_state.get("tutorial_active") else ""
-    exp_gen = (w is None) or (curr_target == "sidebar_generator")
-    with st.expander("New run", expanded=exp_gen):
+    exp_gen = curr_target == "sidebar_generator"
+    with st.expander("Scenario settings · new run", expanded=exp_gen):
         with tour_target("sidebar_generator"):
             with st.form("generate", border=False):
                 stations = st.multiselect("Stations", list(names), default=list(w.params.stations) if w else list(names), format_func=names.get)
                 durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
-                months = st.multiselect("Onset months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
-                retention = st.slider("Rainfall retained · %", 0, 100, (35, 85), 5,
+                months = st.multiselect("Starting months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
+                retention = st.slider("Rainfall compared with original · %", 0, 100, (35, 85), 5,
                                       help="Multiply observed daily rainfall by this fraction at the affected stations.")
                 extent = st.selectbox("Reduction extent", ["All stations", "One station", "Mixed"])
                 a, b = st.columns(2)
@@ -534,7 +550,7 @@ with st.sidebar:
             except (ValueError, OSError) as error:
                 st.error(str(error))
     if w:
-        exp_weights = (page == "Workspace") or (curr_target == "sidebar_presets")
+        exp_weights = curr_target == "sidebar_presets"
         with st.expander("Ranking weights", expanded=exp_weights):
             with tour_target("sidebar_presets"):
                 preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
@@ -568,12 +584,6 @@ with st.sidebar:
                         st.rerun()
                     except ValueError as error:
                         st.error(str(error))
-        with st.expander("Private notes"):
-            note = st.text_area("Provider notes", value=w.notes, key=f"provider_{w.id}", label_visibility="collapsed")
-            if st.button("Save notes", width="stretch"):
-                w.notes = note
-                if save(w):
-                    st.toast("Saved locally")
     with st.expander("Saved runs"):
         sessions = sorted((ROOT / "local").glob("session-*.json"), key=lambda p: p.stat().st_mtime, reverse=True) if (ROOT / "local").exists() else []
         if sessions:
@@ -588,10 +598,6 @@ with st.sidebar:
                     st.error(f"Cannot open run: {error}")
         else:
             st.caption("No saved runs")
-    with st.expander("Settings"):
-        st.markdown("**Appearance**")
-        appearance_picker()
-        st.caption("Light, dark, or your system preference. Saved in this browser.")
     st.divider()
     st.caption(f"Local · NOAA snapshot {source.manifest['downloaded_at'][:10]}")
 
@@ -599,6 +605,18 @@ st.markdown('<div class="basin-eyebrow">COASTAL BEND &nbsp; / &nbsp; RAINFALL EV
 header, status = st.columns([3, 2])
 header.subheader(page if page != "Workspace" else "Scenario workspace")
 status.caption(f"{w.id}  /  {len(w.scenarios)} candidates  /  seed {w.params.seed}" if w else "NOAA GHCN-Daily  /  1991–2025")
+if w:
+    with status.popover("Personal notes", width="stretch"):
+        st.caption("Saved locally with this analysis. Included in exports only if you opt in.")
+        note = st.text_area("Provider notes", value=w.notes, key=f"provider_{w.id}", height=180)
+        if st.button("Save notes", width="stretch"):
+            previous_notes = w.notes
+            w.notes = note
+            if save(w):
+                st.success("Notes saved locally")
+            else:
+                w.notes = previous_notes
+
 
 page_descriptions = {
     "Workspace": "Explore patterns. Compare priorities. Build your shortlist.",
@@ -607,22 +625,26 @@ page_descriptions = {
     "Exports": "Turn reviewed scenarios into a traceable evidence packet.",
 }
 st.caption(page_descriptions[page])
-render_tour_guide(w)
+if current_tour_step() and page != current_tour_step()["page"]:
+    render_tour_guide(w)
 
 if w is None and page == "Workspace":
     with st.container(key="welcome"):
-        st.markdown('<div class="basin-eyebrow">YOUR FIRST EXPLORATION</div><h2 class="welcome-title">Explore rainfall.<br>Compare possibilities.</h2><p class="welcome-copy">Start with historical observations, explore what-if rainfall scenarios, and keep every assumption in view.</p>', unsafe_allow_html=True)
-        st.button("Take a tour", key="welcome_tour", type="primary", on_click=start_tutorial, args=(source, names))
-        st.caption("Or choose your stations in New run and select Generate.")
+        st.markdown('<div class="basin-eyebrow">YOUR FIRST EXPLORATION</div><h2 class="welcome-title">Explore rainfall evidence<br>for your area.</h2><p class="welcome-copy">Compare observations, explore drier rainfall scenarios, and prepare a source-backed report.</p>', unsafe_allow_html=True)
+        primary, secondary = st.columns(2)
+        primary.button("Try an example", type="primary", on_click=start_example, args=(source, names), width="stretch")
+        secondary.button("Use my data", on_click=switch_page, args=("Data",), width="stretch")
+        st.caption("The example uses historical NOAA observations and illustrative rainfall reductions. It is not a forecast.")
+        st.button("Take a tour", key="welcome_tour", on_click=start_tutorial, args=(source, names))
         st.markdown('<div class="welcome-steps"><span><b>01</b> Explore the observations</span><span><b>02</b> Compare & review</span><span><b>03</b> Share the evidence</span></div>', unsafe_allow_html=True)
 
-if page == "Data" or (page == "Workspace" and w is None):
+if page == "Data":
     local_rainfall_preview()
     with tour_target("data_map"):
         metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
         quality = pd.DataFrame(source.manifest["quality"])
         station_table = metadata.merge(quality, on="station_id")
-        st.plotly_chart(basin_map(station_table), width="stretch")
+        st.plotly_chart(accessible_chart(basin_map(station_table)), width="stretch")
         st.caption("Corpus Christi, Victoria and San Antonio airport observations are provisional regional proxies. These coordinates do not establish catchment coverage. Station suitability and spatial aggregation require practitioner review. The coordinate overview works offline.")
         st.dataframe(station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
                      hide_index=True, width="stretch", column_config={"completeness_pct": st.column_config.NumberColumn("Complete %", format="%.3f")})
@@ -655,21 +677,23 @@ if page == "Data" or (page == "Workspace" and w is None):
     if age > 90:
         st.warning(f"Snapshot age: {age} days.")
 
-elif w is None:
-    st.info("No active run.")
+elif w is None and page != "Workspace":
+    st.info("Start an example from Workspace or open a saved run in the sidebar.")
 
-elif page == "Workspace":
+elif page == "Workspace" and w is not None:
+    st.markdown("**Which rainfall scenarios deserve a closer look?**")
+    st.caption("Explore the shortlist, then review each scenario before exporting. Scores reflect your ranking priorities, not likelihood or safety.")
     selected = [w.get(i) for i in w.selected]
-    a, b, c, d = st.columns(4)
-    a.metric("Candidates", len(w.scenarios))
-    b.metric("Groups", w.clustering["groups"])
-    c.metric("Shortlisted", len(selected))
-    d.metric("Approved", sum(s.status == "accepted" and s.approved_revision == s.revision for s in selected))
+    a, b = st.columns(2)
+    a.metric("Scenarios to review", len(selected))
+    b.metric("Approved for export", sum(s.status == "accepted" and s.approved_revision == s.revision for s in selected))
     view = table(w)
-    left, right = st.columns([1.6, 1])
+    left = st.container()
+    right = st.expander("How ranking scores are calculated")
     with left:
-        fig = px.scatter(view, x="Days", y="Deficit mm", color="Group", hover_name="ID",
-                         hover_data=["Score", "Onset", "Concurrence %"], color_continuous_scale="Teal")
+        fig = px.scatter(view, x="Days", y="Deficit mm", hover_name="ID",
+                         hover_data=["Group", "Score", "Onset", "Concurrence %"],
+                         labels={"Days": "Scenario duration · days", "Deficit mm": "Rainfall shortfall from reference · mm"})
         shortlist_rows = view[view.Shortlist]
         fig.add_trace(go.Scatter(x=shortlist_rows["Days"], y=shortlist_rows["Deficit mm"], mode="markers",
                                 marker=dict(size=14, symbol="circle-open", line=dict(width=2), color="#37AFA6"),
@@ -720,13 +744,16 @@ elif page == "Review":
     st.session_state.inspect_id = selected_id
     s = w.get(selected_id)
     f = s.features
-    a, b, c, d, e = st.columns(5)
-    a.metric("Deficit", f"{f['deficit_mm']:.1f} mm", f"{f['deficit_mm']/25.4:.2f} in")
+    a, b = st.columns(2)
+    a.metric("Rainfall shortfall · mm", f"{f['deficit_mm']:.1f}")
     b.metric("Duration · days", f["duration_days"])
-    c.metric("Station stress frequency" if len(s.series.columns) == 1 else "Concurrence", f"{f['concurrence']:.1%}")
-    d.metric("Reference percentile", f"{f['historical_percentile']:.0%}")
-    e.metric("Score", f"{s.score:.2f}")
-    left, right = st.columns([2.2, 1])
+    with st.expander("Reference and ranking details"):
+        st.write(f"Rainfall shortfall: {f['deficit_mm']/25.4:.2f} inches")
+        st.write(f"Station stress frequency / concurrence: {f['concurrence']:.1%}")
+        st.write(f"Reference percentile: {f['historical_percentile']:.0%}")
+        st.write(f"Ranking score: {s.score:.2f} (priority, not probability)")
+    left = st.container()
+    right = st.container()
     with left:
         mode = st.radio("Series", ["Cumulative rainfall", "Daily rainfall", "30-day deficit", "Reservoir simulation"], horizontal=True, label_visibility="collapsed", key="review_series_mode")
         if mode == "Reservoir simulation":
@@ -744,7 +771,7 @@ elif page == "Review":
             sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active)
 
             with tour_target("review_simulation"):
-                st.plotly_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms), width="stretch")
+                st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms)), width="stretch")
 
             s1 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 40), None)
             s2 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 30), None)
@@ -852,7 +879,18 @@ elif page == "Review":
 
 elif page == "Exports":
     chosen = [w.get(i) for i in w.selected]
-    st.dataframe(table(w).query("Shortlist").drop(columns="Shortlist"), hide_index=True, width="stretch")
+    st.markdown("**Review what your recipient will receive**")
+    st.caption("A readable rainfall brief, daily values, source evidence and a replayable audit. Review decisions control what can be exported.")
+    accepted_preview = [s for s in chosen if s.status == "accepted" and s.approved_revision == s.revision]
+    with st.expander("Read the report preview", expanded=True):
+        if accepted_preview:
+            st.caption("Draft preview of currently accepted revisions. Building the packet still requires every shortlisted revision to be reviewed.")
+            st.markdown(generate_brief(w, accepted_preview))
+        else:
+            st.info("No accepted scenarios yet. In Review, inspect a scenario and choose Accept to see its report here.")
+            st.button("Go to Review", on_click=switch_page, args=("Review",))
+    with st.expander("Shortlist details"):
+        st.dataframe(table(w).query("Shortlist").drop(columns="Shortlist"), hide_index=True, width="stretch")
     share = st.checkbox("Include provider notes and free-text review notes", value=False)
     st.caption("Packet includes rainfall, metrics, public evidence, scenario links and all conflict dispositions. Private evidence annotations follow the same opt-in. Reservoir results are excluded.")
     unresolved = [c for c in w.conflicts if c["status"] == "unresolved"]
