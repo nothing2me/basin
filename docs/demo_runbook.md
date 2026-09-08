@@ -28,8 +28,9 @@ Updated: September 8, 2026 | Product baseline: BASIN 0.2.0 (`BASIN.exe`)
 
 5. **Review & Verified Export**:
    - Accept the scenario and log a hydrologist note (*"Verified: acute summer concurrent deficit"*).
-   - Open **Exports** and click **Build verified export bundle**.
-   - Show the green verification report (`{"verified": true}`) confirming that all 30 audit events and 3 scenarios pass SHA-256 cryptographic replaying.
+   - Open **Exports** and click **Build verified export**.
+   - Spotlight the main-stage **Executive Technical Brief (PDF)**: click **Download Executive Brief (PDF)** to show the council-ready two-tier report (plain-language takeaways, policy trigger matrix, and quantitative stress spectrum).
+   - Show companion deliverables: full replay ZIP bundle, verified Markdown brief, and 1-click **Open Output Folder** on disk with green SHA-256 verification.
 
 6. **Close on Impact & Usefulness**:
    - Cite the A/B benchmark: unassisted from-scratch coding took 4–6 hours; BASIN took <10 minutes (30×–50× turnaround acceleration) while converging on the exact same physical numbers.

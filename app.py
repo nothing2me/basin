@@ -20,6 +20,7 @@ from basin_theme import apply_design, appearance_picker, custom_appearance, acce
 from basin_core.data import CachedSource, ROOT
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle, generate_brief
+from basin_core.pdf_report import generate_pdf_report
 from basin_core.workspace import Workspace
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
@@ -1121,8 +1122,22 @@ elif page == "Exports":
         if accepted_preview:
             st.caption("Draft preview of currently accepted revisions. Building the packet still requires every shortlisted revision to be reviewed.")
             brief_preview_text = generate_brief(w, accepted_preview)
-            col_prev_a, col_prev_b = st.columns([3, 1])
+            col_prev_a, col_prev_b, col_prev_c = st.columns([2, 1, 1])
             with col_prev_b:
+                if f"preview_pdf_{w.id}" not in st.session_state:
+                    if st.button("📕 Prep PDF Preview", key=f"btn_prep_pdf_prev_{w.id}", width="stretch"):
+                        st.session_state[f"preview_pdf_{w.id}"] = generate_pdf_report(w, accepted_preview)
+                        st.rerun()
+                else:
+                    st.download_button(
+                        "📕 Download PDF Preview",
+                        st.session_state[f"preview_pdf_{w.id}"],
+                        f"BASIN-Executive-Brief-Preview-{w.id}.pdf",
+                        "application/pdf",
+                        key=f"dl_pdf_preview_{w.id}",
+                        width="stretch"
+                    )
+            with col_prev_c:
                 st.download_button(
                     "📄 Download Brief (.md)",
                     brief_preview_text.encode("utf-8"),
@@ -1191,9 +1206,14 @@ elif page == "Exports":
                 brief_text = generate_brief(w, w.exportable())
                 brief_path = out_dir / f"Hydrologist_Handoff_Brief_{w.id}.md"
                 brief_path.write_text(brief_text, encoding="utf-8")
+                pdf_bytes = generate_pdf_report(w, w.exportable())
+                pdf_path = out_dir / f"BASIN-Executive-Brief-{w.id}.pdf"
+                pdf_path.write_bytes(pdf_bytes)
                 st.session_state.packet = {
                     "data": payload,
+                    "pdf_bytes": pdf_bytes,
                     "brief_text": brief_text,
+                    "saved_pdf": str(pdf_path.name),
                     "saved_zip": str(zip_path.name),
                     "saved_brief": str(brief_path.name),
                     "fingerprint": json.dumps(w.record(share, include_custom=share_custom), sort_keys=True),
@@ -1201,15 +1221,44 @@ elif page == "Exports":
                     "custom": share_custom,
                     "report": report
                 }
-                st.success(f"✅ Verified bundle generated and saved to disk: `output/{zip_path.name}`")
+                st.success(f"✅ Verified deliverables generated and saved to disk: `output/{pdf_path.name}` and `output/{zip_path.name}`")
             except (ValueError, AssertionError, OSError) as error:
                 st.error(f"Verification failed: {error}")
     packet = st.session_state.get("packet")
     if packet and (not w.custom_uploads or share_custom) and packet.get("custom", False) == share_custom and packet["share"] == share and packet["fingerprint"] == json.dumps(w.record(share, include_custom=share_custom), sort_keys=True):
-        st.success(f"✅ **Verified Export Package Ready!** Saved to disk: `output/{packet.get('saved_zip', f'BASIN-{w.id}.zip')}`")
+        # MAIN STAGE DELIVERABLE: Executive Brief (PDF)
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 18px 22px; border-radius: 10px; border: 1px solid #334155; margin: 18px 0 12px 0; color: white;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 0.72rem; font-weight: 800; letter-spacing: 1px; color: #38bdf8; text-transform: uppercase;">⭐ MAIN STAGE DELIVERABLE · COUNCIL & ANALYSTS</span>
+                <span style="font-size: 0.72rem; background: #087e8b; padding: 2px 8px; border-radius: 4px; font-weight: 700;">CRYPTOGRAPHICALLY VERIFIED</span>
+            </div>
+            <div style="font-size: 1.45rem; font-weight: 800; color: #ffffff; line-height: 1.2;">Executive Technical Brief (PDF)</div>
+            <div style="font-size: 0.85rem; color: #cbd5e1; margin: 6px 0 14px 0; line-height: 1.45;">
+                Professionally structured for City Council members, regional water boards, and technical analysts.
+                Includes plain-language bottom-line takeaways, drought stage action matrix, 4-tier stress spectrum drawdown matrix, countdown days to Stage 3 Critical Reserve (20%), and full NOAA SHA-256 audit signatures.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Primary Action: Download PDF
+        pdf_data = packet.get("pdf_bytes")
+        if pdf_data:
+            st.download_button(
+                "📕 Download Executive Brief (PDF)",
+                pdf_data,
+                f"BASIN-Executive-Brief-{w.id}.pdf",
+                "application/pdf",
+                key=f"dl_pdf_main_{w.id}",
+                type="primary",
+                width="stretch"
+            )
+
+        # Secondary Deliverables & File Explorer Access
+        st.markdown("**Companion Deliverables & Replay Package:**")
         col_dl1, col_dl2, col_dl3 = st.columns([1, 1, 1])
         with col_dl1:
-            st.download_button("📥 Download ZIP", packet["data"], f"BASIN-{w.id}.zip", "application/zip", key=f"dl_zip_{w.id}", type="primary", width="stretch")
+            st.download_button("📦 Download Replay ZIP", packet["data"], f"BASIN-{w.id}.zip", "application/zip", key=f"dl_zip_{w.id}", width="stretch")
         with col_dl2:
             brief_bytes = packet.get("brief_text", "").encode("utf-8") if packet.get("brief_text") else b""
             st.download_button("📄 Download Brief (.md)", brief_bytes, f"Hydrologist_Handoff_Brief_{w.id}.md", "text/markdown", key=f"dl_brief_export_{w.id}", width="stretch")
@@ -1219,7 +1268,7 @@ elif page == "Exports":
                 out_folder = ROOT / "output"
                 if sys.platform == "win32":
                     subprocess.Popen(["explorer", str(out_folder.resolve())])
-        st.caption(f"📁 Local copies on disk: `output/{packet.get('saved_zip', f'BASIN-{w.id}.zip')}` and `output/{packet.get('saved_brief', f'Hydrologist_Handoff_Brief_{w.id}.md')}`")
+        st.caption(f"📁 Local copies on disk: `output/{packet.get('saved_pdf', f'BASIN-Executive-Brief-{w.id}.pdf')}`, `output/{packet.get('saved_zip', f'BASIN-{w.id}.zip')}` and `output/{packet.get('saved_brief', f'Hydrologist_Handoff_Brief_{w.id}.md')}`")
         st.json(packet["report"])
         st.caption(f"{packet['report']['scenarios_replayed']} revisions verified · daily_rainfall.csv / shortlist.csv / audit.json / input snapshot / checksums")
     with st.expander("Run resource usage"):
