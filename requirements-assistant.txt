@@ -1,0 +1,19 @@
+# Transitive closure of the optional assistant client, pinned for reproducible installs.
+#
+# BASIN's core runs without any of this. These packages are what `ollama==0.6.2`
+# (pinned in requirements.txt) pulls in; without this file pip resolves them freshly and
+# an install is not reproducible. Install after requirements.txt:
+#
+#     pip install -r requirements.txt -r requirements-assistant.txt
+#
+# Installing the Python client does NOT install the Ollama service and does NOT download
+# any model. See docs/ollama_setup.md for the three separate pieces.
+#
+# anyio, certifi, h11, idna and typing_extensions are also required here and are already
+# pinned at these same versions in requirements.txt, so the two files do not conflict.
+annotated-types==0.8.0
+httpcore==1.0.9
+httpx==0.28.1
+pydantic==2.13.5
+pydantic-core==2.46.5
+typing-inspection==0.4.4
