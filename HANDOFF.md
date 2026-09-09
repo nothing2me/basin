@@ -1,5 +1,42 @@
 # BASIN current handoff
 
+## Report layout and test-isolation checkpoint — B17.3/B17.7
+
+Branch `fix/report-fixtures-and-layout`, from `origin/main` at `4d79822`. Not merged, not pushed.
+
+**Correction to the task premise.** `tests/test_pdf_report.py` no longer loaded `local/session-*.json`; B17.6 already moved it onto the isolated `workspace` fixture and that is merged. The real remaining leak was `app.py`, which globbed the live `local/` directory for its Saved Runs list, so every AppTest-based test read the developer's private analyses on this machine. That is what this change fixes.
+
+What changed:
+
+- **Session isolation.** `basin_core.workspace.session_dir()` resolves through `BASIN_SESSION_DIR`; `Workspace.save` and the app's Saved Runs list both go through it, and an autouse `conftest.py` fixture points it at a per-test throwaway directory. `local/` is gitignored and absent from a clean checkout, which is the situation the tests now reproduce.
+- **Real text measurement.** `text_width` uses Adobe standard glyph widths for Helvetica, Helvetica-Bold and Courier; `wrap_text` breaks on words, splits words that cannot fit, and marks a line with an ellipsis only where a caller explicitly caps the line count.
+- **Paginating layout.** `VectorFlow` places content downward and starts a labelled continuation page rather than running into the footer. The scenario inventory, a new evidence-and-assumptions section, recorded disagreements and the provenance block all flow through it. The previous six-scenario cap and the 35-character review-note cut are gone, and `Page N of M` footers are written once the real page count is known.
+- **Encoding.** The three base fonts declare `/WinAnsiEncoding` and the content stream is written as cp1252, so accented Latin, en/em dashes, guillemets and `±` render as themselves instead of being flattened. Characters with no WinAnsi glyph are counted by the builder and disclosed in the report ("N character(s) ... have no glyph"), rather than silently becoming `?`.
+- **HTML parity.** The same evidence and disagreement sections were added, with `overflow-wrap: anywhere` so long unbroken tokens wrap inside their cell and `page-break-inside: avoid` so an entry is not split.
+- Evidence and conflict private annotations follow the existing export-consent gate in both paths.
+
+Rendering paths exercised:
+
+| Path | How | Result |
+|---|---|---|
+| Windows vector (`build_fallback_pdf`) | The product path on win32; generated for no scenarios, several, >6 scenarios, long notes/descriptions, and non-ASCII | 3-4 pages each, read on screen page by page |
+| HTML (`render_html_report`) | Rendered to PDF with headless Edge for the same five cases; unreachable in the product on win32 | 3-4 pages each, read on screen |
+| `generate_pdf_report` | Exercised by the existing suite; on win32 it dispatches to the vector builder | unchanged |
+
+Evidence:
+
+- Clean baseline in a separate worktree at `4d79822`: **241 passed, 0 failures**. After this change: **266 passed**. No pre-existing failures, so every failure seen during the work was introduced and fixed within it.
+- `tests/test_report_layout.py` (25) parses the generated PDF back into positioned text and asserts no two strings collide on a baseline and nothing is drawn outside the margins, for all five content cases. A self-check test builds a deliberately overlapping and overflowing page and asserts the detectors flag it, so those assertions cannot pass vacuously.
+- Long notes and long evidence descriptions are asserted present in full, including a deliberately unbreakable token that must be split across lines.
+
+Limitations:
+
+- The evidence section is new content in both reports, so a typical brief is now three pages rather than two. That is content growth, not overflow; page breaks were inspected.
+- Wrapping uses standard font metrics, which match the base-14 fonts the vector path embeds. It is an approximation for any future font substitution.
+- Characters outside WinAnsi (CJK, emoji) still cannot be drawn by the base-14 fonts; they are disclosed rather than fixed. Embedding a Unicode font is the real fix and is not attempted here.
+- No reviewer has read the generated documents.
+
+
 ## September 9 task 2 independent review - accepted for integration
 
 Reviewed Claude's `224a8aa` on `eeac2ae`. B17.1/B17.2 are complete for current-session report configuration and preview/export wiring. The earlier checkpoint below records the original implementation; its unmerged status and tier-label limitation are superseded by this review.

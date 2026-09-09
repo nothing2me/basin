@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 import json
 import base64
+import os
 from pathlib import Path
 import platform
 import time
@@ -17,6 +18,19 @@ from basin_core.engine import Reference, Scenario, ScenarioGenerator, ScenarioPa
 from basin_core.evidence import initial_evidence, public_copy, validate_evidence
 from basin_core.integrity import reconstruct_audit, check_digest
 from basin_core.custom_data import build_record, evidence_record, validate_records, validate_links
+
+
+SESSION_DIR_ENV = "BASIN_SESSION_DIR"
+
+
+def session_dir() -> Path:
+    """Directory holding saved analyses.
+
+    Redirectable through BASIN_SESSION_DIR so tests never read or write the real
+    ``local/`` sessions on a developer's machine.
+    """
+    override = os.environ.get(SESSION_DIR_ENV)
+    return Path(override) if override else ROOT / "local"
 
 
 class Workspace:
@@ -218,7 +232,8 @@ class Workspace:
             result["provider_notes"] = self.notes
         return public_copy(result, include_notes)
 
-    def save(self, directory=ROOT / "local"):
+    def save(self, directory=None):
+        directory = Path(directory) if directory is not None else session_dir()
         directory.mkdir(parents=True, exist_ok=True)
         target = directory / f"session-{self.id}.json"
         temporary = target.with_suffix(".tmp")

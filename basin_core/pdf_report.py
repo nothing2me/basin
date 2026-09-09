@@ -222,6 +222,99 @@ def band_storage_acft(fraction: float) -> float:
     return model_total_capacity_acft() * float(fraction)
 
 
+# Adobe standard glyph widths (units per 1000) for the three base-14 fonts the vector
+# report uses. They let the renderer measure a string and wrap it instead of cutting it.
+_HELVETICA_WIDTHS = {
+    " ": 278, "!": 278, '"': 355, "#": 556, "$": 556, "%": 889, "&": 667, "'": 191,
+    "(": 333, ")": 333, "*": 389, "+": 584, ",": 278, "-": 333, ".": 278, "/": 278,
+    ":": 278, ";": 278, "<": 584, "=": 584, ">": 584, "?": 556, "@": 1015,
+    "[": 278, "\\": 278, "]": 278, "^": 469, "_": 556, "`": 333,
+    "{": 334, "|": 260, "}": 334, "~": 584,
+    "A": 667, "B": 667, "C": 722, "D": 722, "E": 667, "F": 611, "G": 778, "H": 722,
+    "I": 278, "J": 500, "K": 667, "L": 556, "M": 833, "N": 722, "O": 778, "P": 667,
+    "Q": 778, "R": 722, "S": 667, "T": 611, "U": 722, "V": 667, "W": 944, "X": 667,
+    "Y": 667, "Z": 611,
+    "a": 556, "b": 556, "c": 500, "d": 556, "e": 556, "f": 278, "g": 556, "h": 556,
+    "i": 222, "j": 222, "k": 500, "l": 222, "m": 833, "n": 556, "o": 556, "p": 556,
+    "q": 556, "r": 333, "s": 500, "t": 278, "u": 556, "v": 500, "w": 722, "x": 500,
+    "y": 500, "z": 500,
+}
+_HELVETICA_BOLD_WIDTHS = {
+    " ": 278, "!": 333, '"': 474, "#": 556, "$": 556, "%": 889, "&": 722, "'": 238,
+    "(": 333, ")": 333, "*": 389, "+": 584, ",": 278, "-": 333, ".": 278, "/": 278,
+    ":": 333, ";": 333, "<": 584, "=": 584, ">": 584, "?": 611, "@": 975,
+    "[": 333, "\\": 278, "]": 333, "^": 584, "_": 556, "`": 333,
+    "{": 389, "|": 280, "}": 389, "~": 584,
+    "A": 722, "B": 722, "C": 722, "D": 722, "E": 667, "F": 611, "G": 778, "H": 722,
+    "I": 278, "J": 556, "K": 722, "L": 611, "M": 833, "N": 722, "O": 778, "P": 667,
+    "Q": 778, "R": 722, "S": 667, "T": 611, "U": 722, "V": 667, "W": 944, "X": 667,
+    "Y": 667, "Z": 611,
+    "a": 556, "b": 611, "c": 556, "d": 611, "e": 556, "f": 333, "g": 611, "h": 611,
+    "i": 278, "j": 278, "k": 556, "l": 278, "m": 889, "n": 611, "o": 611, "p": 611,
+    "q": 611, "r": 389, "s": 556, "t": 333, "u": 611, "v": 556, "w": 778, "x": 556,
+    "y": 556, "z": 500,
+}
+for _digit in "0123456789":
+    _HELVETICA_WIDTHS[_digit] = 556
+    _HELVETICA_BOLD_WIDTHS[_digit] = 556
+
+_FONT_WIDTHS = {"/F1": _HELVETICA_WIDTHS, "/F2": _HELVETICA_BOLD_WIDTHS}
+_DEFAULT_WIDTH = 556          # accented Latin and punctuation outside the tables
+_COURIER_WIDTH = 600          # /F3 is monospaced
+
+
+def text_width(text: str, font: str = "/F1", size: float = 9.0) -> float:
+    """Width of ``text`` in points when drawn in ``font`` at ``size``."""
+    if font == "/F3":
+        return len(str(text)) * _COURIER_WIDTH * size / 1000.0
+    widths = _FONT_WIDTHS.get(font, _HELVETICA_WIDTHS)
+    return sum(widths.get(ch, _DEFAULT_WIDTH) for ch in str(text)) * size / 1000.0
+
+
+def wrap_text(text: str, font: str, size: float, max_width: float, max_lines: int | None = None) -> list[str]:
+    """Break ``text`` into lines that fit ``max_width``, without dropping words.
+
+    Words longer than the line are split rather than allowed to overflow. When
+    ``max_lines`` is reached the final line ends in an ellipsis, so a shortened value is
+    always visibly shortened instead of looking complete.
+    """
+    text = " ".join(str(text).split())
+    if not text:
+        return [""]
+    if max_width <= 0:
+        return [text]
+
+    lines: list[str] = []
+    current = ""
+    for word in text.split(" "):
+        while text_width(word, font, size) > max_width and len(word) > 1:
+            cut = len(word)
+            while cut > 1 and text_width(word[:cut], font, size) > max_width:
+                cut -= 1
+            head, word = word[:cut], word[cut:]
+            if current:
+                lines.append(current)
+                current = ""
+            lines.append(head)
+        candidate = f"{current} {word}".strip()
+        if current and text_width(candidate, font, size) > max_width:
+            lines.append(current)
+            current = word
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+
+    if max_lines is not None and len(lines) > max_lines:
+        kept = lines[:max_lines]
+        last = kept[-1]
+        while last and text_width(last + "...", font, size) > max_width:
+            last = last[:-1]
+        kept[-1] = last.rstrip() + "..."
+        return kept
+    return lines
+
+
 def clip_text(text: str, limit: int) -> str:
     """Shorten text for fixed-width vector cells, marking that it was shortened."""
     text = str(text)
@@ -544,6 +637,53 @@ def render_html_report(
         + "</td></tr>"
     )
 
+    def _private_annotation_html(record) -> str:
+        """Private annotations follow the same export consent as review notes."""
+        if not record.get("private_note"):
+            return ""
+        if include_notes:
+            return f'<div class="evidence-body"><em>Private annotation:</em> {escape(str(record["private_note"]))}</div>'
+        return ('<div class="evidence-body" style="color: #64748b;"><em>Private annotation recorded '
+                '(omitted: export privacy setting excludes private notes).</em></div>')
+
+    evidence_html = ""
+    for record in list(getattr(workspace, "evidence", []) or []):
+        evidence_html += (
+            '<div class="evidence-entry">'
+            f'<div class="evidence-title">{escape(str(record.get("id", "unidentified")))}: '
+            f'{escape(str(record.get("title", "Untitled")))}</div>'
+            f'<div class="evidence-meta">{escape(str(record.get("kind", "unspecified")))} · '
+            f'{escape(str(record.get("review_status", "unspecified")))} · '
+            f'{escape(str(record.get("publisher", "publisher not supplied")))}</div>'
+            f'<div class="evidence-meta">Source: {escape(str(record.get("source_locator", "not supplied")))}; '
+            f'source date: {escape(str(record.get("source_date") or "not supplied"))}. '
+            f'Geography: {escape(str(record.get("geographic_scope", "not supplied")))}. '
+            f'Units: {escape(str(record.get("units") or "not applicable"))}.</div>'
+            f'<div class="evidence-body">{escape(str(record.get("description", "")))}</div>'
+            + _private_annotation_html(record) +
+            "</div>"
+        )
+    if not evidence_html:
+        evidence_html = '<p style="font-size: 7.5pt; color: #64748b;">No evidence records are attached to this analysis.</p>'
+
+    conflicts_html = ""
+    for conflict in list(getattr(workspace, "conflicts", []) or []):
+        conflicts_html += (
+            '<div class="evidence-entry">'
+            f'<div class="evidence-title">{escape(str(conflict.get("id", "conflict")))} '
+            f'[{escape(str(conflict.get("status", "unknown")))}]: '
+            f'{escape(str(conflict.get("left_id", "?")))} vs {escape(str(conflict.get("right_id", "?")))}</div>'
+            f'<div class="evidence-body">Disagreement: {escape(str(conflict.get("disagreement", "")))}</div>'
+            f'<div class="evidence-meta">Comparability: {escape(str(conflict.get("comparability", "")))}</div>'
+            f'<div class="evidence-meta">Human disposition: '
+            f'{escape(str(conflict.get("resolution") or "Unresolved; no disposition recorded."))}</div>'
+            + _private_annotation_html(conflict) +
+            "</div>"
+        )
+    if not conflicts_html:
+        conflicts_html = ('<p style="font-size: 7.5pt; color: #64748b;">No evidence disagreements have been '
+                          "recorded. That does not establish that none exist.</p>")
+
     scenario_html_rows = ""
     for s in accepted:
         prov = s.provenance
@@ -742,11 +882,37 @@ def render_html_report(
         padding: 5px 8px;
         font-size: 7.5pt;
         letter-spacing: 0.3px;
+        overflow-wrap: anywhere;
     }}
     td {{
         padding: 5px 8px;
         border-bottom: 1px solid #e2e8f0;
         color: #334155;
+        overflow-wrap: anywhere;
+    }}
+    tr {{
+        page-break-inside: avoid;
+    }}
+    .evidence-entry {{
+        border-left: 3px solid #cbd5e1;
+        padding: 4px 0 4px 10px;
+        margin-bottom: 8px;
+        page-break-inside: avoid;
+        overflow-wrap: anywhere;
+    }}
+    .evidence-title {{
+        font-weight: 700;
+        font-size: 8pt;
+        color: #0f172a;
+    }}
+    .evidence-meta {{
+        font-size: 7pt;
+        color: #64748b;
+    }}
+    .evidence-body {{
+        font-size: 7.5pt;
+        color: #334155;
+        margin-top: 2px;
     }}
     tr:nth-child(even) td {{
         background: #f8fafc;
@@ -924,6 +1090,12 @@ def render_html_report(
         </tbody>
     </table>
 
+    <div class="section-title">Evidence and Assumptions</div>
+    {evidence_html}
+
+    <div class="section-title">Recorded Disagreements</div>
+    {conflicts_html}
+
     <div class="section-title">Provenance & Verification Scope</div>
     <div class="seal-box">
         <div class="seal-text">
@@ -948,6 +1120,37 @@ def render_html_report(
     return html
 
 
+# Characters that have no WinAnsi glyph but a faithful ASCII rendering.
+_TRANSLITERATIONS = {
+    "≤": "<=", "≥": ">=", "≈": "~", "→": "->", "←": "<-", "×": "x", "\u00a0": " ",
+    "\u2010": "-", "\u2011": "-", "\u2212": "-", "\u02c6": "^", "\u02dc": "~",
+}
+
+
+def encode_winansi(text: str) -> tuple[str, int]:
+    """Map text onto the WinAnsi glyph set.
+
+    Returns the encodable text and the number of characters that had no representation.
+    Those become "?" as before, but the count lets the report disclose that some
+    characters could not be drawn instead of quietly changing the content.
+    """
+    out: list[str] = []
+    dropped = 0
+    for char in text:
+        replacement = _TRANSLITERATIONS.get(char)
+        if replacement is not None:
+            out.append(replacement)
+            continue
+        try:
+            char.encode("cp1252")
+        except UnicodeEncodeError:
+            dropped += 1
+            out.append("?")
+            continue
+        out.append(char)
+    return "".join(out), dropped
+
+
 class VectorPDFBuilder:
     """Zero-dependency pure-Python vector PDF generator compliant with PDF-1.4.
     
@@ -957,6 +1160,9 @@ class VectorPDFBuilder:
 
     def __init__(self) -> None:
         self.pages: list[list[str]] = []
+        # Characters the base-14 fonts cannot represent. Counted so the report can say so
+        # rather than silently printing substitutes.
+        self.unrepresentable = 0
 
     def add_page(self) -> list[str]:
         page: list[str] = []
@@ -1010,19 +1216,16 @@ class VectorPDFBuilder:
         size: float = 9.0,
         color: tuple[float, float, float] = (0.1, 0.1, 0.1),
     ) -> None:
+        clean, dropped = encode_winansi(str(txt))
+        if dropped:
+            self.unrepresentable += dropped
         clean = (
-            str(txt)
-            .replace("–", "-")
-            .replace("—", "--")
-            .replace("·", "*")
-            .replace("≤", "<=")
-            .replace("≥", ">=")
+            clean
             .replace("\\", "\\\\")
             .replace("(", r"\(")
             .replace(")", r"\)")
             .replace("\n", " ")
         )
-        clean = clean.encode("latin1", "replace").decode("latin1")
         op = f"BT {font} {size:.1f} Tf {color[0]:.3f} {color[1]:.3f} {color[2]:.3f} rg 1 0 0 1 {x:.2f} {y:.2f} Tm ({clean}) Tj ET"
         page.append(op)
 
@@ -1055,12 +1258,12 @@ class VectorPDFBuilder:
                 f"/F1 {f1_id} 0 R /F2 {f2_id} 0 R /F3 {f3_id} 0 R >> >> >>"
             )
             content = "\n".join(self.pages[i])
-            c_bytes = content.encode("latin1")
+            c_bytes = content.encode("cp1252", "replace")
             objs[cid] = f"<< /Length {len(c_bytes)} >>\nstream\n{content}\nendstream"
 
-        objs[f1_id] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
-        objs[f2_id] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"
-        objs[f3_id] = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>"
+        objs[f1_id] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
+        objs[f2_id] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"
+        objs[f3_id] = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>"
 
         body = "%PDF-1.4\n"
         xref = ["xref", f"0 {total_objs + 1}", "0000000000 65535 f "]
@@ -1070,7 +1273,93 @@ class VectorPDFBuilder:
 
         xref_pos = len(body)
         body += "\n".join(xref) + f"\ntrailer\n<< /Size {total_objs + 1} /Root {catalog_id} 0 R >>\nstartxref\n{xref_pos}\n%%EOF"
-        return body.encode("latin1")
+        return body.encode("cp1252", "replace")
+
+
+
+class VectorFlow:
+    """Cursor-based layout for the vector report.
+
+    Content is placed downward from a cursor and continues on a fresh page when it would
+    otherwise run into the footer, so long notes and evidence descriptions are wrapped and
+    carried over rather than cut off.
+    """
+
+    LEFT = 36
+    RIGHT = 576
+    WIDTH = RIGHT - LEFT
+    BOTTOM = 76
+    TOP = 700
+
+    def __init__(self, doc: "VectorPDFBuilder", page: list[str], y: float, run_id: str) -> None:
+        self.doc = doc
+        self.page = page
+        self.y = y
+        self.run_id = run_id
+
+    def room_for(self, height: float) -> bool:
+        return self.y - height >= self.BOTTOM
+
+    def break_page(self) -> None:
+        self.page = self.doc.add_page()
+        self.doc.rect(self.page, 36, 742, 540, 26, fill=(0.06, 0.09, 0.16))
+        self.doc.text(self.page, 50, 750, "BASIN * TECHNICAL ENGINEERING APPENDIX (CONTINUED)",
+                      font="/F2", size=9.0, color=(1.0, 1.0, 1.0))
+        self.doc.text(self.page, 415, 750, f"RUN ID: {clip_text(self.run_id, 14)}",
+                      font="/F3", size=7.5, color=(0.85, 0.9, 0.95))
+        self.y = self.TOP + 20
+
+    def ensure(self, height: float) -> None:
+        if not self.room_for(height):
+            self.break_page()
+
+    def gap(self, height: float) -> None:
+        self.y -= height
+
+    def heading(self, text: str, size: float = 9.5) -> None:
+        self.ensure(size + 14)
+        self.doc.text(self.page, self.LEFT, self.y - size, text, font="/F2", size=size,
+                      color=(0.06, 0.09, 0.16))
+        self.y -= size + 8
+
+    def paragraph(self, text: str, font: str = "/F1", size: float = 7.0,
+                  color: tuple[float, float, float] = (0.1, 0.1, 0.1), indent: float = 0.0) -> None:
+        """Draw wrapped text, breaking the page between lines when needed."""
+        leading = size + 2.6
+        for line in wrap_text(text, font, size, self.WIDTH - indent - 12):
+            self.ensure(leading)
+            self.doc.text(self.page, self.LEFT + 12 + indent, self.y - size, line, font=font,
+                          size=size, color=color)
+            self.y -= leading
+
+    def table_header(self, columns) -> None:
+        """columns: sequence of (x, label, width)."""
+        self.ensure(18 + 24)
+        self.doc.rect(self.page, self.LEFT, self.y - 18, self.WIDTH, 18, fill=(0.12, 0.16, 0.24))
+        for x, label, width in columns:
+            for line in wrap_text(label, "/F2", 7.0, width)[:1]:
+                self.doc.text(self.page, x, self.y - 13, line, font="/F2", size=7.0, color=(1, 1, 1))
+        self.y -= 18
+        self._columns = columns
+
+    def table_row(self, cells, index: int, size: float = 6.8) -> None:
+        """cells: sequence of (text, font) aligned with the current header columns."""
+        leading = size + 2.4
+        wrapped = [
+            wrap_text(text, font, size, width - 6)
+            for (text, font), (_, _, width) in zip(cells, self._columns)
+        ]
+        height = max(len(lines) for lines in wrapped) * leading + 6
+        if not self.room_for(height):
+            self.break_page()
+            self.table_header(self._columns)
+        self.doc.rect(self.page, self.LEFT, self.y - height, self.WIDTH, height,
+                      fill=(0.96, 0.97, 0.99) if index % 2 == 0 else (1.0, 1.0, 1.0))
+        for lines, (x, _, _), (_, font) in zip(wrapped, self._columns, cells):
+            for offset, line in enumerate(lines):
+                self.doc.text(self.page, x, self.y - size - 3 - offset * leading, line,
+                              font=font, size=size, color=(0.15, 0.18, 0.22))
+        self.y -= height
 
 
 def build_fallback_pdf(
@@ -1313,10 +1602,7 @@ def build_fallback_pdf(
     elif not config.selected:
         doc.text(p1, 48, 104, "No experiment was configured in Review; these are BASIN's documented defaults, not an earlier run.", font="/F1", size=6.8, color=(0.7, 0.4, 0.05))
 
-    # Page 1 Footer
-    doc.line(p1, 36, 50, 576, 50, stroke=(0.8, 0.85, 0.9))
-    doc.text(p1, 36, 38, "BASIN Calculation Engine * Illustrative Planning Model", font="/F1", size=7.0, color=(0.45, 0.5, 0.55))
-    doc.text(p1, 525, 38, "Page 1 of 2", font="/F2", size=7.0, color=(0.45, 0.5, 0.55))
+    # Footers for every page are drawn once the total page count is known.
 
     # ==========================================
     # PAGE 2: TECHNICAL APPENDIX & AUDIT
@@ -1369,31 +1655,24 @@ def build_fallback_pdf(
         doc.text(p2, 455, y_r + 6, d3, font="/F2", size=7.0)
         doc.text(p2, 520, y_r + 6, stat, font="/F2", size=7.0, color=stat_col)
 
-    # Section 2: Approved Candidate Scenarios Table
-    y_cand = 535
-    doc.text(p2, 36, y_cand + 15, "SHORTLISTED CANDIDATE SCENARIOS (Accepted for Planning Analysis)", font="/F2", size=9.5, color=(0.06, 0.09, 0.16))
-    doc.rect(p2, 36, y_cand - 18, 540, 18, fill=(0.12, 0.16, 0.24))
-    doc.text(p2, 42, y_cand - 13, "Scenario ID", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 115, y_cand - 13, "Period Range", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 220, y_cand - 13, "Duration", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 275, y_cand - 13, "Deficit (mm)", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 345, y_cand - 13, "Concurrence", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 410, y_cand - 13, "Review Disposition & Note", font="/F2", size=7.0, color=(1, 1, 1))
+    # Sections 2-4 flow downward and continue onto extra pages instead of being cut off.
+    flow = VectorFlow(doc, p2, y_spec - 38 - (len(spec_rows[:4]) * 20) - 16 if spec_rows else y_spec - 74, run_id)
 
-    scen_rows = accepted if accepted else []
-    if not scen_rows:
-        doc.text(p2, 42, y_cand - 32, "No accepted scenarios were supplied for this report.", font="/F1", size=7.5, color=(0.45, 0.5, 0.55))
-    for idx, s in enumerate(scen_rows[:6]):
-        y_r = y_cand - 38 - (idx * 20)
-        bg = (0.96, 0.97, 0.99) if idx % 2 == 0 else (1.0, 1.0, 1.0)
-        doc.rect(p2, 36, y_r, 540, 20, fill=bg)
+    flow.heading("SHORTLISTED CANDIDATE SCENARIOS (Accepted for Planning Analysis)")
+    scenario_columns = [
+        (42, "Scenario ID", 70), (115, "Period Range", 100), (220, "Duration", 50),
+        (275, "Deficit (mm)", 65), (345, "Concurrence", 60), (410, "Review Disposition & Note", 160),
+    ]
+    flow.table_header(scenario_columns)
 
-        prov = getattr(s, "provenance", {})
-        feat = getattr(s, "features", {})
-        deficit_mm = feat.get("deficit_mm", 0.0)
-        concurrence = feat.get("concurrence", 0.0)
-
-        entry_note = (s.history[-1].get("private_note") or s.history[-1].get("note")) if getattr(s, "history", None) else None
+    if not accepted:
+        flow.gap(4)
+        flow.paragraph("No accepted scenarios were supplied for this report.", size=7.5,
+                       color=(0.45, 0.5, 0.55))
+    for index, scenario in enumerate(accepted):
+        prov = getattr(scenario, "provenance", {}) or {}
+        feat = getattr(scenario, "features", {}) or {}
+        entry_note = (scenario.history[-1].get("private_note") or scenario.history[-1].get("note")) if getattr(scenario, "history", None) else None
         if include_notes and entry_note:
             note = str(entry_note)
         elif entry_note:
@@ -1403,42 +1682,112 @@ def build_fallback_pdf(
 
         start_dt = prov.get("source_start")
         end_dt = prov.get("source_end")
-        if not start_dt and hasattr(s, "series") and len(s.series):
-            start_dt = str(s.series.index[0].date())
-            end_dt = str(s.series.index[-1].date())
-        duration_days = prov.get("source_window_days") or (len(s.series) if hasattr(s, "series") else "--")
-        period_str = f"{str(start_dt)[:7]} to {str(end_dt)[:7]}"
+        if not start_dt and hasattr(scenario, "series") and len(scenario.series):
+            start_dt = str(scenario.series.index[0].date())
+            end_dt = str(scenario.series.index[-1].date())
+        duration_days = prov.get("source_window_days") or (len(scenario.series) if hasattr(scenario, "series") else "--")
 
-        doc.text(p2, 42, y_r + 6, f"{s.id} (R{s.revision})", font="/F3", size=6.8)
-        doc.text(p2, 115, y_r + 6, period_str, font="/F1", size=6.8)
-        doc.text(p2, 220, y_r + 6, f"{duration_days} d", font="/F1", size=6.8)
-        doc.text(p2, 275, y_r + 6, f"{deficit_mm:,.1f} mm", font="/F2", size=6.8)
-        doc.text(p2, 345, y_r + 6, f"{concurrence:.2f}", font="/F1", size=6.8)
-        doc.text(p2, 410, y_r + 6, clip_text(note, 35), font="/F1", size=6.5, color=(0.3, 0.35, 0.4))
+        flow.table_row([
+            (f"{scenario.id} (R{scenario.revision})", "/F3"),
+            (f"{str(start_dt)[:10]} to {str(end_dt)[:10]}", "/F1"),
+            (f"{duration_days} d", "/F1"),
+            (f"{feat.get('deficit_mm', 0.0):,.1f} mm", "/F2"),
+            (f"{feat.get('concurrence', 0.0):.2f}", "/F1"),
+            (note, "/F1"),
+        ], index)
 
-    # Section 3: Scientific Provenance & Cryptographic Audit Trail
-    y_aud = 275
-    doc.rect(p2, 36, y_aud - 100, 540, 95, fill=(0.96, 0.97, 0.99), stroke=(0.8, 0.85, 0.92))
-    doc.text(p2, 48, y_aud - 20, "PROVENANCE AND VERIFICATION SCOPE", font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
-    doc.text(p2, 48, y_aud - 35, f"* Station Proxies: NOAA GHCN-Daily {clip_text(stations, 70)}.", font="/F1", size=7.0)
-    doc.text(p2, 48, y_aud - 48, f"* SHA-256 Snapshot Digest: {snapshot_hash} (recorded identity; not verified by this document).", font="/F3", size=7.0)
-    doc.text(p2, 48, y_aud - 61, "* Deficit recomputation is checked when the companion ZIP is replayed, not by this PDF.", font="/F1", size=7.0)
-    doc.text(p2, 48, y_aud - 74, replay_line, font="/F3", size=7.0)
-    doc.text(p2, 48, y_aud - 87, "* This PDF is outside the bundle verification contract. A successful replay establishes nothing", font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
-    doc.text(p2, 48, y_aud - 97, "  about these pages. No scientific validation or professional approval is claimed or implied.", font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
+    # Section 3: Evidence, assumptions and recorded disagreements
+    flow.gap(14)
+    flow.heading("EVIDENCE AND ASSUMPTIONS")
+    evidence_records = list(getattr(workspace_or_title, "evidence", []) or []) if not isinstance(workspace_or_title, str) else []
+    if not evidence_records:
+        flow.paragraph("No evidence records are attached to this analysis.", color=(0.45, 0.5, 0.55))
+    for record in evidence_records:
+        flow.gap(4)
+        flow.paragraph(f"{record.get('id', 'unidentified')}: {record.get('title', 'Untitled')}",
+                       font="/F2", size=7.2)
+        flow.paragraph(
+            f"{record.get('kind', 'unspecified')} * {record.get('review_status', 'unspecified')} * "
+            f"{record.get('publisher', 'publisher not supplied')}",
+            size=6.8, color=(0.35, 0.4, 0.48),
+        )
+        flow.paragraph(f"Source: {record.get('source_locator', 'not supplied')}; source date: "
+                       f"{record.get('source_date') or 'not supplied'}.", size=6.8, color=(0.35, 0.4, 0.48))
+        flow.paragraph(f"Geography: {record.get('geographic_scope', 'not supplied')}. Units: "
+                       f"{record.get('units') or 'not applicable'}.", size=6.8, color=(0.35, 0.4, 0.48))
+        flow.paragraph(record.get("description", ""), size=6.8)
+        if include_notes and record.get("private_note"):
+            flow.paragraph(f"Private annotation: {record['private_note']}", size=6.8, color=(0.7, 0.4, 0.05))
+        elif record.get("private_note"):
+            flow.paragraph("Private annotation recorded (omitted: export privacy setting excludes private notes).",
+                           size=6.8, color=(0.45, 0.5, 0.55))
 
-    # Verification Scope Stamp
-    doc.rect(p2, 480, y_aud - 92, 85, 76, fill=(1.0, 1.0, 1.0), stroke=(0.08, 0.49, 0.55), line_width=1.5)
-    doc.text(p2, 489, y_aud - 30, "VERIFICATION", font="/F2", size=7.0, color=(0.08, 0.49, 0.55))
-    doc.text(p2, 505, y_aud - 40, "SCOPE", font="/F2", size=7.0, color=(0.08, 0.49, 0.55))
-    doc.text(p2, 492, y_aud - 56, "BUNDLE ONLY", font="/F2", size=8.0, color=(0.08, 0.49, 0.55))
-    doc.text(p2, 487, y_aud - 68, "PDF NOT VERIFIED", font="/F2", size=6.5, color=(0.7, 0.4, 0.05))
-    doc.text(p2, 488, y_aud - 82, f"ID: {clip_text(run_id, 13)}", font="/F3", size=6.5, color=(0.3, 0.35, 0.4))
+    conflicts = list(getattr(workspace_or_title, "conflicts", []) or []) if not isinstance(workspace_or_title, str) else []
+    flow.gap(10)
+    flow.heading("RECORDED DISAGREEMENTS", size=8.5)
+    if not conflicts:
+        flow.paragraph("No evidence disagreements have been recorded. That does not establish that none exist.",
+                       color=(0.45, 0.5, 0.55))
+    for conflict in conflicts:
+        flow.gap(3)
+        flow.paragraph(f"{conflict.get('id', 'conflict')} [{conflict.get('status', 'unknown')}]: "
+                       f"{conflict.get('left_id', '?')} vs {conflict.get('right_id', '?')}", font="/F2", size=7.0)
+        flow.paragraph(f"Disagreement: {conflict.get('disagreement', '')}", size=6.8)
+        flow.paragraph(f"Comparability: {conflict.get('comparability', '')}", size=6.8, color=(0.35, 0.4, 0.48))
+        flow.paragraph(f"Human disposition: {conflict.get('resolution') or 'Unresolved; no disposition recorded.'}",
+                       size=6.8, color=(0.35, 0.4, 0.48))
+        if include_notes and conflict.get("private_note"):
+            flow.paragraph(f"Private annotation: {conflict['private_note']}", size=6.8, color=(0.7, 0.4, 0.05))
+        elif conflict.get("private_note"):
+            flow.paragraph("Private annotation recorded (omitted: export privacy setting excludes private notes).",
+                           size=6.8, color=(0.45, 0.5, 0.55))
 
-    # Page 2 Footer
-    doc.line(p2, 36, 50, 576, 50, stroke=(0.8, 0.85, 0.9))
-    doc.text(p2, 36, 38, "BASIN Calculation Engine * Companion to the export bundle; not itself replay-verified", font="/F1", size=7.0, color=(0.45, 0.5, 0.55))
-    doc.text(p2, 525, 38, "Page 2 of 2", font="/F2", size=7.0, color=(0.45, 0.5, 0.55))
+    # Section 4: Provenance block, kept whole on whichever page it lands
+    flow.gap(14)
+    flow.ensure(118)
+    audit_top = flow.y
+    doc.rect(flow.page, 36, audit_top - 112, 540, 108, fill=(0.96, 0.97, 0.99), stroke=(0.8, 0.85, 0.92))
+    doc.text(flow.page, 48, audit_top - 18, "PROVENANCE AND VERIFICATION SCOPE", font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
+    provenance_lines = [
+        (f"* Station Proxies: NOAA GHCN-Daily {stations}.", "/F1"),
+        (f"* SHA-256 Snapshot Digest: {snapshot_hash} (recorded identity; not verified by this document).", "/F3"),
+        ("* Deficit recomputation is checked when the companion ZIP is replayed, not by this PDF.", "/F1"),
+        (replay_line, "/F3"),
+    ]
+    line_y = audit_top - 33
+    for content, font in provenance_lines:
+        for wrapped_line in wrap_text(content, font, 7.0, 424):
+            doc.text(flow.page, 48, line_y, wrapped_line, font=font, size=7.0)
+            line_y -= 10
+    doc.text(flow.page, 48, line_y - 2, "* This PDF is outside the bundle verification contract. A successful replay establishes nothing",
+             font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
+    doc.text(flow.page, 48, line_y - 12, "  about these pages. No scientific validation or professional approval is claimed or implied.",
+             font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
+
+    doc.rect(flow.page, 480, audit_top - 104, 85, 76, fill=(1.0, 1.0, 1.0), stroke=(0.08, 0.49, 0.55), line_width=1.5)
+    doc.text(flow.page, 489, audit_top - 42, "VERIFICATION", font="/F2", size=7.0, color=(0.08, 0.49, 0.55))
+    doc.text(flow.page, 505, audit_top - 52, "SCOPE", font="/F2", size=7.0, color=(0.08, 0.49, 0.55))
+    doc.text(flow.page, 492, audit_top - 68, "BUNDLE ONLY", font="/F2", size=8.0, color=(0.08, 0.49, 0.55))
+    doc.text(flow.page, 487, audit_top - 80, "PDF NOT VERIFIED", font="/F2", size=6.5, color=(0.7, 0.4, 0.05))
+    doc.text(flow.page, 488, audit_top - 94, f"ID: {clip_text(run_id, 13)}", font="/F3", size=6.5, color=(0.3, 0.35, 0.4))
+    flow.y = audit_top - 118
+
+    if doc.unrepresentable:
+        flow.gap(6)
+        flow.paragraph(
+            f"{doc.unrepresentable} character(s) in this report have no glyph in the PDF base fonts "
+            "and are shown as '?'. Consult the companion bundle for the exact original text.",
+            size=6.8, color=(0.7, 0.4, 0.05),
+        )
+
+    # Footers last, once the total page count is known.
+    total_pages = len(doc.pages)
+    for number, page in enumerate(doc.pages, start=1):
+        doc.line(page, 36, 50, 576, 50, stroke=(0.8, 0.85, 0.9))
+        footer = ("BASIN Calculation Engine * Illustrative Planning Model" if number == 1
+                  else "BASIN Calculation Engine * Companion to the export bundle; not itself replay-verified")
+        doc.text(page, 36, 38, footer, font="/F1", size=7.0, color=(0.45, 0.5, 0.55))
+        doc.text(page, 505, 38, f"Page {number} of {total_pages}", font="/F2", size=7.0, color=(0.45, 0.5, 0.55))
 
     return doc.render()
 

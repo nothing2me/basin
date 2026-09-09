@@ -21,7 +21,7 @@ from basin_core.data import CachedSource, ROOT
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle, generate_brief
 from basin_core.pdf_report import ExperimentConfig, generate_pdf_report, report_state_token
-from basin_core.workspace import Workspace
+from basin_core.workspace import Workspace, session_dir
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
 from basin_core.custom_data import active_ids, digest
@@ -777,7 +777,8 @@ with top_r:
     with u_col1:
         with st.popover("Saved Runs", width="stretch"):
             st.markdown("**Saved Workspace Runs**")
-            sessions = sorted((ROOT / "local").glob("session-*.json"), key=lambda p: p.stat().st_mtime, reverse=True) if (ROOT / "local").exists() else []
+            saved_dir = session_dir()
+            sessions = sorted(saved_dir.glob("session-*.json"), key=lambda p: p.stat().st_mtime, reverse=True) if saved_dir.exists() else []
             if sessions:
                 previous = st.selectbox("Select saved run", sessions, format_func=lambda p: p.stem.replace("session-", ""), key="saved_run_select")
                 if st.button("Open run", key="btn_open_saved_run", width="stretch", type="primary"):
