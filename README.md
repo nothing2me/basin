@@ -29,6 +29,8 @@ py -3.12 -m venv .venv
 
 The offline Windows wheel bundle is specific to CPython 3.12 x64. Python itself must be installed beforehand. macOS/Linux require their own dependency installation and validation; `start_basin.sh` is provided without a presentation-support claim.
 
+The optional analyst assistant needs three separate pieces: the pinned `ollama` Python package (installed above), the Ollama service (a separate native download), and a pulled model. BASIN runs without any of them. See [docs/ollama_setup.md](docs/ollama_setup.md) for how they differ, how to install each, and what the client boundary does and does not establish.
+
 ## Appearance and help
 
 Start with **Try an example** to open an unapproved rainfall scenario, or **Use my data** for CSV preview and comparison. Advanced scenario settings remain in the sidebar.

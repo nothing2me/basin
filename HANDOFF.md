@@ -1,5 +1,44 @@
 # BASIN current handoff
 
+## Optional assistant pin and dependency advisory checkpoint — SEC.6
+
+Branch `chore/ollama-pin-and-advisories`, from `origin/main` at `3dd1916`. Not merged, not pushed. No application source changed: the only non-test, non-doc edit is the pin in `requirements.txt`.
+
+What changed:
+
+- **Exact pin.** `ollama>=0.4.0` becomes `ollama==0.6.2`. `scripts/probe_ollama_client.py` (new) tested 0.4.0, 0.4.9, 0.5.4 and 0.6.2 in a throwaway venv. All four accept `host`/`trust_env=False`/`follow_redirects=False`/`timeout=30.0`, propagate them to `httpx`, refuse a 307, and return the `.models[].model` shape `check_ollama()` reads. 0.6.2 wins because 0.4.0 constrains `httpx>=0.27.0,<0.28.0` while 0.4.9+ relax it, so pinning the old floor would cap `httpx` for everyone installing the assistant.
+- **Transitive closure pinned.** `requirements-assistant.txt` (new) pins `httpx==0.28.1`, `httpcore==1.0.9`, `pydantic==2.13.5`, `pydantic-core==2.46.5`, `annotated-types==0.8.0`, `typing-inspection==0.4.4` — the packages that actually implement the proxy, redirect and timeout behaviour. Installing the pinned set into this repo's `.venv` **upgraded nothing already present**; it added exactly those six plus `ollama`.
+- **Real-client tests.** `tests/test_ollama_client.py` (10 tests) runs against the installed client, not a mock: options reach the transport; a hostile `OLLAMA_HOST` + `HTTP(S)_PROXY` + `ALL_PROXY` environment does not move the endpoint off loopback; a local fixture answering 307 to a second local port is never followed. Every request goes to a throwaway `127.0.0.1` listener. No external service was contacted, no daemon started, no model downloaded. The module skips cleanly when the package is absent, verified with an import blocker.
+- **Documentation.** `docs/ollama_setup.md` separates the three things people conflate — the Python package (pip, ~50 KB), the Ollama service (separate native download, hundreds of MB), and a pulled model (GBs, none bundled) — and maps each failure state to what `check_ollama()` reports. README links it.
+- **Advisory review.** `docs/dependency_advisories_2026-09-09.md` records the tool, both advisory sources, the date, per-scope package counts, the exact commands and the limitations.
+
+Advisory results, 2026-09-09, `pip-audit` 2.10.1 in its own venv, cross-checked against PyPI and OSV:
+
+| Scope | Packages | Result |
+|---|---|---|
+| Declared core `requirements.txt` | 50 | No known vulnerabilities (both sources) |
+| Declared build-only | 3 | No known vulnerabilities |
+| Declared assistant closure | 6 | No known vulnerabilities (both sources) |
+| Installed `.venv` | 55 resolved | No known vulnerabilities (both sources) |
+
+Declared and installed scopes are reported separately because they are not the same set.
+
+Findings carried forward:
+
+- **A-1 (medium, reported not fixed).** `check_ollama()` filters on `remote_host`/`remote_model`, but every tested client parses list responses into pydantic models that drop unknown fields, so both guards evaluate against `None` on real data and exclude nothing. `test_security.py::test_cloud_models_excluded_and_exact_tag_selected` passes only because it feeds `SimpleNamespace` objects where `getattr` works. The working control is the `"cloud"` substring check. Left unchanged to stay in scope and to preserve the existing security tests; pinned as observed behaviour by a new test and written up as A-1 with a recommended fix.
+- **A-4.** The September 8 review's clean `pip check` is not a vulnerability scan and must not be cited as one. This is BASIN's first advisory review.
+
+Evidence: full suite **278 passed** (268 pre-existing plus 10 new) with the client installed; `tests/test_security.py` unchanged and passing.
+
+Limitations:
+
+- Absence of advisories is not absence of vulnerabilities, and the result dates from the scan date.
+- No hash pinning, so the requirements files do not protect against a republished artifact.
+- The Ollama service, `BASIN.exe`, the rendering browser and the OS are outside any Python advisory database.
+- **Nothing here establishes what the Ollama daemon does with its own outbound connections.** The client boundary is verified; the daemon is a separate process under its own configuration. Real traffic observation on the presentation machine is the open part of SEC.4.
+- No model weights were downloaded and no model behaviour was assessed.
+
+
 ## September 9 task 3 independent integration review
 
 Reviewed `989dd7a` on `4d79822`. Original suite: **266 passed in 279.35 seconds**. Additional independent fixes cover a scenario note taller than one page (continue the row and repeat identifying cells), width measurement after symbol transliteration and conservative widths for non-ASCII WinAnsi glyphs, stable HTML scenario-table column widths, and wrapped vector spectrum labels. Numerical calculations are unchanged.
