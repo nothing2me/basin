@@ -1065,48 +1065,46 @@ def run_assistant(workspace, user_message: str,
     if not isinstance(user_message, str) or len(user_message) > 20000:
         raise ValueError("Question must contain at most 20,000 characters.")
 
-    status = check_ollama()
-    if status.get("available") and status.get("selected") and _OLLAMA_AVAILABLE:
+    model = get_model()
+    if model and _OLLAMA_AVAILABLE and local_model(model):
         try:
-            model = status["selected"]
-            if local_model(model):
-                messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-                messages.extend({"role": m["role"], "content": m["content"][:20000]}
-                                for m in history[-10:] if m.get("role") in {"user", "assistant"}
-                                and isinstance(m.get("content"), str))
-                messages.append({"role": "user", "content": user_message})
+            messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+            messages.extend({"role": m["role"], "content": m["content"][:20000]}
+                            for m in history[-10:] if m.get("role") in {"user", "assistant"}
+                            and isinstance(m.get("content"), str))
+            messages.append({"role": "user", "content": user_message})
 
-                response = local_client().chat(
-                    model=model,
-                    messages=messages,
-                    tools=TOOL_SCHEMAS,
-                )
+            response = local_client().chat(
+                model=model,
+                messages=messages,
+                tools=TOOL_SCHEMAS,
+            )
 
-                if response.message.tool_calls:
-                    rendered_parts = []
-                    for call in response.message.tool_calls[:4]:
-                        fn_name = call.function.name
-                        fn_args = call.function.arguments or {}
+            if response.message.tool_calls:
+                rendered_parts = []
+                for call in response.message.tool_calls[:4]:
+                    fn_name = call.function.name
+                    fn_args = call.function.arguments or {}
 
-                        if fn_name not in TOOL_REGISTRY:
-                            error_msg = f"Unknown tool: {fn_name}. {TOOL_LIST_HELP}"
-                            rendered_parts.append(error_msg)
-                            continue
+                    if fn_name not in TOOL_REGISTRY:
+                        error_msg = f"Unknown tool: {fn_name}. {TOOL_LIST_HELP}"
+                        rendered_parts.append(error_msg)
+                        continue
 
-                        try:
-                            fn_args = validate_tool_args(workspace, fn_name, fn_args)
-                            result = TOOL_REGISTRY[fn_name](workspace, **fn_args)
-                            rendered = render_tool_result(fn_name, result)
-                            rendered_parts.append(rendered)
-                        except (ValueError, KeyError, TypeError) as exc:
-                            rendered_parts.append(f"⚠️ Tool error ({fn_name}): {exc}")
+                    try:
+                        fn_args = validate_tool_args(workspace, fn_name, fn_args)
+                        result = TOOL_REGISTRY[fn_name](workspace, **fn_args)
+                        rendered = render_tool_result(fn_name, result)
+                        rendered_parts.append(rendered)
+                    except (ValueError, KeyError, TypeError) as exc:
+                        rendered_parts.append(f"⚠️ Tool error ({fn_name}): {exc}")
 
-                    full_response = "\n\n".join(rendered_parts)
-                    updated = history + [
-                        {"role": "user", "content": user_message},
-                        {"role": "assistant", "content": full_response},
-                    ]
-                    return full_response, updated
+                full_response = "\n\n".join(rendered_parts)
+                updated = history + [
+                    {"role": "user", "content": user_message},
+                    {"role": "assistant", "content": full_response},
+                ]
+                return full_response, updated
         except Exception as exc:
             logger.warning("Local Ollama tool routing failed (%s); routing through embedded engine.", exc)
 

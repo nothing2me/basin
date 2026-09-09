@@ -63,7 +63,7 @@ def copy_runtime():
     def ignore_patterns(path, names):
         ignored = set()
         for n in names:
-            if n in ("test", "tests", "idlelib", "turtledemo", "__pycache__"):
+            if n in ("test", "tests", "idlelib", "turtledemo", "__pycache__", "site-packages"):
                 ignored.add(n)
         return ignored
 
@@ -77,8 +77,9 @@ def copy_runtime():
     log(f"Copying site-packages from {venv_site}...")
     def ignore_site(path, names):
         ignored = set()
+        is_top_level = Path(path).resolve() == venv_site.resolve()
         for n in names:
-            if n.startswith(("pip", "setuptools", "wheel", "pyinstaller", "_pytest")):
+            if is_top_level and (n.startswith(("pip", "setuptools", "wheel", "pyinstaller", "_virtualenv")) or n in ("_pytest", "pytest")):
                 ignored.add(n)
             elif n == "__pycache__" or n.endswith((".pyc", ".pyo")):
                 ignored.add(n)

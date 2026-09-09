@@ -25,6 +25,7 @@ from basin_core.workspace import Workspace
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
 from basin_core.custom_data import active_ids, digest
+from basin_core.visualizers import pareto_frontier_figure, stage_trigger_milestone_figure, drought_anomaly_matrix_figure
 
 icon_file = ROOT / "assets/basin.ico"
 st.set_page_config(page_title="BASIN", page_icon=str(icon_file) if icon_file.exists() else "◉", layout="wide", initial_sidebar_state="collapsed")
@@ -834,26 +835,41 @@ if page == "Data":
         with st.expander("Station details and completeness"):
             st.dataframe(station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
                          hide_index=True, width="stretch", column_config={"completeness_pct": st.column_config.NumberColumn("Complete %", format="%.3f")})
-    left, right = st.columns([3, 1])
-    station_view = left.multiselect("Observed rainfall", list(names), default=list(names), format_func=names.get)
-    interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"])
-    if station_view:
-        observations = source.select(station_view)
-        if interval == "Annual":
-            groups = observations.groupby(observations.index.year)
-            observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
-        elif interval == "Monthly":
-            groups = observations.resample("MS")
-            observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
+    tab_ts, tab_heatmap = st.tabs(["📈 Observed Time Series", "🗓️ 35-Year Drought Anomaly Matrix"])
+    with tab_ts:
+        left, right = st.columns([3, 1])
+        station_view = left.multiselect("Observed rainfall", list(names), default=list(names), format_func=names.get)
+        interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"])
+        if station_view:
+            observations = source.select(station_view)
+            if interval == "Annual":
+                groups = observations.groupby(observations.index.year)
+                observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
+            elif interval == "Monthly":
+                groups = observations.resample("MS")
+                observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
+            else:
+                observed = observations
+            fig = go.Figure()
+            for station in observed:
+                fig.add_trace(go.Scatter(x=observed.index, y=observed[station], name=names[station], mode="lines", connectgaps=False))
+            fig.update_yaxes(title="Precipitation · mm")
+            st.plotly_chart(chart(fig, 350), width="stretch")
+            with st.expander("Observation table"):
+                st.dataframe(observations, width="stretch")
+    with tab_heatmap:
+        st.markdown("**35-Year Monthly Climatological Anomaly Matrix (1991–2025)**")
+        st.caption("Displays percentage departure from the 35-year monthly mean baseline for each month. Crimson cells indicate severe drought deficits; teal/emerald cells indicate rainfall surpluses. Exposes historical multi-month drought runs (such as 1996, 2011, and 2022) across the record.")
+        c_hm_st, _ = st.columns([2, 2])
+        hm_station_choice = c_hm_st.selectbox("Heatmap station perspective", ["Catchment composite (All stations average)", *[f"{names[s_id]} ({s_id})" for s_id in names]])
+        if hm_station_choice.startswith("Catchment"):
+            hm_obs = source.select(list(names))
+            hm_title = "Catchment composite"
         else:
-            observed = observations
-        fig = go.Figure()
-        for station in observed:
-            fig.add_trace(go.Scatter(x=observed.index, y=observed[station], name=names[station], mode="lines", connectgaps=False))
-        fig.update_yaxes(title="Precipitation · mm")
-        st.plotly_chart(chart(fig, 350), width="stretch")
-        with st.expander("Observation table"):
-            st.dataframe(observations, width="stretch")
+            selected_s_id = next(s_id for s_id in names if f"({s_id})" in hm_station_choice)
+            hm_obs = source.select([selected_s_id])
+            hm_title = names[selected_s_id]
+        st.plotly_chart(accessible_chart(drought_anomaly_matrix_figure(hm_obs, title_prefix=hm_title)), width="stretch")
     with st.expander("Snapshot metadata & quality policy"):
         st.json(source.manifest)
     a, b = st.columns(2)
@@ -980,15 +996,9 @@ elif page == "Workspace":
         left = st.container()
         right = st.expander("How ranking scores are calculated")
         with left:
-            fig = px.scatter(view, x="Days", y="Deficit mm", hover_name="ID",
-                             hover_data=["Group", "Score", "Onset", "Stations stressed together %"],
-                             labels={"Days": "Scenario duration · days", "Deficit mm": "Rainfall shortfall from reference · mm"})
-            shortlist_rows = view[view["Selected for review"]]
-            fig.add_trace(go.Scatter(x=shortlist_rows["Days"], y=shortlist_rows["Deficit mm"], mode="markers",
-                                    marker=dict(size=14, symbol="circle-open", line=dict(width=2), color="#37AFA6"),
-                                    text=shortlist_rows.ID, name="Selected for review",
-                                    hovertemplate="%{text}<extra>Selected for review</extra>"))
-            st.plotly_chart(chart(fig, 220), width="stretch")
+            st.markdown("**Pareto Frontier of Hydrologic Extremes**")
+            st.caption("Bubble size indicates multi-station concurrence %. The dashed amber curve connects the non-dominated Pareto frontier (worst-case historical rainfall shortfall envelope across duration tiers). Teal rings denote shortlisted candidates.")
+            st.plotly_chart(accessible_chart(pareto_frontier_figure(view, w.selected)), width="stretch")
         with right:
             fig = go.Figure()
             for key in w.weights:
@@ -1093,6 +1103,10 @@ elif page == "Review":
                 spec = simulate_stress_spectrum(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active)
                 st.plotly_chart(accessible_chart(stress_spectrum_figure(spec)), width="stretch")
 
+                st.markdown("**Restriction Milestone Timeline (Gantt Analysis)**")
+                st.caption("Horizontal timeline showing elapsed days until mandatory restriction triggers (Stage 1 @ 40%, Stage 2 @ 30%, Critical @ 20%, Emergency @ 15%) across each rainfall tier.")
+                st.plotly_chart(accessible_chart(stage_trigger_milestone_figure(spec)), width="stretch")
+
                 # Tipping point analysis
                 passed = [r for r in spec["summary_table"] if r["survived_critical_20pct"]]
                 failed = [r for r in spec["summary_table"] if not r["survived_critical_20pct"]]
@@ -1128,6 +1142,7 @@ elif page == "Review":
 
                 with tour_target("review_simulation"):
                     st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms)), width="stretch")
+                    st.plotly_chart(accessible_chart(stage_trigger_milestone_figure({"tier_results": {1.0: {"df": sim_df}}})), width="stretch")
 
                 s1 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 40), None)
                 s2 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 30), None)

@@ -10,3 +10,4 @@ wheelhouse/
 *.exe
 dist/
 build/
+*.spec

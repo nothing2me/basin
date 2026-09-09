@@ -15,6 +15,12 @@ import winreg
 import zipfile
 from pathlib import Path
 
+# In PyInstaller --noconsole mode on Windows, sys.stdout and sys.stderr can be None.
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w", encoding="utf-8")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
 DEFAULT_INSTALL_DIR = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))) / "Programs" / "BASIN"
 
 
@@ -265,15 +271,14 @@ def run_gui():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="BASIN Offline Setup Wizard")
-    parser.add_argument("--silent", "-s", "/S", action="store_true", help="Perform silent installation without GUI")
-    parser.add_argument("--dir", type=str, default=str(DEFAULT_INSTALL_DIR), help="Target installation directory")
-    args, _ = parser.parse_known_args()
+    is_silent = any(arg.lower() in ("--silent", "-s", "/s") for arg in sys.argv[1:])
+    target_dir = DEFAULT_INSTALL_DIR
+    for idx, arg in enumerate(sys.argv):
+        if arg in ("--dir", "-d") and idx + 1 < len(sys.argv):
+            target_dir = Path(sys.argv[idx + 1])
 
-    if args.silent or "/S" in sys.argv or "-s" in sys.argv:
-        print(f"[SILENT INSTALL] Installing BASIN to {args.dir}...")
-        perform_install(Path(args.dir))
-        print("[SILENT INSTALL] Completed successfully.")
+    if is_silent:
+        perform_install(target_dir)
         sys.exit(0)
 
     run_gui()
