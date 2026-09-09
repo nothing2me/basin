@@ -750,6 +750,11 @@ except (OSError, ValueError, KeyError) as error:
     st.stop()
 names = {s["id"]: s["name"].title().replace(" Intl Ap", "").replace(" Rgnl Ap", "") for s in source.manifest["stations"]}
 w = st.session_state.get("workspace")
+if w is not None and st.session_state.get("report_workspace_id") != w.id:
+    for report_key in ("experiment_config", "preview_pdf", "packet",
+                       "review_initial_storage", "review_conservation", "review_pipeline_active"):
+        st.session_state.pop(report_key, None)
+    st.session_state["report_workspace_id"] = w.id
 curr_target = TUTORIAL_STEPS[st.session_state.get("tutorial_step", 0)]["target"] if st.session_state.get("tutorial_active") else ""
 
 with st.sidebar:
@@ -1087,6 +1092,16 @@ elif page == "Review":
                 horizontal=True,
                 key="reservoir_sim_subview"
             )
+            previous_config = st.session_state.get("experiment_config")
+            if isinstance(previous_config, ExperimentConfig) and previous_config.selected:
+                restored_settings = {
+                    "review_initial_storage": f"{previous_config.initial_pct * 100:.0f}% (illustrative)",
+                    "review_conservation": int(round(previous_config.conservation_pct * 100)),
+                    "review_pipeline_active": previous_config.pipeline_active,
+                }
+                for setting_key, setting_value in restored_settings.items():
+                    if setting_key not in st.session_state:
+                        st.session_state[setting_key] = setting_value
             c_pace, c_init, c_conserve = st.columns([1, 1, 1])
             pace_choice = c_pace.selectbox("Playback pace", ["Presentation mode (2.5 min)", "Deliberate (45 sec)", "Rapid preview (10 sec)"], label_visibility="collapsed")
             pace_ms = 2500 if "2.5 min" in pace_choice else (800 if "45 sec" in pace_choice else 150)
@@ -1312,7 +1327,7 @@ elif page == "Exports":
         experiment_config = ExperimentConfig()
 
     def report_token(accepted_scenarios):
-        return report_state_token(w.id, accepted_scenarios, share, share_custom, experiment_config)
+        return report_state_token({"id": w.id, "content": digest(w.record(share, include_custom=True))}, accepted_scenarios, share, share_custom, experiment_config)
 
     with st.expander("Experiment configuration used for reports", expanded=False):
         if not experiment_config.selected:
@@ -1384,7 +1399,7 @@ elif page == "Exports":
                     "token": report_token(w.exportable()),
                     "report": report
                 }
-                st.success(f"✅ Verified deliverables generated and saved to disk: `output/{pdf_path.name}` and `output/{zip_path.name}`")
+                st.success(f"✅ Verified ZIP and separate, unverified PDF generated and saved to disk: `output/{pdf_path.name}` and `output/{zip_path.name}`")
             except (ValueError, AssertionError, OSError) as error:
                 st.error(f"Verification failed: {error}")
 
@@ -1458,6 +1473,8 @@ elif page == "Exports":
 
     # 3. TECHNICAL VERIFICATION ACCORDIONS (AUDIT TRAIL & METHODOLOGY)
     accepted_preview = [s for s in chosen if s.status == "accepted" and s.approved_revision == s.revision]
+    if not accepted_preview:
+        st.session_state.pop("preview_pdf", None)
     with st.expander("Read the report preview", expanded=False):
         if accepted_preview:
             st.caption("Draft preview of currently accepted revisions. Building the packet still requires every shortlisted revision to be reviewed.")

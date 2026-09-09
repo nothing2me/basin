@@ -239,7 +239,7 @@ def simulate_stress_spectrum(series: pd.DataFrame,
         day_b4 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= 15.0), None)
         survived = bool(min_pct > 20.0)
 
-        label = tier_labels.get(round(m, 2), f"{int(round(m * 100))}% ({(100 - int(round(m * 100))):+d}% Rain)")
+        label = tier_labels.get(round(m, 2), f"{int(round(m * 100))}% ({(int(round(m * 100)) - 100):+d}% Rain)")
 
         row = {
             "tier_multiplier": m,

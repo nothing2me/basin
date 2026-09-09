@@ -143,6 +143,8 @@ def test_rainfall_tiers_reach_the_spectrum_table(approved):
     assert "100%, 50%" in html
     assert html.count("<td>50.0%</td>") == 1
     assert "<td>80.0%</td>" not in html
+    assert "50% (-50% Rain)" in html
+    assert "50% (+50% Rain)" not in html
 
     text = vector_text(build_fallback_pdf(approved, accepted, config=config))
     assert "100%, 50%" in text
@@ -183,7 +185,7 @@ def test_unavailable_configured_scenario_is_stated_not_swapped(approved):
     config = ExperimentConfig(scenario_id="B-DOES-NOT-EXIST", selected=True)
 
     scenario, note = select_primary_scenario(accepted, config)
-    assert scenario is accepted[0]
+    assert scenario is None
     assert "is not among this report's accepted scenarios" in note
 
     assert "is not among this report" in render_html_report(approved, accepted, config=config)
@@ -196,9 +198,10 @@ def test_configured_revision_mismatch_is_stated(approved):
     config = ExperimentConfig(scenario_id=target.id, scenario_revision=target.revision + 5, selected=True)
 
     scenario, note = select_primary_scenario(accepted, config)
-    assert scenario is target
+    assert scenario is None
     assert f"revision {target.revision + 5}" in note
-    assert "uses the accepted revision" in note
+    assert "no replacement was simulated" in note
+    assert "Simulation unavailable" in render_html_report(approved, accepted, config=config)
 
 
 # --------------------------------------------------------------------------------------

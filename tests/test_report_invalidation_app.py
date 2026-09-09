@@ -148,3 +148,63 @@ def test_exported_pdf_uses_the_selected_settings(app):
     assert b"30% demand reduction" in pdf_bytes
     assert b"Selected in Review" in pdf_bytes
     assert b"48% of combined capacity" not in pdf_bytes
+
+
+def test_same_revision_note_change_invalidates_preview(app):
+    w = app.session_state.workspace
+    app.checkbox(key=f"share_notes_{w.id}").set_value(True).run()
+    prep_preview(app)
+    scenario = w.get(w.selected[0])
+    revision = scenario.revision
+    scenario.review(True, "Updated consented note without numerical edits")
+    assert scenario.revision == revision
+    app.run()
+    assert not app.exception
+    assert "preview_pdf" not in app.session_state
+
+
+def test_weight_change_invalidates_preview(app):
+    prep_preview(app)
+    app.session_state.workspace.rerank({"severity": 100, "duration": 0, "concurrence": 0, "season": 0})
+    app.run()
+    assert not app.exception
+    assert "preview_pdf" not in app.session_state
+
+
+def test_new_workspace_discards_previous_experiment(app):
+    from basin_core.workspace import Workspace
+    old = app.session_state.workspace
+    app.session_state["experiment_config"] = ExperimentConfig(initial_pct=0.35, selected=True)
+    prep_preview(app)
+    replacement = Workspace(old.source, old.params, 3)
+    app.session_state.workspace = replacement
+    app.run()
+    assert not app.exception
+    assert "experiment_config" not in app.session_state
+    assert "preview_pdf" not in app.session_state
+
+
+def test_no_accepted_scenarios_discards_prepared_preview(app):
+    prep_preview(app)
+    w = app.session_state.workspace
+    for sid in w.selected:
+        w.get(sid).review(False, "Remove from report")
+    app.run()
+    assert not app.exception
+    assert "preview_pdf" not in app.session_state
+
+
+def test_review_settings_survive_navigation(app):
+    app.sidebar.radio[0].set_value("Review").run()
+    next(r for r in app.radio if "Cumulative rainfall" in r.options).set_value("Reservoir simulation").run()
+    app.selectbox(key="review_initial_storage").set_value("35% (illustrative)").run()
+    app.select_slider(key="review_conservation").set_value(30).run()
+    app.checkbox(key="review_pipeline_active").set_value(False).run()
+    app.sidebar.radio[0].set_value("Exports").run()
+    app.sidebar.radio[0].set_value("Review").run()
+    next(r for r in app.radio if "Cumulative rainfall" in r.options).set_value("Reservoir simulation").run()
+    assert not app.exception
+    config = app.session_state["experiment_config"]
+    assert config.initial_pct == pytest.approx(0.35)
+    assert config.conservation_pct == pytest.approx(0.30)
+    assert config.pipeline_active is False

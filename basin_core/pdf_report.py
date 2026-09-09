@@ -178,16 +178,16 @@ def select_primary_scenario(accepted: Sequence, config: ExperimentConfig):
         if getattr(scenario, "id", None) == config.scenario_id:
             revision = getattr(scenario, "revision", None)
             if config.scenario_revision is not None and revision != config.scenario_revision:
-                return scenario, (
+                return None, (
                     f"The experiment was configured on {config.scenario_id} revision "
-                    f"{config.scenario_revision}; this report uses the accepted revision {revision}."
+                    f"{config.scenario_revision}; the accepted revision is {revision}. "
+                    "Reconfigure the experiment in Review; no replacement was simulated."
                 )
             return scenario, None
 
-    fallback = accepted[0]
-    return fallback, (
+    return None, (
         f"The experiment was configured on {config.scenario_id}, which is not among this "
-        f"report's accepted scenarios. Results below are for {getattr(fallback, 'id', 'the first accepted scenario')}."
+        "report's accepted scenarios. Reconfigure in Review; no replacement was simulated."
     )
 
 

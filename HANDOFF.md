@@ -1,5 +1,15 @@
 # BASIN current handoff
 
+## September 9 task 2 independent review - accepted for integration
+
+Reviewed Claude's `224a8aa` on `eeac2ae`. B17.1/B17.2 are complete for current-session report configuration and preview/export wiring. The earlier checkpoint below records the original implementation; its unmerged status and tier-label limitation are superseded by this review.
+
+Review fixes: preview identity now includes workspace contents, including changed consented notes and ranking weights; empty accepted sets clear previews; workspace changes clear prior experiment/report state; Review controls retain settings across navigation. A missing configured scenario or mismatched revision makes the experiment unavailable until reconfigured, with no substituted simulation. Corrected non-default rainfall-tier label signs without changing calculations. Export success wording distinguishes the verified ZIP from its separate PDF.
+
+Verification: **241 passed in 271.04 seconds** (`python -m pytest -q --tb=short`), including five additional real-Streamlit regressions in `tests/test_report_invalidation_app.py`. Snapshot checkout verified; offline Python smoke verified (run `3e9386e21eb0`, five scenarios, 500 audit records); explicit replay verified with `implementation_matches_current: true`. Source packaging and `git diff --check` passed. Inspected the supplied selected-settings vector report on both pages and HTML page 1; the supplied HTML report remains two pages. Behavioral fixes are covered by the final tests; this is not a comprehensive layout or practitioner review.
+
+Next: task 3 long-text wrapping, pagination and readable tables in both report paths; isolated PDF fixtures are already complete. Review-settings discoverability, saved/versioned simulations (B16), live assistant/network/dependency checks, native installer/device/download acceptance and practitioner/event-format decisions remain open. Default reports now correctly label simulator defaults, including 0% conservation; selected settings remain session-only. No scientific validation or external reviewer approval is claimed.
+
 ## Report experiment-configuration checkpoint — B17.1/B17.2
 
 Branch `feat/b17-report-experiment-config`, from `origin/main` at `eeac2ae` (Noah's visualizer commit, which landed after B17.6 was merged; branching from the named `1762b76` would have conflicted in the `app.py` Review section). Not merged, not pushed.
