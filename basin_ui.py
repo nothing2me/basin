@@ -247,7 +247,7 @@ def assistant_panel(w, source=None, names=None):
     from basin_core.assistant import check_ollama, run_assistant, run_tool_directly
     from basin_core.tools import TOOL_REGISTRY
 
-    st.session_state.setdefault("assistant_open", True)
+    st.session_state.setdefault("assistant_open", False)
     st.session_state.setdefault("assistant_messages", [])
     st.session_state.setdefault("assistant_history", [])
 
@@ -276,7 +276,7 @@ def assistant_panel(w, source=None, names=None):
     with st.container(key="assistant_drawer"):
         h_col, c_col = st.columns([5, 1])
         h_col.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
-        h_col.markdown('<div class="basin-assistant-sub">Grounded verification queries · Strict templates · Zero hallucinations</div>', unsafe_allow_html=True)
+        h_col.markdown('<div class="basin-assistant-sub">Deterministic calculation engine · Strict templates · Read-only queries</div>', unsafe_allow_html=True)
         if c_col.button("✕", key="assistant_close_x", help="Close Assistant"):
             st.session_state.assistant_open = False
             st.rerun()

@@ -800,7 +800,16 @@ def run_assistant(workspace, user_message: str,
 
     # Step 2: No tool calls — direct response (abstention or clarification)
     if not response.message.tool_calls:
-        reply = response.message.content or "I'm not sure how to help with that."
+        from basin_ui import fallback_query_route
+        fallback_reply = fallback_query_route(workspace, user_message)
+        if "No exact tool matched your query" not in fallback_reply:
+            reply = fallback_reply
+        else:
+            reply = (
+                "**BASIN Analyst Assistant**\n\n"
+                "I am a read-only decision-support tool. I only answer questions using verified, deterministic workspace calculations, and cannot provide speculative commentary or forecasts.\n\n"
+                f"{TOOL_LIST_HELP}"
+            )
         updated = history + [
             {"role": "user", "content": user_message},
             {"role": "assistant", "content": reply},
@@ -885,28 +894,8 @@ def run_assistant(workspace, user_message: str,
             rendered_parts.append(f"⚠️ {error_msg}")
             tool_messages.append({"role": "tool", "content": error_msg})
 
-    # Step 4: Send tool results back for connective prose
-    followup_messages = messages + [response.message] + tool_messages
-    followup_messages.append({
-        "role": "system",
-        "content": ("The tool results above contain verified computed data. "
-                    "Present them to the user. You may add 1-2 sentences of "
-                    "context or suggest a next step, but do NOT modify, "
-                    "re-round, or reinterpret any numbers from the tool output. "
-                    "Do NOT repeat the tables — reference them briefly."),
-    })
-
-    try:
-        final = _ollama.chat(model=model, messages=followup_messages)
-        commentary = final.message.content or ""
-    except Exception:
-        commentary = ""
-
-    # Combine: tool output first (ground truth), then brief LLM commentary
+    # Step 4: Ground truth tool output only (no unconstrained LLM hallucination)
     full_response = "\n\n".join(rendered_parts)
-    if commentary.strip():
-        full_response += "\n\n---\n" + commentary.strip()
-
     updated = history + [
         {"role": "user", "content": user_message},
         {"role": "assistant", "content": full_response},
