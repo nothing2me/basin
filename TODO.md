@@ -6,6 +6,8 @@ Updated: 2026-09-08 | Current review baseline: `f96c28a` (local HEAD matches rem
 
 ## September 8 team-context reconciliation
 
+September 9 follow-up: B17.6 independently reviewed and accepted for integration with upstream `21f98db`. Original Claude branch: 191 passing tests; combined build plus short-window report regression: **192 passed**. Snapshot, Python offline smoke, explicit replay and source packaging passed. Fixed leftover six-month no-breach wording; adapted the security mock to exercise the optional Ollama route. PDF fixture isolation is already done, so task 3 should not redo it. **Next: B17.1/B17.2 settings propagation and report cache invalidation.** Long-text/pagination, domain review, live model/network and native installer/device acceptance remain open. New upstream installer functionality is not certified by this report review.
+
 ### Combined-build verification after Noah's update
 
 Merged Noah's `40a7023` into the security branch (merge `502824a`). **172 tests passed in 122.44 s**, including the 13 security tests and the previously failing PDF/UI export workflows. Fresh-checkout snapshot, Python offline smoke and independent replay passed; run `0d51fc36a996`, five scenarios, 500 audit records, implementation matches. No custom comparisons in that smoke packet. A generated two-page Windows PDF was rendered and visually inspected. Security client restrictions, HTML escaping, CLI consent and tracked-only packaging survived the merge.

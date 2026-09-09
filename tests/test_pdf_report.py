@@ -278,3 +278,18 @@ def test_private_notes_stay_opt_in_in_the_vector_path(approved):
 def test_find_browser_executable_returns_path_or_none():
     found = find_browser_executable()
     assert found is None or isinstance(found, str)
+
+
+def test_short_unbreached_window_does_not_claim_six_months(approved):
+    accepted = approved.exportable()
+    primary = accepted[0]
+    original = primary.series
+    try:
+        primary.series = original.iloc[:30].copy()
+        html = render_html_report(approved, accepted, initial_pct=1.0)
+        pdf = build_fallback_pdf(approved, accepted, initial_pct=1.0)
+        assert 'No breach in modeled window' in html
+        assert b'No breach in window' in pdf
+        assert '>6 Mo' not in html and b'>6 Mo' not in pdf
+    finally:
+        primary.series = original

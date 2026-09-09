@@ -1,5 +1,13 @@
 # BASIN current handoff
 
+## September 9 independent integration review
+
+Reviewed Claude's `86ff09d` against `a276478`: five changed files, with app/UI/theme/config and numerical analysis unchanged. Re-ran the original branch: **191 passed**. Merged newer upstream `21f98db` (embedded assistant/installer work) without conflicts. Corrected a remaining report claim that every unbreached window exceeds six months; added a short-window regression. Updated the security test's mock availability so it still exercises the optional Ollama path after upstream's fallback routing change.
+
+Combined result: **192 passed in 117.44 s**. Snapshot checkout, offline Python smoke and independent replay passed; run `e8d73d73397f`, five scenarios, 500 audit records, implementation matches (zero custom comparisons in this smoke packet). Source packaging passed. Rendered and inspected both pages of Claude's vector report; the follow-up duration wording has a focused HTML/vector regression. This is a code/automated/visual review, not practitioner validation. The newer installer was integrated but not built or security-certified by this PDF review.
+
+B17.6 is accepted for integration. Next Claude task: B17.1/B17.2 selected scenario/settings propagation and cache invalidation, preserving private-note/custom-data consent and the separate PDF verification scope. Report pagination/long-text work remains for task 3, although its isolated-fixture prerequisite was already completed by task 1. Live assistant/installer/device checks remain separate open gates. Earlier branch-unmerged statements below are historical, superseded by this integration checkpoint.
+
 ## Report-content accuracy checkpoint — B17.6
 
 Branch `fix/b17-report-content-accuracy` (from `a276478`), not merged and not pushed. Fixes report-content accuracy in `basin_core/pdf_report.py` across both the HTML and Windows vector paths. The numerical model in `basin_core/analysis.py` is unchanged; the report now reads the model instead of restating it.

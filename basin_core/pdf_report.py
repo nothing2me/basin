@@ -227,7 +227,7 @@ def render_html_report(
         depletion_range_sub = f"*Day {metrics.earliest_breach_day} in uncalibrated sim; NOT a forecast"
         tipping_point_tier = metrics.tipping_point_tier or UNAVAILABLE
     else:
-        depletion_range_val = "Buffer Maintained (>6 Months)*"
+        depletion_range_val = "No breach in modeled window*"
         depletion_range_sub = "*Storage >20% across modeled window (toy model)"
         tipping_point_tier = "No tier reached Stage 3 in sim"
 
@@ -930,7 +930,7 @@ def build_fallback_pdf(
         depletion_range_val = f"~{m_low}-{m_low + 1} Months (Toy Model)*"
         depletion_range_sub = f"*Day {metrics.earliest_breach_day} in uncalibrated sim"
     else:
-        depletion_range_val = "Buffer Maintained (>6 Mo)*"
+        depletion_range_val = "No breach in window*"
         depletion_range_sub = "*Storage >20% across modeled window"
 
     # Conservation benefit
