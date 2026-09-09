@@ -43,10 +43,21 @@ def ensure_credentials(root: Path):
 
 
 def find_python(root: Path) -> str:
+    # 1. Bundled standalone portable runtime (for offline setup installations)
+    bundled_py = root / "runtime" / "python.exe"
+    if bundled_py.exists():
+        return str(bundled_py)
+
+    bundled_venv = root / "runtime" / "Scripts" / "python.exe"
+    if bundled_venv.exists():
+        return str(bundled_venv)
+
+    # 2. Local developer virtual environment
     venv_py = root / ".venv" / "Scripts" / "python.exe"
     if venv_py.exists():
         return str(venv_py)
 
+    # 3. System Python launcher (py -3.12)
     try:
         res = subprocess.run(["py", "-3.12", "-c", "import sys; print(sys.executable)"],
                              capture_output=True, text=True, check=True,
@@ -57,6 +68,7 @@ def find_python(root: Path) -> str:
     except Exception:
         pass
 
+    # 4. Standard PATH python
     try:
         res = subprocess.run(["python", "-c", "import sys; print(sys.executable)"],
                              capture_output=True, text=True, check=True,
@@ -104,7 +116,7 @@ def main():
     if not python_exe:
         show_error(
             "Python 3.12 environment not found.\n\n"
-            "Please run 'Setup BASIN.cmd' once to initialize the local environment.",
+            "Please run 'Setup BASIN.cmd' or install via 'Setup-BASIN.exe' to initialize.",
             "BASIN — Setup Required"
         )
         sys.exit(1)
@@ -124,6 +136,7 @@ def main():
         "--server.address=127.0.0.1",
         f"--server.port={port}",
         "--server.headless=true",
+        "--server.fileWatcherType=none",
         "--browser.gatherUsageStats=false"
     ]
 
@@ -135,8 +148,18 @@ def main():
 
     def terminate_server():
         try:
+            if sys.platform == "win32" and server_proc.poll() is None:
+                # Force kill the entire process tree (/T) to prevent zombie workers
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(server_proc.pid)],
+                    capture_output=True,
+                    creationflags=CREATE_NO_WINDOW
+                )
+        except Exception:
+            pass
+        try:
             server_proc.terminate()
-            server_proc.wait(timeout=3.0)
+            server_proc.wait(timeout=2.0)
         except Exception:
             server_proc.kill()
 
@@ -147,6 +170,7 @@ def main():
         sys.exit(1)
 
     # Launch native desktop window using pywebview (WebView2 embedded in native Win32 window)
+    window_opened = False
     try:
         import webview
         webview.settings["ALLOW_DOWNLOADS"] = True
@@ -163,14 +187,26 @@ def main():
         )
         window.events.closed += terminate_server
         webview.start(gui="edgechromium")
-    except Exception as e:
-        # Fallback if WebView2 is missing: try standalone app mode
-        terminate_server()
-        show_error(f"Could not initialize desktop application window:\n{e}", "BASIN — Desktop Error")
-        sys.exit(1)
+        window_opened = True
+    except Exception:
+        # Fallback if WebView2 is missing on older/offline Windows: open in default browser
+        pass
+
+    if not window_opened:
+        try:
+            import webbrowser
+            webbrowser.open(target_url)
+            # Keep process alive while user is browsing
+            while server_proc.poll() is None:
+                time.sleep(1.0)
+        except Exception as e:
+            terminate_server()
+            show_error(f"Could not open application interface:\n{e}", "BASIN — Interface Error")
+            sys.exit(1)
 
     terminate_server()
 
 
 if __name__ == "__main__":
     main()
+

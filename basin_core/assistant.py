@@ -10,8 +10,9 @@ from __future__ import annotations
 import json
 import logging
 import math
-from jsonschema import Draft202012Validator
+import re
 from typing import Any
+from jsonschema import Draft202012Validator
 
 from basin_core.tools import TOOL_FUNCTIONS, TOOL_REGISTRY
 
@@ -825,79 +826,297 @@ def validate_tool_args(workspace, name, args):
     return dict(args)
 
 
+def semantic_query_route(workspace, prompt: str) -> str:
+    """Deterministic Semantic Entity & Synonym Graph intent router.
+
+    Parses natural language queries, extracts scenario IDs, station codes,
+    years, and parameter thresholds, executes verified local tools, and renders
+    standard templates completely offline with zero LLM dependency.
+    """
+    from basin_core.tools import (
+        check_concurrence,
+        check_export_readiness,
+        compare_scenarios,
+        describe_cluster,
+        describe_scenario,
+        explain_ranking,
+        find_scenarios_by_year,
+        get_data_provenance,
+        query_rainfall,
+        run_sensitivity,
+        run_stress_spectrum,
+        summarize_evidence,
+        test_reservoir_infrastructure,
+    )
+
+    p = prompt.lower().strip()
+
+    # Adversarial & Non-Predictive Advisory Guardrails
+    if any(q in p for q in [
+        "when will water run out", "when will the reservoir run out",
+        "will water run out", "exact date of breach", "forecast reservoir levels",
+        "what date will", "what date will choke canyon", "when do we run out"
+    ]):
+        return (
+            "⚠️ **Analysis Boundary (Non-Predictive Advisory)**: BASIN does not generate calendar-date forecasts "
+            "or operational water-supply predictions. The bundled reservoir experiment is an illustrative, "
+            "uncalibrated mass-balance sensitivity model using historical rainfall proxies, not a delivery forecast."
+        )
+
+    if any(q in p for q in [
+        "should council", "should the city", "declare stage", "mandate stage",
+        "should we declare", "declare an emergency", "mandate cuts"
+    ]):
+        return (
+            "⚠️ **Analysis Boundary (Policy Governance)**: BASIN is an analytical rainfall scenario workbench, "
+            "not a regulatory decision authority. Official drought stages are declared exclusively by municipal and regional "
+            "authorities pursuant to the City of Corpus Christi Drought Contingency Plan."
+        )
+
+    # 1. Extract Scenario IDs
+    id_matches = re.findall(r"\b[bB]-\d+\b", prompt)
+    for s in getattr(workspace, "scenarios", []):
+        if s.id.lower() in p and s.id not in id_matches:
+            id_matches.append(s.id)
+
+    default_id = id_matches[0] if id_matches else (
+        workspace.selected[0] if getattr(workspace, "selected", None) else (
+            workspace.scenarios[0].id if getattr(workspace, "scenarios", None) else "B-001"
+        )
+    )
+
+    # 2. Extract Year
+    year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
+    year = int(year_match.group(1)) if year_match else None
+
+    # 3. Extract Percentages
+    conservation_pct = 0.0
+    cons_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:conservation|mandate|cut|demand)", p)
+    if cons_match:
+        conservation_pct = float(cons_match.group(1))
+    elif any(k in p for k in ["conservation", "mandate", "cut"]):
+        gen_pct = re.search(r"(\d+(?:\.\d+)?)\s*%", p)
+        if gen_pct:
+            conservation_pct = float(gen_pct.group(1))
+
+    rainfall_reduction_pct = 0.0
+    red_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:lower|less|reduction|drier|dry|deficit)", p)
+    if red_match:
+        rainfall_reduction_pct = float(red_match.group(1))
+
+    initial_storage_pct = 0.48
+    store_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:initial|starting|storage|capacity|pool)", p)
+    if store_match:
+        val = float(store_match.group(1))
+        initial_storage_pct = val / 100.0 if val > 1.0 else val
+
+    # 4. Extract Station
+    station_id = None
+    if any(k in p for k in ["corpus", "crp", "12924"]):
+        station_id = "USW00012924"
+    elif any(k in p for k in ["victoria", "vct", "12912"]):
+        station_id = "USW00012912"
+    elif any(k in p for k in ["san antonio", "sat", "12921"]):
+        station_id = "USW00012921"
+    else:
+        stations = getattr(workspace, "source", None)
+        manifest_stations = workspace.source.manifest.get("stations", []) if (stations and hasattr(workspace.source, "manifest")) else []
+        for stn in manifest_stations:
+            if stn.get("id", "").lower() in p or stn.get("name", "").lower() in p:
+                station_id = stn["id"]
+                break
+        if not station_id and manifest_stations:
+            station_id = manifest_stations[0]["id"]
+        elif not station_id:
+            station_id = "USW00012924"
+
+    # 5. Extract Dates for rainfall queries
+    date_matches = re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", p)
+    if len(date_matches) >= 2:
+        start_date, end_date = date_matches[0], date_matches[1]
+    elif len(date_matches) == 1:
+        start_date = date_matches[0]
+        end_date = f"{int(start_date[:4])}-12-31"
+    elif year is not None:
+        start_date = f"{year}-01-01"
+        end_date = f"{year}-12-31"
+    else:
+        start_date = "2011-01-01"
+        end_date = "2011-12-31"
+
+    try:
+        # Route 1: Multi-tier stress spectrum sweep
+        if any(k in p for k in ["spectrum", "stress spectrum", "multi-tier", "tiers", "tipping point", "sweep", "countdown", "days to breach", "days-to-breach"]):
+            res = run_stress_spectrum(
+                workspace,
+                scenario_id=default_id if id_matches else "",
+                year=year if year is not None else 2011,
+                initial_storage_pct=initial_storage_pct,
+                conservation_pct=conservation_pct,
+            )
+            return render_tool_result("run_stress_spectrum", res)
+
+        # Route 2: Reservoir infrastructure survival check
+        if any(k in p for k in ["survive", "survival", "infrastructure", "reservoir", "drawdown", "capacity", "storage", "restriction", "lake corpus christi", "choke canyon"]):
+            res = test_reservoir_infrastructure(
+                workspace,
+                scenario_id=default_id if id_matches else "",
+                year=year if year is not None else 2011,
+                rainfall_reduction_pct=rainfall_reduction_pct,
+                initial_storage_pct=initial_storage_pct,
+                conservation_pct=conservation_pct,
+            )
+            return render_tool_result("test_reservoir_infrastructure", res)
+
+        # Route 3: Query station point rainfall
+        if any(k in p for k in ["rainfall at", "rain at", "daily rainfall", "observations for", "observed rain", "precipitation at", "station record", "station query", "weather observations"]) or ("station" in p and any(k in p for k in ["rain", "precipitation", "observations", "records", "daily"])):
+            res = query_rainfall(workspace, station_id=station_id, start_date=start_date, end_date=end_date)
+            return render_tool_result("query_rainfall", res)
+
+        # Route 4: Find scenarios by year
+        if (year is not None and (not id_matches or any(k in p for k in ["scenarios", "find", "list", "show", "search", "events", "years"]))) or any(k in p for k in ["recent", "modern", "years", "from 20", "from 19"]):
+            res = find_scenarios_by_year(workspace, year=year if year is not None else 2011)
+            return render_tool_result("find_scenarios_by_year", res)
+
+        # Route 5: Export readiness check
+        if any(k in p for k in ["readiness", "export ready", "can i export", "blocker", "export check", "ready to export", "ready for export"]):
+            res = check_export_readiness(workspace)
+            return render_tool_result("check_export_readiness", res)
+
+        # Route 6: Compare scenarios
+        if any(k in p for k in ["compare", "vs", "versus", "difference"]):
+            if len(id_matches) >= 2:
+                id1, id2 = id_matches[0], id_matches[1]
+            elif len(workspace.selected) >= 2:
+                id1, id2 = workspace.selected[0], workspace.selected[1]
+            else:
+                id1 = workspace.scenarios[0].id if workspace.scenarios else "B-001"
+                id2 = workspace.scenarios[1].id if len(workspace.scenarios) > 1 else id1
+            id3 = id_matches[2] if len(id_matches) >= 3 else ""
+            res = compare_scenarios(workspace, id1, id2, id3)
+            return render_tool_result("compare_scenarios", res)
+
+        # Route 7: Station stress concurrence
+        if any(k in p for k in ["stress", "concurrence", "simultaneous", "station stress", "concurrence in", "concurrent"]):
+            res = check_concurrence(workspace, default_id)
+            return render_tool_result("check_concurrence", res)
+
+        # Route 8: Explain ranking / score
+        if any(k in p for k in ["rank", "score", "why did", "position", "scoring"]):
+            res = explain_ranking(workspace, default_id)
+            return render_tool_result("explain_ranking", res)
+
+        # Route 9: Run sensitivity test
+        if any(k in p for k in ["sensitivity", "weight", "what if", "priority"]):
+            dur_val = 25
+            if "double" in p and "duration" in p:
+                dur_val = 50
+            elif "half" in p and "duration" in p:
+                dur_val = 12
+            res = run_sensitivity(workspace, duration=dur_val)
+            return render_tool_result("run_sensitivity", res)
+
+        # Route 10: Summarize evidence / citations / conflicts
+        if any(k in p for k in ["evidence", "conflict", "source", "disagreement", "citation", "citations", "notes on", "note", "justification"]):
+            res = summarize_evidence(workspace, default_id)
+            return render_tool_result("summarize_evidence", res)
+
+        # Route 11: Describe drought cluster / profile
+        if any(k in p for k in ["cluster", "profile", "group", "kmeans", "centroid"]):
+            cid = 0
+            digit_match = re.search(r"group\s*(\d+)|cluster\s*(\d+)", p)
+            if digit_match:
+                cid = int(digit_match.group(1) or digit_match.group(2))
+            res = describe_cluster(workspace, cid)
+            return render_tool_result("describe_cluster", res)
+
+        # Route 12: Data provenance & NOAA metadata
+        if any(k in p for k in ["provenance", "noaa", "data source", "station", "manifest", "data come from", "where does this data", "snapshot sha", "ghcn"]):
+            res = get_data_provenance(workspace)
+            return render_tool_result("get_data_provenance", res)
+
+        # Route 13: Describe scenario (default if scenario ID mentioned or general request)
+        if any(k in p for k in ["scenario", "tell me about", "deficit", "describe"]) or id_matches:
+            res = describe_scenario(workspace, default_id)
+            return render_tool_result("describe_scenario", res)
+
+        return (
+            "**BASIN Analyst Assistant**\n\n"
+            "I am a read-only decision-support tool. I only answer questions using verified, "
+            "deterministic workspace calculations, and cannot provide speculative commentary or forecasts.\n\n"
+            f"{TOOL_LIST_HELP}"
+        )
+    except ValueError as err:
+        return f"⚠️ **Analysis Boundary**: {err}"
+    except Exception as ex:
+        return f"⚠️ **Query Processing Error**: {ex}"
+
+
 def run_assistant(workspace, user_message: str,
                   history: list[dict]) -> tuple[str, list[dict]]:
-    """Execute the LLM → tool → template → response loop.
+    """Execute the assistant query loop.
+
+    If a local Ollama daemon is running, routes via local LLM tool calling.
+    Otherwise, seamlessly executes the deterministic Embedded Semantic Entity
+    & Synonym Graph Engine (100% offline, zero external dependencies).
 
     Returns (response_text, updated_history).
     """
     if not isinstance(user_message, str) or len(user_message) > 20000:
         raise ValueError("Question must contain at most 20,000 characters.")
-    model = get_model()
-    if not local_model(model):
-        raise ValueError("Cloud models are not supported.")
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    messages.extend({"role": m["role"], "content": m["content"][:20000]}
-                    for m in history[-10:] if m.get("role") in {"user", "assistant"}
-                    and isinstance(m.get("content"), str))
-    messages.append({"role": "user", "content": user_message})
 
-    # Step 1: LLM selects tools
-    response = local_client().chat(
-        model=model,
-        messages=messages,
-        tools=TOOL_SCHEMAS,
-    )
-
-    # Step 2: No tool calls — direct response (abstention or clarification)
-    if not response.message.tool_calls:
-        from basin_ui import fallback_query_route
-        fallback_reply = fallback_query_route(workspace, user_message)
-        if "No exact tool matched your query" not in fallback_reply:
-            reply = fallback_reply
-        else:
-            reply = (
-                "**BASIN Analyst Assistant**\n\n"
-                "I am a read-only decision-support tool. I only answer questions using verified, deterministic workspace calculations, and cannot provide speculative commentary or forecasts.\n\n"
-                f"{TOOL_LIST_HELP}"
-            )
-        updated = history + [
-            {"role": "user", "content": user_message},
-            {"role": "assistant", "content": reply},
-        ]
-        return reply, updated
-
-    # Step 3: Execute each tool call and render the template
-    tool_messages = []
-    rendered_parts = []
-    for call in response.message.tool_calls[:4]:
-        fn_name = call.function.name
-        fn_args = call.function.arguments or {}
-
-        if fn_name not in TOOL_REGISTRY:
-            error_msg = f"Unknown tool: {fn_name}. {TOOL_LIST_HELP}"
-            rendered_parts.append(error_msg)
-            tool_messages.append({"role": "tool", "content": error_msg})
-            continue
-
+    status = check_ollama()
+    if status.get("available") and status.get("selected") and _OLLAMA_AVAILABLE:
         try:
-            fn_args = validate_tool_args(workspace, fn_name, fn_args)
-            result = TOOL_REGISTRY[fn_name](workspace, **fn_args)
-            rendered = render_tool_result(fn_name, result)
-            rendered_parts.append(rendered)
-            tool_messages.append({"role": "tool", "content": rendered})
-        except (ValueError, KeyError, TypeError) as exc:
-            error_msg = f"Tool error ({fn_name}): {exc}"
-            rendered_parts.append(f"⚠️ {error_msg}")
-            tool_messages.append({"role": "tool", "content": error_msg})
+            model = status["selected"]
+            if local_model(model):
+                messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+                messages.extend({"role": m["role"], "content": m["content"][:20000]}
+                                for m in history[-10:] if m.get("role") in {"user", "assistant"}
+                                and isinstance(m.get("content"), str))
+                messages.append({"role": "user", "content": user_message})
 
-    # Step 4: Ground truth tool output only (no unconstrained LLM hallucination)
-    full_response = "\n\n".join(rendered_parts)
+                response = local_client().chat(
+                    model=model,
+                    messages=messages,
+                    tools=TOOL_SCHEMAS,
+                )
+
+                if response.message.tool_calls:
+                    rendered_parts = []
+                    for call in response.message.tool_calls[:4]:
+                        fn_name = call.function.name
+                        fn_args = call.function.arguments or {}
+
+                        if fn_name not in TOOL_REGISTRY:
+                            error_msg = f"Unknown tool: {fn_name}. {TOOL_LIST_HELP}"
+                            rendered_parts.append(error_msg)
+                            continue
+
+                        try:
+                            fn_args = validate_tool_args(workspace, fn_name, fn_args)
+                            result = TOOL_REGISTRY[fn_name](workspace, **fn_args)
+                            rendered = render_tool_result(fn_name, result)
+                            rendered_parts.append(rendered)
+                        except (ValueError, KeyError, TypeError) as exc:
+                            rendered_parts.append(f"⚠️ Tool error ({fn_name}): {exc}")
+
+                    full_response = "\n\n".join(rendered_parts)
+                    updated = history + [
+                        {"role": "user", "content": user_message},
+                        {"role": "assistant", "content": full_response},
+                    ]
+                    return full_response, updated
+        except Exception as exc:
+            logger.warning("Local Ollama tool routing failed (%s); routing through embedded engine.", exc)
+
+    # Embedded Semantic Entity & Synonym Graph Engine (zero-dependency offline fallback)
+    reply = semantic_query_route(workspace, user_message)
     updated = history + [
         {"role": "user", "content": user_message},
-        {"role": "assistant", "content": full_response},
+        {"role": "assistant", "content": reply},
     ]
-    return full_response, updated
+    return reply, updated
 
 
 def run_tool_directly(workspace, tool_name: str,

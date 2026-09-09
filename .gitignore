@@ -8,3 +8,5 @@ wheelhouse/
 *.log
 .env
 *.exe
+dist/
+build/
