@@ -41,8 +41,51 @@ def local_client():
 
 
 def local_model(name):
-    # Ollama can route cloud-tagged models through its local daemon.
-    return isinstance(name, str) and bool(name) and "cloud" not in name.lower()
+    """Name screening only; eligibility also requires raw inventory metadata."""
+    return (isinstance(name, str) and bool(name.strip()) and name == name.strip()
+            and "cloud" not in name.lower())
+
+
+def eligible_local_model(record):
+    """Reject remote/ambiguous entries before typed parsing can discard fields.
+
+    Local GGUF metadata is a daemon assertion, not proof of daemon egress policy.
+    Missing remote fields are normal (Ollama omits empty values), but unsupported
+    formats and incomplete local-weight metadata do not qualify for chat.
+    """
+    if not isinstance(record, dict):
+        return False
+    name = record.get("model")
+    if not local_model(name) or record.get("name", name) != name:
+        return False
+    if any(record.get(key, "") != "" for key in ("remote_host", "remote_model")):
+        return False
+    details = record.get("details")
+    digest = record.get("digest")
+    return (isinstance(details, dict) and details.get("format") == "gguf"
+            and type(record.get("size")) is int and record["size"] > 0
+            and isinstance(digest, str) and re.fullmatch(r"[0-9a-fA-F]{64}", digest) is not None)
+
+
+def local_model_inventory():
+    """Read untyped /api/tags using the pinned client's restricted transport.
+
+    The private raw method is intentional: Client.list() loses remote metadata.
+    Real-client regression tests pin this dependency on ollama==0.6.2.
+    """
+    client = local_client()
+    try:
+        payload = client._request_raw("GET", "/api/tags").json()
+        if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
+            raise ValueError("Unrecognized model inventory; local model eligibility is unknown")
+        records = payload["models"]
+        # Conflicting duplicate entries must not qualify via their benign copy.
+        rejected = {r.get("model") for r in records if isinstance(r, dict)
+                    and isinstance(r.get("model"), str) and not eligible_local_model(r)}
+        return list(dict.fromkeys(r["model"] for r in records
+                                  if eligible_local_model(r) and r["model"] not in rejected))
+    finally:
+        client._client.close()
 
 
 def check_ollama(force_refresh: bool = False) -> dict:
@@ -59,8 +102,7 @@ def check_ollama(force_refresh: bool = False) -> dict:
         _OLLAMA_CACHE["timestamp"] = now
         return res
     try:
-        response = local_client().list()
-        installed = [m.model for m in response.models if local_model(m.model) and not getattr(m, "remote_host", None) and not getattr(m, "remote_model", None)] if response.models else []
+        installed = local_model_inventory()
         selected = None
         for preferred in PREFERRED_MODELS:
             for installed_name in installed:
@@ -79,13 +121,12 @@ def check_ollama(force_refresh: bool = False) -> dict:
     return res
 
 
-def get_model() -> str:
-    """Return the best available model name."""
-    status = check_ollama()
+def get_model() -> str | None:
+    """Recheck eligibility immediately before sending any user/workspace content."""
+    status = check_ollama(force_refresh=True)
     if status["selected"]:
         return status["selected"]
-    raise RuntimeError("No Ollama model available. Install Ollama and pull a "
-                       "model: ollama pull qwen2.5:7b")
+    return None
 
 # ---------------------------------------------------------------------------
 # Response templates — every number is a named variable from tool output

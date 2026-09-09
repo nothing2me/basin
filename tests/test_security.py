@@ -26,6 +26,21 @@ def test_embedded_assistant_rejects_invalid_questions(workspace, question):
         a.run_assistant(workspace, question, [])
 
 
+def test_cloud_models_excluded_and_exact_tag_selected(monkeypatch):
+    def entry(name, **extra):
+        return dict(model=name, size=100, digest="d" * 64, details={"format": "gguf"}, **extra)
+    models = [entry('qwen2.5:7b'), entry('qwen2.5:3b'),
+              entry('other:cloud'), entry('alias:latest', remote_host='remote')]
+    monkeypatch.setattr(a, '_OLLAMA_AVAILABLE', True)
+    monkeypatch.setattr(a, 'local_client', lambda: NS(
+        _request_raw=lambda *args: NS(json=lambda: {"models": models}),
+        _client=NS(close=lambda: None)))
+    status = a.check_ollama(force_refresh=True)
+    assert status['models'] == ['qwen2.5:7b', 'qwen2.5:3b']
+    assert status['selected'] == 'qwen2.5:3b'
+    a._OLLAMA_CACHE.clear()
+
+
 @pytest.mark.parametrize('name,args', [
     ('describe_scenario', {}), ('describe_scenario', {'scenario_id': '../../private'}),
     ('get_data_provenance', {'command': 'delete'}),
@@ -89,3 +104,12 @@ def test_package_excludes_untracked_private_files(monkeypatch, tmp_path):
     private.write_text('PRIVATE SENTINEL')
     monkeypatch.setattr(package.subprocess, 'check_output', lambda *a, **k: b'public.md\0')
     assert package.reviewed_files(tmp_path, [public, private]) == [public]
+
+
+def test_missing_optional_package_routes_to_builtin_tools(monkeypatch):
+    monkeypatch.setattr(a, '_OLLAMA_AVAILABLE', False)
+    monkeypatch.setattr(a, 'semantic_query_route', lambda *args: 'Built-in answer')
+    a._OLLAMA_CACHE.clear()
+    reply, history = a.run_assistant(None, 'Synthetic question', [], use_qwen=False)
+    assert reply == 'Built-in answer' and len(history) == 2
+    a._OLLAMA_CACHE.clear()

@@ -36,6 +36,7 @@ TAGS_PAYLOAD = json.dumps({
 
 def make_handler(mode: str, redirect_to: str = ""):
     seen: list[str] = []
+    submitted: list[dict] = []
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -54,6 +55,17 @@ def make_handler(mode: str, redirect_to: str = ""):
             self.end_headers()
             self.wfile.write(TAGS_PAYLOAD)
 
+        def do_POST(self):
+            seen.append(self.path)
+            submitted.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+            body = json.dumps({"message": {"role": "assistant", "content": ""}, "done": True}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    Handler.submitted = submitted
     Handler.seen = seen
     return Handler
 
@@ -200,13 +212,12 @@ def test_absent_package_is_reported_not_raised(monkeypatch):
 # --------------------------------------------------------------------------------------
 
 def test_remote_fields_are_dropped_by_the_real_client():
-    """The remote_host/remote_model guards in check_ollama cannot fire on real data.
+    """Typed list responses lose fields; BASIN must inspect the raw response instead.
 
-    test_security.py::test_cloud_models_excluded_and_exact_tag_selected feeds
-    SimpleNamespace objects, where ``getattr(m, "remote_host", None)`` works. The pinned
-    client parses responses into pydantic models that ignore unknown fields, so those two
-    guards are inert against a real daemon and only the ``"cloud"`` name check applies.
-    This test pins the real behaviour so the gap is not mistaken for coverage.
+    The original security mock used SimpleNamespace objects, where remote-field
+    attributes survived. The pinned client ignores unknown fields, so attribute-only
+    guards would be inert against a real daemon. This test preserves the reason
+    BASIN uses untyped inventory metadata instead.
     """
     parsed = ollama.ListResponse(models=[{
         "model": "alias:latest", "name": "alias:latest", "size": 1, "digest": "d" * 64,
@@ -220,6 +231,95 @@ def test_remote_fields_are_dropped_by_the_real_client():
     assert getattr(model, "remote_model", None) is None
     assert "remote_host" not in model.model_dump()
 
-    # The name-based check is the control that actually works today.
+    # Name screening alone is not an eligibility decision.
     assert a.local_model("alias:latest") is True
     assert a.local_model("gpt-oss:120b-cloud") is False
+
+
+@pytest.fixture
+def raw_inventory(monkeypatch, local_server):
+    port, handler = local_server()
+    monkeypatch.setattr(a, "local_client", lambda: client_for(port))
+    a._OLLAMA_CACHE.clear()
+    def set_records(records):
+        monkeypatch.setitem(globals(), "TAGS_PAYLOAD", json.dumps({"models": records}).encode())
+    yield set_records, handler
+    a._OLLAMA_CACHE.clear()
+
+
+def local_entry(**changes):
+    entry = {"model": "qwen2.5:3b", "name": "qwen2.5:3b", "size": 123,
+             "digest": "d" * 64, "details": {"format": "gguf"}}
+    entry.update(changes)
+    return entry
+
+
+@pytest.mark.parametrize("changes", [
+    {"remote_host": "https://remote.example"}, {"remote_model": "remote:7b"},
+    {"remote_host": None}, {"remote_model": False},
+    {"model": "other:cloud", "name": "other:cloud"},
+    {"name": "different:latest"}, {"details": {}}, {"details": {"format": "unknown"}},
+    {"size": 0}, {"size": True}, {"digest": "missing"},
+])
+def test_raw_inventory_rejects_remote_and_ambiguous_models(raw_inventory, changes):
+    set_records, handler = raw_inventory
+    set_records([local_entry(**changes)])
+    status = a.check_ollama(force_refresh=True)
+    assert status["models"] == [] and status["selected"] is None
+    assert handler.seen == ["/api/tags"]
+    assert not handler.submitted
+
+
+def test_raw_remote_alias_is_rejected_even_with_local_looking_name(raw_inventory):
+    set_records, _ = raw_inventory
+    set_records([local_entry(remote_host="https://remote.example"),
+                 local_entry(model="local-alternative:latest", name="local-alternative:latest")])
+    status = a.check_ollama(force_refresh=True)
+    assert status["models"] == ["local-alternative:latest"]
+    assert status["selected"] == "local-alternative:latest"
+
+
+def test_conflicting_duplicate_alias_cannot_qualify(raw_inventory):
+    set_records, _ = raw_inventory
+    set_records([local_entry(), local_entry(remote_model="remote:latest")])
+    assert a.get_model() is None
+
+
+def test_inventory_malformed_json_fails_closed(raw_inventory, monkeypatch):
+    monkeypatch.setitem(globals(), "TAGS_PAYLOAD", b'{"models": {}}')
+    assert a.get_model() is None
+    monkeypatch.setitem(globals(), "TAGS_PAYLOAD", b'not JSON')
+    assert a.get_model() is None
+
+
+def test_cached_local_alias_rechecked_before_optional_model_selection(raw_inventory, monkeypatch):
+    set_records, handler = raw_inventory
+    set_records([local_entry()])
+    assert a.check_ollama(force_refresh=True)["selected"] == "qwen2.5:3b"
+    set_records([local_entry(remote_host="https://remote.example")])
+    monkeypatch.setattr(a, "semantic_query_route", lambda *args: "Built-in answer")
+    assert a.get_model() is None
+    reply, history = a.run_assistant(None, "PRIVATE-QUESTION-SENTINEL", [], use_qwen=False)
+    assert reply == "Built-in answer" and len(history) == 2
+    assert handler.seen == ["/api/tags", "/api/tags"]
+    assert handler.submitted == []
+
+
+def test_optional_model_selection_does_not_enable_ollama_chat(raw_inventory, monkeypatch):
+    set_records, handler = raw_inventory
+    set_records([local_entry()])
+    monkeypatch.setattr(a, "semantic_query_route", lambda *args: "Built-in answer")
+    assert a.get_model() == "qwen2.5:3b"
+    a.run_assistant(None, "Synthetic test question", [], use_qwen=False)
+    assert handler.seen == ["/api/tags"]
+    assert handler.submitted == []
+
+
+def test_raw_inventory_redirect_is_not_followed(local_server, monkeypatch):
+    target_port, target_handler = local_server()
+    port, handler = local_server("redirect", f"http://127.0.0.1:{target_port}/api/tags")
+    monkeypatch.setattr(a, "local_client", lambda: client_for(port))
+    a._OLLAMA_CACHE.clear()
+    assert a.get_model() is None
+    assert handler.seen and not target_handler.seen
+    a._OLLAMA_CACHE.clear()
