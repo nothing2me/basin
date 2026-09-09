@@ -27,6 +27,88 @@ h3{font-size:1.6rem!important;font-weight:650!important}
 [data-testid="stMetricLabel"]{font-size:.76rem;opacity:.78}
 [data-testid="stCaptionContainer"]{font-size:.78rem}
 [data-testid="stSidebar"] [role="radiogroup"]{gap:5px}
+[data-testid="stSidebar"], [data-testid="stSidebarNav"], button[data-testid="stSidebarCollapseButton"], [data-testid="collapsedControl"]{display:none!important}
+.basin-top-brand{text-align:center;font-size:2.3rem;font-weight:900;letter-spacing:.14em;margin:0;line-height:1.1}
+.basin-top-sub{text-align:center;font-size:.75rem;letter-spacing:.16em;opacity:.7;text-transform:uppercase;margin:2px 0 0}
+.basin-header-text-btn{padding:0;margin:6px 0 0;text-align:center}
+.basin-header-text-btn [data-testid="stButton"] button{
+    background:transparent!important;
+    border:none!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    outline:none!important;
+    min-height:auto!important;
+    height:auto!important;
+    padding:8px 4px 14px 4px!important;
+    width:100%!important;
+    justify-content:center!important;
+    transition:color .15s ease, border-bottom .15s ease!important;
+}
+.basin-header-text-btn [data-testid="stButton"] button p{
+    font-size:1.45rem!important;
+    line-height:1.2!important;
+    letter-spacing:-.02em!important;
+    margin:0!important;
+}
+.basin-nav-active [data-testid="stButton"] button{
+    border-bottom:3.5px solid currentColor!important;
+}
+.basin-nav-active [data-testid="stButton"] button p{
+    font-weight:800!important;
+    color:currentColor!important;
+    opacity:1!important;
+}
+.basin-nav-ready [data-testid="stButton"] button{
+    border-bottom:3.5px solid transparent!important;
+    cursor:pointer!important;
+}
+.basin-nav-ready [data-testid="stButton"] button p{
+    font-weight:600!important;
+    color:currentColor!important;
+    opacity:.75!important;
+}
+.basin-nav-ready [data-testid="stButton"] button:hover{
+    border-bottom:3.5px solid color-mix(in srgb,currentColor 35%,transparent)!important;
+}
+.basin-nav-ready [data-testid="stButton"] button:hover p{
+    opacity:1!important;
+}
+.basin-nav-locked [data-testid="stButton"] button{
+    border-bottom:3.5px solid transparent!important;
+    opacity:.32!important;
+    cursor:not-allowed!important;
+}
+.basin-nav-locked [data-testid="stButton"] button p{
+    font-weight:500!important;
+    color:color-mix(in srgb,currentColor 45%,transparent)!important;
+}
+.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:4px 0;margin:0 auto}
+.basin-top-logo{height:46px;width:auto;max-width:260px;object-fit:contain;display:block}
+.st-key-notes_slide_drawer{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:min(580px,92vw)!important;z-index:99990!important;transition:left .08s ease-out!important;pointer-events:none!important}
+.st-key-notes_slide_drawer *{pointer-events:auto!important}
+body:has(.st-key-assistant_drawer) .st-key-notes_slide_drawer{left:calc((100vw - 485px)/2)!important}
+@media(max-width:950px){body:has(.st-key-assistant_drawer) .st-key-notes_slide_drawer{left:50%!important}}
+.st-key-notes_drawer_closed{background:color-mix(in srgb,var(--background-color,#1a2228) 96%,#000)!important;border:1px solid color-mix(in srgb,currentColor 22%,transparent)!important;border-bottom:none!important;border-radius:12px 12px 0 0!important;padding:5px 14px 4px 14px!important;box-shadow:0 -4px 18px rgba(0,0,0,.38)!important;max-height:46px!important;overflow:hidden!important}
+.st-key-notes_drawer_closed .st-key-notes_body_content{display:none!important}
+.st-key-notes_drawer_open{background:color-mix(in srgb,var(--background-color,#1a2228) 98%,#000)!important;border:1.5px solid color-mix(in srgb,currentColor 28%,transparent)!important;border-bottom:none!important;border-radius:14px 14px 0 0!important;padding:10px 18px 16px 18px!important;box-shadow:0 -8px 32px rgba(0,0,0,.55)!important;max-height:420px!important;overflow-y:auto!important;animation:basinSlideUp .18s ease-out!important}
+@keyframes basinSlideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.basin-notes-tab-title{font-size:.88rem;font-weight:750;line-height:2.2;letter-spacing:-.01em}
+.st-key-review_accept_box [data-testid="stButton"] button{font-size:1.35rem!important;font-weight:800!important;min-height:3.8rem!important;padding:14px 28px!important;border-radius:12px!important;letter-spacing:.05em!important;text-transform:uppercase!important;background:#0ea5e9!important;color:#fff!important;border:none!important;box-shadow:0 4px 18px rgba(14,165,233,.35)!important;margin:10px auto!important;display:flex!important;justify-content:center!important;align-items:center!important;width:100%!important}
+.st-key-review_accept_box [data-testid="stButton"] button:hover{background:#0284c7!important;box-shadow:0 6px 24px rgba(14,165,233,.5)!important}
+.st-key-review_accept_box [data-testid="stButton"] button *{color:#fff!important}
+.basin-gate-card{padding:22px 26px;border-radius:14px;border:1.5px solid color-mix(in srgb,currentColor 22%,transparent);background:color-mix(in srgb,currentColor 3%,transparent);margin:18px 0 10px;text-align:center}
+.basin-gate-card [data-testid="stButton"] button{font-size:1.22rem!important;font-weight:800!important;min-height:3.5rem!important;padding:10px 30px!important;border-radius:12px!important;margin:8px auto!important;display:flex!important;justify-content:center!important;align-items:center!important;max-width:580px!important;box-shadow:0 4px 18px rgba(53,98,115,.35)!important}
+body.basin-theme-bw,body.basin-theme-bw .stApp,body.basin-theme-bw [data-testid="stAppViewContainer"],body.basin-theme-bw [data-testid="stHeader"]{background-color:#000!important;background-image:none!important;color:#fff!important}
+body.basin-theme-bw .block-container{background-color:#000!important}
+body.basin-theme-bw p,body.basin-theme-bw span,body.basin-theme-bw label,body.basin-theme-bw h1,body.basin-theme-bw h2,body.basin-theme-bw h3,body.basin-theme-bw [data-testid="stMarkdownContainer"] *{color:#fff!important}
+body.basin-theme-bw [data-testid="stMetric"],body.basin-theme-bw .basin-gate-card,body.basin-theme-bw [data-testid="stExpander"]{background-color:#000!important;border:1.5px solid #fff!important}
+body.basin-theme-bw button[kind="primary"],body.basin-theme-bw button[data-testid="stBaseButton-primary"],body.basin-theme-bw .st-key-review_accept_box button{background-color:#fff!important;color:#000!important;border:2px solid #fff!important}
+body.basin-theme-bw button[kind="primary"] *,body.basin-theme-bw button[data-testid="stBaseButton-primary"] *,body.basin-theme-bw .st-key-review_accept_box button *{color:#000!important}
+body.basin-theme-bw button[kind="secondary"],body.basin-theme-bw button[data-testid="stBaseButton-secondary"]{background-color:#000!important;color:#fff!important;border:1.5px solid #fff!important}
+body.basin-theme-bw button[kind="secondary"] *,body.basin-theme-bw button[data-testid="stBaseButton-secondary"] *{color:#fff!important}
+body.basin-theme-bw .basin-nav-active [data-testid="stButton"] button{border-bottom:4px solid #fff!important}
+body.basin-theme-bw .basin-nav-divider{border-bottom:1.5px solid #fff!important}
+body.basin-theme-bw .basin-top-logo{filter:none!important}
 [data-testid="stSidebar"] [role="radiogroup"] label{border-radius:9px;padding:7px 10px;margin:0;transition:background .15s ease}
 [data-testid="stSidebar"] [role="radiogroup"] label:has([aria-checked="true"]){background:color-mix(in srgb,#356273 28%,transparent);font-weight:650}
 [data-testid="stExpander"]{border-radius:11px!important}
@@ -81,18 +163,25 @@ body:has(.st-key-assistant_drawer) .block-container,body:has(.st-key-assistant_d
 .basin-assistant-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:650;background:color-mix(in srgb,currentColor 8%,transparent);border:1px solid color-mix(in srgb,currentColor 16%,transparent);margin-bottom:.5rem}
 .basin-assistant-title{font-size:1.15rem;font-weight:700;letter-spacing:-.02em;margin:0 0 2px}
 .basin-assistant-sub{font-size:.78rem;opacity:.8;margin:0 0 .85rem;line-height:1.4}
+.basin-pipeline-stepper{display:flex;align-items:center;justify-content:space-between;gap:8px;background:color-mix(in srgb,currentColor 3%,transparent);border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:12px;padding:8px 12px;margin:6px 0 16px}
+.basin-step-card{flex:1;display:flex;flex-direction:column;padding:6px 10px;border-radius:8px;border:1px solid transparent;transition:background .12s ease}
+.basin-step-card.active{background:color-mix(in srgb,#356273 24%,transparent);border-color:color-mix(in srgb,#356273 45%,transparent)}
+.basin-step-num{font-size:.65rem;font-weight:800;letter-spacing:.08em;opacity:.75;text-transform:uppercase}
+.basin-step-name{font-size:.84rem;font-weight:650;line-height:1.2;margin:1px 0}
+.basin-step-status{font-size:.70rem;opacity:.75}
+.basin-step-arrow{opacity:.35;font-size:.85rem;user-select:none}
 </style>""")
 
 
 def appearance_picker():
-    # Main-menu theme items are the native persisted System/Light/Dark choices.
-    # Bounded observation tolerates rendering delay; failure leaves a usable
-    # native menu and clear directions, never a second conflicting CSS theme.
+    # Main-menu theme items are the native persisted System/Light/Dark choices,
+    # plus the high-contrast Black/White theme.
     st.html("""
 <div class="basin-theme-picker" aria-label="Appearance">
  <button type="button" data-basin-theme="Light">Light</button>
  <button type="button" data-basin-theme="Dark">Dark</button>
  <button type="button" data-basin-theme="System">System</button>
+ <button type="button" data-basin-theme="BW">Black/White</button>
 </div>
 <p class="basin-theme-status" role="status" aria-live="polite"></p>
 <script>
@@ -100,9 +189,20 @@ def appearance_picker():
  const script = document.currentScript;
  const root = script.parentElement;
  const status = root.querySelector('.basin-theme-status');
+ if (localStorage.getItem('basin-bw-theme') === 'true') {
+   document.body.classList.add('basin-theme-bw');
+ }
  root.querySelectorAll('[data-basin-theme]').forEach(button => {
    button.addEventListener('click', () => {
      const name = button.dataset.basinTheme;
+     if (name === 'BW') {
+       const isBW = document.body.classList.toggle('basin-theme-bw');
+       localStorage.setItem('basin-bw-theme', isBW ? 'true' : 'false');
+       status.textContent = isBW ? 'Black / White high-contrast theme active.' : 'Black / White theme removed.';
+       return;
+     }
+     document.body.classList.remove('basin-theme-bw');
+     localStorage.removeItem('basin-bw-theme');
      const menuButton = document.querySelector('[data-testid="stMainMenuButton"]');
      if (!menuButton) { status.textContent = 'Open the top-right menu to change appearance.'; return; }
      status.textContent = '';
@@ -150,6 +250,7 @@ def reset_colors():
         st.session_state[f"appearance_{name}"] = value
         st.session_state[f"draft_{name}"] = value
     st.session_state["appearance_colorblind"] = False
+    st.session_state["appearance_bw"] = False
 
 
 def custom_appearance():
@@ -167,6 +268,10 @@ def custom_appearance():
             st.success("Colors applied")
     st.toggle("Color-blind mode", key="appearance_colorblind",
               help="Applies a consistent blue interface accent and chart colors with shapes, line styles and patterns. Turn off to restore your custom colors.")
+    bw_active = st.toggle("Black / White high-contrast", key="appearance_bw",
+                          help="Pure monochrome black and white theme.")
+    if bw_active:
+        st.html('<script>document.body.classList.add("basin-theme-bw");</script>')
     st.button("Reset colors", on_click=reset_colors)
     st.caption("Color choices last for this session. Light/Dark/System is saved in this browser.")
     enabled = st.session_state.appearance_colorblind

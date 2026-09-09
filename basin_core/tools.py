@@ -450,7 +450,11 @@ def test_reservoir_infrastructure(workspace: Workspace, scenario_id: str = "",
         year_matches = [s for s in workspace.scenarios
                         if s.provenance.get("source_start", "").startswith(str(year))]
         if not year_matches:
-            scenario = workspace.scenarios[0]
+            raise ValueError(
+                f"No historical drought events found for year {year}. "
+                "The bundled NOAA record covers 1991–2025. "
+                "BASIN cannot simulate unobserved or future years."
+            )
         else:
             scenario = max(year_matches, key=lambda s: s.score)
 
@@ -521,7 +525,11 @@ def run_stress_spectrum(workspace: Workspace, scenario_id: str = "",
         year_matches = [s for s in workspace.scenarios
                         if s.provenance.get("source_start", "").startswith(str(year))]
         if not year_matches:
-            scenario = workspace.scenarios[0]
+            raise ValueError(
+                f"No historical drought events found for year {year}. "
+                "The bundled NOAA record covers 1991–2025. "
+                "BASIN cannot simulate unobserved or future years."
+            )
         else:
             scenario = max(year_matches, key=lambda s: s.score)
 

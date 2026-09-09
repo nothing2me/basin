@@ -143,6 +143,22 @@ def fallback_query_route(w, prompt: str) -> str:
     )
 
     p = prompt.lower().strip()
+
+    # Adversarial & Non-Predictive Advisory Guardrails
+    if any(q in p for q in ["when will water run out", "when will the reservoir run out", "will water run out", "exact date of breach", "forecast reservoir levels", "what date will"]):
+        return (
+            "⚠️ **Analysis Boundary (Non-Predictive Advisory)**: BASIN does not generate calendar-date forecasts "
+            "or operational water-supply predictions. The bundled reservoir experiment is an illustrative, "
+            "uncalibrated mass-balance sensitivity model using historical rainfall proxies, not a delivery forecast."
+        )
+
+    if any(q in p for q in ["should council", "should the city", "declare stage", "mandate stage", "should we declare"]):
+        return (
+            "⚠️ **Analysis Boundary (Policy Governance)**: BASIN is an analytical rainfall scenario workbench, "
+            "not a regulatory decision authority. Official drought stages are declared exclusively by municipal and regional "
+            "authorities pursuant to the City of Corpus Christi Drought Contingency Plan."
+        )
+
     id_matches = re.findall(r"\b[bB]-\d+\b", prompt)
     for s in w.scenarios:
         if s.id.lower() in p and s.id not in id_matches:
@@ -150,97 +166,102 @@ def fallback_query_route(w, prompt: str) -> str:
 
     default_id = id_matches[0] if id_matches else (w.selected[0] if w.selected else w.scenarios[0].id)
 
-    # 1. Multi-tier stress spectrum sweep check
-    if any(k in p for k in ["spectrum", "stress spectrum", "multi-tier", "tiers", "tipping point", "sweep"]):
-        from basin_core.tools import run_stress_spectrum
-        year = 2011
+    try:
+        # 1. Multi-tier stress spectrum sweep check
+        if any(k in p for k in ["spectrum", "stress spectrum", "multi-tier", "tiers", "tipping point", "sweep"]):
+            from basin_core.tools import run_stress_spectrum
+            year = 2011
+            year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
+            if year_match:
+                year = int(year_match.group(1))
+            conservation_pct = 0.0
+            cons_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:conservation|mandate|cut)", p)
+            if cons_match:
+                conservation_pct = float(cons_match.group(1))
+            res = run_stress_spectrum(w, scenario_id=default_id if id_matches else "",
+                                      year=year, conservation_pct=conservation_pct)
+            return render_tool_result("run_stress_spectrum", res)
+
+        # 2. Infrastructure / Reservoir survival check
+        if any(k in p for k in ["survive", "infrastructure", "reservoir", "drawdown", "capacity", "storage", "restriction"]):
+            from basin_core.tools import test_reservoir_infrastructure
+            year = 2011
+            year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
+            if year_match:
+                year = int(year_match.group(1))
+            reduction = 0.0
+            pct_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:lower|less|reduction|drier)?", p)
+            if pct_match:
+                reduction = float(pct_match.group(1))
+            res = test_reservoir_infrastructure(w, scenario_id=default_id if id_matches else "",
+                                                year=year, rainfall_reduction_pct=reduction)
+            return render_tool_result("test_reservoir_infrastructure", res)
+
+        # 3. Find scenarios by year
         year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
-        if year_match:
+        if year_match and (not id_matches or any(k in p for k in ["scenarios", "find", "list", "show", "search", "events", "years"])):
+            from basin_core.tools import find_scenarios_by_year
             year = int(year_match.group(1))
-        conservation_pct = 0.0
-        cons_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:conservation|mandate|cut)", p)
-        if cons_match:
-            conservation_pct = float(cons_match.group(1))
-        res = run_stress_spectrum(w, scenario_id=default_id if id_matches else "",
-                                  year=year, conservation_pct=conservation_pct)
-        return render_tool_result("run_stress_spectrum", res)
+            res = find_scenarios_by_year(w, year=year)
+            return render_tool_result("find_scenarios_by_year", res)
+        elif any(k in p for k in ["recent", "modern", "years", "from 20", "from 19"]):
+            from basin_core.tools import find_scenarios_by_year
+            year = int(year_match.group(1)) if year_match else 2011
+            res = find_scenarios_by_year(w, year=year)
+            return render_tool_result("find_scenarios_by_year", res)
 
-    # 2. Infrastructure / Reservoir survival check
-    if any(k in p for k in ["survive", "infrastructure", "reservoir", "drawdown", "capacity", "storage", "restriction"]):
-        from basin_core.tools import test_reservoir_infrastructure
-        year = 2011
-        year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
-        if year_match:
-            year = int(year_match.group(1))
-        reduction = 0.0
-        pct_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:lower|less|reduction|drier)?", p)
-        if pct_match:
-            reduction = float(pct_match.group(1))
-        res = test_reservoir_infrastructure(w, scenario_id=default_id if id_matches else "",
-                                            year=year, rainfall_reduction_pct=reduction)
-        return render_tool_result("test_reservoir_infrastructure", res)
+        if any(k in p for k in ["readiness", "export ready", "can i export", "blocker"]):
+            res = check_export_readiness(w)
+            return render_tool_result("check_export_readiness", res)
 
-    # 2. Find scenarios by year
-    year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
-    if year_match and (not id_matches or any(k in p for k in ["scenarios", "find", "list", "show", "search", "events", "years"])):
-        from basin_core.tools import find_scenarios_by_year
-        year = int(year_match.group(1))
-        res = find_scenarios_by_year(w, year=year)
-        return render_tool_result("find_scenarios_by_year", res)
-    elif any(k in p for k in ["recent", "modern", "years", "from 20", "from 19"]):
-        from basin_core.tools import find_scenarios_by_year
-        year = int(year_match.group(1)) if year_match else 2011
-        res = find_scenarios_by_year(w, year=year)
-        return render_tool_result("find_scenarios_by_year", res)
+        if any(k in p for k in ["compare", "vs", "versus", "difference"]):
+            if len(id_matches) >= 2:
+                id1, id2 = id_matches[0], id_matches[1]
+            elif len(w.selected) >= 2:
+                id1, id2 = w.selected[0], w.selected[1]
+            else:
+                id1, id2 = w.scenarios[0].id, w.scenarios[1].id
+            id3 = id_matches[2] if len(id_matches) >= 3 else ""
+            res = compare_scenarios(w, id1, id2, id3)
+            return render_tool_result("compare_scenarios", res)
 
-    if any(k in p for k in ["readiness", "export ready", "can i export", "blocker"]):
-        res = check_export_readiness(w)
-        return render_tool_result("check_export_readiness", res)
+        if any(k in p for k in ["stress", "concurrence", "simultaneous"]):
+            res = check_concurrence(w, default_id)
+            return render_tool_result("check_concurrence", res)
 
-    if any(k in p for k in ["compare", "vs", "versus", "difference"]):
-        if len(id_matches) >= 2:
-            id1, id2 = id_matches[0], id_matches[1]
-        elif len(w.selected) >= 2:
-            id1, id2 = w.selected[0], w.selected[1]
-        else:
-            id1, id2 = w.scenarios[0].id, w.scenarios[1].id
-        id3 = id_matches[2] if len(id_matches) >= 3 else ""
-        res = compare_scenarios(w, id1, id2, id3)
-        return render_tool_result("compare_scenarios", res)
+        if any(k in p for k in ["rank", "score", "why did", "position"]):
+            res = explain_ranking(w, default_id)
+            return render_tool_result("explain_ranking", res)
 
-    if any(k in p for k in ["stress", "concurrence", "simultaneous"]):
-        res = check_concurrence(w, default_id)
-        return render_tool_result("check_concurrence", res)
+        if any(k in p for k in ["sensitivity", "weight", "what if", "priority"]):
+            res = run_sensitivity(w)
+            return render_tool_result("run_sensitivity", res)
 
-    if any(k in p for k in ["rank", "score", "why did", "position"]):
-        res = explain_ranking(w, default_id)
-        return render_tool_result("explain_ranking", res)
+        if any(k in p for k in ["evidence", "conflict", "source", "disagreement", "citation"]):
+            res = summarize_evidence(w, default_id)
+            return render_tool_result("summarize_evidence", res)
 
-    if any(k in p for k in ["sensitivity", "weight", "what if", "priority"]):
-        res = run_sensitivity(w)
-        return render_tool_result("run_sensitivity", res)
+        if any(k in p for k in ["cluster", "profile", "group"]):
+            cid = 0
+            digit_match = re.search(r"group\s*(\d+)|cluster\s*(\d+)", p)
+            if digit_match:
+                cid = int(digit_match.group(1) or digit_match.group(2))
+            res = describe_cluster(w, cid)
+            return render_tool_result("describe_cluster", res)
 
-    if any(k in p for k in ["evidence", "conflict", "source", "disagreement", "citation"]):
-        res = summarize_evidence(w, default_id)
-        return render_tool_result("summarize_evidence", res)
+        if any(k in p for k in ["provenance", "noaa", "data source", "station", "manifest", "data come from", "where does this data"]):
+            res = get_data_provenance(w)
+            return render_tool_result("get_data_provenance", res)
 
-    if any(k in p for k in ["cluster", "profile", "group"]):
-        cid = 0
-        digit_match = re.search(r"group\s*(\d+)|cluster\s*(\d+)", p)
-        if digit_match:
-            cid = int(digit_match.group(1) or digit_match.group(2))
-        res = describe_cluster(w, cid)
-        return render_tool_result("describe_cluster", res)
+        if any(k in p for k in ["scenario", "tell me about", "profile", "deficit"]) or id_matches:
+            res = describe_scenario(w, default_id)
+            return render_tool_result("describe_scenario", res)
 
-    if any(k in p for k in ["provenance", "noaa", "data source", "station", "manifest", "data come from", "where does this data"]):
-        res = get_data_provenance(w)
-        return render_tool_result("get_data_provenance", res)
-
-    if any(k in p for k in ["scenario", "tell me about", "profile", "deficit"]) or id_matches:
-        res = describe_scenario(w, default_id)
-        return render_tool_result("describe_scenario", res)
-
-    return f"**BASIN Analyst Assistant**\n\nNo exact tool matched your query. All answers must be grounded in verified tools:\n\n{TOOL_LIST_HELP}"
+        return f"**BASIN Analyst Assistant**\n\nNo exact tool matched your query. All answers must be grounded in verified tools:\n\n{TOOL_LIST_HELP}"
+    except ValueError as err:
+        return f"⚠️ **Analysis Boundary**: {err}"
+    except Exception as ex:
+        return f"⚠️ **Query Processing Error**: {ex}"
 
 
 def assistant_panel(w, source=None, names=None):

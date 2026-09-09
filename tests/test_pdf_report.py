@@ -10,6 +10,8 @@ def test_fallback_pdf_generation():
     pdf_bytes = build_fallback_pdf("Test Title", "Test Content")
     assert pdf_bytes.startswith(b"%PDF-1.4")
     assert b"BASIN EXECUTIVE TECHNICAL BRIEF" in pdf_bytes
+    assert b"WARNING: WHAT THIS ARTIFACT IS NOT" in pdf_bytes
+    assert b"Toy Model" in pdf_bytes
     assert len(pdf_bytes) > 500
 
 
@@ -23,9 +25,12 @@ def test_render_html_report():
 
     html = render_html_report(workspace, accepted)
     assert "BASIN · EXECUTIVE TECHNICAL BRIEF" in html
+    assert "WHAT THIS DOCUMENT IS NOT" in html
     assert "The Bottom Line — Executive Overview" in html
     assert "Illustrative Drought Response Reference Framework" in html
-    assert "Multi-Tier Rainfall Stress Spectrum & Countdown Matrix" in html
+    assert "Illustrative Storage Sensitivity Spectrum (Non-Predictive)" in html
+    assert "Illustrative Depletion Window" in html
+    assert "badge-danger" not in html
     assert "Scientific Provenance & Verification Scope" in html
     assert workspace.id in html
     assert "omitted: export privacy setting excludes private notes" in html
