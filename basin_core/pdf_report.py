@@ -259,12 +259,13 @@ for _digit in "0123456789":
     _HELVETICA_BOLD_WIDTHS[_digit] = 556
 
 _FONT_WIDTHS = {"/F1": _HELVETICA_WIDTHS, "/F2": _HELVETICA_BOLD_WIDTHS}
-_DEFAULT_WIDTH = 556          # accented Latin and punctuation outside the tables
+_DEFAULT_WIDTH = 1015         # conservative bound for WinAnsi glyphs outside the ASCII tables
 _COURIER_WIDTH = 600          # /F3 is monospaced
 
 
 def text_width(text: str, font: str = "/F1", size: float = 9.0) -> float:
     """Width of ``text`` in points when drawn in ``font`` at ``size``."""
+    text, _ = encode_winansi(str(text))
     if font == "/F3":
         return len(str(text)) * _COURIER_WIDTH * size / 1000.0
     widths = _FONT_WIDTHS.get(font, _HELVETICA_WIDTHS)
@@ -1074,7 +1075,8 @@ def render_html_report(
     </table>
 
     <div class="section-title">Shortlisted Scenario Inventory & Human Review Notes</div>
-    <table>
+    <table style="table-layout: fixed;">
+        <colgroup><col style="width: 10%;"><col style="width: 18%;"><col style="width: 10%;"><col style="width: 12%;"><col style="width: 13%;"><col style="width: 37%;"></colgroup>
         <thead>
             <tr>
                 <th>Scenario ID</th>
@@ -1349,17 +1351,32 @@ class VectorFlow:
             wrap_text(text, font, size, width - 6)
             for (text, font), (_, _, width) in zip(cells, self._columns)
         ]
-        height = max(len(lines) for lines in wrapped) * leading + 6
-        if not self.room_for(height):
+        total_lines = max(len(lines) for lines in wrapped)
+        height = total_lines * leading + 6
+        full_page_height = self.TOP + 20 - 18 - self.BOTTOM
+        if height <= full_page_height and not self.room_for(height):
             self.break_page()
             self.table_header(self._columns)
-        self.doc.rect(self.page, self.LEFT, self.y - height, self.WIDTH, height,
-                      fill=(0.96, 0.97, 0.99) if index % 2 == 0 else (1.0, 1.0, 1.0))
-        for lines, (x, _, _), (_, font) in zip(wrapped, self._columns, cells):
-            for offset, line in enumerate(lines):
-                self.doc.text(self.page, x, self.y - size - 3 - offset * leading, line,
-                              font=font, size=size, color=(0.15, 0.18, 0.22))
-        self.y -= height
+        offset = 0
+        while offset < total_lines:
+            available = int((self.y - self.BOTTOM - 6) / leading)
+            if available < 1:
+                self.break_page()
+                self.table_header(self._columns)
+                continue
+            count = min(available, total_lines - offset)
+            height = count * leading + 6
+            self.doc.rect(self.page, self.LEFT, self.y - height, self.WIDTH, height,
+                          fill=(0.96, 0.97, 0.99) if index % 2 == 0 else (1.0, 1.0, 1.0))
+            for lines, (x, _, _), (_, font) in zip(wrapped, self._columns, cells):
+                # Repeat completed identifying cells alongside a continued long note.
+                segment = lines[offset:offset + count] if offset < len(lines) else lines[:1]
+                for row_offset, line in enumerate(segment):
+                    self.doc.text(self.page, x, self.y - size - 3 - row_offset * leading, line,
+                                  font=font, size=size, color=(0.15, 0.18, 0.22))
+            self.y -= height
+            offset += count
+
 
 
 def build_fallback_pdf(
@@ -1647,7 +1664,9 @@ def build_fallback_pdf(
         stat = "Resilient" if r.get("survived_critical_20pct") else "Triggered"
         stat_col = (0.1, 0.55, 0.35) if r.get("survived_critical_20pct") else (0.75, 0.25, 0.2)
 
-        doc.text(p2, 42, y_r + 6, r["tier_label"].split(" (")[0][:18], font="/F2", size=7.0)
+        label_lines = wrap_text(r["tier_label"].split(" (")[0], "/F2", 6.5, 87, max_lines=2)
+        for line_index, label_line in enumerate(label_lines):
+            doc.text(p2, 42, y_r + 12 - line_index * 8, label_line, font="/F2", size=6.5)
         doc.text(p2, 135, y_r + 6, f"{r['retention_pct']}%", font="/F1", size=7.0)
         doc.text(p2, 190, y_r + 6, f"{r['min_pct']:.1f}% ({r['min_acft']:,.0f} ac-ft)", font="/F2", size=7.0)
         doc.text(p2, 315, y_r + 6, d1, font="/F1", size=7.0)

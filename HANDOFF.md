@@ -1,5 +1,17 @@
 # BASIN current handoff
 
+## September 9 task 3 independent integration review
+
+Reviewed `989dd7a` on `4d79822`. Original suite: **266 passed in 279.35 seconds**. Additional independent fixes cover a scenario note taller than one page (continue the row and repeat identifying cells), width measurement after symbol transliteration and conservative widths for non-ASCII WinAnsi glyphs, stable HTML scenario-table column widths, and wrapped vector spectrum labels. Numerical calculations are unchanged.
+
+Final suite: **268 passed in 273.08 seconds** (`python -m pytest -q --tb=short`), including two additional layout regressions. Snapshot checkout, offline Python smoke (run `1bc5cd407bec`, five scenarios, 500 audit records, zero custom comparisons) and explicit rehearsal replay passed with `implementation_matches_current: true`. Source packaging passed. Inspected current-code HTML and vector scenario tables rendered through Edge and Poppler, plus long-note continuation and supplied HTML evidence pages. This is a software/visual review, not practitioner validation or actual-device installer acceptance.
+
+B17.7 and the task 3 layout/isolation scope are complete. B17.3 stays unchecked because browser-renderer failure/degradation reporting is still outstanding. Base-font CJK/emoji support remains limited to disclosed replacements. Text metrics use exact ASCII standard-font widths and a conservative bound for other WinAnsi glyphs, rather than claiming exact metrics for all characters. The earlier branch-unmerged status is historical once this review is integrated.
+
+Next Claude task 4: determine/test an exact optional Ollama Python-client pin, prove real-client timeout/proxy/redirect compatibility with a controlled local fixture, document package versus daemon versus model, and run a reputable dependency-advisory scan with scope/date/limitations. Use the updated main as the base, commit separately and return for review before merge. No broad upgrades, model downloads, firewall changes or remote access. Package testing is not evidence of daemon egress behavior.
+
+Manual checks and commands: `docs/report_device_acceptance.md`. Remaining separate gates include B15 terminology/reference/units review, B16 saved simulations, SEC.4/SEC.5 live/device checks, and named-human domain feedback and event-format confirmation.
+
 ## Report layout and test-isolation checkpoint — B17.3/B17.7
 
 Branch `fix/report-fixtures-and-layout`, from `origin/main` at `4d79822`. Not merged, not pushed.

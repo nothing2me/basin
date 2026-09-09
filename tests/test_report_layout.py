@@ -311,6 +311,8 @@ def test_html_carries_long_notes_and_evidence_in_full(approved):
     assert LONG_DESCRIPTION.split(".")[0] in html
     # Long unbroken tokens must wrap inside their box rather than overflow it.
     assert "overflow-wrap: anywhere" in html
+    assert '<table style="table-layout: fixed;">' in html
+    assert '<col style="width: 37%;">' in html
 
 
 def test_html_handles_no_scenarios_and_no_evidence(workspace):
@@ -392,3 +394,25 @@ def test_flow_starts_a_new_page_instead_of_overrunning_the_footer():
     flow.paragraph(LONG_NOTE * 3, size=7.0)
     assert len(doc.pages) > 1
     assert flow.y > VectorFlow.BOTTOM - 10
+
+
+def test_single_review_row_can_continue_across_multiple_pages(approved):
+    note = "START-MULTIPAGE " + (LONG_NOTE + " ") * 30 + "END-MULTIPAGE"
+    accepted = approved.exportable()
+    accepted[0].review(True, note)
+    pdf_bytes = build_fallback_pdf(approved, accepted, include_notes=True)
+    text = " ".join(page_text(pdf_bytes).split())
+    assert "START-MULTIPAGE" in text and "END-MULTIPAGE" in text
+    note_column = " ".join(item[5] for item in drawn_items(pdf_bytes)
+                           if item[1] == 410 and item[3] == 6.8)
+    assert note_column.count(LONG_NOTE) == 30
+    assert page_count(pdf_bytes) > 4
+    assert not out_of_bounds(pdf_bytes)
+    assert not overlapping_pairs(pdf_bytes)
+
+
+def test_width_accounts_for_rendered_transliterations_and_wide_punctuation():
+    assert text_width("→", "/F1", 9) == text_width("->", "/F1", 9)
+    # An em dash is 1000 font units, not the former default of 556.
+    assert text_width("—", "/F1", 10) >= 10
+    assert text_width("W", "/F1", 10) == pytest.approx(9.44)
