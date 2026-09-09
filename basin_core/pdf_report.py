@@ -9,6 +9,7 @@ Features dual-tier presentation:
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from html import escape
 import os
 from pathlib import Path
@@ -18,7 +19,118 @@ import sys
 import tempfile
 from typing import Sequence
 
-from basin_core.analysis import simulate_stress_spectrum, simulate_reservoir_drawdown
+from basin_core.analysis import (
+    RESERVOIR_ASSUMPTIONS,
+    simulate_reservoir_drawdown,
+    simulate_stress_spectrum,
+)
+
+UNAVAILABLE = "Not available"
+
+# Illustrative combined-storage bands. These mirror the bands the simulator applies in
+# basin_core.analysis.simulate_reservoir_drawdown; tests/test_pdf_report.py pins them to
+# the model's actual stage_num output so the report cannot drift away from the model.
+ILLUSTRATIVE_BANDS: tuple[tuple[float, str], ...] = (
+    (0.40, "Band 1"),
+    (0.30, "Band 2"),
+    (0.20, "Band 3"),
+    (0.15, "Band 4"),
+)
+
+# TWDB volumetric survey figures recorded in research/incoming/BASIN_Research_Packet.md.
+# They are a sourced external reference and deliberately differ from the model assumption
+# above; the report states both rather than implying the model reproduces the surveys.
+SURVEYED_CAPACITIES_ACFT = {"Lake Corpus Christi": 256062.0, "Choke Canyon": 662820.0}
+
+
+def model_capacities_acft() -> dict[str, float]:
+    """Per-reservoir capacities exactly as the reservoir model assumes them."""
+    return {str(k): float(v) for k, v in RESERVOIR_ASSUMPTIONS["capacities_acft"].items()}
+
+
+def model_total_capacity_acft() -> float:
+    """Combined conservation-pool capacity used as the denominator by the model."""
+    return float(sum(model_capacities_acft().values()))
+
+
+def band_storage_acft(fraction: float) -> float:
+    """Storage volume at a given fraction of the model's combined capacity."""
+    return model_total_capacity_acft() * float(fraction)
+
+
+def clip_text(text: str, limit: int) -> str:
+    """Shorten text for fixed-width vector cells, marking that it was shortened."""
+    text = str(text)
+    return text if len(text) <= limit else text[: max(0, limit - 3)].rstrip() + "..."
+
+
+@dataclass(frozen=True)
+class ReportMetrics:
+    """Facts computed from the illustrative reservoir experiment, for report rendering.
+
+    ``unavailable_reason`` is set whenever the simulation could not be computed. Renderers
+    must show an explicit unavailable state in that case; they must never substitute
+    example or placeholder numbers, which would be indistinguishable from real results.
+    """
+
+    spectrum_data: dict | None = None
+    sim_base: object | None = None
+    sim_cons: object | None = None
+    unavailable_reason: str | None = None
+    earliest_breach_day: int | None = None
+    tipping_point_tier: str | None = None
+    day_base_stage3: int | None = None
+    day_cons_stage3: int | None = None
+    mean_evaporation_acft: float | None = None
+    mean_served_demand_acft: float | None = None
+
+    @property
+    def available(self) -> bool:
+        return self.unavailable_reason is None
+
+
+def compute_report_metrics(primary_scenario, init_frac: float, cons_frac: float) -> ReportMetrics:
+    """Run the illustrative experiment, or report why it could not be run.
+
+    Shared by the HTML and vector renderers so the two paths cannot disagree about what
+    was computed or about whether anything was computed at all.
+    """
+    if primary_scenario is None:
+        return ReportMetrics(unavailable_reason="no accepted scenario was supplied")
+
+    series = getattr(primary_scenario, "series", None)
+    if series is None or not len(series):
+        return ReportMetrics(unavailable_reason="the primary scenario carries no daily rainfall series")
+
+    try:
+        spectrum_data = simulate_stress_spectrum(series, initial_pct=init_frac, conservation_pct=cons_frac)
+        sim_base = simulate_reservoir_drawdown(series, initial_pct=init_frac, conservation_pct=0.0)
+        sim_cons = simulate_reservoir_drawdown(series, initial_pct=init_frac, conservation_pct=cons_frac)
+    except Exception as exc:
+        return ReportMetrics(unavailable_reason=f"the simulation raised {type(exc).__name__}")
+
+    earliest_breach_day: int | None = None
+    tipping_point_tier: str | None = None
+    for row in spectrum_data.get("summary_table", []):
+        day3 = row.get("day_stage3_20")
+        if day3 is not None and (earliest_breach_day is None or day3 < earliest_breach_day):
+            earliest_breach_day = day3
+            tipping_point_tier = row["tier_label"].split(" (")[0]
+
+    def first_stage3(sim) -> int | None:
+        return next((int(r["day"]) for _, r in sim.iterrows() if r["combined_pct"] <= 20.0), None)
+
+    return ReportMetrics(
+        spectrum_data=spectrum_data,
+        sim_base=sim_base,
+        sim_cons=sim_cons,
+        earliest_breach_day=earliest_breach_day,
+        tipping_point_tier=tipping_point_tier,
+        day_base_stage3=first_stage3(sim_base),
+        day_cons_stage3=first_stage3(sim_cons),
+        mean_evaporation_acft=float(sim_base["evap_acft"].mean()) if len(sim_base) else None,
+        mean_served_demand_acft=float(sim_base["served_demand_acft"].mean()) if len(sim_base) else None,
+    )
 
 
 def find_browser_executable() -> str | None:
@@ -80,31 +192,8 @@ def render_html_report(
     cons_frac = conservation_pct / 100.0 if conservation_pct > 1.0 else conservation_pct
 
     primary_scenario = accepted[0] if accepted else None
-    spectrum_data = None
-    sim_base = None
-    sim_cons = None
-
-    if primary_scenario and hasattr(primary_scenario, "series") and len(primary_scenario.series):
-        try:
-            spectrum_data = simulate_stress_spectrum(
-                primary_scenario.series,
-                initial_pct=init_frac,
-                conservation_pct=cons_frac,
-            )
-            sim_base = simulate_reservoir_drawdown(
-                primary_scenario.series,
-                initial_pct=init_frac,
-                conservation_pct=0.0,
-            )
-            sim_cons = simulate_reservoir_drawdown(
-                primary_scenario.series,
-                initial_pct=init_frac,
-                conservation_pct=cons_frac,
-            )
-        except Exception:
-            spectrum_data = None
-            sim_base = None
-            sim_cons = None
+    metrics = compute_report_metrics(primary_scenario, init_frac, cons_frac)
+    spectrum_data = metrics.spectrum_data
 
     run_id = workspace.id
     created_date = workspace.created_at[:10] if getattr(workspace, "created_at", None) else "Current Session"
@@ -113,61 +202,70 @@ def render_html_report(
     weights_summary = ", ".join(f"{k.capitalize()}: {v}%" for k, v in workspace.weights.items())
     primary_id = primary_scenario.id if primary_scenario else "None"
 
-    # Numeric calculation of earliest Stage 3 breach day
-    earliest_breach_num: int | None = None
-    tipping_point_tier = "None (System Resilient)"
+    manifest = getattr(workspace.source, "manifest", {}) or {}
+    record_span = f"{manifest.get('start', 'unknown start')} to {manifest.get('end', 'unknown end')}"
 
-    if spectrum_data and "summary_table" in spectrum_data:
-        for r in spectrum_data["summary_table"]:
-            d3 = r.get("day_stage3_20")
-            if d3 is not None:
-                if earliest_breach_num is None or d3 < earliest_breach_num:
-                    earliest_breach_num = d3
-                    tipping_point_tier = r["tier_label"].split(" (")[0]
+    capacities = model_capacities_acft()
+    total_capacity = model_total_capacity_acft()
+    capacity_breakdown = "; ".join(f"{name} {value:,.0f} ac-ft" for name, value in capacities.items())
+    surveyed_total = sum(SURVEYED_CAPACITIES_ACFT.values())
+    surveyed_breakdown = "; ".join(f"{name} {value:,.0f} ac-ft" for name, value in SURVEYED_CAPACITIES_ACFT.items())
 
-    if earliest_breach_num is not None:
-        m_low = max(1, int(earliest_breach_num / 30.4))
-        m_high = m_low + 1
-        depletion_range_val = f"~{m_low}–{m_high} Months (Toy Model)*"
-        depletion_range_sub = f"*Day {earliest_breach_num} in uncalibrated sim; NOT a forecast"
+    unavailable_note = (
+        "" if metrics.available
+        else f"Simulation unavailable: {metrics.unavailable_reason}. No substitute figures are shown."
+    )
+
+    # Depletion window and tipping point
+    if not metrics.available:
+        depletion_range_val = UNAVAILABLE
+        depletion_range_sub = unavailable_note
+        tipping_point_tier = UNAVAILABLE
+    elif metrics.earliest_breach_day is not None:
+        m_low = max(1, int(metrics.earliest_breach_day / 30.4))
+        depletion_range_val = f"~{m_low}–{m_low + 1} Months (Toy Model)*"
+        depletion_range_sub = f"*Day {metrics.earliest_breach_day} in uncalibrated sim; NOT a forecast"
+        tipping_point_tier = metrics.tipping_point_tier or UNAVAILABLE
     else:
         depletion_range_val = "Buffer Maintained (>6 Months)*"
         depletion_range_sub = "*Storage >20% across modeled window (toy model)"
+        tipping_point_tier = "No tier reached Stage 3 in sim"
 
-    # Dynamically calculate conservation mandate impact (difference between baseline & conservation)
-    day_base_3 = next((int(r["day"]) for _, r in sim_base.iterrows() if r["combined_pct"] <= 20.0), None) if sim_base is not None else None
-    day_cons_3 = next((int(r["day"]) for _, r in sim_cons.iterrows() if r["combined_pct"] <= 20.0), None) if sim_cons is not None else None
+    # Conservation mandate impact, measured as the difference between baseline and mandate runs
+    day_base_3 = metrics.day_base_stage3
+    day_cons_3 = metrics.day_cons_stage3
 
-    if day_base_3 is not None and day_cons_3 is not None:
+    if not metrics.available:
+        conservation_val = UNAVAILABLE
+        conservation_sub = unavailable_note
+    elif day_base_3 is not None and day_cons_3 is not None:
         diff = day_cons_3 - day_base_3
         if diff > 0:
             conservation_val = f"+{diff} Days Gained*"
             conservation_sub = f"*Simulated deferral from Day {day_base_3} to Day {day_cons_3} ({cons_frac*100:.0f}% mandate)"
         elif diff < 0:
             conservation_val = f"{diff} Days*"
-            conservation_sub = f"*Accelerated under simulation settings"
+            conservation_sub = "*Accelerated under simulation settings"
         else:
             conservation_val = "0 Days*"
             conservation_sub = f"*Evaporation dominates at Day {day_base_3}"
     elif day_base_3 is not None and day_cons_3 is None:
         conservation_val = "Trigger Averted in Sim*"
-        conservation_sub = f"*Storage maintained >20% across entire modeled window"
+        conservation_sub = "*Storage maintained >20% across entire modeled window"
     elif day_base_3 is None and day_cons_3 is None:
         conservation_val = "Buffer Intact*"
-        conservation_sub = f"*Storage remains >20% in baseline and conservation"
+        conservation_sub = "*Storage remains >20% in baseline and conservation"
     else:
-        conservation_val = "N/A"
-        conservation_sub = "Threshold not reached in modeled window"
+        conservation_val = "Threshold not reached in baseline*"
+        conservation_sub = "*Baseline stayed above 20% while the mandate run did not"
 
-    # Dynamically compute primary loss driver
-    if sim_base is not None and len(sim_base):
-        avg_evap = float(sim_base["evap_acft"].mean())
-        avg_dem = float(sim_base["served_demand_acft"].mean())
-        loss_driver_val = f"{avg_evap:,.0f} ac-ft/day"
-        loss_driver_sub = f"Mean evaporation load (vs {avg_dem:,.0f} ac-ft/day demand)"
+    # Primary loss driver
+    if metrics.available and metrics.mean_evaporation_acft is not None:
+        loss_driver_val = f"{metrics.mean_evaporation_acft:,.0f} ac-ft/day"
+        loss_driver_sub = f"Mean evaporation load (vs {metrics.mean_served_demand_acft:,.0f} ac-ft/day demand)"
     else:
-        loss_driver_val = "N/A"
-        loss_driver_sub = "Simulation unavailable"
+        loss_driver_val = UNAVAILABLE
+        loss_driver_sub = unavailable_note or "Simulation produced no rows"
 
     spectrum_html_rows = ""
     if spectrum_data and "summary_table" in spectrum_data:
@@ -191,6 +289,63 @@ def render_html_report(
                 <td>{status_badge}</td>
             </tr>
             """
+
+    band_actions = {
+        "Band 1": ("Public awareness notices, voluntary reduction targets, leak audit escalation.",
+                   "Early demand dampening. Magnitude not modeled."),
+        "Band 2": ("Restrictions on landscape irrigation and non-essential outdoor use.",
+                   "Slows drawdown between bands. Magnitude not modeled."),
+        "Band 3": ("Emergency curtailment across accounts; drought surcharge pricing.",
+                   "Protects the minimum reserve. Magnitude not modeled."),
+        "Band 4": ("Supply-emergency protocols prioritizing public health and safety.",
+                   "Last band the model distinguishes before storage exhaustion."),
+    }
+    band_html_rows = ""
+    for band_fraction, band_name in ILLUSTRATIVE_BANDS:
+        actions, effect = band_actions[band_name]
+        band_html_rows += (
+            "<tr>"
+            f"<td><strong>{escape(band_name)}</strong></td>"
+            f"<td>&le; {band_fraction * 100:.0f}% ({band_storage_acft(band_fraction):,.0f} ac-ft)</td>"
+            f"<td>{escape(actions)}</td>"
+            f"<td>{escape(effect)}</td>"
+            "</tr>"
+        )
+
+    if metrics.available:
+        tipping_point_sub = "First tier breaching Stage 3 in sim*"
+        overview_sentence = (
+            f"Derived using primary scenario <strong>{escape(primary_id)}</strong> at "
+            f"<strong>{init_frac * 100:.0f}% initial storage</strong>, it evaluates whether emergency "
+            f"conservation ({cons_frac * 100:.0f}%) defers breaching the illustrative 20% reserve band (Stage 3)."
+        )
+    else:
+        tipping_point_sub = unavailable_note
+        overview_sentence = (
+            f"It was intended to run at {init_frac * 100:.0f}% initial storage with "
+            f"{cons_frac * 100:.0f}% emergency conservation, but no run was produced for this report."
+        )
+
+    unavailable_banner = (
+        f'<p style="margin-top: 6px; font-weight: 600; color: #92400e;">{escape(unavailable_note)}</p>'
+        if unavailable_note else ""
+    )
+
+    tier_count = len(spectrum_data.get("summary_table", [])) if spectrum_data else 0
+    if metrics.available:
+        spectrum_caption = (
+            f"Simulated drawdown across {tier_count} rainfall tiers for {primary_id} starting at "
+            f"{init_frac * 100:.0f}% initial storage with {cons_frac * 100:.0f}% emergency conservation. "
+            "Asterisks mark days inside the uncalibrated modeled window."
+        )
+    else:
+        spectrum_caption = f"Not computed for this report. {unavailable_note}"
+
+    spectrum_unavailable_row = (
+        '<tr><td colspan="7" style="text-align: center; color: #92400e; font-weight: 600;">'
+        + escape(f"{UNAVAILABLE} — {unavailable_note or 'the stress spectrum produced no rows'}")
+        + "</td></tr>"
+    )
 
     scenario_html_rows = ""
     for s in accepted:
@@ -466,7 +621,8 @@ def render_html_report(
 
     <div class="callout">
         <div class="callout-title">The Bottom Line — Executive Overview</div>
-        <p>This report presents human-reviewed rainfall stress scenarios and an <strong>illustrative reservoir drawdown experiment</strong> for <strong>Lake Corpus Christi</strong> (257,300 ac-ft baseline cap) and <strong>Choke Canyon Reservoir</strong> (662,600 ac-ft baseline cap). Derived using primary scenario <strong>{escape(primary_id)}</strong> at <strong>{init_frac * 100:.0f}% initial storage</strong>, it evaluates whether emergency conservation ({cons_frac * 100:.0f}%) defers breaching the critical 20% reserve threshold (Stage 3). <em>This simulation is an exploratory sensitivity tool, not an operational delivery forecast.</em></p>
+        <p>This report presents human-reviewed rainfall stress scenarios and an <strong>illustrative reservoir drawdown experiment</strong> across the reservoirs the model represents ({escape(capacity_breakdown)}; combined <strong>{total_capacity:,.0f} ac-ft</strong>). {overview_sentence} <em>This simulation is an exploratory sensitivity tool, not an operational delivery forecast.</em></p>
+        {unavailable_banner}
     </div>
 
     <div class="kpi-row">
@@ -478,7 +634,7 @@ def render_html_report(
         <div class="kpi-card neutral">
             <div class="kpi-label">Simulated Tipping Point Tier</div>
             <div class="kpi-val" style="font-size: 10.5pt; margin-top: 3px;">{escape(tipping_point_tier)}</div>
-            <div class="kpi-sub">First tier breaching Stage 3 in sim*</div>
+            <div class="kpi-sub">{escape(tipping_point_sub)}</div>
         </div>
         <div class="kpi-card neutral">
             <div class="kpi-label">Simulated Mandate Impact</div>
@@ -494,36 +650,22 @@ def render_html_report(
 
     <div class="section-title">Illustrative Drought Response Reference Framework</div>
     <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
-        City of Corpus Christi Drought Contingency Plan (Approved 2025 Revision, City Code Ch. 55 triggers: Stage 1 &le; 40%, Stage 2 &le; 30%, Stage 3 &le; 20% combined storage; clearance requires +10% held for 15 consecutive days; emergency tier designated Level 1 Water Emergency). Capacities based on TWDB Volumetric Surveys (Choke Canyon 2024: 669,186 ac-ft @ 220.5 ft MSL, 25,510 acres; Lake Corpus Christi 2016: 256,339 ac-ft @ 94.0 ft MSL, 19,748 acres). Operational triggers depend on combined storage; verify active city declarations before operational use.
+        <strong>Illustrative assumption, not adopted policy.</strong> The storage bands below are this experiment's own assumption ({escape(str(RESERVOIR_ASSUMPTIONS["thresholds"]))}). BASIN does not reproduce any adopted drought contingency ordinance, and the response categories listed are generic planning language rather than measures any authority has adopted. Confirm the currently adopted plan and any active declarations with the responsible utility before operational use.
+    </p>
+    <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
+        <strong>Capacity basis.</strong> Band volumes are computed against the model's assumed combined conservation-pool capacity of {total_capacity:,.0f} ac-ft ({escape(capacity_breakdown)}). That is the experiment's assumption, not a survey-verified figure. For comparison, the project research packet records TWDB volumetric survey values of {escape(surveyed_breakdown)} (combined {surveyed_total:,.0f} ac-ft). Reconciling the model assumption with the surveys is open work; this report does not claim the two agree.
     </p>
     <table>
         <thead>
             <tr>
-                <th style="width: 22%;">Drought Trigger Stage</th>
-                <th style="width: 22%;">System Storage Trigger</th>
-                <th style="width: 32%;">Typical Planning Actions</th>
-                <th style="width: 24%;">Illustrative Reserve Impact</th>
+                <th style="width: 22%;">Illustrative Band</th>
+                <th style="width: 26%;">Combined Storage (model capacity)</th>
+                <th style="width: 32%;">Generic Response Categories</th>
+                <th style="width: 20%;">Intended Effect</th>
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td><strong>Stage 1 · Mild Drought</strong></td>
-                <td>Combined storage &le; 40%</td>
-                <td>Public awareness notices, voluntary 5% reduction, leak audit escalation.</td>
-                <td>Early demand dampening (~5–10 MGD reduction).</td>
-            </tr>
-            <tr>
-                <td><strong>Stage 2 · Moderate Drought</strong></td>
-                <td>Combined storage &le; 30%</td>
-                <td>Mandatory 1-day/week landscape irrigation, non-essential water bans.</td>
-                <td>Extends intermediate reserves; curbs peak summer usage.</td>
-            </tr>
-            <tr>
-                <td><strong>Stage 3 · Critical Emergency</strong></td>
-                <td>Combined storage &le; 20%</td>
-                <td>Mandatory emergency curtailment across all accounts, surcharge pricing.</td>
-                <td>Protects critical minimum reserve under extreme drought.</td>
-            </tr>
+            {band_html_rows}
         </tbody>
     </table>
 
@@ -542,11 +684,11 @@ def render_html_report(
     <!-- Page 2 Equal-Prominence Matrix Callout -->
     <div style="background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 6px; padding: 9px 12px; margin-bottom: 10px; font-size: 9.5pt; font-weight: 600; color: #92400e; line-height: 1.4;">
         ⚠️ ILLUSTRATIVE SENSITIVITY EXPERIMENT ONLY — NOT AN OPERATIONAL FORECAST<br>
-        <span style="font-weight: 400; font-size: 8.5pt; color: #78350f;">Drawdown trajectories reflect an illustrative two-pool mass-balance with uncalibrated toy inflow proxies (0.15 retention) and fixed evaporation. They do NOT represent safe yield, actual reservoir levels, or regulatory curtailment dates.</span>
+        <span style="font-weight: 400; font-size: 8.5pt; color: #78350f;">Drawdown trajectories reflect an illustrative two-pool mass-balance with an uncalibrated inflow proxy ({escape(str(RESERVOIR_ASSUMPTIONS["inflow"]))}) and a fixed seasonal evaporation assumption. They do NOT represent safe yield, actual reservoir levels, or regulatory curtailment dates.</span>
     </div>
 
     <div class="section-title">Illustrative Storage Sensitivity Spectrum (Non-Predictive)</div>
-    <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">Simulated drawdown across 4 rainfall tiers for {escape(primary_id)} starting at {init_frac*100:.0f}% initial storage with {cons_frac*100:.0f}% emergency conservation. Asterisks denote synthetic toy inflow window.</p>
+    <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">{escape(spectrum_caption)}</p>
     <table>
         <thead>
             <tr>
@@ -560,7 +702,7 @@ def render_html_report(
             </tr>
         </thead>
         <tbody>
-            {spectrum_html_rows if spectrum_html_rows else '<tr><td colspan="7" style="text-align: center; color: #64748b;">No stress spectrum data available.</td></tr>'}
+            {spectrum_html_rows if spectrum_html_rows else spectrum_unavailable_row}
         </tbody>
     </table>
 
@@ -569,7 +711,7 @@ def render_html_report(
         <thead>
             <tr>
                 <th>Scenario ID</th>
-                <th>NOAA Ground Truth Dates</th>
+                <th>Source Window (NOAA GHCN-Daily)</th>
                 <th>Duration</th>
                 <th>Precip Deficit</th>
                 <th>Concurrence</th>
@@ -581,18 +723,19 @@ def render_html_report(
         </tbody>
     </table>
 
-    <div class="section-title">Scientific Provenance & Verification Scope</div>
+    <div class="section-title">Provenance & Verification Scope</div>
     <div class="seal-box">
         <div class="seal-text">
-            <div><strong>Data Source:</strong> NOAA GHCN-Daily Daily Precipitation (1991–2025) · Stations: {escape(stations)}</div>
+            <div><strong>Data Source:</strong> NOAA GHCN-Daily precipitation, {escape(record_span)} · Stations: {escape(stations)}</div>
             <div><strong>Shortlist Weights:</strong> {escape(weights_summary)}</div>
-            <div><strong>Verification Scope:</strong> Cryptographic SHA-256 validation applies to the companion ZIP data bundle (daily_rainfall.csv, shortlist.csv, audit.json, snapshot).</div>
+            <div><strong>What SHA-256 verification covers:</strong> the companion ZIP data bundle (daily_rainfall.csv, shortlist.csv, audit.json, snapshot), when that bundle is replayed. docs/verification_scope.md states the contract.</div>
+            <div><strong>What it does not cover:</strong> <strong>this PDF is outside that contract.</strong> It is generated separately, is not part of the bundle inventory or its hashes, and a successful bundle replay establishes nothing about the figures or wording on these pages. No scientific validation or professional approval is claimed or implied.</div>
             <div><strong>Modeling Boundary:</strong> Reservoir drawdown is an illustrative planning experiment; point rainfall records are proxies and do not establish basin-wide calibrated inflow.</div>
-            <div><strong>Independent Replay:</strong> <span class="font-mono text-sm">python scripts/replay_bundle.py output/BASIN-{escape(run_id)}.zip</span></div>
+            <div><strong>Bundle Replay Command:</strong> <span class="font-mono text-sm">python scripts/replay_bundle.py output/BASIN-{escape(run_id)}.zip</span></div>
         </div>
         <div class="seal-stamp">
-            <div>BASIN AUDIT</div>
-            <div style="font-size: 11pt; font-weight: 800;">DATA PASS</div>
+            <div>VERIFICATION SCOPE</div>
+            <div style="font-size: 8.5pt; font-weight: 800; line-height: 1.25;">BUNDLE ONLY<br>PDF NOT VERIFIED</div>
             <div class="font-mono" style="font-size: 6.5pt;">ID: {escape(run_id)}</div>
         </div>
     </div>
@@ -742,114 +885,99 @@ def build_fallback_pdf(
     multi-tier stress spectrum drawdown tables, approved scenario features,
     and cryptographic audit signatures. Supports both object and string inputs.
     """
-    from basin_core.analysis import simulate_stress_spectrum, simulate_reservoir_drawdown
-
     doc = VectorPDFBuilder()
 
     # Determine input mode (Workspace object vs Title string)
+    init_frac = initial_pct / 100.0 if initial_pct > 1.0 else initial_pct
+    cons_frac = conservation_pct / 100.0 if conservation_pct > 1.0 else conservation_pct
+
     if isinstance(workspace_or_title, str):
+        # Title/body mode carries no session. Nothing about a run, snapshot or simulation
+        # can be stated here, so every such field reports an explicit unavailable state.
         title = workspace_or_title
         body_text = str(accepted_or_text or "")
-        run_id = "AUDIT-CERTIFIED"
-        created_date = "Current Session"
-        stations = "Corpus Christi Intl (USW00012924), Victoria (USW00012912), San Antonio (USW00012921)"
-        snapshot_hash = "f9a1b2c3d4e5f6a7"
+        run_id = UNAVAILABLE
+        created_date = UNAVAILABLE
+        stations = UNAVAILABLE
+        snapshot_hash = UNAVAILABLE
         accepted = []
-        spectrum_data = None
-        depletion_range_val = "~4-5 Months (Toy Model)*"
-        depletion_range_sub = "*Earliest Stage 3 breach day in sim"
-        conservation_val = "+32 Days Gained*"
-        conservation_sub = f"*With {conservation_pct*100:.0f}% emergency curtailment"
-        loss_driver_val = "1,280 ac-ft/day*"
-        loss_driver_sub = "*Mean simulated surface evaporation"
+        metrics = compute_report_metrics(None, init_frac, cons_frac)
     else:
         workspace = workspace_or_title
         accepted = list(accepted_or_text or [])
         run_id = str(workspace.id)
-        created_date = workspace.created_at[:10] if getattr(workspace, "created_at", None) else "Current Session"
-        stations = ", ".join(getattr(workspace.params, "stations", ["USW00012924", "USW00012912", "USW00012921"]))
-        snapshot_hash = getattr(workspace, "source", None)
-        if snapshot_hash and hasattr(snapshot_hash, "manifest"):
-            snapshot_hash = snapshot_hash.manifest.get("sha256", "e3b0c44298fc1c14")[:16]
-        else:
-            snapshot_hash = "e3b0c44298fc1c14"
+        created_date = workspace.created_at[:10] if getattr(workspace, "created_at", None) else UNAVAILABLE
+        station_ids = list(getattr(getattr(workspace, "params", None), "stations", None) or [])
+        stations = ", ".join(str(x) for x in station_ids) if station_ids else UNAVAILABLE
+        manifest = getattr(getattr(workspace, "source", None), "manifest", None) or {}
+        snapshot_hash = str(manifest.get("sha256", ""))[:16] or UNAVAILABLE
         title = f"BASIN Executive Technical Brief -- {run_id}"
-        body_text = f"Evaluated {len(accepted)} accepted scenarios under {initial_pct*100:.0f}% starting storage."
+        body_text = f"Evaluated {len(accepted)} accepted scenarios under {init_frac * 100:.0f}% starting storage."
+        metrics = compute_report_metrics(accepted[0] if accepted else None, init_frac, cons_frac)
 
-        # Compute simulation metrics
-        init_frac = initial_pct / 100.0 if initial_pct > 1.0 else initial_pct
-        cons_frac = conservation_pct / 100.0 if conservation_pct > 1.0 else conservation_pct
-        primary_scenario = accepted[0] if accepted else None
-        spectrum_data = None
-        sim_base = None
-        sim_cons = None
+    spectrum_data = metrics.spectrum_data
+    unavailable_note = (
+        "" if metrics.available
+        else f"Simulation unavailable: {metrics.unavailable_reason}. No substitute figures are shown."
+    )
 
-        if primary_scenario and hasattr(primary_scenario, "series") and len(primary_scenario.series):
-            try:
-                spectrum_data = simulate_stress_spectrum(
-                    primary_scenario.series,
-                    initial_pct=init_frac,
-                    conservation_pct=cons_frac,
-                )
-                sim_base = simulate_reservoir_drawdown(
-                    primary_scenario.series,
-                    initial_pct=init_frac,
-                    conservation_pct=0.0,
-                )
-                sim_cons = simulate_reservoir_drawdown(
-                    primary_scenario.series,
-                    initial_pct=init_frac,
-                    conservation_pct=cons_frac,
-                )
-            except Exception:
-                spectrum_data = None
-                sim_base = None
-                sim_cons = None
+    # Depletion window
+    if not metrics.available:
+        depletion_range_val = UNAVAILABLE
+        depletion_range_sub = "*Not computed for this report"
+    elif metrics.earliest_breach_day is not None:
+        m_low = max(1, int(metrics.earliest_breach_day / 30.4))
+        depletion_range_val = f"~{m_low}-{m_low + 1} Months (Toy Model)*"
+        depletion_range_sub = f"*Day {metrics.earliest_breach_day} in uncalibrated sim"
+    else:
+        depletion_range_val = "Buffer Maintained (>6 Mo)*"
+        depletion_range_sub = "*Storage >20% across modeled window"
 
-        # Depletion window calculation
-        earliest_breach_num: int | None = None
-        if spectrum_data and "summary_table" in spectrum_data:
-            for r in spectrum_data["summary_table"]:
-                d3 = r.get("day_stage3_20")
-                if d3 is not None:
-                    if earliest_breach_num is None or d3 < earliest_breach_num:
-                        earliest_breach_num = d3
-
-        if earliest_breach_num is not None:
-            m_low = max(1, int(earliest_breach_num / 30.4))
-            depletion_range_val = f"~{m_low}-{m_low + 1} Months (Toy Model)*"
-            depletion_range_sub = f"*Day {earliest_breach_num} in uncalibrated sim"
+    # Conservation benefit
+    day_base_3 = metrics.day_base_stage3
+    day_cons_3 = metrics.day_cons_stage3
+    if not metrics.available:
+        conservation_val = UNAVAILABLE
+        conservation_sub = "*Not computed for this report"
+    elif day_base_3 is not None and day_cons_3 is not None:
+        diff = day_cons_3 - day_base_3
+        if diff > 0:
+            conservation_val = f"+{diff} Days Gained*"
+            conservation_sub = f"*Deferred Day {day_base_3} to Day {day_cons_3}"
+        elif diff < 0:
+            conservation_val = f"{diff} Days*"
+            conservation_sub = "*Accelerated under these settings"
         else:
-            depletion_range_val = "Buffer Maintained (>6 Mo)*"
-            depletion_range_sub = "*Storage >20% across modeled window"
+            conservation_val = "0 Days*"
+            conservation_sub = "*Evaporation dominates storage"
+    elif day_base_3 is not None and day_cons_3 is None:
+        conservation_val = "Trigger Averted*"
+        conservation_sub = "*Storage maintained above 20%"
+    elif day_base_3 is None and day_cons_3 is None:
+        conservation_val = "Buffer Intact*"
+        conservation_sub = "*Threshold not breached in window"
+    else:
+        conservation_val = "Baseline Above 20%*"
+        conservation_sub = "*Mandate run breached, baseline did not"
 
-        # Conservation benefit calculation
-        day_base_3 = next((int(r["day"]) for _, r in sim_base.iterrows() if r["combined_pct"] <= 20.0), None) if sim_base is not None else None
-        day_cons_3 = next((int(r["day"]) for _, r in sim_cons.iterrows() if r["combined_pct"] <= 20.0), None) if sim_cons is not None else None
+    # Dominant loss driver
+    if metrics.available and metrics.mean_evaporation_acft is not None:
+        loss_driver_val = f"{metrics.mean_evaporation_acft:,.0f} ac-ft/day*"
+        loss_driver_sub = f"*Mean evaporation vs {metrics.mean_served_demand_acft:,.0f} demand"
+    else:
+        loss_driver_val = UNAVAILABLE
+        loss_driver_sub = "*Not computed for this report"
 
-        if day_base_3 is not None and day_cons_3 is not None:
-            diff = day_cons_3 - day_base_3
-            if diff > 0:
-                conservation_val = f"+{diff} Days Gained*"
-                conservation_sub = f"*Deferred Day {day_base_3} to Day {day_cons_3}"
-            else:
-                conservation_val = "0 Days*"
-                conservation_sub = "*Evaporation dominates storage"
-        elif day_base_3 is not None and day_cons_3 is None:
-            conservation_val = "Trigger Averted*"
-            conservation_sub = "*Storage maintained above 20%"
-        else:
-            conservation_val = "Buffer Intact*"
-            conservation_sub = "*Threshold not breached in window"
-
-        if sim_base is not None and len(sim_base):
-            avg_evap = float(sim_base["evap_acft"].mean())
-            avg_dem = float(sim_base["served_demand_acft"].mean())
-            loss_driver_val = f"{avg_evap:,.0f} ac-ft/day*"
-            loss_driver_sub = f"*Mean evaporation vs {avg_dem:,.0f} demand"
-        else:
-            loss_driver_val = "1,280 ac-ft/day*"
-            loss_driver_sub = "*Estimated evaporation load"
+    capacities = model_capacities_acft()
+    total_capacity = model_total_capacity_acft()
+    capacity_breakdown = "; ".join(f"{name} {value:,.0f}" for name, value in capacities.items())
+    surveyed_total = sum(SURVEYED_CAPACITIES_ACFT.values())
+    tier_count = len(spectrum_data.get("summary_table", [])) if spectrum_data else 0
+    replay_line = (
+        "* Bundle Replay Command: not applicable, this report was generated without a session"
+        if run_id == UNAVAILABLE
+        else f"* Bundle Replay Command: python scripts/replay_bundle.py output/BASIN-{run_id}.zip"
+    )
 
     # ==========================================
     # PAGE 1: EXECUTIVE BRIEF & FRAMEWORK
@@ -892,26 +1020,66 @@ def build_fallback_pdf(
     # Narrative Findings Box
     doc.rect(p1, 36, 424, 540, 110, fill=(0.98, 0.99, 1.0), stroke=(0.88, 0.9, 0.94))
     doc.text(p1, 48, 518, "KEY PLANNING FINDINGS & HYDROLOGIC CONTEXT", font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
-    doc.text(p1, 48, 502, f"- Evaluates combined storage across Lake Corpus Christi and Choke Canyon Reservoir (963,600 ac-ft full pool).", font="/F1", size=7.2)
-    doc.text(p1, 48, 489, f"- Tested under initial storage of {initial_pct*100:.0f}%, with {conservation_pct*100:.0f}% emergency demand reduction modeled.", font="/F1", size=7.2)
-    doc.text(p1, 48, 476, f"- Multi-station drought proxy reconstructed from NOAA GHCN-Daily stations: {stations[:60]}.", font="/F1", size=7.2)
-    doc.text(p1, 48, 463, f"- Critical reserve threshold (Stage 3: 20%) is tested across 4 stress tiers to determine tipping points.", font="/F1", size=7.2)
-    doc.text(p1, 48, 450, f"- Mandating emergency conservation deferral extends reserve buffer by delaying stage threshold breaches.", font="/F1", size=7.2)
-    doc.text(p1, 48, 437, f"- {body_text[:110]}", font="/F1", size=7.2, color=(0.3, 0.35, 0.4))
+    if not metrics.available:
+        tier_finding = f"- {unavailable_note}"
+    else:
+        tier_finding = (
+            f"- The 20% band ({band_storage_acft(0.20):,.0f} ac-ft of model capacity) is tested across "
+            f"{tier_count} rainfall retention tiers; see page 2."
+        )
+
+    if not metrics.available:
+        mandate_finding = "- Conservation effect not computed for this report."
+    elif day_base_3 is not None and day_cons_3 is not None:
+        verb = "deferred" if day_cons_3 > day_base_3 else "did not defer"
+        mandate_finding = (
+            f"- In this run the {cons_frac * 100:.0f}% mandate {verb} the 20% band "
+            f"(baseline Day {day_base_3}, mandate Day {day_cons_3})."
+        )
+    elif day_base_3 is None and day_cons_3 is None:
+        mandate_finding = "- Neither the baseline nor the mandate run reached the 20% band in the modeled window."
+    else:
+        mandate_finding = "- Baseline and mandate runs disagreed on reaching the 20% band; see page 2."
+
+    findings = [
+        f"- Combined storage across the model's reservoirs: {total_capacity:,.0f} ac-ft "
+        f"({capacity_breakdown} ac-ft).",
+        (f"- Tested under initial storage of {init_frac * 100:.0f}%, with {cons_frac * 100:.0f}% emergency demand reduction modeled."
+         if metrics.available else
+         f"- Requested settings were {init_frac * 100:.0f}% initial storage and {cons_frac * 100:.0f}% emergency demand reduction; nothing was simulated."),
+        f"- Multi-station drought proxy reconstructed from NOAA GHCN-Daily stations: {clip_text(stations, 60)}.",
+        tier_finding,
+        mandate_finding,
+        f"- {clip_text(body_text, 110)}",
+    ]
+    for offset, finding in enumerate(findings):
+        colour = (0.3, 0.35, 0.4) if offset == len(findings) - 1 else (0.1, 0.1, 0.1)
+        doc.text(p1, 48, 502 - offset * 13, clip_text(finding, 132), font="/F1", size=7.2, color=colour)
 
     # Drought Contingency Plan Reference Framework
-    doc.text(p1, 36, 400, "DROUGHT RESPONSE REFERENCE FRAMEWORK (Approved June 2026 Revision)", font="/F2", size=9.5, color=(0.06, 0.09, 0.16))
+    doc.text(p1, 36, 400, "ILLUSTRATIVE STORAGE BANDS USED BY THIS EXPERIMENT -- NOT ADOPTED POLICY", font="/F2", size=9.5, color=(0.06, 0.09, 0.16))
     y_tbl = 382
     doc.rect(p1, 36, y_tbl - 18, 540, 18, fill=(0.08, 0.49, 0.55))
-    doc.text(p1, 44, y_tbl - 13, "STAGE / TRIGGER", font="/F2", size=7.5, color=(1, 1, 1))
-    doc.text(p1, 150, y_tbl - 13, "COMBINED CAPACITY", font="/F2", size=7.5, color=(1, 1, 1))
-    doc.text(p1, 260, y_tbl - 13, "MANDATED ACTIONS & CURTAILMENT PROTOCOLS", font="/F2", size=7.5, color=(1, 1, 1))
+    doc.text(p1, 44, y_tbl - 13, "ILLUSTRATIVE BAND", font="/F2", size=7.5, color=(1, 1, 1))
+    doc.text(p1, 150, y_tbl - 13, "COMBINED STORAGE", font="/F2", size=7.5, color=(1, 1, 1))
+    doc.text(p1, 260, y_tbl - 13, "GENERIC RESPONSE CATEGORIES -- NOT ADOPTED BY ANY AUTHORITY", font="/F2", size=7.5, color=(1, 1, 1))
 
+    band_actions = {
+        "Band 1": ("Public awareness notices, voluntary reduction targets, leak audit escalation.",
+                   "Generic planning language; effect on storage is not quantified here."),
+        "Band 2": ("Restrictions on landscape irrigation and non-essential outdoor use.",
+                   "Generic planning language; effect on storage is not quantified here."),
+        "Band 3": ("Emergency curtailment across accounts; drought surcharge pricing.",
+                   "Generic planning language; effect on storage is not quantified here."),
+        "Band 4": ("Supply-emergency protocols prioritizing public health and safety.",
+                   "Last band the model distinguishes before storage exhaustion."),
+    }
     rows_framework = [
-        ("Stage 1 (Mild)", "<= 40% (385,440 ac-ft)", "Voluntary conservation target 5%; public leak abatement notifications.", "Public education and municipal utility distribution audit activations."),
-        ("Stage 2 (Moderate)", "<= 30% (289,080 ac-ft)", "Mandatory 1-day/week lawn watering tied to designated trash pickup days.", "Prohibition on impervious surface washing and aesthetic water features."),
-        ("Stage 3 (Critical)", "<= 20% (192,720 ac-ft)", "Emergency mandatory curtailment; drought surcharge pricing enacted.", "Complete ban on outdoor irrigation; mandatory commercial conservation."),
-        ("Level 1 Emergency", "Disruption / Critical", "Catastrophic infrastructure disruption or imminent supply exhaustion protocol.", "Emergency allocations strictly prioritized for public health and safety."),
+        (name,
+         f"<= {fraction * 100:.0f}% ({band_storage_acft(fraction):,.0f} ac-ft)",
+         band_actions[name][0],
+         band_actions[name][1])
+        for fraction, name in ILLUSTRATIVE_BANDS
     ]
 
     for idx, (stg, cap, act1, act2) in enumerate(rows_framework):
@@ -922,6 +1090,10 @@ def build_fallback_pdf(
         doc.text(p1, 150, y_r + 14, cap, font="/F1", size=7.5)
         doc.text(p1, 260, y_r + 15, act1, font="/F1", size=6.8)
         doc.text(p1, 260, y_r + 5, act2, font="/F1", size=6.8)
+
+    doc.text(p1, 36, 236, f"Band volumes use the model's assumed combined capacity of {total_capacity:,.0f} ac-ft ({capacity_breakdown} ac-ft).", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
+    doc.text(p1, 36, 226, f"That is this experiment's assumption, not a survey-verified figure: the project research packet records TWDB volumetric", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
+    doc.text(p1, 36, 216, f"survey values summing to {surveyed_total:,.0f} ac-ft. Reconciling the two is open work; this report does not claim they agree.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
 
     # Page 1 Footer
     doc.line(p1, 36, 50, 576, 50, stroke=(0.8, 0.85, 0.9))
@@ -952,15 +1124,14 @@ def build_fallback_pdf(
     doc.text(p2, 455, y_spec - 13, "Stage 3 (20%)", font="/F2", size=7.0, color=(1, 1, 1))
     doc.text(p2, 520, y_spec - 13, "Sim Status", font="/F2", size=7.0, color=(1, 1, 1))
 
-    if spectrum_data and "summary_table" in spectrum_data:
-        spec_rows = spectrum_data["summary_table"]
-    else:
-        spec_rows = [
-            {"tier_label": "Tier 1: Full Inflow", "retention_pct": 100, "min_pct": 36.4, "min_acft": 350718, "day_stage1_40": 42, "day_stage2_30": None, "day_stage3_20": None, "survived_critical_20pct": True},
-            {"tier_label": "Tier 2: 80% Retained", "retention_pct": 80, "min_pct": 28.2, "min_acft": 271735, "day_stage1_40": 38, "day_stage2_30": 84, "day_stage3_20": None, "survived_critical_20pct": True},
-            {"tier_label": "Tier 3: 60% Retained", "retention_pct": 60, "min_pct": 19.5, "min_acft": 187884, "day_stage1_40": 34, "day_stage2_30": 76, "day_stage3_20": 138, "survived_critical_20pct": False},
-            {"tier_label": "Tier 4: 40% Retained", "retention_pct": 40, "min_pct": 14.1, "min_acft": 135868, "day_stage1_40": 31, "day_stage2_30": 68, "day_stage3_20": 118, "survived_critical_20pct": False},
-        ]
+    spec_rows = spectrum_data["summary_table"] if spectrum_data and "summary_table" in spectrum_data else []
+
+    if not spec_rows:
+        # No example or placeholder rows: an empty spectrum is reported as unavailable so a
+        # reader can never mistake illustrative filler for a computed result.
+        doc.rect(p2, 36, y_spec - 58, 540, 40, fill=(0.99, 0.96, 0.92), stroke=(0.85, 0.65, 0.15))
+        doc.text(p2, 42, y_spec - 32, f"{UNAVAILABLE.upper()} -- STRESS SPECTRUM NOT COMPUTED FOR THIS REPORT", font="/F2", size=8.0, color=(0.7, 0.4, 0.05))
+        doc.text(p2, 42, y_spec - 46, clip_text(unavailable_note or "The stress spectrum produced no rows.", 118), font="/F1", size=7.0, color=(0.4, 0.35, 0.2))
 
     for idx, r in enumerate(spec_rows[:4]):
         y_r = y_spec - 38 - (idx * 20)
@@ -981,7 +1152,7 @@ def build_fallback_pdf(
         doc.text(p2, 520, y_r + 6, stat, font="/F2", size=7.0, color=stat_col)
 
     # Section 2: Approved Candidate Scenarios Table
-    y_cand = 555
+    y_cand = 535
     doc.text(p2, 36, y_cand + 15, "SHORTLISTED CANDIDATE SCENARIOS (Accepted for Planning Analysis)", font="/F2", size=9.5, color=(0.06, 0.09, 0.16))
     doc.rect(p2, 36, y_cand - 18, 540, 18, fill=(0.12, 0.16, 0.24))
     doc.text(p2, 42, y_cand - 13, "Scenario ID", font="/F2", size=7.0, color=(1, 1, 1))
@@ -989,9 +1160,11 @@ def build_fallback_pdf(
     doc.text(p2, 220, y_cand - 13, "Duration", font="/F2", size=7.0, color=(1, 1, 1))
     doc.text(p2, 275, y_cand - 13, "Deficit (mm)", font="/F2", size=7.0, color=(1, 1, 1))
     doc.text(p2, 345, y_cand - 13, "Concurrence", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 410, y_cand - 13, "Review Decision & Hydrologist Note", font="/F2", size=7.0, color=(1, 1, 1))
+    doc.text(p2, 410, y_cand - 13, "Review Disposition & Note", font="/F2", size=7.0, color=(1, 1, 1))
 
     scen_rows = accepted if accepted else []
+    if not scen_rows:
+        doc.text(p2, 42, y_cand - 32, "No accepted scenarios were supplied for this report.", font="/F1", size=7.5, color=(0.45, 0.5, 0.55))
     for idx, s in enumerate(scen_rows[:6]):
         y_r = y_cand - 38 - (idx * 20)
         bg = (0.96, 0.97, 0.99) if idx % 2 == 0 else (1.0, 1.0, 1.0)
@@ -1023,28 +1196,30 @@ def build_fallback_pdf(
         doc.text(p2, 220, y_r + 6, f"{duration_days} d", font="/F1", size=6.8)
         doc.text(p2, 275, y_r + 6, f"{deficit_mm:,.1f} mm", font="/F2", size=6.8)
         doc.text(p2, 345, y_r + 6, f"{concurrence:.2f}", font="/F1", size=6.8)
-        doc.text(p2, 410, y_r + 6, note[:35], font="/F1", size=6.5, color=(0.3, 0.35, 0.4))
+        doc.text(p2, 410, y_r + 6, clip_text(note, 35), font="/F1", size=6.5, color=(0.3, 0.35, 0.4))
 
     # Section 3: Scientific Provenance & Cryptographic Audit Trail
     y_aud = 275
     doc.rect(p2, 36, y_aud - 100, 540, 95, fill=(0.96, 0.97, 0.99), stroke=(0.8, 0.85, 0.92))
-    doc.text(p2, 48, y_aud - 20, "SCIENTIFIC PROVENANCE & CRYPTOGRAPHIC AUDIT VERIFICATION", font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
-    doc.text(p2, 48, y_aud - 35, "* Station Proxies: NOAA GHCN-Daily (Corpus Christi Intl AP, Victoria Regional, San Antonio Intl AP).", font="/F1", size=7.0)
-    doc.text(p2, 48, y_aud - 48, f"* SHA-256 Manifest Digest: {snapshot_hash} (Input raw series certified unaltered).", font="/F3", size=7.0)
-    doc.text(p2, 48, y_aud - 61, "* Mathematical Verification: All candidate deficits match recomputed zero-fill sums.", font="/F1", size=7.0)
-    doc.text(p2, 48, y_aud - 74, f"* Replay Command: python scripts/replay_bundle.py output/BASIN-{run_id}.zip", font="/F3", size=7.0)
-    doc.text(p2, 48, y_aud - 87, "* Scope Limitation: Cryptographic verification certifies data integrity, not hydrological forecasts.", font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
+    doc.text(p2, 48, y_aud - 20, "PROVENANCE AND VERIFICATION SCOPE", font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
+    doc.text(p2, 48, y_aud - 35, f"* Station Proxies: NOAA GHCN-Daily {clip_text(stations, 70)}.", font="/F1", size=7.0)
+    doc.text(p2, 48, y_aud - 48, f"* SHA-256 Snapshot Digest: {snapshot_hash} (recorded identity; not verified by this document).", font="/F3", size=7.0)
+    doc.text(p2, 48, y_aud - 61, "* Deficit recomputation is checked when the companion ZIP is replayed, not by this PDF.", font="/F1", size=7.0)
+    doc.text(p2, 48, y_aud - 74, replay_line, font="/F3", size=7.0)
+    doc.text(p2, 48, y_aud - 87, "* This PDF is outside the bundle verification contract. A successful replay establishes nothing", font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
+    doc.text(p2, 48, y_aud - 97, "  about these pages. No scientific validation or professional approval is claimed or implied.", font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
 
-    # Audit Stamp Box
+    # Verification Scope Stamp
     doc.rect(p2, 480, y_aud - 92, 85, 76, fill=(1.0, 1.0, 1.0), stroke=(0.08, 0.49, 0.55), line_width=1.5)
-    doc.text(p2, 493, y_aud - 32, "BASIN AUDIT", font="/F2", size=7.5, color=(0.08, 0.49, 0.55))
-    doc.text(p2, 497, y_aud - 52, "PASS", font="/F2", size=13.0, color=(0.08, 0.49, 0.55))
-    doc.text(p2, 488, y_aud - 68, f"ID: {run_id[:8]}", font="/F3", size=6.5, color=(0.3, 0.35, 0.4))
-    doc.text(p2, 490, y_aud - 80, "VERIFIED 256", font="/F2", size=6.0, color=(0.08, 0.49, 0.55))
+    doc.text(p2, 489, y_aud - 30, "VERIFICATION", font="/F2", size=7.0, color=(0.08, 0.49, 0.55))
+    doc.text(p2, 505, y_aud - 40, "SCOPE", font="/F2", size=7.0, color=(0.08, 0.49, 0.55))
+    doc.text(p2, 492, y_aud - 56, "BUNDLE ONLY", font="/F2", size=8.0, color=(0.08, 0.49, 0.55))
+    doc.text(p2, 487, y_aud - 68, "PDF NOT VERIFIED", font="/F2", size=6.5, color=(0.7, 0.4, 0.05))
+    doc.text(p2, 488, y_aud - 82, f"ID: {clip_text(run_id, 13)}", font="/F3", size=6.5, color=(0.3, 0.35, 0.4))
 
     # Page 2 Footer
     doc.line(p2, 36, 50, 576, 50, stroke=(0.8, 0.85, 0.9))
-    doc.text(p2, 36, 38, "BASIN Calculation Engine * Verified Export Bundle Companion", font="/F1", size=7.0, color=(0.45, 0.5, 0.55))
+    doc.text(p2, 36, 38, "BASIN Calculation Engine * Companion to the export bundle; not itself replay-verified", font="/F1", size=7.0, color=(0.45, 0.5, 0.55))
     doc.text(p2, 525, 38, "Page 2 of 2", font="/F2", size=7.0, color=(0.45, 0.5, 0.55))
 
     return doc.render()

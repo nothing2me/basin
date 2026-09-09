@@ -1,10 +1,36 @@
 # BASIN current handoff
 
+## Report-content accuracy checkpoint — B17.6
+
+Branch `fix/b17-report-content-accuracy` (from `a276478`), not merged and not pushed. Fixes report-content accuracy in `basin_core/pdf_report.py` across both the HTML and Windows vector paths. The numerical model in `basin_core/analysis.py` is unchanged; the report now reads the model instead of restating it.
+
+What changed:
+
+- **Capacity is derived, not restated.** `model_capacities_acft()` / `model_total_capacity_acft()` read `RESERVOIR_ASSUMPTIONS["capacities_acft"]`, so both paths print 919,900 ac-ft and bands of 367,960 / 275,970 / 183,980 / 137,985 ac-ft. The hard-coded 963,600 ac-ft and the 385,440 / 289,080 / 192,720 bands derived from it are gone.
+- **Unavailable is shown as unavailable.** A shared `compute_report_metrics()` returns an `unavailable_reason` when there is no accepted scenario, no daily series, or the simulation raises. The vector path renders an explicit "STRESS SPECTRUM NOT COMPUTED FOR THIS REPORT" panel instead of the four example tier rows, and title/body mode no longer invents a run ID (`AUDIT-CERTIFIED`), a snapshot digest, station names or KPI figures. Captions and the executive overview no longer describe a run that did not happen.
+- **Verification wording matches actual scope.** The `PASS` / `VERIFIED 256` stamp is replaced by `VERIFICATION SCOPE / BUNDLE ONLY / PDF NOT VERIFIED`. Both paths state that SHA-256 verification covers the companion ZIP and that this PDF sits outside that contract, and that no scientific validation or professional approval is claimed. "Input raw series certified unaltered", the unconditional deficit-recomputation claim and "Verified Export Bundle Companion" are removed.
+- **Unsupported policy and benefit claims removed.** The invented ordinance citation ("City Code Ch. 55", "Approved 2025 Revision" / "Approved June 2026 Revision"), the survey capacities that matched neither the model nor the research packet (669,186 / 256,339 ac-ft), the "~5-10 MGD reduction" benefit figure and the "Hydrologist Note" column header are gone. Bands are labelled as this experiment's assumption, quoting `RESERVOIR_ASSUMPTIONS["thresholds"]`, and the TWDB survey values recorded in the research packet (918,882 ac-ft combined) are shown separately as a sourced reference the model does not reproduce.
+- Two vector layout defects fixed while inspecting: the last stress-spectrum row overlapped the following section heading, and the capacity finding was clipped mid-sentence.
+
+Evidence:
+
+- `.venv/Scripts/python.exe -m pytest -q`: **191 passed in 124.89 s** (172 at the `a276478` baseline; 19 net new tests). `tests/test_pdf_report.py` was also migrated off `local/session-*.json` onto the shared isolated `workspace` fixture, so it no longer needs a saved local session.
+- `scripts/demo_smoke.py`: verified, run `cef3b8f77674`, five scenarios, 500 audit records, `implementation_matches_current: true`, zero custom comparisons.
+- Both output paths generated and read on screen: the Windows vector PDF (`build_fallback_pdf`, both a populated run and an unavailable run) and the HTML path rendered to PDF with Edge. Text operators were also extracted from the vector PDFs to confirm exact strings and positions.
+
+Limitations and untested paths:
+
+- **The browser HTML-to-PDF route is unreachable in the product on Windows.** `generate_pdf_report` calls the vector builder directly when `sys.platform == "win32"`, so the HTML path was rendered manually with Edge for this inspection and has not been exercised through the product on this machine. Whether that platform guard is intended is open under B17.3.
+- No reviewer has read either document. Passing regression tests are not an accuracy review, and a rendered PDF is still not independently verified report content.
+- B17.1 (settings propagation from `app.py`), B17.2's consent preview, B17.4 (CLI opt-ins) and B17.5 (device checks) are untouched by this work.
+- Private-note and custom-data consent behaviour is unchanged and still covered by tests; the security fixes from `dd5996a` are untouched.
+- Note: GitHub Desktop stashed this working tree and switched the checkout back to `main` partway through the session. The work was recovered from `stash@{0}`. Worth knowing if uncommitted changes go missing again.
+
 ## Latest integration checkpoint
 
 Noah's main commit `40a7023` is merged with security commit `dd5996a` (integration merge `502824a`). **172 tests passed in 122.44 seconds**: the prior four PDF/UI export failures are resolved. Snapshot checkout, offline Python smoke and independent replay passed (run `0d51fc36a996`, five scenarios/500 audit records, implementation matches). Visually inspected both pages of the generated Windows vector PDF. All security safeguards survived the automatic merge; no conflicts required manual resolution.
 
-Remaining: B17 report correctness/settings/claims and table truncation, live Ollama and actual-device security gates. The PDF still hard-codes a mismatched capacity and audit badge and substitutes example rows when spectrum data is unavailable; a rendered PDF is not equivalent to independently verified report contents. PDF tests currently rely on an existing local session. Prior failing-suite records below are historical and superseded by this checkpoint. No remote push performed by this integration pass.
+Remaining: B17 report correctness/settings/claims and table truncation, live Ollama and actual-device security gates. The PDF still hard-codes a mismatched capacity and audit badge and substitutes example rows when spectrum data is unavailable; a rendered PDF is not equivalent to independently verified report contents. PDF tests currently rely on an existing local session. (Those three PDF statements are superseded by the B17.6 checkpoint above; the closing point that a rendered PDF is not independently verified content still stands.) Prior failing-suite records below are historical and superseded by this checkpoint. No remote push performed by this integration pass.
 
 ## Security follow-up — current checkpoint
 

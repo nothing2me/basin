@@ -78,4 +78,7 @@ def test_html_and_fallback_pdf_contain_no_alarmist_styling(approved_workspace):
     # Also check fallback vector PDF
     pdf_bytes = build_fallback_pdf("Test Fallback", "Test Text")
     assert b"WARNING: WHAT THIS ARTIFACT IS NOT" in pdf_bytes
-    assert b"Toy Model" in pdf_bytes
+    assert b"uncalibrated toy planning model" in pdf_bytes
+    # Title/body mode has no session to simulate, so the metric cards must say so rather
+    # than carry the example figures they used to substitute.
+    assert b"Not available" in pdf_bytes
