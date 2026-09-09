@@ -1,4 +1,5 @@
 """Evidence and comparison views consuming the Workspace contract."""
+from html import escape as html_escape
 import uuid
 
 import pandas as pd
@@ -283,7 +284,7 @@ def assistant_panel(w, source=None, names=None):
 
         status = check_ollama()
         if status["available"] and status["selected"]:
-            st.markdown(f'<div class="basin-assistant-badge" style="color:#009E73">● Active: {status["selected"]} (Local Ollama)</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="basin-assistant-badge" style="color:#009E73">● Active: {html_escape(str(status["selected"]))} (Local Ollama)</div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="basin-assistant-badge" style="color:#E69F00">● Direct Tool Execution (Deterministic Local Engine)</div>', unsafe_allow_html=True)
 

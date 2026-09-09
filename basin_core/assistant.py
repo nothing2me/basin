@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 import logging
+import math
+from jsonschema import Draft202012Validator
 from typing import Any
 
 from basin_core.tools import TOOL_FUNCTIONS, TOOL_REGISTRY
@@ -30,6 +32,19 @@ PREFERRED_MODELS = ["qwen2.5:3b", "llama3.2:3b", "qwen2.5:7b", "llama3.1:8b", "m
 _OLLAMA_CACHE: dict[str, Any] = {}
 
 
+def local_client():
+    """Ignore remote host/proxy configuration; never follow HTTP redirects."""
+    if not _OLLAMA_AVAILABLE:
+        raise RuntimeError("Ollama is not installed; use direct tools.")
+    return _ollama.Client(host="http://127.0.0.1:11434", trust_env=False,
+                          follow_redirects=False, timeout=30.0)
+
+
+def local_model(name):
+    # Ollama can route cloud-tagged models through its local daemon.
+    return isinstance(name, str) and bool(name) and "cloud" not in name.lower()
+
+
 def check_ollama(force_refresh: bool = False) -> dict:
     """Return availability status and installed models (cached for 30s for instant UI response)."""
     import time
@@ -44,12 +59,12 @@ def check_ollama(force_refresh: bool = False) -> dict:
         _OLLAMA_CACHE["timestamp"] = now
         return res
     try:
-        response = _ollama.list()
-        installed = [m.model for m in response.models] if response.models else []
+        response = local_client().list()
+        installed = [m.model for m in response.models if local_model(m.model) and not getattr(m, "remote_host", None) and not getattr(m, "remote_model", None)] if response.models else []
         selected = None
         for preferred in PREFERRED_MODELS:
             for installed_name in installed:
-                if installed_name.startswith(preferred.split(":")[0]):
+                if installed_name == preferred:
                     selected = installed_name
                     break
             if selected:
@@ -780,19 +795,55 @@ TOOL_SCHEMAS = [
 ]
 
 
+def validate_tool_args(workspace, name, args):
+    """Reject malformed routing rather than silently selecting different data."""
+    if name not in TOOL_REGISTRY:
+        raise ValueError("Unsupported read-only tool")
+    schema = next(t["function"]["parameters"] for t in TOOL_SCHEMAS
+                  if t["function"]["name"] == name)
+    schema = {**schema, "additionalProperties": False}
+    if list(Draft202012Validator(schema).iter_errors(args)):
+        raise ValueError("Invalid or missing tool arguments; specify the requested fields explicitly.")
+    for key, value in args.items():
+        if isinstance(value, (float, int)) and (isinstance(value, bool) or not math.isfinite(value)):
+            raise ValueError("Numeric arguments must be finite numbers.")
+        if key.startswith("scenario_id"):
+            workspace.get(value)
+        if key in {"severity", "duration", "concurrence", "season", "rainfall_reduction_pct"} and not 0 <= value <= 100:
+            raise ValueError("Percentage/weight outside 0–100.")
+        if key == "initial_storage_pct" and not 0.05 <= value <= 1:
+            raise ValueError("Initial storage must be a fraction from 0.05 to 1.")
+        if key == "conservation_pct" and not (value == 0 or 1 < value <= 50):
+            raise ValueError("Conservation must be explicit percentage points greater than 1 up to 50, or zero; fractional inputs are ambiguous.")
+        if key == "year" and not 1991 <= value <= 2025:
+            raise ValueError("Year is outside the bundled observation period.")
+    if name in {"test_reservoir_infrastructure", "run_stress_spectrum"}:
+        if not args.get("scenario_id"):
+            raise ValueError("Specify an exact scenario_id for this illustrative experiment.")
+        if "year" in args and not workspace.get(args["scenario_id"]).provenance["source_start"].startswith(str(args["year"])):
+            raise ValueError("Scenario and requested year disagree.")
+    return dict(args)
+
+
 def run_assistant(workspace, user_message: str,
                   history: list[dict]) -> tuple[str, list[dict]]:
     """Execute the LLM → tool → template → response loop.
 
     Returns (response_text, updated_history).
     """
+    if not isinstance(user_message, str) or len(user_message) > 20000:
+        raise ValueError("Question must contain at most 20,000 characters.")
     model = get_model()
+    if not local_model(model):
+        raise ValueError("Cloud models are not supported.")
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    messages.extend(history)
+    messages.extend({"role": m["role"], "content": m["content"][:20000]}
+                    for m in history[-10:] if m.get("role") in {"user", "assistant"}
+                    and isinstance(m.get("content"), str))
     messages.append({"role": "user", "content": user_message})
 
     # Step 1: LLM selects tools
-    response = _ollama.chat(
+    response = local_client().chat(
         model=model,
         messages=messages,
         tools=TOOL_SCHEMAS,
@@ -819,9 +870,9 @@ def run_assistant(workspace, user_message: str,
     # Step 3: Execute each tool call and render the template
     tool_messages = []
     rendered_parts = []
-    for call in response.message.tool_calls:
+    for call in response.message.tool_calls[:4]:
         fn_name = call.function.name
-        fn_args = dict(call.function.arguments or {})
+        fn_args = call.function.arguments or {}
 
         if fn_name not in TOOL_REGISTRY:
             error_msg = f"Unknown tool: {fn_name}. {TOOL_LIST_HELP}"
@@ -829,62 +880,8 @@ def run_assistant(workspace, user_message: str,
             tool_messages.append({"role": "tool", "content": error_msg})
             continue
 
-        # Fill sensible defaults if the model missed required arguments
-        sid_default = workspace.selected[0] if workspace.selected else (workspace.scenarios[0].id if workspace.scenarios else "B-001")
-        if fn_name in ("describe_scenario", "explain_ranking", "check_concurrence", "summarize_evidence"):
-            if not fn_args.get("scenario_id"):
-                fn_args["scenario_id"] = sid_default
-        elif fn_name == "compare_scenarios":
-            if not fn_args.get("scenario_id_1"):
-                fn_args["scenario_id_1"] = sid_default
-            if not fn_args.get("scenario_id_2"):
-                fn_args["scenario_id_2"] = workspace.selected[1] if len(workspace.selected) > 1 else (workspace.scenarios[1].id if len(workspace.scenarios) > 1 else sid_default)
-        elif fn_name == "describe_cluster":
-            if "cluster_id" not in fn_args:
-                fn_args["cluster_id"] = 0
-            else:
-                try:
-                    fn_args["cluster_id"] = int(fn_args["cluster_id"])
-                except Exception:
-                    fn_args["cluster_id"] = 0
-        elif fn_name == "find_scenarios_by_year":
-            if "year" not in fn_args:
-                fn_args["year"] = 2011
-            else:
-                try:
-                    fn_args["year"] = int(fn_args["year"])
-                except Exception:
-                    fn_args["year"] = 2011
-        elif fn_name == "test_reservoir_infrastructure":
-            if "year" in fn_args:
-                try:
-                    fn_args["year"] = int(fn_args["year"])
-                except Exception:
-                    fn_args["year"] = 2011
-            if "rainfall_reduction_pct" in fn_args:
-                try:
-                    fn_args["rainfall_reduction_pct"] = float(fn_args["rainfall_reduction_pct"])
-                except Exception:
-                    fn_args["rainfall_reduction_pct"] = 0.0
-        elif fn_name == "run_stress_spectrum":
-            if "year" in fn_args:
-                try:
-                    fn_args["year"] = int(fn_args["year"])
-                except Exception:
-                    fn_args["year"] = 2011
-            if "initial_storage_pct" in fn_args:
-                try:
-                    fn_args["initial_storage_pct"] = float(fn_args["initial_storage_pct"])
-                except Exception:
-                    fn_args["initial_storage_pct"] = 0.48
-            if "conservation_pct" in fn_args:
-                try:
-                    fn_args["conservation_pct"] = float(fn_args["conservation_pct"])
-                except Exception:
-                    fn_args["conservation_pct"] = 0.0
-
         try:
-            # Inject workspace as first argument
+            fn_args = validate_tool_args(workspace, fn_name, fn_args)
             result = TOOL_REGISTRY[fn_name](workspace, **fn_args)
             rendered = render_tool_result(fn_name, result)
             rendered_parts.append(rendered)
@@ -908,5 +905,6 @@ def run_tool_directly(workspace, tool_name: str,
     """Execute a single tool without the LLM — for manual/fallback mode."""
     if tool_name not in TOOL_REGISTRY:
         raise ValueError(f"Unknown tool: {tool_name}")
+    args = validate_tool_args(workspace, tool_name, args)
     result = TOOL_REGISTRY[tool_name](workspace, **args)
     return render_tool_result(tool_name, result)

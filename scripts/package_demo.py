@@ -3,9 +3,25 @@ from pathlib import Path
 import argparse
 import hashlib
 import json
+import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def reviewed_files(root, candidates):
+    """Package tracked source only; do not sweep untracked private documents."""
+    tracked = set(subprocess.check_output(
+        ['git', 'ls-files', '-z'], cwd=root).decode('utf-8').split('\0'))
+    result = []
+    for path in candidates:
+        relative = path.relative_to(root).as_posix()
+        if relative not in tracked:
+            continue
+        if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+            raise ValueError('Refusing package file outside repository: ' + relative)
+        result.append(path)
+    return result
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
@@ -15,10 +31,13 @@ if __name__ == "__main__":
     for directory in ["basin_core", "scripts", "tests", "data", "docs", "assets"]:
         if (ROOT / directory).exists():
             files.extend(p for p in (ROOT / directory).rglob("*") if p.is_file() and "__pycache__" not in p.parts and p.suffix in [".py", ".csv", ".json", ".md", ".ico", ".png"])
+    files = reviewed_files(ROOT, files)
     if args.wheels:
         wheels = list((ROOT / "wheelhouse").glob("*.whl"))
         if not wheels:
             raise SystemExit("No wheels. Download requirements into wheelhouse first.")
+        if any(p.is_symlink() or not p.resolve().is_relative_to(ROOT.resolve()) for p in wheels):
+            raise ValueError('Wheel path escapes repository')
         files.extend(wheels)
     output = ROOT / "output"
     output.mkdir(exist_ok=True)

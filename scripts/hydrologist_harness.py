@@ -155,7 +155,7 @@ def cmd_export(args):
 
     print(f"Building verified hydrologist export bundle for workspace {ws.id}...")
     try:
-        bundle_bytes = export_bundle(ws, include_notes=True)
+        bundle_bytes = export_bundle(ws, include_notes=args.include_notes, include_custom=args.include_custom)
         out_path.write_bytes(bundle_bytes)
         print(f"Export written to: {out_path} ({len(bundle_bytes):,} bytes)")
 
@@ -214,6 +214,8 @@ def main():
     # export
     p_export = subparsers.add_parser("export", help="Export and verify hydrologist handoff bundle")
     p_export.add_argument("--output", type=str, default="", help="Custom output zip path")
+    p_export.add_argument("--include-notes", action="store_true", help="Explicitly include private review/provider notes")
+    p_export.add_argument("--include-custom", action="store_true", help="Explicitly include normalized custom data and source metadata")
     p_export.set_defaults(func=cmd_export)
 
     # reset

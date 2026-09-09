@@ -2,7 +2,28 @@
 
 September 8 planning supplement: [September 22 finalist excellence plan](docs/finalist_excellence_plan.md) defines the prioritized repair, validation, deployment and presentation gates arising from the mock-judge assessment. It assumes access to a hydrologist or technical faculty reviewer; rural-serving operator participation remains unconfirmed. The supplement is a plan, not a completion record. Keep task ownership and status on this board.
 
-Updated: 2026-09-07 | Planning baseline: `ebd8d59` on `main` | Status reconciled against `f78d692` on `origin/main`
+Updated: 2026-09-08 | Current review baseline: `f96c28a` (local HEAD matches remote HEAD). Older dated checkpoints below are historical; the September 8 reconciliation and B14–B21 are the current additions.
+
+## September 8 team-context reconciliation
+
+Security follow-up: [September 8 security review](docs/security_review_2026-09-08.md) records findings, fixes, tests and remaining gates. Application-level hardening is implemented; live Ollama/network validation and dependency advisory review remain open. Do not mark the entire application “secure” from these checks.
+
+- [x] **SEC.1** Fix assistant client destination/proxy/redirect configuration, model-name filtering, tool argument validation and bounded calls/history; add mocked boundary and invalid-call tests.
+- [x] **SEC.2** Make CLI notes/custom exports opt-in, escape model-name HTML, and prevent untracked files being swept into source packages; test consent propagation and package exclusion.
+- [x] **SEC.3** Review existing loopback launcher configuration, bounded CSV input, packet inventory/size checks and private original storage; record limitations in the linked review.
+- [ ] **SEC.4** Validate live Ollama and daemon egress on the presentation laptop; run dependency advisory review and pin/test the optional stack.
+- [ ] **SEC.5** Complete actual-device browser/native/download/PDF checks, frozen-package privacy inspection and broader adversarial/session-input testing. Existing B15 export failures remain open.
+
+Message (7) is the latest supplied backlog. It starts at item 2; its closing recommendation mentions baseline/units/scenario-selection repairs without supplying item 1. B15 records that prerequisite from inspected code rather than inventing a missing attachment section. Message (6) is the earlier backlog; messages (4)/(5) are duplicate efficiency guidance, not feature requirements. The private Discord transcript is context, not evidence of tests or authorization to contact people, publish, deploy or book travel.
+
+- Team-stated lanes: Mohammed volunteered for UI/UX and security; Misha stated a focus on information/data; Noah reported assistant, spectrum, native and presentation work and proposed a download website. These are context, not invented acceptance or reviewer assignments. Reviewers remain unassigned.
+- Team target: feature readiness before September 18–19, with rehearsal time protected ahead of the September 22 showcase. This is a planning target, not an organizer deadline. The proposed meeting was moved toward Thursday; confirmation and professional-review arrangements remain with the team. Travel-form completion is individual and outside this engineering board.
+- Implemented: historical scenarios/review/export; schema 2.1 saved custom evidence with consent, versioning and replay; optional Ollama assistant; stress-spectrum charts; separate PDF output; native download handling. Implementation is not proof of usability, scientific validation, offline isolation or executable self-containment.
+- Corrected since earlier backlog: PDF breach arithmetic and PDF note opt-in have code/tests; do not reopen these as wholly absent. Selected-settings propagation, fallback reporting and independent PDF verification remain open under B17.
+- Current checks: snapshot checkout, Python offline smoke and explicit replay passed; run `21fac96ba217`, five scenarios, 500 audit records, implementation matches. That smoke packet contains **zero custom comparisons**; it is not a custom-data acceptance exercise. Full-suite result is recorded in HANDOFF.md when the current run finishes.
+- Priority order: B15 correctness → B16 persistence/B17 report alignment → B18 assistant/privacy hardening → B19 one area model → B20 geographic views. B21 document ingestion can proceed after its evidence contract is agreed. Human validation and event confirmation should proceed alongside technical work.
+
+The duplicate custom-evidence B13 heading is renamed B14 below; B13 remains the UI workflow task. Earlier checkpoint counts are historical, not current test totals. All new unchecked items are open work, with completed portions stated explicitly.
 
 This is the shared task board for BASIN. Subdivide work here using stable IDs rather than maintaining separate TODO documents per person. A GitHub issue or PR may discuss implementation, but link its ID here and keep this board's owner/status current. This plan proposes work; it does not claim team approval of new product scope or assign real people without their agreement.
 
@@ -19,7 +40,7 @@ Presentation device is a different Windows laptop. The actual Stage 1 submission
 
 Proposed objective for team confirmation in B01: help rural-serving water analysts assemble traceable evidence, compare rainfall stress scenarios and assumptions, and prepare a reviewed packet for deeper drought-planning analysis.
 
-The existing documented core is rainfall scenario generation, grouping, ranking, review, and export. Evidence-conflict workflows are proposed extensions. Reservoir impact prediction is a separate scope decision, because the current technical design excludes it even though the code contains a simulation. A numerical check, hash, or user acceptance does not establish hydrologic validity or professional certification.
+The implemented core includes rainfall scenario generation, grouping, ranking, review, evidence conflicts, custom supporting evidence and export. An optional Ollama assistant and illustrative reservoir spectrum now exist. Custom evidence does not yet drive a local-area impact model. A numerical check, hash, or user acceptance does not establish hydrologic validity or professional certification.
 
 ## How to claim and finish work
 
@@ -388,7 +409,7 @@ Acceptance: a first-time participant can identify the next action at each stage,
 
 ## Deferred ideas - do not start without reprioritization
 
-- Local chat assistant: use only after the accepted core and validation/rehearsal work; it should not become a second unverified calculation path.
+- Local chat assistant: implemented since this original deferral; hardening and evaluation are tracked in B18. Additional assistant scope remains lower priority than correctness and rehearsal.
 - Automated policy extraction or broad document ingestion: begin with manually reviewed evidence records first.
 - Rainfall-threshold timeline: potentially useful after defining the metric, threshold, source and reference; avoid labeling it a water-supply danger forecast.
 - Alternative management strategies, conservation or new supply: require an agreed impact model and intervention definitions, not merely ranking sliders.
@@ -412,10 +433,10 @@ Original private attachments remain outside the repository. This board records a
 
 ## Part B upload-comparison checkpoint — 2026-09-06
 
-A first descriptive uploaded-versus-NOAA same-date comparison is implemented, with explicit applicability declarations, paired-day arithmetic and opt-in report download. This extends the CSV preview only. Saved upload evidence, scenario linkage, seasonal baseline validation and scenario-packet replay integration are not complete. Existing B03/B04/B05 review gates and named-human assignments remain unchanged. See docs/local_upload_and_research_plan.md for the bounded next steps.
+Historical first slice: descriptive uploaded-versus-NOAA comparison began as preview only. Superseded by B14: saved evidence, versioned scenario links and consented packet replay are implemented. Seasonal baseline validation, independent real-sample review and custom-data-driven area simulations remain open. See docs/local_upload_and_research_plan.md for the implementation history.
 
 
-## B13 — Reviewed custom rainfall evidence integration (publication authorized)
+## B14 — Reviewed custom rainfall evidence integration (formerly duplicate B13)
 
 Status: In review. Implementer: Codex; independent reviewer unassigned. Scope: persisted supporting evidence for existing scenarios, not numerical new-station generation or geographic simulation.
 
@@ -431,3 +452,74 @@ Status: In review. Implementer: Codex; independent reviewer unassigned. Scope: p
 - [ ] Independent teammate exercise using their own consented sample and exported packet.
 
 Verification: 125 full-suite tests passed; 45 custom/integrity checks passed after final verifier scope updates; final integrated UI test passed; independent CLI replay passed for a synthetic custom-data packet. Updated README, methodology, verification contract and upload plan explain schema 2.1 and backward compatibility. User authorized publication of this integration. Existing P0 practitioner and presentation-device gates remain open.
+
+## B15 — Repair numerical meaning and current regressions (P0)
+
+Owner / independent reviewer: Unclaimed. Added prerequisite from message (7)'s closing sequence and source inspection; this is not a reconstruction of its missing item 1.
+
+- [ ] **B15.1** Restore a passing current suite. September 8: **145 passed, 4 failed in 101.62 s** at `f96c28a`. Failures: `tests/test_app.py::test_full_user_workflow`, `tests/test_custom_data.py::test_upload_ui_save_restore_and_export_consent`, `tests/test_failures.py::test_evidence_conflict_ui_workflow`, `tests/test_pdf_report.py::test_generate_pdf_report`. PDF fallback fails Latin-1 encoding of an em dash (`pdf_report.py:653`); inspect all three UI export failures rather than assuming they have no additional cause.
+- [ ] **B15.2** Define the spectrum's reference correctly. `run_stress_spectrum` passes `scenario.series`; `simulate_stress_spectrum` multiplies that already-constructed series and labels 1.0 “100% Historical Baseline.” Use original observations for a true historical baseline or label it as the selected scenario. Trace compounded multipliers and revisions consistently across UI, assistant and PDF.
+- [ ] **B15.3** Audit fractions versus percentages, rainfall mm versus volume, ac-ft/day versus MGD, threshold equality and scenario-year selection across all surfaces. Tools currently clamp ambiguous percentages and select the first scenario if a requested year has no matches. Return explicit validation/clarification instead of silently substituting another interpretation.
+- [ ] **B15.4** Replace unsupported “catastrophic,” “survived,” and operational threshold interpretations with descriptions appropriate to an illustrative experiment. Test no-breach and partial-breach cases without claiming predicted restrictions.
+
+## B16 — Save and reproduce illustrative simulations (message 7 item 2)
+
+Owner / reviewer: Unclaimed. Open; rainfall/custom-evidence replay does not cover this experiment.
+
+- [ ] **B16.1** Version settings: initial storage, conservation, pipeline, rainfall tiers, model identity and units.
+- [ ] **B16.2** Link exact scenario revisions and evidence versions; restore inputs/results and mark results stale after changes.
+- [ ] **B16.3** Define a separate simulation export and independent recomputation contract with negative tests. Label verified rainfall evidence separately from internally reproducible illustrative calculations.
+
+## B17 — Align PDF, privacy and download behavior (message 7 item 3, P0)
+
+Owner / reviewer: Unclaimed. Dynamic breach arithmetic and `include_notes=False` already exist; remaining integration is open.
+
+- [ ] **B17.1** Pass the actual selected scenario, storage, conservation, pipeline and tiers to PDF generation. `app.py` calls currently omit experiment settings; `generate_pdf_report` defaults to 0.48 storage and 0.15 conservation.
+- [ ] **B17.2** Preview included scenarios, assumptions, data and consent; state that the separately generated PDF is outside ZIP verification unless a new contract covers it.
+- [ ] **B17.3** Fix fallback encoding and make renderer failure/degraded output explicit. Do not silently substitute the short generic fallback for the full report. Inspect page breaks, tables and long evidence descriptions in both rendering paths.
+- [ ] **B17.4** Add explicit CLI note/custom-data opt-ins. `scripts/hydrologist_harness.py::cmd_export` currently sets `include_notes=True` and omits custom-data consent. Test all output routes with private sentinel data and consent revocation.
+- [ ] **B17.5** Test browser/native downloads, destination paths, write failures and recovery on the actual laptop. Native download-handling code exists; that is not a completed device test.
+
+## B18 — Harden optional assistant (message 7 item 4, P0)
+
+Owner / reviewer: Unclaimed. Ollama routing and deterministic tools exist. Their presence does not establish zero hallucinations or zero cloud leakage.
+
+- [ ] **B18.1** Enforce local-only model connectivity and test remote-host configuration; show actual selected model/tag and availability. Current code uses the default Ollama client, and model preference matches family prefixes rather than exact tags.
+- [ ] **B18.2** Verify missing/stopped/no-model/slow-model behavior while keeping core workflows usable.
+- [ ] **B18.3** Validate argument names, types, ranges, dates and IDs. Remove silent malformed-year fallback to 2011 and implicit scenario substitution; expose interpreted inputs and units.
+- [ ] **B18.4** Test ambiguous/unsupported questions and misleading supplied text; ensure final answers match tool data and retain limitations. Evaluate routing as well as arithmetic.
+- [ ] **B18.5** Add read-only explanations of saved custom comparisons, suitability, missingness and uncertainty using the existing evidence contract.
+
+## B19 — One custom-data-driven area model (message 7 item 5)
+
+Owner / domain reviewer: Unclaimed. Proposed expansion; B14 stores supporting evidence and does not complete this task.
+
+- [ ] **B19.1** Team selects one area, boundary and modeling question; reviewer agrees appropriate observation sources and representativeness.
+- [ ] **B19.2** Define inputs, units, equations, baseline, period, assumptions and missing/unsuitable-data behavior before connecting reviewed datasets to numerical inputs.
+- [ ] **B19.3** Link model outputs to evidence/settings, establish baseline-versus-scenario comparisons, domain review, validation criteria and visible uncertainty. Calibrated claims require the separate B08 scope decision.
+
+## B20 — Geographic views (message 7 item 6)
+
+UI lead volunteered in team context: Mohammed. Independent reviewer: Unclaimed. Numerical map claims depend on B19; visual prototypes may proceed earlier with explicit placeholder labels.
+
+- [ ] **B20.1** Area boundary, station map and relevant reservoir/infrastructure layers with documented sources and reuse terms.
+- [ ] **B20.2** Baseline/scenario views and timeline linked to saved simulation results; distinguish measured, assumed, simulated and unavailable information.
+- [ ] **B20.3** Accessible legends, keyboard/selection controls and static exports. Station points and stress-spectrum charts alone do not establish an area visualization.
+
+## B21 — Reviewed document ingestion (message 7 item 7)
+
+Owner / reviewer: Unclaimed. Separate from generating a PDF report; not implemented by PDF export.
+
+- [ ] **B21.1** Define supported types/limits and private storage with exact source identity; handle scanned, malformed and unsupported documents explicitly.
+- [ ] **B21.2** Extract text with page references; require human inspection/correction before promoting extracted statements to model inputs.
+- [ ] **B21.3** Link reviewed document evidence to assumptions/simulations with versioning and explicit export inclusion controls. Agree the evidence contract before parallel ingestion work.
+
+## Remaining reconciliation and acceptance (message 7 item 8)
+
+- [x] **B11.10** Incorporate messages (4)–(7) and team context, remove duplicate B13 heading, and correct current custom-evidence/assistant status on this board. No private transcript copied into Git.
+- [ ] **B11.11** Complete cross-document reconciliation of README, claim inventory, methodology, upload plan and presentation against current implementation. “No LLM required for core workflows” remains accurate; distinguish it from “no LLM exists.” Separate wrapper executable from its Python/WebView2/Ollama prerequisites.
+- [ ] **B09.11** Audit benchmark protocol, authorship, participant qualifications, task equivalence, timings and independent reproduction before claiming 30×–50× user benefit. Team-reported numbers and matching hashes are not proof of professional certification or representative time savings.
+- [ ] **B10.9** Actual-laptop offline rehearsal must now include optional Ollama, PDF rendering, native downloads and fallback behavior in addition to the existing rainfall workflow.
+- [ ] **B11.12** Confirm official event format and speaking time, complete novice/analyst/recipient exercises (B09), then rehearse and freeze under B12. Keep the September 18–19 readiness target separate from organizer requirements. Download-site proposal remains unverified/planned; do not publish unverified offline or standalone-install claims.
+
+Acceptance: current automated regressions fixed, output/settings/consent contracts consistent, named human reviews recorded, and actual-device rehearsal completed. A source-code review or a green core replay alone does not satisfy these gates.
