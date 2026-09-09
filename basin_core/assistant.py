@@ -15,7 +15,77 @@ from jsonschema import Draft202012Validator
 
 from basin_core.tools import TOOL_FUNCTIONS, TOOL_REGISTRY
 
+try:
+    import ollama as _ollama
+    _OLLAMA_AVAILABLE = True
+except ImportError:
+    _ollama = None  # type: ignore[assignment]
+    _OLLAMA_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Optional Ollama client configuration (preserved for dependency/egress audits)
+# ---------------------------------------------------------------------------
+
+PREFERRED_MODELS = ["qwen2.5:3b", "llama3.2:3b", "qwen2.5:7b", "llama3.1:8b", "mistral:7b"]
+_OLLAMA_CACHE: dict[str, Any] = {}
+
+
+def local_client():
+    """Ignore remote host/proxy configuration; never follow HTTP redirects."""
+    if not _OLLAMA_AVAILABLE:
+        raise RuntimeError("Ollama is not installed; use direct tools.")
+    return _ollama.Client(host="http://127.0.0.1:11434", trust_env=False,
+                          follow_redirects=False, timeout=30.0)
+
+
+def local_model(name):
+    # Ollama can route cloud-tagged models through its local daemon.
+    return isinstance(name, str) and bool(name) and "cloud" not in name.lower()
+
+
+def check_ollama(force_refresh: bool = False) -> dict:
+    """Return availability status and installed models (cached for 30s for instant UI response)."""
+    import time
+    now = time.time()
+    if not force_refresh and "data" in _OLLAMA_CACHE and (now - _OLLAMA_CACHE.get("timestamp", 0) < 30.0):
+        return _OLLAMA_CACHE["data"]
+
+    if not _OLLAMA_AVAILABLE:
+        res = {"available": False, "reason": "ollama package not installed",
+               "models": [], "selected": None}
+        _OLLAMA_CACHE["data"] = res
+        _OLLAMA_CACHE["timestamp"] = now
+        return res
+    try:
+        response = local_client().list()
+        installed = [m.model for m in response.models if local_model(m.model) and not getattr(m, "remote_host", None) and not getattr(m, "remote_model", None)] if response.models else []
+        selected = None
+        for preferred in PREFERRED_MODELS:
+            for installed_name in installed:
+                if installed_name == preferred:
+                    selected = installed_name
+                    break
+            if selected:
+                break
+        res = {"available": True, "models": installed,
+               "selected": selected or (installed[0] if installed else None)}
+    except Exception as exc:
+        res = {"available": False, "reason": str(exc),
+               "models": [], "selected": None}
+    _OLLAMA_CACHE["data"] = res
+    _OLLAMA_CACHE["timestamp"] = now
+    return res
+
+
+def get_model() -> str:
+    """Return the best available model name."""
+    status = check_ollama()
+    if status["selected"]:
+        return status["selected"]
+    raise RuntimeError("No Ollama model available. Install Ollama and pull a "
+                       "model: ollama pull qwen2.5:7b")
 
 # ---------------------------------------------------------------------------
 # Response templates — every number is a named variable from tool output
