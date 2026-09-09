@@ -1,3 +1,8 @@
+# Core runtime pins. Every supported installation path installs this file, so the
+# reviewed optional-assistant pins are included from here rather than repeated in
+# Setup BASIN.cmd, CI and the README. Keep version numbers in one file only.
+-r requirements-assistant.txt
+
 altair==6.2.2
 anyio==4.15.1
 attrs==26.1.0

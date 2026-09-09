@@ -1,10 +1,13 @@
 # Transitive closure of the optional assistant client, pinned for reproducible installs.
 #
 # BASIN's core runs without any of this. These packages are what `ollama==0.6.2`
-# (pinned in requirements.txt) pulls in; without this file pip resolves them freshly and
-# an install is not reproducible. Install after requirements.txt:
+# (pinned in requirements.txt) pulls in anyway; pinning them here is what makes an
+# install reproducible.
 #
-#     pip install -r requirements.txt -r requirements-assistant.txt
+# requirements.txt includes this file, so every supported installation path already
+# applies these pins:
+#
+#     pip install -r requirements.txt
 #
 # Installing the Python client does NOT install the Ollama service and does NOT download
 # any model. See docs/ollama_setup.md for the three separate pieces.

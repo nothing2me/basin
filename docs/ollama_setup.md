@@ -27,8 +27,9 @@ distinguishes all three:
 ## Installing
 
 ```bash
-# 1. Python client, pinned. Add the transitive closure for a reproducible install.
-pip install -r requirements.txt -r requirements-assistant.txt
+# 1. Python client, pinned. requirements.txt includes requirements-assistant.txt, so the
+#    reviewed pins apply on every supported installation path with no extra flags.
+pip install -r requirements.txt
 
 # 2. The service: download and install from https://ollama.com/download, then confirm
 ollama --version
@@ -64,7 +65,23 @@ BASIN's security behaviour depends on could change on any fresh install. The pin
   already pinned in `requirements.txt`: installing it upgraded nothing that was already
   present, adding only `httpx`, `httpcore`, `pydantic`, `pydantic-core`,
   `annotated-types` and `typing-inspection`. Those are pinned in
-  `requirements-assistant.txt`.
+  `requirements-assistant.txt`, which `requirements.txt` includes with `-r` so the version
+  numbers live in exactly one file and every installation path applies them.
+
+## Which installation paths apply these pins
+
+| Path | Installs dependencies? | How the pins reach it |
+|---|---|---|
+| `Setup BASIN.cmd` (online and `wheelhouse/` offline branches) | Yes | Installs `requirements.txt`, which includes the assistant pins |
+| `.github/workflows/tests.yml` | Yes | Same |
+| Documented manual commands in `README.md` | Yes | Same |
+| `start_basin.sh` | No — prints the manual command if `.venv` is missing | Same command |
+| `scripts/build_offline_bundle.py` | No — copies an existing `.venv/Lib/site-packages` | Inherits whatever setup installed |
+| `scripts/build_exe.py` | No — runs PyInstaller against the existing environment | Inherits |
+| `scripts/package_demo.py` | No — packages tracked source | Ships every `requirements*.txt` |
+
+`python scripts/check_install_consistency.py` re-checks this and exits non-zero if a path
+drifts; `tests/test_install_consistency.py` asserts the same invariants.
 
 ## What the client boundary does and does not give you
 
