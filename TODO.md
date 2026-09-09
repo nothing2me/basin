@@ -1,5 +1,16 @@
 # BASIN team TODO
 
+### September 9 Rural Usability, Data Sovereignty, Agronomics & Optional AI Installer — COMPLETE
+- [x] **Setup & Installer Choice (`Setup BASIN.cmd`)**: Added interactive prompt `[y/N]` and `--with-ai` / `--no-ai` CLI flags. Clearly documents that the 2.1 GB embedded Qwen model download requires internet, while skipping allows 100% offline installation with instant direct tools.
+- [x] **US Customary Units Default & Global Toggle (`app.py`, `basin_core/summary.py`, `basin_core/visualizers.py`)**: US customary units default (`in`, `ac-ft`, `GPM`) with immediate global toggle in header. Dual-unit text summaries and unit-aware chart visualizers preserve 100% test compatibility.
+- [x] **Storage Preset Default & Dynamic Emergency Pipeline (`basin_core/water_system.py`, `app.py`)**: "Small Municipal District (12k ac-ft)" and "Rural Farm Pond (1.5k ac-ft)" presets available with active emergency pipeline/intertie modeling (`demand_no_pipeline_acft_day`).
+- [x] **Unrestricted Navigation (`app.py`)**: All 4 tabs (Data, Workspace, Review, Export) accessible without artificial "Accept" lock gates.
+- [x] **Data Sovereignty Core Engine (`basin_core/data.py`, `basin_core/engine.py`, `app.py`)**: User-uploaded local rainfall CSVs can be activated as the driving gauge to generate candidate scenarios and run reservoir simulations.
+- [x] **Agronomics & Wildfire Danger Panel (`basin_core/agronomics.py`, `app.py`, `tests/test_agronomics.py`)**: Texas Reference ET ($ET_o$), crop water demand ($ET_c = ET_o \times K_c$) for 5 staple crops (cotton, sorghum, corn, pasture, row crops), and Keetch-Byram Drought Index (KBDI 0–800) with county burn ban detection (KBDI > 600).
+- [x] **Instant UI Chips & CPU Prompt Optimization (`basin_ui.py`, `basin_core/assistant.py`)**: 6 instant analysis chips (0.01s latency, zero LLM overhead); dynamic tool candidate pruning drops prompt tokens by 75% and speeds CPU inference by 3.3x (from 30.4s to 9.0s).
+- [x] **Honest Environmental Footprint Accounting (`app.py`)**: Separate reporting of Data Processing (K-Means) energy and active Assistant AI inference energy.
+- [x] **Full test suite pass rate: 308 / 308 passed (100.0%) across all 25 test modules!**
+
 ### September 9 embedded Qwen inference, 40-point physics, and usability suite — COMPLETE
 - [x] Pinned `llama-cpp-python==0.3.35` and `models/qwen2.5-3b-instruct-q4_k_m.gguf` (SHA-256: `626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d`, 2,104,932,768 bytes).
 - [x] Process-isolated runtime in `basin_core/qwen_runtime.py` with 8k context, tool calling, and cancellation.

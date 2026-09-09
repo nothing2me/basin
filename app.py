@@ -28,6 +28,7 @@ from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
 from basin_core.custom_data import active_ids, digest
 from basin_core.visualizers import rainfall_reference_figure, rainfall_shortfall_figure, stage_trigger_milestone_figure, drought_anomaly_matrix_figure
+from basin_core.agronomics import calculate_crop_water_deficit, calculate_kbdi, CROP_COEFFICIENTS
 
 icon_file = ROOT / "assets/basin.ico"
 st.set_page_config(page_title="BASIN", page_icon=str(icon_file) if icon_file.exists() else "◉", layout="wide", initial_sidebar_state="collapsed")
@@ -100,6 +101,24 @@ def local_rainfall_preview():
         st.dataframe(frame, hide_index=True, width="stretch")
         st.caption(f"Original file SHA-256: {preview.original_sha256}")
         st.info("Local station suitability and historical reference are not yet established. No percentile, forecast or scenario change is produced by this preview.")
+
+        with st.container(border=True):
+            st.markdown("##### 🌟 Data Sovereignty: Use in Scenario Generator")
+            st.caption("Register your uploaded rain gauge so you can resample drought scenarios and simulate storage drawdown directly on your own local records.")
+            if st.button("🚀 Activate Gauge & Build Scenarios on Your Data", key=f"btn_activate_custom_gauge_{preview.original_sha256[:8]}", type="primary", width="stretch"):
+                clean_lookup = {pd.to_datetime(d): v for d, v in preview.observations if v is not None}
+                s_series = pd.Series(clean_lookup).sort_index()
+                st_id = f"LOCAL_{preview.station[:10].upper().replace(' ', '_')}"
+                curr_src = st.session_state.get("custom_source") or load_source()
+                new_src = curr_src.with_custom_station(st_id, preview.station, s_series, preview.location)
+                st.session_state["custom_source"] = new_src
+                st.session_state["selected_stations"] = [st_id]
+                params = ScenarioParams((st_id,), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
+                st.session_state.workspace = Workspace(new_src, params, 6)
+                st.session_state.data_accepted = True
+                st.session_state.page = "Workspace"
+                st.rerun()
+
         uploaded_reference_comparison(preview, upload.getvalue())
 
 
@@ -571,32 +590,34 @@ def open_review(identifier):
 def switch_page(name):
     st.session_state.page = name
     w = st.session_state.get("workspace")
+    if w is None and name in ("Review", "Exports"):
+        src = st.session_state.get("custom_source") or load_source()
+        stn_ids = [s["id"] for s in src.manifest["stations"]]
+        params = ScenarioParams(tuple(stn_ids), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
+        w = Workspace(src, params, 6)
+        st.session_state.workspace = w
     if name == "Review" and w and w.selected and not st.session_state.get("inspect_id"):
         st.session_state.inspect_id = w.selected[0]
 
 
 def render_top_navigation(current_page, w):
-    data_accepted = st.session_state.get("data_accepted", False) or (w is not None)
-    scenarios_accepted = st.session_state.get("scenarios_accepted", False) or (w is not None and len(w.selected) > 0 and any(s.status != "unreviewed" for s in (w.get(i) for i in w.selected)))
-    export_ready = w is not None and all(w.get(i).status in ("accepted", "rejected") for i in w.selected) and any(w.get(i).status == "accepted" for i in w.selected)
-
     stages = [
         ("Data", "Data Dashboard", True),
-        ("Workspace", "Scenario Builder", data_accepted),
-        ("Review", "Review Selections", scenarios_accepted or (w is not None)),
-        ("Exports", "Export", export_ready),
+        ("Workspace", "Scenario Builder", True),
+        ("Review", "Review Selections", True),
+        ("Exports", "Export", True),
     ]
 
     cols = st.columns(4)
-    for col, (page_key, label, is_ready) in zip(cols, stages):
+    for col, (page_key, label, _) in zip(cols, stages):
         is_active = current_page == page_key
-        state_class = "basin-nav-active" if is_active else ("basin-nav-ready" if is_ready else "basin-nav-locked")
+        state_class = "basin-nav-active" if is_active else "basin-nav-ready"
         with col:
             st.markdown(f'<div class="basin-header-text-btn {state_class}">', unsafe_allow_html=True)
             st.button(
                 label,
                 key=f"nav_tab_{page_key}",
-                disabled=not is_ready,
+                disabled=False,
                 on_click=switch_page,
                 args=(page_key,),
                 width="stretch",
@@ -833,7 +854,7 @@ def tour_target(target_id: str):
 
 
 try:
-    source = load_source()
+    source = st.session_state.get("custom_source") or load_source()
 except (OSError, ValueError, KeyError) as error:
     st.error(f"Snapshot unavailable: {error}")
     st.stop()
@@ -850,8 +871,19 @@ with st.sidebar:
     page = st.radio("View", ["Data", "Workspace", "Review", "Exports"], key="page",
                     index=0, format_func=PAGE_LABELS.get, label_visibility="collapsed")
 
-# Centered Brand Header with Top-Right Utilities
-top_l, top_c, top_r = st.columns([1, 2, 1])
+# Centered Brand Header with Top-Right Utilities and Top-Left Unit Selector
+top_l, top_c, top_r = st.columns([1.2, 1.8, 1.2])
+
+with top_l:
+    u_choice = st.selectbox(
+        "Units",
+        ["🇺🇸 US Customary (in, ac-ft)", "🌐 Metric (mm, m³)"],
+        index=0 if st.session_state.get("unit_mode", "us") == "us" else 1,
+        key="global_unit_selector",
+        label_visibility="collapsed",
+        help="Switch units across all charts, tables, and KPI metrics.",
+    )
+    st.session_state["unit_mode"] = "us" if "US Customary" in u_choice else "metric"
 
 with top_c:
     logo_file = ROOT / "assets" / "basin-logo.png"
@@ -1237,8 +1269,10 @@ elif page == "Review":
     st.session_state.inspect_id = selected_id
     s = w.get(selected_id)
     f = s.features
+    is_us = st.session_state.get("unit_mode", "us") == "us"
+    unit_arg = "in" if is_us else "mm"
     st.markdown("### Understand this scenario")
-    st.info("📢 **Plain-Language Summary**: " + scenario_summary(f, names))
+    st.info("📢 **Plain-Language Summary**: " + scenario_summary(f, names, unit_system="us" if is_us else "metric"))
     st.write(f"A {f['duration_days']}-day rainfall scenario using the historical window "
              f"{s.provenance['source_start']} to {s.provenance['source_end']} at {len(s.series.columns)} selected station(s). "
              "Decide whether this revision belongs in your rainfall handoff.")
@@ -1251,7 +1285,8 @@ elif page == "Review":
     st.caption(construction + (" Later rainfall edits are included in the current chart; see revision history." if rainfall_edits else "")
                + " Historical dates identify the source window; they are not forecast dates.")
     a, b = st.columns(2)
-    a.metric("Average station shortfall over this scenario", f"{f['deficit_mm']:.1f} mm ({f['deficit_mm']/25.4:.2f} in)",
+    shortfall_metric = f"{f['deficit_mm']/25.4:.2f} in ({f['deficit_mm']:.1f} mm)" if is_us else f"{f['deficit_mm']:.1f} mm ({f['deficit_mm']/25.4:.2f} in)"
+    a.metric("Average station shortfall over this scenario", shortfall_metric,
              help="Each station's total reference minus scenario rainfall is clipped at zero, then averaged equally across stations.")
     b.metric("Scenario duration", f"{f['duration_days']} days")
     st.caption("⚖️ **Catchment Weighting Disclosure**: Rainfall deficits and reference windows weight all selected stations equally (1/N arithmetic mean). No elevation or Thiessen polygon spatial weighting is applied without local calibration.")
@@ -1264,7 +1299,7 @@ elif page == "Review":
         station = st.selectbox("Station to compare", list(s.series.columns), format_func=lambda i: names[i], key=f"review_station_{w.id}")
         mode = st.radio("Rainfall view", ["Cumulative rainfall", "Daily rainfall", "30-day deficit"], horizontal=True, key="review_rainfall_view")
         expected = pd.DataFrame(w.reference.expected(s.series.index), index=s.series.index, columns=s.series.columns)
-        fig = rainfall_reference_figure(s.series[station], expected[station], mode)
+        fig = rainfall_reference_figure(s.series[station], expected[station], mode, unit=unit_arg)
         fig = chart(fig, 340)
         if mode != "30-day deficit":
             fig.data[0].line.dash = "dash"
@@ -1272,8 +1307,12 @@ elif page == "Review":
         st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
         actual_total, reference_total = s.series[station].sum(), expected[station].sum()
         difference = reference_total - actual_total
-        st.write(f"Over these {len(s.series)} days, **{names[station]}** receives **{actual_total:.1f} mm ({actual_total/25.4:.2f} in)** in the scenario "
-                 f"versus **{reference_total:.1f} mm ({reference_total/25.4:.2f} in)** in the reference: **{abs(difference):.1f} mm ({abs(difference)/25.4:.2f} in) {'less' if difference >= 0 else 'more'} rainfall**.")
+        if is_us:
+            st.write(f"Over these {len(s.series)} days, **{names[station]}** receives **{actual_total/25.4:.2f} in ({actual_total:.1f} mm)** in the scenario "
+                     f"versus **{reference_total/25.4:.2f} in ({reference_total:.1f} mm)** in the reference: **{abs(difference)/25.4:.2f} in ({abs(difference):.1f} mm) {'less' if difference >= 0 else 'more'} rainfall**.")
+        else:
+            st.write(f"Over these {len(s.series)} days, **{names[station]}** receives **{actual_total:.1f} mm ({actual_total/25.4:.2f} in)** in the scenario "
+                     f"versus **{reference_total:.1f} mm ({reference_total/25.4:.2f} in)** in the reference: **{abs(difference):.1f} mm ({abs(difference)/25.4:.2f} in) {'less' if difference >= 0 else 'more'} rainfall**.")
         st.caption("The dashed reference uses this station's 1991–2020 monthly mean daily rainfall. The scenario line includes your current edits.")
         if mode == "30-day deficit":
             st.caption("Above zero means less rainfall than the reference over the preceding 30 days; below zero means more. The first 29 days have no complete window.")
@@ -1388,11 +1427,7 @@ elif page == "Review":
             init_choice = c_init.selectbox("Initial storage", ["48% (illustrative)", "60% (illustrative)", "35% (illustrative)"], label_visibility="visible", key="review_initial_storage")
             init_pct = 0.48 if "48%" in init_choice else (0.60 if "60%" in init_choice else 0.35)
             conserve_choice = c_conserve.select_slider("Assumed demand reduction", options=[0, 10, 20, 30], value=0, format_func=lambda v: f"{v}%", label_visibility="visible", key="review_conservation")
-
-            if chosen_sys.demand_no_pipeline_acft_day is not None:
-                pipeline_active = st.checkbox("Assume pipeline supply available", value=True, key="review_pipeline_active")
-            else:
-                pipeline_active = False
+            pipeline_active = st.checkbox("Assume pipeline supply available", value=True, key="review_pipeline_active")
 
             # Preserve the report integration contract through the optional Review UI.
             st.session_state["experiment_config"] = ExperimentConfig(
@@ -1466,6 +1501,56 @@ elif page == "Review":
                 m4.metric("Below Stage 2 (conditional)", f"Day {s2}" if s2 else "No crossing")
                 st.info("📢 **Operational Takeaway**: " + reservoir_summary(sim_df, chosen_sys.name))
                 st.caption(f"Results cover this {len(s.series)}-day window only. Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings are retained for this workspace during the session; opening another workspace resets them.")
+
+    with st.expander("🌾 Agronomic Crop ET & 🔥 Wildfire Danger (KBDI)", expanded=False):
+        st.caption("Cross-sector operational impacts calculated from daily scenario rainfall.")
+        c_agro_tab, c_fire_tab = st.tabs(["🌾 Crop Water Deficit (ETc)", "🔥 Wildfire Risk (KBDI)"])
+        with c_agro_tab:
+            st.markdown("##### 🌾 Crop Evapotranspiration & Irrigation Deficit")
+            c1, c2 = st.columns([2, 1])
+            crop_choice = c1.selectbox("Crop Type", list(CROP_COEFFICIENTS.keys()), key=f"crop_sel_{s.id}_{w.id}")
+            crop_def = calculate_crop_water_deficit(s.series, crop_name=crop_choice)
+            c2.metric("Crop Coefficient (Kc)", f"{crop_def['kc']:.2f}")
+
+            a1, a2, a3, a4 = st.columns(4)
+            if is_us:
+                a1.metric("Scenario Rainfall", f"{crop_def['total_rain_in']:.2f} in")
+                a2.metric("Reference ET (ETo)", f"{crop_def['total_eto_in']:.2f} in")
+                a3.metric("Crop ET (ETc)", f"{crop_def['total_etc_in']:.2f} in")
+                a4.metric("Net Irrigation Deficit", f"{crop_def['irrigation_gap_in']:.2f} in/acre")
+            else:
+                a1.metric("Scenario Rainfall", f"{crop_def['total_rain_mm']:.1f} mm")
+                a2.metric("Reference ET (ETo)", f"{crop_def['total_eto_in']*25.4:.1f} mm")
+                a3.metric("Crop ET (ETc)", f"{crop_def['total_etc_in']*25.4:.1f} mm")
+                a4.metric("Net Irrigation Deficit", f"{crop_def['irrigation_gap_mm']:.1f} mm")
+
+            st.info("📢 **Agronomic Takeaway**: " + crop_def["takeaway"])
+
+            st.markdown("**Monthly Water Demand vs Rainfall Breakdown**")
+            m_df = pd.DataFrame(crop_def["monthly_summary"])
+            st.dataframe(m_df, hide_index=True, width="stretch")
+
+        with c_fire_tab:
+            st.markdown("##### 🔥 Keetch-Byram Drought Index (KBDI) & Burn Ban Danger")
+            f1, f2 = st.columns([2, 1])
+            start_kbdi = f1.slider("Starting KBDI (Soil Dryness)", 0, 800, 400, 10, key=f"kbdi_start_{s.id}_{w.id}",
+                                  help="0 = fully saturated soil, 800 = extreme drought. Texas A&M Forest Service initiates county burn bans at 600+.")
+            kbdi_res = calculate_kbdi(s.series, initial_kbdi=float(start_kbdi))
+            f2.metric("Danger Class", kbdi_res.danger_class)
+
+            k1, k2, k3, k4 = st.columns(4)
+            k1.metric("Initial KBDI", f"{kbdi_res.initial_kbdi:.0f}")
+            k2.metric("Peak KBDI", f"{kbdi_res.peak_kbdi:.0f}")
+            k3.metric("Final KBDI", f"{kbdi_res.final_kbdi:.0f}")
+            k4.metric("County Burn Ban (>600)", "⚠️ TRIGGERED" if kbdi_res.burn_ban_breached else "✅ Below 600")
+
+            if kbdi_res.burn_ban_breached:
+                st.warning(f"🚨 **County Burn Ban Threshold Breached**: KBDI reaches {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.burn_ban_day}. Texas county commissioners typically enact mandatory outdoor burning bans at KBDI ≥ 600.")
+            else:
+                st.success(f"✅ KBDI peaks at {kbdi_res.peak_kbdi:.0f}, remaining below the statutory county burn-ban threshold (600).")
+
+            st.info("📢 **Operational Takeaway**: " + kbdi_res.takeaway)
+
     with st.expander("Change rainfall or shortlist"):
         st.caption("Changing rainfall creates a revision and clears its previous acceptance. Add your reason in the review note first.")
         with st.expander("Scale rainfall"):
@@ -1849,10 +1934,22 @@ elif page == "Exports":
         c_fp2.metric("CPU Execution", f"{fp['cpu_seconds']:.2f} s")
         c_fp3.metric("Resident Memory", f"{fp['process_rss_mib_at_end']:.1f} MiB")
         er = fp.get("energy_wh_range", [0, 0])
-        c_fp4.metric("Est. Laptop Energy", f"{er[0]:.4f}–{er[1]:.4f} Wh")
+        c_fp4.metric("Est. Pipeline Energy", f"{er[0]:.4f}–{er[1]:.4f} Wh")
+
+        ai_sec = float(st.session_state.get("assistant_inference_seconds", 0.0))
+        ai_wh_min = (ai_sec * 15.0) / 3600.0
+        ai_wh_max = (ai_sec * 35.0) / 3600.0
+
+        st.markdown("**AI & Assistant Subsystem Energy**")
+        a_col1, a_col2, a_col3 = st.columns(3)
+        a_col1.metric("Assistant Compute Time", f"{ai_sec:.2f} s")
+        a_col2.metric("Active AI Power", "15–35 W" if ai_sec > 0 else "0 W (Direct Tools)")
+        a_col3.metric("Est. AI Energy", f"{ai_wh_min:.4f}–{ai_wh_max:.4f} Wh" if ai_sec > 0 else "0.0000 Wh")
+
         st.caption(
             "Runs 100% on-device with zero cloud inference calls and zero network transmission during analysis. "
-            "Energy is an illustrative laptop estimate (15–65 W × elapsed seconds); full lifecycle water and carbon costs are unquantified."
+            "Pipeline energy is an illustrative laptop estimate (15–65 W × elapsed seconds); assistant energy accounts for active on-device CPU/GPU inference. "
+            "Full lifecycle water and embodied hardware carbon costs are unquantified."
         )
         st.json(w.footprint)
 

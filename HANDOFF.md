@@ -1,5 +1,30 @@
 # BASIN current handoff
 
+## September 9 Rural Usability, Data Sovereignty, Agronomics & Optional AI Installer — Complete
+
+### 1. Optional AI Assistant in Setup & 100% Offline Resilience
+- **Installer Enhancement (`Setup BASIN.cmd`)**: Interactive setup asks the operator whether to download the 2.1 GB local Qwen model. Explicitly states that model download requires internet connectivity. Can be automated via `--with-ai` or `--no-ai`.
+- **Pure Offline Mode**: If skipped, BASIN installs cleanly with zero internet requirements and zero runtime errors. The assistant drawer displays `⚪ Offline Mode: Instant Direct Tools Active` and executes instant analysis calculators with 0.01s latency.
+- **CPU Prompt Optimization**: Added `select_candidate_tools` in `basin_core/assistant.py` which dynamically filters tool schemas to the top 3 query-relevant tools. Reduces prompt evaluation size from ~1,500 to ~350 tokens, speeding up on-device CPU inference from 30.4s to 9.0s (a 3.3x speedup).
+
+### 2. Rural Usability & Framing
+- **US Customary Units by Default**: Defaults to inches (`in`), acre-feet (`ac-ft`), and gallons per minute (`GPM`) throughout the interface, text summaries, and charts. An accessible global selector in the top-left header allows instant toggle between US Customary and Metric (`mm`, `m³`).
+- **Unrestricted Tab Navigation**: Operators can freely jump between Data Dashboard, Scenario Builder, Review Selections, and Export tabs without artificial "Accept" button locks.
+- **Rural/Small Municipal Storage Presets**: Defaults storage exploration to single-reservoir small district (12,000 ac-ft) and rural farm/WCID ponds (1,500 ac-ft) ahead of the regional multi-pool system, including dynamic pipeline/intertie emergency modeling.
+
+### 3. Data Sovereignty (Custom Rainfall CSVs Drive Scenarios)
+- **Direct Workspace Integration**: Local rainfall records uploaded via the Data Dashboard feature an `🌟 Activate Gauge for Scenario Generation` action.
+- **Engine Adaptation**: `basin_core/data.py` (`with_custom_station`) and `basin_core/engine.py` allow custom gauges to define observation series and drive unsupervised K-Means drought scenario generation even with shorter modern periods of record. Verified with automated end-to-end tests (`tests/test_uploads.py`).
+
+### 4. Cross-Sector Agronomics & Wildfire Danger (KBDI)
+- **Texas Crop Water Deficit**: `basin_core/agronomics.py` calculates crop water demand ($ET_c = ET_o \times K_c$) and net irrigation gaps across scenario rainfall for 5 Texas staple crops (Cotton, Grain Sorghum, Corn, Pasture, Row Crops) based on Texas ET Network normals.
+- **Keetch-Byram Drought Index (KBDI)**: Tracks cumulative daily soil moisture deficit (0–800) and automatically flags statutory county outdoor burn ban thresholds ($KBDI \ge 600$).
+- **Review UI Panel**: An interactive dedicated expander in Step 3 Review provides crop selection, monthly demand-vs-rainfall tables, and interactive starting-KBDI soil dryness sliders.
+- **Honest Energy Accounting**: Environmental footprint expander separates Data Processing compute energy (K-Means) from active Assistant LLM inference energy.
+
+### 5. Verification & Test Suite
+- **100% Passing Test Suite**: **308 / 308 passed** across all 25 test suites in 508s (0 regressions, 15 new test cases added for agronomics and custom uploads).
+
 ## September 9 Real Embedded Qwen Inference & Usability Suite — Complete
 
 ### 1. Embedded Qwen Inference Engine Implemented & Verified

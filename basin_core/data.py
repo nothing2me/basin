@@ -14,7 +14,14 @@ ROOT = Path(__file__).resolve().parents[1]
 class CachedSource:
     """Verified immutable snapshot; missing values remain missing."""
 
-    def __init__(self, directory: Path = ROOT / "data", raw: bytes | None = None, manifest: dict | None = None):
+    def __init__(self, directory: Path = ROOT / "data", raw: bytes | None = None, manifest: dict | None = None,
+                 _daily: pd.DataFrame | None = None, _manifest: dict | None = None, _raw: bytes | None = None):
+        if _daily is not None and _manifest is not None:
+            self.daily = _daily
+            self.manifest = _manifest
+            self.raw = _raw or b""
+            return
+
         self.raw = raw if raw is not None else (directory / "observations.csv").read_bytes()
         self.manifest = manifest if manifest is not None else json.loads((directory / "manifest.json").read_text())
         if not isinstance(self.manifest, dict) or self.manifest.get("schema_version") != "1.0" or any(k not in self.manifest for k in ("sha256", "start", "end", "stations")):
@@ -48,3 +55,27 @@ class CachedSource:
         if not stations or len(set(stations)) != len(stations) or not set(stations) <= set(self.daily.columns):
             raise ValueError("Choose at least one distinct station from the snapshot")
         return self.daily[stations].copy()
+
+    def with_custom_station(self, station_id: str, name: str, series: pd.Series,
+                            location: str = "") -> CachedSource:
+        """Return a new CachedSource augmenting the verified snapshot with a local custom gauge."""
+        if not station_id or not isinstance(series, pd.Series):
+            raise ValueError("Invalid custom station identifier or series")
+        new_daily = self.daily.copy()
+        custom_series = series.copy()
+        custom_series.index = pd.to_datetime(custom_series.index)
+        custom_series = custom_series[~custom_series.index.duplicated(keep="first")].sort_index()
+        new_daily[station_id] = custom_series.reindex(new_daily.index)
+
+        new_manifest = json.loads(json.dumps(self.manifest))
+        new_manifest["stations"] = [s for s in new_manifest["stations"] if s.get("id") != station_id]
+        new_manifest["stations"].append({
+            "id": station_id,
+            "name": name,
+            "location": location or name,
+            "custom": True,
+            "elevation_m": None,
+            "latitude": None,
+            "longitude": None,
+        })
+        return CachedSource(_daily=new_daily, _manifest=new_manifest, _raw=self.raw)

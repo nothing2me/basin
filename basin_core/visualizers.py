@@ -20,6 +20,7 @@ from plotly.subplots import make_subplots
 def rainfall_shortfall_figure(
     view: pd.DataFrame, shortlist_ids: list[str] | None = None,
     focused_id: str | None = None, *, colorblind: bool = False,
+    unit: str = "mm",
 ) -> go.Figure:
     """Compare total deficits on a shared scale; horizontal offsets only separate dots.
 
@@ -33,6 +34,8 @@ def rainfall_shortfall_figure(
         return fig
 
     data = view.copy()
+    val_col = "Deficit in" if unit == "in" and "Deficit in" in data.columns else "Deficit mm"
+    unit_label = "in" if val_col == "Deficit in" else "mm"
     durations = sorted(data["Days"].unique())
     cols = min(3, len(durations))
     rows = (len(durations) + cols - 1) // cols
@@ -42,24 +45,24 @@ def rainfall_shortfall_figure(
         subplot_titles=[f"{d:g} days" for d in durations],
         horizontal_spacing=0.07, vertical_spacing=0.15 if rows > 1 else 0,
     )
-    low, high = min(0.0, data["Deficit mm"].min()), max(0.0, data["Deficit mm"].max())
-    span = max(high - low, 1.0)
+    low, high = min(0.0, data[val_col].min()), max(0.0, data[val_col].max())
+    span = max(high - low, 0.1 if unit_label == "in" else 1.0)
     y_range = [low - span * 0.04, high + span * 0.13]
     # Approximate a 12px separation in each 300px-high plotting panel.
     separation = (y_range[1] - y_range[0]) / 25
     offsets = {}
     for _, panel in data.groupby("Days"):
         placed = []
-        for _, point in panel.sort_values(["Deficit mm", "ID"]).iterrows():
-            nearby = [(lane, y) for lane, y in placed if point["Deficit mm"] - y < separation]
+        for _, point in panel.sort_values([val_col, "ID"]).iterrows():
+            nearby = [(lane, y) for lane, y in placed if point[val_col] - y < separation]
             lane = 0
             for candidate in [0] + [v for n in range(1, len(nearby) + 2) for v in (n, -n)]:
-                if all((candidate - x) ** 2 + ((point["Deficit mm"] - y) / separation) ** 2 >= 1
+                if all((candidate - x) ** 2 + ((point[val_col] - y) / separation) ** 2 >= 1
                        for x, y in nearby):
                     lane = candidate
                     break
             offsets[point["ID"]] = lane
-            placed.append((lane, point["Deficit mm"]))
+            placed.append((lane, point[val_col]))
     data["_offset"] = data["ID"].map(offsets)
     extent = max(8, max(abs(v) for v in offsets.values()) + 2)
     palette = (["#0072B2", "#E69F00", "#56B4E9", "#CC79A7", "#D55E00", "#009E73"]
@@ -84,7 +87,7 @@ def rainfall_shortfall_figure(
             if points.empty:
                 return
             fig.add_trace(go.Scatter(
-                x=points["_offset"], y=points["Deficit mm"],
+                x=points["_offset"], y=points[val_col],
                 mode="markers+text" if focus else "markers",
                 text=points["ID"] if focus else None, textposition="top center",
                 name=name, legendgroup=group, legendrank=rank, showlegend=group not in shown and not focus,
@@ -99,7 +102,7 @@ def rainfall_shortfall_figure(
                 size=8, opacity=0.8, color=palette[color_index % len(palette)],
                 symbol=symbols[color_index % len(symbols)] if colorblind else "circle",
             ), rank=groups.index(group))
-        add_points(panel[panel["Deficit mm"] == panel["Deficit mm"].max()],
+        add_points(panel[panel[val_col] == panel[val_col].max()],
                    "Highest deficit in each duration", "maximum",
                    dict(size=12, symbol="diamond-open", color="#E69F00", line=dict(width=2)))
         add_points(panel[panel["ID"].isin(shortlist_ids or [])], "Selected for review", "shortlist",
@@ -108,7 +111,7 @@ def rainfall_shortfall_figure(
                    dict(size=18, symbol="square-open", color="#E69F00", line=dict(width=2)), focus=True)
         fig.update_xaxes(range=[-extent, extent], visible=False, fixedrange=True, showgrid=False, zeroline=False, showticklabels=False, ticks="", row=row, col=col)
         fig.update_yaxes(range=y_range, showgrid=True, zeroline=False,
-                         title_text="Total rainfall deficit (mm)" if col == 1 else None,
+                         title_text=f"Total rainfall deficit ({unit_label})" if col == 1 else None,
                          showticklabels=col == 1, row=row, col=col)
 
     fig.update_layout(
@@ -126,26 +129,34 @@ def pareto_frontier_figure(view: pd.DataFrame, shortlist_ids: list[str] | None =
     return rainfall_shortfall_figure(view, shortlist_ids)
 
 
-def rainfall_reference_figure(series: pd.Series, reference: pd.Series, mode: str = "Cumulative rainfall") -> go.Figure:
+def rainfall_reference_figure(
+    series: pd.Series, reference: pd.Series, mode: str = "Cumulative rainfall",
+    unit: str = "mm"
+) -> go.Figure:
     """Compare one station with its own climatology on the same scenario days."""
+    scale = 1.0 / 25.4 if unit == "in" else 1.0
+    u_str = "in" if unit == "in" else "mm"
+    s_vals = series * scale
+    r_vals = reference * scale
     days = list(range(1, len(series) + 1))
     fig = go.Figure()
     if mode == "30-day deficit":
-        values = (reference - series).rolling(30, min_periods=30).sum()
+        values = (r_vals - s_vals).rolling(30, min_periods=30).sum()
         fig.add_trace(go.Scatter(x=days, y=values, name="30-day reference minus scenario",
                                 line=dict(color="#2878A0", width=2)))
         fig.add_hline(y=0, line_dash="dot")
-        title = "Rolling 30-day rainfall difference (mm)"
+        title = f"Rolling 30-day rainfall difference ({u_str})"
     else:
         cumulative = mode == "Cumulative rainfall"
         for values, name, dash, color in (
-            (reference, "Historical monthly reference", "dash", "#888888"),
-            (series, "Selected scenario", "solid", "#2878A0"),
+            (r_vals, "Historical monthly reference", "dash", "#888888"),
+            (s_vals, "Selected scenario", "solid", "#2878A0"),
         ):
             fig.add_trace(go.Scatter(x=days, y=values.cumsum() if cumulative else values,
                                     name=name, line=dict(color=color, width=2.2, dash=dash)))
-        title = "Accumulated rainfall (mm)" if cumulative else "Daily rainfall (mm)"
-    fig.update_traces(hovertemplate="Day %{x}<br>%{y:.1f} mm<extra>%{fullData.name}</extra>")
+        title = f"Accumulated rainfall ({u_str})" if cumulative else f"Daily rainfall ({u_str})"
+    fmt = ".2f" if unit == "in" else ".1f"
+    fig.update_traces(hovertemplate=f"Day %{{x}}<br>%{{y:{fmt}}} {u_str}<extra>%{{fullData.name}}</extra>")
     fig.update_layout(height=340, margin=dict(l=15, r=15, t=15, b=15), hovermode="x unified",
                       legend=dict(orientation="h", y=1.15),
                       xaxis=dict(title="Days since scenario start"), yaxis=dict(title=title))

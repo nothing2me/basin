@@ -138,7 +138,7 @@ RURAL_FARM_PRESET = WaterSystemConfig(
 )
 
 SYSTEM_PRESETS: dict[str, WaterSystemConfig] = {
-    "Region N (Corpus Christi — 2 reservoirs)": REGION_N_PRESET,
     "Small Municipal District (12k ac-ft)": SMALL_MUNI_PRESET,
     "Rural Farm Pond (1.5k ac-ft)": RURAL_FARM_PRESET,
+    "Region N (Corpus Christi — 2 reservoirs)": REGION_N_PRESET,
 }
