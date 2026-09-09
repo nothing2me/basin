@@ -192,7 +192,9 @@ class Workspace:
 
     def edit(self, identifier, note, factor=None, replacement=None):
         self.get(identifier).edit(self.reference, note, factor, replacement)
-        self.clustering = ScenarioClusterer().fit(self.scenarios, self.clustering["groups"])
+        # Preserve cluster stability across single-scenario edits:
+        # Untouched scenarios retain their cluster assignments and group profiles;
+        # the edited scenario retains its cluster identity to prevent global label flipping.
         self.rerank(self.weights)
 
     def exportable(self):
@@ -255,10 +257,14 @@ class Workspace:
     @classmethod
     def load(cls, source, path):
         data = json.loads(Path(path).read_text(encoding="utf-8"))
-        if data["schema_version"] not in ("1.0", "2.0", "2.1") or data["snapshot_sha256"] != source.manifest["sha256"]:
-            raise ValueError("Saved session uses a different snapshot or schema")
+        if data["schema_version"] not in ("1.0", "2.0", "2.1"):
+            raise ValueError("Saved session uses an unsupported schema version")
+        legacy_warning = None
+        if data.get("snapshot_sha256") != source.manifest["sha256"]:
+            legacy_warning = f"Notice: Saved session was generated with NOAA snapshot {str(data.get('snapshot_sha256'))[:8]}… (current: {source.manifest['sha256'][:8]}…)."
         obj = cls.__new__(cls)
         obj.source = source
+        obj.legacy_warning = legacy_warning
         legacy = data["schema_version"] == "1.0"
         obj.params, obj.reference, obj.scenarios = reconstruct_audit(source, data, legacy=legacy)
         for field in ["id", "created_at", "weights", "selected", "generation", "clustering", "footprint", "selection_history"]:

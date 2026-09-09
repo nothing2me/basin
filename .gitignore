@@ -11,3 +11,5 @@ wheelhouse/
 dist/
 build/
 *.spec
+models/*.gguf
+models/*.tmp

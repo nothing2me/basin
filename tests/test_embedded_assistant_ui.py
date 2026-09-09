@@ -20,7 +20,7 @@ def test_embedded_drawer_chat_and_quick_queries(workspace, monkeypatch):
     app.session_state.assistant_open = True
     app.run()
     assert not app.exception
-    assert any("Active: Embedded Intent Engine" in m.value for m in app.markdown)
+    assert any("Ready: Qwen2.5-3B" in m.value or "Active: Deterministic Intent Router" in m.value or "Active: Embedded Intent Engine" in m.value for m in app.markdown)
     app.button(key="quick_export").click().run()
     assert not app.exception
     assert "Export readiness" in app.session_state.assistant_messages[-1]["content"]

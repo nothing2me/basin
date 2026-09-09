@@ -37,7 +37,10 @@ class RainfallPreview:
 
 
 def preview_rainfall(raw: bytes, station: str, location: str,
-                     unit: Literal["mm", "inches"]) -> RainfallPreview:
+                     unit: Literal["mm", "inches"],
+                     *,
+                     date_format: Literal["iso", "us", "auto"] = "iso",
+                     allow_flexible_headers: bool = False) -> RainfallPreview:
     """Validate without changing sources, sessions, or scenario approvals."""
     if not station.strip() or not location.strip():
         raise ValueError("Enter a station name and location description.")
@@ -54,19 +57,58 @@ def preview_rainfall(raw: bytes, station: str, location: str,
     reader = csv.reader(io.StringIO(text, newline=""), strict=True)
     records: dict[date, float | None] = {}
     try:
-        if next(reader, None) != ["date", "precipitation"]:
-            raise ValueError("Use exactly these columns: date,precipitation. Download the template.")
+        header = next(reader, None)
+        if header is None:
+            raise ValueError("Include at least one valid rainfall observation.")
+        clean_header = [col.strip().lower() for col in header]
+        if not allow_flexible_headers:
+            if header != ["date", "precipitation"]:
+                raise ValueError("Use exactly these columns: date,precipitation. Download the template.")
+        else:
+            valid_date_cols = {"date", "day", "timestamp", "observation_date", "time"}
+            valid_precip_cols = {"precipitation", "prcp", "rain", "rainfall", "precip", "value", "precipitation_mm", "precip_mm", "rain_mm"}
+            if len(clean_header) != 2 or clean_header[0] not in valid_date_cols or clean_header[1] not in valid_precip_cols:
+                if header != ["date", "precipitation"]:
+                    raise ValueError("Use recognized date and precipitation columns (e.g. date,precipitation or date,rain). Download the template.")
         for number, row in enumerate(reader, start=2):
             if number - 1 > MAX_ROWS:
                 raise ValueError("CSV exceeds the 250,000 row limit.")
             if len(row) != 2:
                 raise ValueError(f"Record {number}: expected two columns.")
-            if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", row[0]):
-                raise ValueError(f"Record {number}: use YYYY-MM-DD dates.")
-            try:
-                day = date.fromisoformat(row[0])
-            except ValueError as error:
-                raise ValueError(f"Record {number}: invalid calendar date.") from error
+            raw_date = row[0].strip()
+            day = None
+            if date_format == "iso":
+                if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw_date):
+                    raise ValueError(f"Record {number}: use YYYY-MM-DD dates.")
+                try:
+                    day = date.fromisoformat(raw_date)
+                except ValueError as error:
+                    raise ValueError(f"Record {number}: invalid calendar date.") from error
+            elif date_format == "us":
+                us_match = re.fullmatch(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", raw_date)
+                if not us_match:
+                    raise ValueError(f"Record {number}: use MM/DD/YYYY dates.")
+                m, d, y = map(int, us_match.groups())
+                try:
+                    day = date(y, m, d)
+                except ValueError as error:
+                    raise ValueError(f"Record {number}: invalid calendar date.") from error
+            elif date_format == "auto":
+                if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw_date):
+                    try:
+                        day = date.fromisoformat(raw_date)
+                    except ValueError as error:
+                        raise ValueError(f"Record {number}: invalid calendar date.") from error
+                else:
+                    us_match = re.fullmatch(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", raw_date)
+                    if us_match:
+                        m, d, y = map(int, us_match.groups())
+                        try:
+                            day = date(y, m, d)
+                        except ValueError as error:
+                            raise ValueError(f"Record {number}: invalid calendar date.") from error
+                    else:
+                        raise ValueError(f"Record {number}: unrecognized date format (use YYYY-MM-DD or MM/DD/YYYY).")
             if day in records:
                 raise ValueError(f"Record {number}: duplicate date {day}; resolve it before importing.")
             value = None

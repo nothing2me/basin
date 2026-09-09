@@ -23,30 +23,31 @@ def evidence_panel(w, scenario, save):
     st.dataframe(pd.DataFrame([registry[i] for i in attached]).drop(columns="private_note", errors="ignore"),
                  hide_index=True, width="stretch")
     st.caption("Evidence types and applicability are declarations. No numerical trust score or automatic source winner is assigned.")
-    left, right = st.columns(2)
-    first = left.selectbox("First evidence", list(registry), format_func=lambda i: registry[i]["title"], key=f"evidence_left_{key}")
-    second = right.selectbox("Second evidence", list(registry), index=min(1, len(registry)-1),
-                             format_func=lambda i: registry[i]["title"], key=f"evidence_right_{key}")
-    for column, identifier in ((left, first), (right, second)):
-        e = registry[identifier]
-        with column:
-            st.write(e["title"])
-            st.caption(f"{e['kind']} · {e['review_status']}")
-            st.write({"Publisher": e["publisher"], "Source": e["source_locator"], "Source date": e["source_date"] or "Not supplied",
-                      "Retrieved": e["retrieved_at"] or "Not supplied", "Geography": e["geographic_scope"], "Units": e["units"] or "Not applicable"})
-            st.write(e["description"])
-    with st.form(f"conflict_form_{key}"):
-        st.write("Record a disagreement between the two records above")
-        disagreement = st.text_input("Public disagreement", key=f"disagreement_{key}")
-        comparability = st.text_input("Public comparability limits (dates, definitions, units, geography)", key=f"comparability_{key}")
-        private = st.text_input("Private conflict annotation (excluded by default)", key=f"conflict_private_{key}")
-        add = st.form_submit_button("Record unresolved disagreement")
-    if add:
-        try:
-            w.add_conflict(first, second, disagreement, comparability, private)
-            if save(w): st.success("Disagreement saved; both evidence records retained.")
-        except ValueError as error:
-            st.error(str(error))
+    with st.expander("Record disagreement / conflict between evidence records", expanded=False):
+        left, right = st.columns(2)
+        first = left.selectbox("First evidence", list(registry), format_func=lambda i: registry[i]["title"], key=f"evidence_left_{key}")
+        second = right.selectbox("Second evidence", list(registry), index=min(1, len(registry)-1),
+                                 format_func=lambda i: registry[i]["title"], key=f"evidence_right_{key}")
+        for column, identifier in ((left, first), (right, second)):
+            e = registry[identifier]
+            with column:
+                st.write(e["title"])
+                st.caption(f"{e['kind']} · {e['review_status']}")
+                st.write({"Publisher": e["publisher"], "Source": e["source_locator"], "Source date": e["source_date"] or "Not supplied",
+                          "Retrieved": e["retrieved_at"] or "Not supplied", "Geography": e["geographic_scope"], "Units": e["units"] or "Not applicable"})
+                st.write(e["description"])
+        with st.form(f"conflict_form_{key}"):
+            st.write("Record a disagreement between the two records above")
+            disagreement = st.text_input("Public disagreement", key=f"disagreement_{key}")
+            comparability = st.text_input("Public comparability limits (dates, definitions, units, geography)", key=f"comparability_{key}")
+            private = st.text_input("Private conflict annotation (excluded by default)", key=f"conflict_private_{key}")
+            add = st.form_submit_button("Record unresolved disagreement")
+        if add:
+            try:
+                w.add_conflict(first, second, disagreement, comparability, private)
+                if save(w): st.success("Disagreement saved; both evidence records retained.")
+            except ValueError as error:
+                st.error(str(error))
     if w.conflicts:
         with st.expander("Conflict dispositions", expanded=True):
             identifier = st.selectbox("Recorded conflict", [c["id"] for c in w.conflicts], key=f"conflict_id_{key}")
@@ -130,6 +131,7 @@ def assistant_panel(w, source=None, names=None):
     """Render the slide-out assistant panel with right-side tab, open by default."""
     from basin_core.assistant import run_assistant, run_tool_directly
     from basin_core.tools import TOOL_REGISTRY
+    from basin_core.qwen_runtime import get_model_info, get_qwen_client
 
     st.session_state.setdefault("assistant_open", False)
     st.session_state.setdefault("assistant_messages", [])
@@ -158,15 +160,31 @@ def assistant_panel(w, source=None, names=None):
         return
 
     with st.container(key="assistant_drawer"):
+        model_info = get_model_info()
+        client = get_qwen_client()
+        status = client.status
+        if status == "ready":
+            badge_html = f'<div class="basin-assistant-badge" style="color:#009E73">🟢 Ready: Qwen2.5-3B ({model_info["quantization"]} · CPU)</div>'
+            sub_text = "Real local Qwen2.5-3B LLM · Grounded in verified hydrologic tools"
+        elif status == "loading":
+            badge_html = '<div class="basin-assistant-badge" style="color:#E69F00">🟡 Loading Qwen2.5-3B runtime...</div>'
+            sub_text = "Initializing local llama.cpp background worker..."
+        elif status == "crashed":
+            badge_html = '<div class="basin-assistant-badge" style="color:#dc2626">🔴 Qwen runtime crashed (deterministic fallback active)</div>'
+            sub_text = "Operating via verified local deterministic router"
+        else:
+            badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">🔵 Active: Deterministic Intent Router (Model Not Loaded)</div>'
+            sub_text = "Deterministic calculation engine · Strict templates · Read-only queries"
+
         h_col, c_col = st.columns([5, 1])
         h_col.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
-        h_col.markdown('<div class="basin-assistant-sub">Deterministic calculation engine · Strict templates · Read-only queries</div>', unsafe_allow_html=True)
+        h_col.markdown(f'<div class="basin-assistant-sub">{sub_text}</div>', unsafe_allow_html=True)
         if c_col.button("✕", key="assistant_close_x", help="Close Assistant"):
             st.session_state.assistant_open = False
             st.rerun()
 
-        st.markdown('<div class="basin-assistant-badge" style="color:#009E73">● Active: Embedded Intent Engine (Offline · Deterministic)</div>', unsafe_allow_html=True)
-        st.caption("Built into BASIN. Ask a complete question each time; include scenario IDs when comparing. No model setup is required.")
+        st.markdown(badge_html, unsafe_allow_html=True)
+        st.caption("Ask about scenario profiles, compare candidates, check station stress, or test priority weights. Grounded in verified hydrologic data.")
 
         st.caption("Quick Queries")
         q1, q2, q3, q4 = st.columns(4)

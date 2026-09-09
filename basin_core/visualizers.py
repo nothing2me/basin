@@ -106,7 +106,7 @@ def rainfall_shortfall_figure(
                    dict(size=14, symbol="circle-open", color="#E69F00", line=dict(width=2)), rank=101)
         add_points(panel[panel["ID"] == focused_id], "Scenario details", "focus",
                    dict(size=18, symbol="square-open", color="#E69F00", line=dict(width=2)), focus=True)
-        fig.update_xaxes(range=[-extent, extent], visible=False, fixedrange=True, row=row, col=col)
+        fig.update_xaxes(range=[-extent, extent], visible=False, fixedrange=True, showgrid=False, zeroline=False, showticklabels=False, ticks="", row=row, col=col)
         fig.update_yaxes(range=y_range, showgrid=True, zeroline=False,
                          title_text="Total rainfall deficit (mm)" if col == 1 else None,
                          showticklabels=col == 1, row=row, col=col)
@@ -152,16 +152,21 @@ def rainfall_reference_figure(series: pd.Series, reference: pd.Series, mode: str
     return fig
 
 
-def stage_trigger_milestone_figure(spec: dict) -> go.Figure:
+def stage_trigger_milestone_figure(
+    spec: dict,
+    stage_bands_pct: tuple[float, float, float, float] = (40.0, 30.0, 20.0, 15.0)
+) -> go.Figure:
     """Render a horizontal milestone timeline across stress tiers or single scenario drawdown."""
     fig = go.Figure()
 
+    bands = [b * 100.0 if b <= 1.0 else b for b in stage_bands_pct]
+    b1, b2, b3, b4 = bands[0], bands[1], bands[2], bands[3]
     stages_meta = [
-        {"name": "At least 40%", "color": "#059669"},
-        {"name": "30% to below 40%", "color": "#d97706"},
-        {"name": "20% to below 30%", "color": "#ea580c"},
-        {"name": "15% to below 20%", "color": "#dc2626"},
-        {"name": "Below 15%", "color": "#7f1d1d"},
+        {"name": f"At least {b1:g}%", "color": "#059669"},
+        {"name": f"{b2:g}% to below {b1:g}%", "color": "#d97706"},
+        {"name": f"{b3:g}% to below {b2:g}%", "color": "#ea580c"},
+        {"name": f"{b4:g}% to below {b3:g}%", "color": "#dc2626"},
+        {"name": f"Below {b4:g}%", "color": "#7f1d1d"},
     ]
 
     added_to_legend = set()
@@ -175,13 +180,13 @@ def stage_trigger_milestone_figure(spec: dict) -> go.Figure:
     }
 
     def get_stage_idx(pct):
-        if pct >= 40.0:
+        if pct >= b1:
             return 0
-        elif pct >= 30.0:
+        elif pct >= b2:
             return 1
-        elif pct >= 20.0:
+        elif pct >= b3:
             return 2
-        elif pct >= 15.0:
+        elif pct >= b4:
             return 3
         else:
             return 4

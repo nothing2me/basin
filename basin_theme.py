@@ -257,15 +257,16 @@ def custom_appearance():
     for name, value in COLOR_DEFAULTS.items():
         st.session_state.setdefault(f"appearance_{name}", value)
         st.session_state.setdefault(f"draft_{name}", st.session_state[f"appearance_{name}"])
-    with st.form("appearance_colors", border=False):
-        buttons, selected, sidebar = st.columns(3, gap="small")
-        buttons.color_picker("Buttons", key="draft_accent")
-        selected.color_picker("Selected", key="draft_selection")
-        sidebar.color_picker("Sidebar", key="draft_sidebar")
-        if st.form_submit_button("Apply colors", width="stretch"):
-            for name in COLOR_DEFAULTS:
-                st.session_state[f"appearance_{name}"] = st.session_state[f"draft_{name}"]
-            st.success("Colors applied")
+    with st.expander("Advanced RGB palette customization", expanded=False):
+        with st.form("appearance_colors", border=False):
+            buttons, selected, sidebar = st.columns(3, gap="small")
+            buttons.color_picker("Buttons", key="draft_accent")
+            selected.color_picker("Selected", key="draft_selection")
+            sidebar.color_picker("Sidebar", key="draft_sidebar")
+            if st.form_submit_button("Apply colors", width="stretch"):
+                for name in COLOR_DEFAULTS:
+                    st.session_state[f"appearance_{name}"] = st.session_state[f"draft_{name}"]
+                st.success("Colors applied")
     st.toggle("Color-blind mode", key="appearance_colorblind",
               help="Applies a consistent blue interface accent and chart colors with shapes, line styles and patterns. Turn off to restore your custom colors.")
     bw_active = st.toggle("Black / White high-contrast", key="appearance_bw",

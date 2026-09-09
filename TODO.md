@@ -1,14 +1,18 @@
 # BASIN team TODO
 
-## September 9 embedded assistant replacement
+### September 9 embedded Qwen inference, 40-point physics, and usability suite — COMPLETE
+- [x] Pinned `llama-cpp-python==0.3.35` and `models/qwen2.5-3b-instruct-q4_k_m.gguf` (SHA-256: `626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d`, 2,104,932,768 bytes).
+- [x] Process-isolated runtime in `basin_core/qwen_runtime.py` with 8k context, tool calling, and cancellation.
+- [x] Assistant execution wired in `basin_core/assistant.py` with parameter validation and deterministic tool evaluation.
+- [x] Standalone smoke test `scripts/qwen_smoke_test.py` verified with `output/qwen_smoke_evidence.json` (PASS).
+- [x] 50-question benchmark `scripts/evaluate_routing_quality.py` passed 50/50 (100.0%) in `output/routing_quality_evidence.json`.
+- [x] Live UI drawer status badge in `basin_ui.py` displaying `🟢 Ready: Qwen2.5-3B (Q4_K_M · CPU)`.
+- [x] Complete 40-point physics, calculations, usability, and workflow suite: capacity-scaled evaporation, smooth 12-month pan evaporation curve, surface area EAC scaling, flexible calendar onsets, extended 2025 benchmark horizon, single-scenario edit cluster stability, dynamic single-station concurrence text, catchment weighting disclosures, dual-unit displays, flexible CSV engine, batch accept, undo swap, Excel deliverable, cross-platform folder open, persistent downloads card, and parameterized stage bands.
+- [x] Full test suite: **293 / 293 passed (100%)** across 23 test modules in 467.51s.
 
-Noah requested the embedded engine as the sole assistant implementation. Ollama routing, discovery, installation requirements, and the CLI retry path have been removed. Earlier task 4/Ollama-specific client pinning, model checks, and daemon gates below are superseded; do not reintroduce that stack. Keep the dependency-advisory review for current requirements and the actual-device/offline rehearsal open. Current demo/setup documents describe the embedded engine and its supported-question limitations.
+Review/chart integration with upstream report changes and baseline test suite passed. Concurrent water-system/summary work in the working directory is preserved and integrated.
 
-Review/chart integration with upstream report changes and the embedded assistant replacement passed **275 tests** in two non-overlapping groups. See the newest HANDOFF checkpoint for scope; concurrent water-system/summary work remains outside that verification.
-
-September 8 planning supplement: [September 22 finalist excellence plan](docs/finalist_excellence_plan.md) defines the prioritized repair, validation, deployment and presentation gates arising from the mock-judge assessment. It assumes access to a hydrologist or technical faculty reviewer; rural-serving operator participation remains unconfirmed. The supplement is a plan, not a completion record. Keep task ownership and status on this board.
-
-Updated: 2026-09-09 | Latest review: task 3 (`989dd7a` on `4d79822`) plus independent layout fixes. Earlier dated checkpoints are historical; consult the newest HANDOFF checkpoint for verification.
+Updated: 2026-09-09 | Latest verification: Real embedded Qwen inference + full 40-point scope verified (293 passed). Consult the newest HANDOFF checkpoint for verification.
 
 ## September 8 team-context reconciliation
 

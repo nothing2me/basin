@@ -43,7 +43,7 @@ def reconstruct_record(record, reference, legacy=False):
         raise ValueError("Unsupported rainfall transformation method")
     start, end = pd.Timestamp(p["source_start"]), pd.Timestamp(p["source_end"])
     duration = p["source_window_days"]
-    if start.day != 1 or type(duration) is not int or not 30 <= duration <= 365 or end != start + pd.Timedelta(days=duration - 1):
+    if type(duration) is not int or not 30 <= duration <= 365 or end != start + pd.Timedelta(days=duration - 1):
         raise ValueError("Source window dates or duration mismatch")
     if set(p["retention_by_station"]) != set(reference.stations):
         raise ValueError("Source station identities mismatch")

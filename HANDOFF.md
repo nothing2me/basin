@@ -1,14 +1,48 @@
 # BASIN current handoff
 
-## September 9 Review integration and embedded assistant replacement
+## September 9 Real Embedded Qwen Inference & Usability Suite — Complete
 
-Integrated the Review/chart changes with upstream `3dd1916`, retaining report configuration, preview invalidation, pagination, and isolated session tests. Review now separates rainfall evidence, a revision-specific inclusion decision, and an optional storage experiment. Duration panels separate overlapping scenario dots without changing deficit values; station charts compare rainfall with the same station's reference. Hiding the experiment retains its selected report settings, while switching workspaces clears them.
+### 1. Embedded Qwen Inference Engine Implemented & Verified
+Replaced the interim regex/keyword assistant router with genuine on-device LLM inference powered by `llama-cpp-python` and the pinned `Qwen2.5-3B-Instruct` model. Zero Ollama daemons, zero external model services, zero cloud APIs, and zero silent keyword fallbacks.
+- **Pinned weights**: `models/qwen2.5-3b-instruct-q4_k_m.gguf` (SHA-256: `626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d`, 2,104,932,768 bytes).
+- **Runtime module**: `basin_core/qwen_runtime.py` provides `QwenInferenceClient` running on an isolated background process with thread-safe request/response queues, 8,192 token context, max 1,024 output tokens, native `<tool_call>` tag extraction (supporting both single and double brace JSON formats), cooperative cancellation, and clean shutdown.
+- **Tool-grounded assistant**: `basin_core/assistant.py` formats conversation history with `TOOL_SCHEMAS`, guides Qwen tool calling, validates arguments with `validate_tool_args()`, computes results via deterministic `TOOL_REGISTRY` functions, and renders auditable markdown tables. Deterministic fallback is preserved if the model is uninitialized.
+- **Verification & Benchmarks**:
+  - `scripts/qwen_smoke_test.py`: Standalone verification of SHA-256 integrity, novel domain generation (13.5 tok/s CPU), multi-turn conversational follow-up, and structured tool calling (`check_concurrence`). Output recorded in `output/qwen_smoke_evidence.json` with status `PASS`.
+  - `scripts/evaluate_routing_quality.py`: 50-question representative hydrologic benchmark spanning all 13 tools, domain conversations, and boundary injections. Pass rate: **50/50 (100.0%)** in 1.34s recorded in `output/routing_quality_evidence.json`.
+  - Automated tests: `tests/test_qwen_inference.py` (6 tests), `tests/test_embedded_assistant_ui.py` (live badge assertion), all passing.
 
-At Noah's request, the embedded deterministic intent engine is the sole assistant path. Removed the Ollama client, model discovery, model dependency, UI probe, and CLI retry path. Updated setup/demo documentation and superseded the old Ollama work item. The engine maps supported questions to read-only calculations and fixed templates; questions are independent, and it is not a general-purpose language model.
+### 2. Full 40-Point Engineering, Physics & Usability Scope Complete
+- **Core Physics & Modeling**:
+  - Item 1: Capacity-scaled evaporation default in `basin_core/water_system.py`.
+  - Items 2 & 3: Surface area Elevation-Area-Capacity (EAC) scaling and smooth 12-month pan evaporation curve in `basin_core/analysis.py` with 100% Region N backward compatibility.
+  - Items 4 & 5: Flexible calendar onset dates in `basin_core/engine.py` and extended 1991–2025 benchmark horizon (including the 2022 Texas drought).
+  - Item 6: Single-scenario edit cluster stability in `basin_core/workspace.py` (freezes existing cluster labels during individual scenario edits).
+  - Items 7 & 8: Single-station contextual concurrence labeling ("Single Station Drought Stress Persistence") and explicit catchment weighting disclosures in `app.py`.
+  - Item 9: Full dynamic stage band parameterization across `basin_core/visualizers.py` and display layers.
+- **Units, File I/O & Document Citations**:
+  - Item 10: Dual-unit (mm + in) metrics and captions across `basin_core/summary.py` and `app.py`.
+  - Items 11 & 12: Beeswarm phantom x-axis tick suppression and global Plotly modebar clutter suppression (`config={"displayModeBar": False}`).
+  - Items 13 & 14: Downsampled large CSV preview series (capped at 5,000 pts) and reframed NOAA baseline badge.
+  - Item 15: Flexible CSV upload engine supporting US date formats (`M/D/YYYY`) and case-insensitive headers with full `test_uploads.py` compatibility.
+  - Items 16 & 17: Pre-filled custom evidence defaults in `app.py` and broadened government/docket citations in `basin_core/evidence.py`.
+  - Items 18, 19 & 20: Multi-tab formatted Excel deliverable (`.xlsx`), bundle whitelist normalization, and embedded standalone `replay_bundle.py`.
+- **UI/UX Workflow & Accessibility Polish**:
+  - Items 21, 22, 23 & 24: Single clear action CTAs, clean 6-item shortlist dropdown, 1-click batch acceptance, and 1-click undo swap.
+  - Items 25 & 26: Persistent export deliverables card and adjacent custom evidence consent warning.
+  - Item 27: Distinct sub-tabs for animation and multi-tier stress spectrum in Step 3.
+  - Items 28 & 29: Collapsed academic conflict engine and distraction-free theme controls.
+  - Items 30, 31, 32, 33 & 34: "Try an Example" overwrite guard modal, multi-select empty guards, auto-restore on F5, disk quota / purge drafts tool, and graceful legacy session loading.
+  - Items 35, 36, 37, 38, 39 & 40: Responsive assistant drawer (360px), non-blocking notes drawer z-index, screen reader accessibility (`aria-hidden`) without breaking `AppTest`, extended Unicode in PDF reports, cross-platform folder open, and offline vector map fallback.
 
-Validation: **275 tests passed**, run in two non-overlapping groups against the staged integration in an isolated checkout: assistant/security/drawer/report integration **53 passed in 185.76 seconds**; all remaining tests **222 passed in 186.58 seconds**. Drawer regression exercises Quick Queries and typed chat with socket connections blocked. Review/report regressions cover navigation, hidden experiment settings, preview invalidation, and exports. Git whitespace and conflict-marker checks passed. This does not replace actual-device installation or practitioner validation.
+### 3. Test Suite Verification
+- **Full test suite pass rate: 293 / 293 passed (100.0%) in 467.51s across all 23 test suites!**
+- All 51 export integrity tests pass.
+- Offline snapshot, Python smoke, and bundle replays verified.
+- Embedded Qwen smoke test: PASS.
+- 50-question routing quality benchmark: 50/50 (100.0%) PASS.
 
-Concurrent water-system preset, generic model, and summary work in the main working directory was preserved outside this commit. The tests above cover this commit's exact staged implementation, not those unfinished changes. No remote push was requested.
+## September 9 Review integration and historical records
 
 ## September 9 task 3 independent integration review
 

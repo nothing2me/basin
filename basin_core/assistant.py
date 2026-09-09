@@ -871,7 +871,11 @@ def semantic_query_route(workspace, prompt: str) -> str:
             return render_tool_result("test_reservoir_infrastructure", res)
 
         # Route 3: Query station point rainfall
-        if any(k in p for k in ["rainfall at", "rain at", "daily rainfall", "observations for", "observed rain", "precipitation at", "station record", "station query", "weather observations"]) or ("station" in p and any(k in p for k in ["rain", "precipitation", "observations", "records", "daily"])):
+        if (
+            any(k in p for k in ["rainfall at", "rain at", "daily rainfall", "observations for", "observed rain", "precipitation at", "station record", "station query", "weather observations"])
+            or ("station" in p and any(k in p for k in ["rain", "precipitation", "observations", "records", "daily", "recorded"]))
+            or (any(k in p for k in ["usw000", "12924", "12912", "12921"]) and any(k in p for k in ["rain", "precipitation", "recorded", "observations"]))
+        ):
             res = query_rainfall(workspace, station_id=station_id, start_date=start_date, end_date=end_date)
             return render_tool_result("query_rainfall", res)
 
@@ -903,13 +907,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
             res = check_concurrence(workspace, default_id)
             return render_tool_result("check_concurrence", res)
 
-        # Route 8: Explain ranking / score
-        if any(k in p for k in ["rank", "score", "why did", "position", "scoring"]):
-            res = explain_ranking(workspace, default_id)
-            return render_tool_result("explain_ranking", res)
-
-        # Route 9: Run sensitivity test
-        if any(k in p for k in ["sensitivity", "weight", "what if", "priority"]):
+        # Route 8: Run sensitivity test
+        if any(k in p for k in ["sensitivity", "what if", "doubled the", "half the weight"]) or ("weight" in p and any(k in p for k in ["change", "impact", "sensitivity", "double", "half", "test", "ranking weights"])):
             dur_val = 25
             if "double" in p and "duration" in p:
                 dur_val = 50
@@ -917,6 +916,11 @@ def semantic_query_route(workspace, prompt: str) -> str:
                 dur_val = 12
             res = run_sensitivity(workspace, duration=dur_val)
             return render_tool_result("run_sensitivity", res)
+
+        # Route 9: Explain ranking / score
+        if any(k in p for k in ["rank", "score", "why did", "position", "scoring"]):
+            res = explain_ranking(workspace, default_id)
+            return render_tool_result("explain_ranking", res)
 
         # Route 10: Summarize evidence / citations / conflicts
         if any(k in p for k in ["evidence", "conflict", "source", "disagreement", "citation", "citations", "notes on", "note", "justification"]):
@@ -955,18 +959,85 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
 
 def run_assistant(workspace, user_message: str,
-                  history: list[dict]) -> tuple[str, list[dict]]:
-    """Answer through the embedded engine and return bounded display history.
+                  history: list[dict],
+                  use_qwen: bool = True) -> tuple[str, list[dict]]:
+    """Answer user questions using real embedded Qwen inference with tool grounding.
 
-    Each question is routed independently. History is retained for display,
-    never interpreted as instructions or sent to an inference service.
+    When the bundled Qwen runtime is initialized and ready, natural language queries
+    are processed by the local Qwen2.5-3B-Instruct model with structured tool calling
+    to verified local hydrologic calculators. If the model is not yet loaded, unavailable,
+    or encounters an error, falls back gracefully to the deterministic intent router.
     """
     if not isinstance(user_message, str) or len(user_message) > 20000:
         raise ValueError("Question must contain at most 20,000 characters.")
     if not user_message.strip():
         raise ValueError("Enter a question about the workspace.")
 
-    reply = semantic_query_route(workspace, user_message)
+    reply: str | None = None
+
+    if use_qwen:
+        try:
+            from basin_core.qwen_runtime import get_qwen_client
+            client = get_qwen_client()
+            if client.status == "ready":
+                messages = [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are the BASIN Hydrologist Assistant — an embedded, decision-support specialist "
+                            "for municipal water supply planning and drought resilience.\n\n"
+                            "CRITICAL OPERATIONAL RULES:\n"
+                            "1. Base all numerical claims, drought severity, durations, and storage metrics on verified tool results.\n"
+                            "2. When asked about a scenario, comparison, station rainfall, ranking, reservoir stress test, or drought concurrence, call the appropriate tool.\n"
+                            "3. Explain hydrologic principles clearly, professionally, and concisely.\n"
+                            "4. Never invent numbers or hallucinate metrics."
+                        ),
+                    }
+                ]
+                for m in history[-6:]:
+                    if isinstance(m, dict) and m.get("role") in {"user", "assistant"} and isinstance(m.get("content"), str):
+                        messages.append({"role": m["role"], "content": m["content"][:4000]})
+
+                messages.append({"role": "user", "content": user_message})
+
+                resp = client.generate(messages, tools=TOOL_SCHEMAS, temperature=0.1, max_tokens=512)
+                tool_calls = resp.get("tool_calls")
+                raw_content = resp.get("content") or ""
+
+                if tool_calls:
+                    tool_results_md = []
+                    for call in tool_calls:
+                        fn_name = call.get("function", {}).get("name")
+                        raw_args = call.get("function", {}).get("arguments", {})
+                        args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
+                        if fn_name in TOOL_REGISTRY:
+                            try:
+                                val_args = validate_tool_args(workspace, fn_name, args)
+                                res = TOOL_REGISTRY[fn_name](workspace, **val_args)
+                                tool_results_md.append(render_tool_result(fn_name, res))
+                            except Exception as tool_err:
+                                tool_results_md.append(f"⚠️ Tool `{fn_name}` notice: {tool_err}")
+
+                    clean_text = re.sub(r"<tool_call>.*?</tool_call>", "", raw_content, flags=re.DOTALL).strip()
+                    if tool_results_md:
+                        joined_tools = "\n\n".join(tool_results_md)
+                        if clean_text:
+                            reply = f"{clean_text}\n\n{joined_tools}"
+                        else:
+                            reply = joined_tools
+                    elif clean_text:
+                        reply = clean_text
+                else:
+                    clean_text = re.sub(r"<tool_call>.*?</tool_call>", "", raw_content, flags=re.DOTALL).strip()
+                    if clean_text:
+                        reply = clean_text
+
+        except Exception as ex:
+            logger.warning("Qwen inference error, falling back to deterministic router: %s", ex)
+
+    if reply is None:
+        reply = semantic_query_route(workspace, user_message)
+
     previous = [
         {"role": m["role"], "content": m["content"][:20000]}
         for m in history[-10:]

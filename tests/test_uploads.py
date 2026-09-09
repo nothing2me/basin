@@ -108,3 +108,17 @@ def test_preview_ui_does_not_create_or_modify_a_scenario(monkeypatch):
     assert not app.exception
     assert not app.error
     assert "workspace" not in app.session_state or app.session_state.workspace is None
+
+
+def test_flexible_headers_and_us_date_format():
+    us_data = b"Date,Rain\n01/15/2024,5.2\n01/16/2024,0\n"
+    res = preview_rainfall(us_data, "Gauge US", "Texas Ranch", "mm",
+                           date_format="us", allow_flexible_headers=True)
+    assert res.valid_days == 2
+    assert res.expected_days == 2
+    assert res.observations[0][1] == 5.2
+
+    auto_data = b"date,precipitation\n2024-03-01,12.0\n"
+    res_auto = preview_rainfall(auto_data, "Gauge Auto", "Texas Hill", "mm", date_format="auto")
+    assert res_auto.valid_days == 1
+

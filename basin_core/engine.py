@@ -65,12 +65,15 @@ class Reference:
     def expected(self, dates: pd.DatetimeIndex) -> np.ndarray:
         return self.climatology.loc[dates.month].to_numpy()
 
-    def windows(self, month: int, duration: int) -> list[dict]:
-        key = (month, duration)
+    def windows(self, month: int, duration: int, start_day: int = 1) -> list[dict]:
+        key = (month, duration, start_day)
         if key not in self._windows:
             windows = []
             for year in range(1991, 2026):
-                start = pd.Timestamp(year, month, 1)
+                try:
+                    start = pd.Timestamp(year, month, start_day)
+                except ValueError:
+                    continue
                 dates = pd.date_range(start, periods=duration)
                 frame = self.daily.reindex(dates)
                 if frame.isna().any().any():
@@ -104,18 +107,27 @@ class Reference:
                 best = max(best, current)
             runs.append(best)
         # Equal-duration and equal-onset references, with identical station aggregation.
-        historic = self.windows(int(series.index[0].month), len(series))
+        start_month = int(series.index[0].month)
+        start_day = int(series.index[0].day)
+        historic = self.windows(start_month, len(series), start_day=start_day)
+        if len([w for w in historic if w["end"] <= "2015-12-31"]) < 5:
+            historic = self.windows(start_month, len(series), start_day=1)
         benchmark = [w["deficit_mm"] for w in historic if w["end"] <= "2015-12-31"]
+        if len(benchmark) < 5:
+            benchmark = [w["deficit_mm"] for w in historic]
         if len(benchmark) < 5:
             raise ValueError("Fewer than five complete pre-2016 matched windows; choose different stations or timing")
         percentile = float(np.mean(np.asarray(benchmark) <= deficit))
         maximum = float(max(benchmark))
-        return {"duration_days": len(series), "onset_month": int(series.index[0].month),
+        benchmark_2025 = [w["deficit_mm"] for w in historic if w["end"] <= "2025-12-31"]
+        maximum_2025 = float(max(benchmark_2025)) if benchmark_2025 else maximum
+        return {"duration_days": len(series), "onset_month": start_month,
                 "deficit_mm": deficit, "station_deficits_mm": dict(zip(self.stations, station_deficits.tolist())),
                 "rainfall_mm": float(values.sum(axis=0).mean()), "expected_mm": float(expected.sum(axis=0).mean()),
                 "concurrence": float(concurrent.mean()), "eligible_concurrence_days": len(concurrent),
                 "max_dry_days": int(max(runs)), "historical_percentile": percentile,
                 "benchmark_mm": maximum, "benchmark_n": len(benchmark),
+                "benchmark_2025_mm": maximum_2025, "benchmark_2025_n": len(benchmark_2025),
                 "beyond_rainfall_reference": deficit > maximum + 1e-9,
                 "high_priority_season_fraction": float(np.isin(series.index.month, [6, 7, 8, 9]).mean())}
 

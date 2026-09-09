@@ -8,6 +8,7 @@ from sklearn.metrics import silhouette_score, pairwise_distances
 from threadpoolctl import threadpool_limits
 
 from basin_core.engine import Scenario
+from basin_core.water_system import WaterSource, WaterSystemConfig, REGION_N_PRESET, SYSTEM_PRESETS
 
 DEFAULT_WEIGHTS = {"severity": 40, "duration": 25, "concurrence": 25, "season": 10}
 
@@ -131,21 +132,17 @@ def comparison(scenarios: list[Scenario], selected: list[str], seed: int) -> lis
     return result
 
 
-RESERVOIR_ASSUMPTIONS = {
-    "model_version": "illustrative-balance-2",
-    "scope": "Uncalibrated two-pool experiment; no forecast or official restriction dates. Excluded from session evidence packets and replay verification.",
-    "capacities_acft": {"Lake Corpus Christi": 257300.0, "Choke Canyon": 662600.0},
-    "inflow": "30 + 45 × equal-station mean rainfall (mm/day), in ac-ft/day; illustrative coefficient, no catchment calibration",
-    "evaporation": "Potential loss 750 ac-ft/day in June–September, 380 otherwise; illustrative fixed seasonal assumption",
-    "demand": "Requested 370 ac-ft/day with pipeline availability, 554 otherwise; conservation reduces this request",
-    "allocation": "Inflow proportional to capacities; evaporation proportional to available water; demand targets 65% from LCC above 20% storage, 15% otherwise, with remaining water covering any shortfall; remaining excess spills",
-    "thresholds": "Illustrative combined-storage bands at 40%, 30%, 20%, 15%; not current official policy",
-    "time_step": "Daily: add inflow, serve available evaporation and demand, spill excess. Rows report end-of-day storage.",
-}
+RESERVOIR_ASSUMPTIONS = REGION_N_PRESET.describe_assumptions()
+
+
+PAN_EVAP_MONTH_WEIGHTS = (0.04, 0.05, 0.07, 0.09, 0.11, 0.14, 0.15, 0.14, 0.10, 0.06, 0.03, 0.02)
 
 
 def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
-                                conservation_pct: float = 0.0, pipeline_active: bool = True) -> pd.DataFrame:
+                                conservation_pct: float = 0.0, pipeline_active: bool = True,
+                                config: WaterSystemConfig | None = None,
+                                use_smooth_evap: bool = False,
+                                use_eac_scaling: bool = False) -> pd.DataFrame:
     """Illustrative daily water accounting, explicitly tracking unserved losses and spill."""
     if not isinstance(series, pd.DataFrame) or series.empty or not len(series.columns):
         raise ValueError("Provide a nonempty daily rainfall table")
@@ -159,42 +156,118 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
             raise ValueError(label + " must be a fraction from 0 to 1")
     if type(pipeline_active) is not bool:
         raise ValueError("Pipeline availability must be true or false")
-    caps = np.array([257300.0, 662600.0])
+
+    cfg = config if config is not None else REGION_N_PRESET
+    cfg.validate()
+    n_sources = len(cfg.sources)
+    caps = np.array([s.capacity_acft for s in cfg.sources], dtype=float)
+    total_cap = float(caps.sum())
     storage = caps * initial_pct
     records = []
+    base_inflow = sum(s.inflow_base_acft for s in cfg.sources)
+    inflow_sens = sum(s.inflow_sensitivity for s in cfg.sources)
+    summer_evap = sum(s.evap_summer_acft for s in cfg.sources)
+    winter_evap = sum(s.evap_winter_acft for s in cfg.sources)
+    annual_mean_daily_evap = (4.0 * summer_evap + 8.0 * winter_evap) / 12.0
+
     for step, (date, rain) in enumerate(series.mean(axis=1).items()):
         beginning = float(storage.sum())
-        inflow = 30.0 + float(rain) * 45.0
-        potential_evap = 750.0 if date.month in (6, 7, 8, 9) else 380.0
-        requested_demand = (370.0 if pipeline_active else 554.0) * (1 - conservation_pct)
+        inflow = base_inflow + float(rain) * inflow_sens
+
+        smooth_active = use_smooth_evap or getattr(cfg, "use_smooth_evap", False)
+        eac_active = use_eac_scaling or getattr(cfg, "use_eac_scaling", False)
+
+        # Smooth 12-month pan evaporation curve (Item 3)
+        if smooth_active:
+            m_idx = date.month - 1
+            month_factor = PAN_EVAP_MONTH_WEIGHTS[m_idx] * 12.0
+            day_potential_evap = annual_mean_daily_evap * month_factor
+        else:
+            day_potential_evap = summer_evap if date.month in (6, 7, 8, 9) else winter_evap
+
+        # Surface area EAC scaling (Item 2)
+        if eac_active and total_cap > 0:
+            current_fraction = max(0.0, min(1.0, beginning / total_cap))
+            eac_scale = max(0.15, current_fraction ** 0.65)
+            potential_evap = day_potential_evap * eac_scale
+        else:
+            potential_evap = day_potential_evap
+
+        if pipeline_active or cfg.demand_no_pipeline_acft_day is None:
+            dem = cfg.demand_acft_day
+        else:
+            dem = cfg.demand_no_pipeline_acft_day
+        requested_demand = dem * (1 - conservation_pct)
+
         storage += inflow * caps / caps.sum()
         actual_evap = min(potential_evap, float(storage.sum()))
         if storage.sum() > 0:
             storage -= actual_evap * storage / storage.sum()
-        fraction = .65 if storage[0] > caps[0] * .20 else .15
-        withdrawals = np.minimum(storage, requested_demand * np.array([fraction, 1 - fraction]))
-        storage -= withdrawals
-        served = float(withdrawals.sum())
-        for tank in (0, 1):
-            extra = min(float(storage[tank]), max(0.0, requested_demand - served))
-            storage[tank] -= extra
-            served += extra
+
+        if n_sources == 2:
+            fraction = cfg.allocation_primary_fraction if storage[0] > caps[0] * cfg.allocation_threshold_pct else cfg.allocation_secondary_fraction
+            withdrawals = np.minimum(storage, requested_demand * np.array([fraction, 1 - fraction]))
+            storage -= withdrawals
+            served = float(withdrawals.sum())
+            for tank in (0, 1):
+                extra = min(float(storage[tank]), max(0.0, requested_demand - served))
+                storage[tank] -= extra
+                served += extra
+        elif n_sources == 1:
+            served = min(float(storage[0]), requested_demand)
+            storage[0] -= served
+        else:
+            proportions = storage / storage.sum() if storage.sum() > 0 else caps / caps.sum()
+            withdrawals = np.minimum(storage, requested_demand * proportions)
+            storage -= withdrawals
+            served = float(withdrawals.sum())
+            for tank in range(n_sources):
+                extra = min(float(storage[tank]), max(0.0, requested_demand - served))
+                storage[tank] -= extra
+                served += extra
+
         spill = float(np.maximum(storage - caps, 0).sum())
         storage = np.clip(storage, 0, caps)
         combined = float(storage.sum())
         pct = combined / caps.sum() * 100
-        band = 4 if pct < 15 else 3 if pct < 20 else 2 if pct < 30 else 1 if pct < 40 else 0
-        records.append({"day": step + 1, "date": str(date.date()),
-                        "lcc_acft": float(storage[0]), "lcc_pct": float(storage[0] / caps[0] * 100),
-                        "ccr_acft": float(storage[1]), "ccr_pct": float(storage[1] / caps[1] * 100),
-                        "combined_acft": combined, "combined_pct": pct, "beginning_acft": beginning,
-                        "stage": f"Illustrative band {band}", "stage_num": band, "prcp_mm": float(rain),
-                        "inflow_acft": inflow, "evap_acft": actual_evap, "potential_evap_acft": potential_evap,
-                        "unmet_evap_acft": potential_evap - actual_evap,
-                        "demand_acft": requested_demand, "served_demand_acft": served,
-                        "unmet_demand_acft": max(0.0, requested_demand - served), "spill_acft": spill,
-                        "net_loss_acft": requested_demand + potential_evap - inflow,
-                        "balance_error_acft": combined - (beginning + inflow - actual_evap - served - spill)})
+
+        band = 0
+        if len(cfg.stage_bands_pct) >= 4:
+            b40, b30, b20, b15 = cfg.stage_bands_pct[:4]
+            band = 4 if pct < b15 * 100 else 3 if pct < b20 * 100 else 2 if pct < b30 * 100 else 1 if pct < b40 * 100 else 0
+        else:
+            for b_idx, b_thresh in enumerate(sorted(cfg.stage_bands_pct, reverse=True)):
+                if pct < b_thresh * 100:
+                    band = b_idx + 1
+
+        rec = {
+            "day": step + 1, "date": str(date.date()),
+            "combined_acft": combined, "combined_pct": pct, "beginning_acft": beginning,
+            "stage": f"Illustrative band {band}", "stage_num": band, "prcp_mm": float(rain),
+            "inflow_acft": inflow, "evap_acft": actual_evap, "potential_evap_acft": potential_evap,
+            "unmet_evap_acft": potential_evap - actual_evap,
+            "demand_acft": requested_demand, "served_demand_acft": served,
+            "unmet_demand_acft": max(0.0, requested_demand - served), "spill_acft": spill,
+            "net_loss_acft": requested_demand + potential_evap - inflow,
+            "balance_error_acft": combined - (beginning + inflow - actual_evap - served - spill),
+        }
+        for i, s in enumerate(cfg.sources):
+            rec[f"source_{i}_name"] = s.name
+            rec[f"source_{i}_acft"] = float(storage[i])
+            rec[f"source_{i}_pct"] = float(storage[i] / caps[i] * 100)
+
+        if n_sources >= 2:
+            rec["lcc_acft"] = float(storage[0])
+            rec["lcc_pct"] = float(storage[0] / caps[0] * 100)
+            rec["ccr_acft"] = float(storage[1])
+            rec["ccr_pct"] = float(storage[1] / caps[1] * 100)
+        else:
+            rec["lcc_acft"] = float(storage[0])
+            rec["lcc_pct"] = float(storage[0] / caps[0] * 100)
+            rec["ccr_acft"] = 0.0
+            rec["ccr_pct"] = 0.0
+
+        records.append(rec)
     return pd.DataFrame(records)
 
 
@@ -202,13 +275,15 @@ def simulate_stress_spectrum(series: pd.DataFrame,
                              tiers: tuple[float, ...] = (1.0, 0.8, 0.6, 0.4),
                              initial_pct: float = 0.48,
                              conservation_pct: float = 0.0,
-                             pipeline_active: bool = True) -> dict:
+                             pipeline_active: bool = True,
+                             config: WaterSystemConfig | None = None) -> dict:
     """Simulate reservoir storage drawdown across multiple rainfall stress tiers simultaneously.
 
     tiers: tuple of rainfall retention multipliers (e.g. 1.0 = 100%, 0.8 = 80%, 0.6 = 60%, 0.4 = 40%).
     Returns a dict containing simulation results for each tier, combined trajectory dataframes,
     and a summary table of threshold breach countdowns.
     """
+    cfg = config if config is not None else REGION_N_PRESET
     tier_results = {}
     summary_rows = []
 
@@ -226,18 +301,20 @@ def simulate_stress_spectrum(series: pd.DataFrame,
             scaled_series,
             initial_pct=initial_pct,
             conservation_pct=conservation_pct,
-            pipeline_active=pipeline_active
+            pipeline_active=pipeline_active,
+            config=cfg,
         )
         min_pct = round(float(sim_df["combined_pct"].min()), 1)
         min_acft = round(float(sim_df["combined_acft"].min()), 0)
         final_pct = round(float(sim_df["combined_pct"].iloc[-1]), 1)
         final_acft = round(float(sim_df["combined_acft"].iloc[-1]), 0)
 
-        day_b1 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= 40.0), None)
-        day_b2 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= 30.0), None)
-        day_b3 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= 20.0), None)
-        day_b4 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= 15.0), None)
-        survived = bool(min_pct > 20.0)
+        critical_thresh = cfg.stage_bands_pct[2] * 100 if len(cfg.stage_bands_pct) >= 3 else 20.0
+        day_b1 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= (cfg.stage_bands_pct[0] * 100 if len(cfg.stage_bands_pct) >= 1 else 40.0)), None)
+        day_b2 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= (cfg.stage_bands_pct[1] * 100 if len(cfg.stage_bands_pct) >= 2 else 30.0)), None)
+        day_b3 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= critical_thresh), None)
+        day_b4 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= (cfg.stage_bands_pct[3] * 100 if len(cfg.stage_bands_pct) >= 4 else 15.0)), None)
+        survived = bool(min_pct > critical_thresh)
 
         label = tier_labels.get(round(m, 2), f"{int(round(m * 100))}% ({(int(round(m * 100)) - 100):+d}% Rain)")
 
@@ -270,5 +347,6 @@ def simulate_stress_spectrum(series: pd.DataFrame,
         "initial_pct": round(initial_pct * 100, 1),
         "conservation_pct": round(conservation_pct * 100, 1),
         "pipeline_active": pipeline_active,
+        "config": cfg,
     }
 

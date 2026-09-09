@@ -24,7 +24,8 @@ EXCLUDED = ['scientific validity or source authenticity', 'professional approval
             'KMeans labels, selection history and saved comparison results (recorded and hash-checked only)',
             'reservoir experiment and threshold timing', 'performance measurements and implementation identity attestation']
 FILES = {'daily_rainfall.csv', 'shortlist.csv', 'audit.json', 'Hydrologist_Handoff_Brief.md',
-         'snapshot/observations.csv', 'snapshot/manifest.json', 'methodology.md', 'README.txt'}
+         'snapshot/observations.csv', 'snapshot/manifest.json', 'methodology.md', 'README.txt',
+         'replay_bundle.py'}
 
 
 def verification_scope(version):
@@ -118,7 +119,8 @@ def export_bundle(workspace, include_notes=False, include_custom=False):
              'audit.json': dumps(audit), 'Hydrologist_Handoff_Brief.md': generate_brief(workspace, accepted).encode(),
              'snapshot/observations.csv': workspace.source.raw, 'snapshot/manifest.json': dumps(workspace.source.manifest),
              'methodology.md': (ROOT / 'docs/methodology.md').read_bytes(),
-             'README.txt': b'================================================================================\nWARNING: WHAT THIS ARTIFACT IS NOT\n- NOT a hydrologic drought-of-record analysis\n- NOT a safe-yield, firm-yield, or delivery forecast\n- NOT validated against actual streamflow or surface evaporation\n================================================================================\n\nBASIN rainfall scenarios for expert review. Historical dates are source labels, not forecasts.\nReplay with BASIN 0.2: python scripts/replay_bundle.py path/to/bundle.zip\nSee the handoff brief for verification scope, assumptions and unresolved issues. The reservoir experiment is excluded.\n'}
+             'README.txt': b'================================================================================\nWARNING: WHAT THIS ARTIFACT IS NOT\n- NOT a hydrologic drought-of-record analysis\n- NOT a safe-yield, firm-yield, or delivery forecast\n- NOT validated against actual streamflow or surface evaporation\n================================================================================\n\nBASIN rainfall scenarios for expert review. Historical dates are source labels, not forecasts.\nReplay with BASIN 0.2: python scripts/replay_bundle.py path/to/bundle.zip\nSee the handoff brief for verification scope, assumptions and unresolved issues. The reservoir experiment is excluded.\n',
+             'replay_bundle.py': (ROOT / 'scripts/replay_bundle.py').read_bytes()}
     manifest = {'schema_version': audit['schema_version'], 'basin_version': __version__, 'run_id': workspace.id,
                 'accepted_ids': [s.id for s in accepted], 'private_notes_included': include_notes,
                 'implementation': implementation_identity(), 'verification_scope': verification_scope(audit['schema_version']),

@@ -26,6 +26,7 @@ from basin_core.analysis import (
     simulate_reservoir_drawdown,
     simulate_stress_spectrum,
 )
+from basin_core.water_system import WaterSystemConfig, REGION_N_PRESET
 
 UNAVAILABLE = "Not available"
 
@@ -55,6 +56,7 @@ class ExperimentConfig:
     scenario_id: str | None = None
     scenario_revision: int | None = None
     selected: bool = False
+    system_config: WaterSystemConfig | None = None
 
     def __post_init__(self) -> None:
         for label, value in (("Initial storage", self.initial_pct), ("Conservation", self.conservation_pct)):
@@ -93,7 +95,7 @@ class ExperimentConfig:
 
     def describe_rows(self) -> list[tuple[str, str]]:
         """Label/value pairs rendered identically by the preview and both report paths."""
-        return [
+        rows = [
             ("Configuration source", self.source_label),
             ("Experiment scenario", self.scenario_label),
             ("Initial storage", f"{self.initial_pct * 100:.0f}% of combined capacity"),
@@ -101,21 +103,25 @@ class ExperimentConfig:
             ("Pipeline supply", "Assumed available" if self.pipeline_active else "Assumed unavailable"),
             ("Rainfall retention tiers", self.tier_label),
         ]
+        if self.system_config is not None:
+            clean_name = self.system_config.name.replace("—", "-").replace("–", "-")
+            rows.append(("Water system", clean_name))
+        return rows
 
     def fingerprint(self) -> str:
         """Stable identity for cache keys, so a settings change invalidates a stale report."""
-        return json.dumps(
-            {
-                "initial_pct": round(float(self.initial_pct), 6),
-                "conservation_pct": round(float(self.conservation_pct), 6),
-                "pipeline_active": bool(self.pipeline_active),
-                "tiers": [round(float(t), 6) for t in self.tiers],
-                "scenario_id": self.scenario_id,
-                "scenario_revision": self.scenario_revision,
-                "selected": bool(self.selected),
-            },
-            sort_keys=True,
-        )
+        data = {
+            "initial_pct": round(float(self.initial_pct), 6),
+            "conservation_pct": round(float(self.conservation_pct), 6),
+            "pipeline_active": bool(self.pipeline_active),
+            "tiers": [round(float(t), 6) for t in self.tiers],
+            "scenario_id": self.scenario_id,
+            "scenario_revision": self.scenario_revision,
+            "selected": bool(self.selected),
+        }
+        if self.system_config is not None:
+            data["system_config"] = self.system_config.name
+        return json.dumps(data, sort_keys=True)
 
 
 def resolve_config(config: ExperimentConfig | None, initial_pct=None, conservation_pct=None) -> ExperimentConfig:
@@ -368,18 +374,21 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
             initial_pct=config.initial_pct,
             conservation_pct=config.conservation_pct,
             pipeline_active=config.pipeline_active,
+            config=config.system_config,
         )
         sim_base = simulate_reservoir_drawdown(
             series,
             initial_pct=config.initial_pct,
             conservation_pct=0.0,
             pipeline_active=config.pipeline_active,
+            config=config.system_config,
         )
         sim_cons = simulate_reservoir_drawdown(
             series,
             initial_pct=config.initial_pct,
             conservation_pct=config.conservation_pct,
             pipeline_active=config.pipeline_active,
+            config=config.system_config,
         )
     except Exception as exc:
         return ReportMetrics(unavailable_reason=f"the simulation raised {type(exc).__name__}")
