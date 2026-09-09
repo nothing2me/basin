@@ -1,5 +1,38 @@
 # BASIN current handoff
 
+## Report experiment-configuration checkpoint — B17.1/B17.2
+
+Branch `feat/b17-report-experiment-config`, from `origin/main` at `eeac2ae` (Noah's visualizer commit, which landed after B17.6 was merged; branching from the named `1762b76` would have conflicted in the `app.py` Review section). Not merged, not pushed.
+
+Reports previously defaulted to 48% storage and 15% conservation regardless of what was chosen in Review, and a prepared preview survived changes to the scenarios, the settings and the consent flags.
+
+What changed:
+
+- **One explicit configuration.** `ExperimentConfig` in `basin_core/pdf_report.py` is a frozen, validated record of initial storage, conservation, pipeline assumption, rainfall tiers, the scenario id/revision the experiment was run on, and whether a person actually selected it. The Review controls build it (they now carry stable keys and write `st.session_state["experiment_config"]`), and the same instance is threaded through the export build, the preview, `render_html_report` and `build_fallback_pdf`. `compute_report_metrics` forwards `pipeline_active` and `tiers`, which the report paths previously dropped.
+- **Scenario selection is carried, not replaced.** `select_primary_scenario` uses the configured scenario as the report's primary scenario. A configured scenario missing from the accepted set, or a revision mismatch, is printed in the report; the code never substitutes a scenario the reviewer did not accept.
+- **Defaults are explicit.** With no Review experiment, reports state "BASIN default; no experiment was run in Review" and use the simulator's own defaults (48% storage, 0% conservation, pipeline available, tiers 100/80/60/40). This replaces the old 0.48/0.15 pair, which matched neither the model nor the UI's initial widget values. **This changes default report output:** conservation in a default report is now 0%, not 15%.
+- **Stale reports are dropped.** `report_state_token` covers the workspace, the accepted scenarios and their revisions, both consent flags and the configuration. The preview is cached under that token and purged when it moves; a built packet is compared against it plus the existing `w.record(...)` fingerprint, and is removed from session state with a "rebuild" notice rather than left in memory behind a hidden button.
+- **Display.** The Exports page shows the configuration as a table, the preview expander repeats it inline, the vector report gets a labelled block on page 1, and the HTML report gets a compact line under the executive overview.
+- The PDF download card no longer carries a blanket "CRYPTOGRAPHICALLY VERIFIED" badge; it now says the ZIP is verified and the PDF is outside that contract.
+
+Evidence:
+
+- Baseline before editing: **197 passed, 0 failures** at `eeac2ae`. After: **236 passed** (39 net new tests). No pre-existing failures to distinguish; every failure seen during this work was introduced and fixed within it.
+- `tests/test_report_config.py` (32) covers the configuration object and its validation, settings and scenario changes altering results in both paths, the no-silent-substitution rule, the display, the token, and that rainfall features and series are untouched.
+- `tests/test_report_invalidation_app.py` (7) drives the real Streamlit script: Review controls become the configuration, defaults are explicit before any experiment, a prepared preview is dropped when settings, consent or a scenario edit change, a built packet is discarded when settings change, and an exported PDF carries the selected settings.
+- `scripts/demo_smoke.py`: verified, run `d2a5ef7b9322`, five scenarios, 500 audit records, implementation matches.
+- Both rendering paths generated and read on screen with a selected configuration, a default configuration and a deliberately unavailable configured scenario; vector text operators were extracted with coordinates to confirm placement.
+
+Limitations and things found but not changed:
+
+- **Page budget.** A full configuration table on the HTML page 1 pushed the brief from two pages to three and split the drought-band table. The HTML report therefore carries a compact one-line summary and the vector report carries the table; the app preview shows the full table. Worth revisiting if the print layout is reworked.
+- **Tier label sign error, not fixed.** `simulate_stress_spectrum` builds labels for non-default tiers as `f"{pct}% ({100-pct:+d}% Rain)"`, so a 50% tier reads "+50% Rain" when it means a 50% reduction. It is unreachable from the UI (only the default tiers are offered, whose labels are hard-coded and correct) and sits in the model module, so it was left alone under "do not change rainfall calculations". It would surface if tier choice is ever exposed.
+- The Review settings live inside the "Reservoir simulation" view. A user who never opens that view exports a default-labelled report, which is accurate but easy to miss.
+- Settings are session state only; saved-session persistence is B16 and explicitly out of scope here.
+- The win32 guard in `generate_pdf_report` still makes the browser HTML route unreachable in the product, so the HTML path was again rendered with Edge for inspection rather than exercised through the product (B17.3).
+- No reviewer has read the generated documents.
+
+
 ## September 9 independent integration review
 
 Reviewed Claude's `86ff09d` against `a276478`: five changed files, with app/UI/theme/config and numerical analysis unchanged. Re-ran the original branch: **191 passed**. Merged newer upstream `21f98db` (embedded assistant/installer work) without conflicts. Corrected a remaining report claim that every unbreached window exceeds six months; added a short-window regression. Updated the security test's mock availability so it still exercises the optional Ollama path after upstream's fallback routing change.
@@ -38,7 +71,7 @@ Limitations and untested paths:
 
 Noah's main commit `40a7023` is merged with security commit `dd5996a` (integration merge `502824a`). **172 tests passed in 122.44 seconds**: the prior four PDF/UI export failures are resolved. Snapshot checkout, offline Python smoke and independent replay passed (run `0d51fc36a996`, five scenarios/500 audit records, implementation matches). Visually inspected both pages of the generated Windows vector PDF. All security safeguards survived the automatic merge; no conflicts required manual resolution.
 
-Remaining: B17 report correctness/settings/claims and table truncation, live Ollama and actual-device security gates. The PDF still hard-codes a mismatched capacity and audit badge and substitutes example rows when spectrum data is unavailable; a rendered PDF is not equivalent to independently verified report contents. PDF tests currently rely on an existing local session. (Those three PDF statements are superseded by the B17.6 checkpoint above; the closing point that a rendered PDF is not independently verified content still stands.) Prior failing-suite records below are historical and superseded by this checkpoint. No remote push performed by this integration pass.
+Remaining after B17.6 and B17.1/B17.2: B17.3 degraded-render reporting and long-text pagination, live Ollama and actual-device security gates. The PDF still hard-codes a mismatched capacity and audit badge and substitutes example rows when spectrum data is unavailable; a rendered PDF is not equivalent to independently verified report contents. PDF tests currently rely on an existing local session. (Those three PDF statements are superseded by the B17.6 checkpoint above; the closing point that a rendered PDF is not independently verified content still stands.) Prior failing-suite records below are historical and superseded by this checkpoint. No remote push performed by this integration pass.
 
 ## Security follow-up — current checkpoint
 

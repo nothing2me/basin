@@ -20,7 +20,7 @@ from basin_theme import apply_design, appearance_picker, custom_appearance, acce
 from basin_core.data import CachedSource, ROOT
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle, generate_brief
-from basin_core.pdf_report import generate_pdf_report
+from basin_core.pdf_report import ExperimentConfig, generate_pdf_report, report_state_token
 from basin_core.workspace import Workspace
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
@@ -1090,11 +1090,21 @@ elif page == "Review":
             c_pace, c_init, c_conserve = st.columns([1, 1, 1])
             pace_choice = c_pace.selectbox("Playback pace", ["Presentation mode (2.5 min)", "Deliberate (45 sec)", "Rapid preview (10 sec)"], label_visibility="collapsed")
             pace_ms = 2500 if "2.5 min" in pace_choice else (800 if "45 sec" in pace_choice else 150)
-            init_choice = c_init.selectbox("Initial storage", ["48% (illustrative)", "60% (illustrative)", "35% (illustrative)"], label_visibility="collapsed")
+            init_choice = c_init.selectbox("Initial storage", ["48% (illustrative)", "60% (illustrative)", "35% (illustrative)"], label_visibility="collapsed", key="review_initial_storage")
             init_pct = 0.48 if "48%" in init_choice else (0.60 if "60%" in init_choice else 0.35)
-            conserve_choice = c_conserve.select_slider("Emergency Conservation", options=[0, 10, 20, 30], value=0, format_func=lambda v: f"Conservation: {v}%", label_visibility="collapsed")
+            conserve_choice = c_conserve.select_slider("Emergency Conservation", options=[0, 10, 20, 30], value=0, format_func=lambda v: f"Conservation: {v}%", label_visibility="collapsed", key="review_conservation")
 
-            pipeline_active = st.checkbox("Assume pipeline supply available", value=True)
+            pipeline_active = st.checkbox("Assume pipeline supply available", value=True, key="review_pipeline_active")
+
+            # The one configuration the report preview and both PDF paths render from.
+            st.session_state["experiment_config"] = ExperimentConfig(
+                initial_pct=init_pct,
+                conservation_pct=conserve_choice / 100.0,
+                pipeline_active=pipeline_active,
+                scenario_id=s.id,
+                scenario_revision=s.revision,
+                selected=True,
+            )
             st.info("Illustrative experiment: conditional storage under assumed inputs. Not calibrated, not a forecast, and excluded from saved evidence packets and their verification.")
             with st.expander("All experiment assumptions and accounting"):
                 st.json(RESERVOIR_ASSUMPTIONS)
@@ -1296,6 +1306,25 @@ elif page == "Exports":
         col_opt2.warning("This analysis contains custom evidence. Replay requires all saved normalized upload versions, station/location/source metadata and suitability rationale.")
         share_custom = col_opt2.checkbox("Include custom numerical inputs and source metadata in this replayable export", key="custom_export_" + digest(w.custom_uploads))
     
+    # The single experiment configuration every report on this page is generated from.
+    experiment_config = st.session_state.get("experiment_config")
+    if not isinstance(experiment_config, ExperimentConfig):
+        experiment_config = ExperimentConfig()
+
+    def report_token(accepted_scenarios):
+        return report_state_token(w.id, accepted_scenarios, share, share_custom, experiment_config)
+
+    with st.expander("Experiment configuration used for reports", expanded=False):
+        if not experiment_config.selected:
+            st.info("No experiment has been configured in Review. Reports use BASIN's documented defaults, shown below. These are not a record of an earlier run.")
+        else:
+            st.caption("Selected in Review. Every simulated figure in the preview and the exported PDF uses exactly these settings.")
+        st.dataframe(
+            pd.DataFrame(experiment_config.describe_rows(), columns=["Setting", "Value"]),
+            hide_index=True,
+            width="stretch",
+        )
+
     # 1. READINESS GATE & PRIMARY EXPORT TRIGGER
     try:
         w.exportable()
@@ -1338,7 +1367,7 @@ elif page == "Exports":
                 brief_text = generate_brief(w, w.exportable())
                 brief_path = out_dir / f"Hydrologist_Handoff_Brief_{w.id}.md"
                 brief_path.write_text(brief_text, encoding="utf-8")
-                pdf_bytes = generate_pdf_report(w, w.exportable(), include_notes=share)
+                pdf_bytes = generate_pdf_report(w, w.exportable(), include_notes=share, config=experiment_config)
                 pdf_path = out_dir / f"BASIN-Executive-Brief-{w.id}.pdf"
                 pdf_path.write_bytes(pdf_bytes)
                 st.session_state.packet = {
@@ -1351,6 +1380,8 @@ elif page == "Exports":
                     "fingerprint": json.dumps(w.record(share, include_custom=share_custom), sort_keys=True),
                     "share": share,
                     "custom": share_custom,
+                    "config": experiment_config.fingerprint(),
+                    "token": report_token(w.exportable()),
                     "report": report
                 }
                 st.success(f"✅ Verified deliverables generated and saved to disk: `output/{pdf_path.name}` and `output/{zip_path.name}`")
@@ -1359,17 +1390,39 @@ elif page == "Exports":
 
     # 2. GENERATED DELIVERABLES STAGE (MAIN PDF & ZIP DOWNLOAD CARDS)
     packet = st.session_state.get("packet")
-    if packet and (not w.custom_uploads or share_custom) and packet.get("custom", False) == share_custom and packet["share"] == share and packet["fingerprint"] == json.dumps(w.record(share, include_custom=share_custom), sort_keys=True):
+    try:
+        current_fingerprint = json.dumps(w.record(share, include_custom=share_custom), sort_keys=True)
+    except ValueError:
+        current_fingerprint = None
+
+    packet_fresh = bool(
+        packet
+        and (not w.custom_uploads or share_custom)
+        and packet.get("custom", False) == share_custom
+        and packet.get("share") == share
+        and packet.get("config") == experiment_config.fingerprint()
+        and current_fingerprint is not None
+        and packet.get("fingerprint") == current_fingerprint
+    )
+    if packet and not packet_fresh:
+        # Inputs, settings or consent moved on. Drop the generated bytes rather than leave
+        # a download that no longer matches the workspace and settings it claims to report.
+        st.session_state.pop("packet", None)
+        packet = None
+        st.info("Inputs, experiment settings or consent changed since the last export. Rebuild the verified export to download it again.")
+
+    if packet_fresh:
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 18px 22px; border-radius: 10px; border: 1px solid #334155; margin: 18px 0 12px 0; color: white;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <span style="font-size: 0.72rem; font-weight: 800; letter-spacing: 1px; color: #38bdf8; text-transform: uppercase;">⭐ MAIN STAGE DELIVERABLE · COUNCIL & ANALYSTS</span>
-                <span style="font-size: 0.72rem; background: #087e8b; padding: 2px 8px; border-radius: 4px; font-weight: 700;">CRYPTOGRAPHICALLY VERIFIED</span>
+                <span style="font-size: 0.72rem; background: #087e8b; padding: 2px 8px; border-radius: 4px; font-weight: 700;">ZIP BUNDLE VERIFIED · PDF NOT COVERED</span>
             </div>
             <div style="font-size: 1.45rem; font-weight: 800; color: #ffffff; line-height: 1.2;">Executive Technical Brief (PDF)</div>
             <div style="font-size: 0.85rem; color: #cbd5e1; margin: 6px 0 14px 0; line-height: 1.45;">
                 Professionally structured for City Council members, regional water boards, and technical analysts.
-                Includes plain-language bottom-line takeaways, drought stage action matrix, 4-tier stress spectrum drawdown matrix, and full NOAA SHA-256 audit signatures.
+                Includes plain-language bottom-line takeaways, the experiment configuration used, illustrative storage bands and the stress spectrum matrix.
+                SHA-256 verification covers the companion replay ZIP; this PDF is generated separately and is outside that contract.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1408,18 +1461,31 @@ elif page == "Exports":
     with st.expander("Read the report preview", expanded=False):
         if accepted_preview:
             st.caption("Draft preview of currently accepted revisions. Building the packet still requires every shortlisted revision to be reviewed.")
+            st.caption(
+                "Experiment configuration: "
+                + " · ".join(f"{label} — {value}" for label, value in experiment_config.describe_rows())
+            )
             brief_preview_text = generate_brief(w, accepted_preview)
             col_prev_a, col_prev_b, col_prev_c = st.columns([2, 1, 1])
             with col_prev_b:
-                preview_pdf_key = f"preview_pdf_{w.id}_{share}"
-                if preview_pdf_key not in st.session_state:
+                preview_token = report_token(accepted_preview)
+                preview_state = st.session_state.get("preview_pdf")
+                if preview_state and preview_state.get("token") != preview_token:
+                    # Scenario selection, consent or experiment settings changed: discard the
+                    # prepared bytes so a stale preview can never be downloaded.
+                    st.session_state.pop("preview_pdf", None)
+                    preview_state = None
+                if preview_state is None:
                     if st.button("📕 Prep PDF Preview", key=f"btn_prep_pdf_prev_{w.id}", width="stretch"):
-                        st.session_state[preview_pdf_key] = generate_pdf_report(w, accepted_preview, include_notes=share)
+                        st.session_state["preview_pdf"] = {
+                            "token": preview_token,
+                            "bytes": generate_pdf_report(w, accepted_preview, include_notes=share, config=experiment_config),
+                        }
                         st.rerun()
                 else:
                     st.download_button(
                         "📕 Download PDF Preview",
-                        st.session_state[preview_pdf_key],
+                        preview_state["bytes"],
                         f"BASIN-Executive-Brief-Preview-{w.id}.pdf",
                         "application/pdf",
                         key=f"dl_pdf_preview_{w.id}",

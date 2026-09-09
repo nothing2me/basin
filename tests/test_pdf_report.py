@@ -3,6 +3,7 @@ import pytest
 
 from basin_core.analysis import RESERVOIR_ASSUMPTIONS, simulate_reservoir_drawdown
 from basin_core.pdf_report import (
+    ExperimentConfig,
     ILLUSTRATIVE_BANDS,
     UNAVAILABLE,
     band_storage_acft,
@@ -170,8 +171,8 @@ def test_no_stale_capacity_constants_in_either_path(approved):
 # --------------------------------------------------------------------------------------
 
 def test_metrics_report_why_the_simulation_is_unavailable():
-    assert compute_report_metrics(None, 0.48, 0.15).unavailable_reason == "no accepted scenario was supplied"
-    empty = compute_report_metrics(_SeriesLessScenario(), 0.48, 0.15)
+    assert compute_report_metrics(None, ExperimentConfig()).unavailable_reason == "no accepted scenario was supplied"
+    empty = compute_report_metrics(_SeriesLessScenario(), ExperimentConfig())
     assert not empty.available
     assert "no daily rainfall series" in empty.unavailable_reason
     assert empty.spectrum_data is None
@@ -184,7 +185,7 @@ def test_simulation_failure_is_reported_not_substituted(approved, monkeypatch):
     monkeypatch.setattr("basin_core.pdf_report.simulate_stress_spectrum", boom)
     accepted = approved.exportable()
 
-    metrics = compute_report_metrics(accepted[0], 0.48, 0.15)
+    metrics = compute_report_metrics(accepted[0], ExperimentConfig())
     assert metrics.unavailable_reason == "the simulation raised RuntimeError"
 
     pdf_bytes = build_fallback_pdf(approved, accepted)

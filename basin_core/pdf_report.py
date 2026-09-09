@@ -9,8 +9,10 @@ Features dual-tier presentation:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from html import escape
+import json
+import math
 import os
 from pathlib import Path
 import shutil
@@ -26,6 +28,168 @@ from basin_core.analysis import (
 )
 
 UNAVAILABLE = "Not available"
+
+# BASIN's documented defaults. These are the values the simulator itself defaults to, so a
+# report generated without a Review experiment reports the model's own starting point
+# rather than a figure that looks like somebody's earlier choice.
+DEFAULT_INITIAL_PCT = 0.48
+DEFAULT_CONSERVATION_PCT = 0.0
+DEFAULT_PIPELINE_ACTIVE = True
+DEFAULT_TIERS: tuple[float, ...] = (1.0, 0.8, 0.6, 0.4)
+
+
+@dataclass(frozen=True)
+class ExperimentConfig:
+    """The exact experiment settings a report was generated from.
+
+    One instance is threaded through the preview, the vector report and the HTML report so
+    the three cannot disagree about what was run. ``selected`` is true only when a person
+    chose these values in Review; a default configuration says so rather than presenting
+    BASIN's defaults as though they were a previous experiment.
+    """
+
+    initial_pct: float = DEFAULT_INITIAL_PCT
+    conservation_pct: float = DEFAULT_CONSERVATION_PCT
+    pipeline_active: bool = DEFAULT_PIPELINE_ACTIVE
+    tiers: tuple[float, ...] = DEFAULT_TIERS
+    scenario_id: str | None = None
+    scenario_revision: int | None = None
+    selected: bool = False
+
+    def __post_init__(self) -> None:
+        for label, value in (("Initial storage", self.initial_pct), ("Conservation", self.conservation_pct)):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= 1:
+                raise ValueError(label + " must be a fraction from 0 to 1")
+        if type(self.pipeline_active) is not bool:
+            raise ValueError("Pipeline availability must be true or false")
+        tiers = tuple(float(t) for t in self.tiers)
+        if not tiers or any(not math.isfinite(t) or t <= 0 for t in tiers):
+            raise ValueError("Rainfall tiers must be a nonempty sequence of positive multipliers")
+        object.__setattr__(self, "tiers", tiers)
+        if self.scenario_revision is not None and (
+            isinstance(self.scenario_revision, bool) or not isinstance(self.scenario_revision, int)
+        ):
+            raise ValueError("Scenario revision must be an integer")
+        if self.scenario_id is not None and not isinstance(self.scenario_id, str):
+            raise ValueError("Scenario identifier must be a string")
+
+    @property
+    def source_label(self) -> str:
+        if self.selected:
+            return "Selected in Review"
+        return "BASIN default; no experiment was run in Review"
+
+    @property
+    def scenario_label(self) -> str:
+        if not self.scenario_id:
+            return "Not tied to a specific scenario"
+        if self.scenario_revision is None:
+            return self.scenario_id
+        return f"{self.scenario_id} (revision {self.scenario_revision})"
+
+    @property
+    def tier_label(self) -> str:
+        return ", ".join(f"{t * 100:.0f}%" for t in self.tiers)
+
+    def describe_rows(self) -> list[tuple[str, str]]:
+        """Label/value pairs rendered identically by the preview and both report paths."""
+        return [
+            ("Configuration source", self.source_label),
+            ("Experiment scenario", self.scenario_label),
+            ("Initial storage", f"{self.initial_pct * 100:.0f}% of combined capacity"),
+            ("Emergency conservation", f"{self.conservation_pct * 100:.0f}% demand reduction"),
+            ("Pipeline supply", "Assumed available" if self.pipeline_active else "Assumed unavailable"),
+            ("Rainfall retention tiers", self.tier_label),
+        ]
+
+    def fingerprint(self) -> str:
+        """Stable identity for cache keys, so a settings change invalidates a stale report."""
+        return json.dumps(
+            {
+                "initial_pct": round(float(self.initial_pct), 6),
+                "conservation_pct": round(float(self.conservation_pct), 6),
+                "pipeline_active": bool(self.pipeline_active),
+                "tiers": [round(float(t), 6) for t in self.tiers],
+                "scenario_id": self.scenario_id,
+                "scenario_revision": self.scenario_revision,
+                "selected": bool(self.selected),
+            },
+            sort_keys=True,
+        )
+
+
+def resolve_config(config: ExperimentConfig | None, initial_pct=None, conservation_pct=None) -> ExperimentConfig:
+    """Return the configuration to render with.
+
+    An explicit config always wins. The older ``initial_pct``/``conservation_pct``
+    arguments remain supported for direct callers and produce an unselected configuration,
+    because values passed that way were never a recorded user choice.
+    """
+    if config is not None:
+        if not isinstance(config, ExperimentConfig):
+            raise ValueError("config must be an ExperimentConfig")
+        return config
+    return ExperimentConfig(
+        initial_pct=DEFAULT_INITIAL_PCT if initial_pct is None else _as_fraction(initial_pct),
+        conservation_pct=DEFAULT_CONSERVATION_PCT if conservation_pct is None else _as_fraction(conservation_pct),
+    )
+
+
+def _as_fraction(value) -> float:
+    """Accept a percentage or a fraction, as the report entry points always have."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise ValueError("Storage and conservation settings must be finite numbers")
+    return float(value) / 100.0 if value > 1.0 else float(value)
+
+
+def report_state_token(workspace_id, accepted: Sequence, include_notes: bool,
+                       include_custom: bool, config: ExperimentConfig) -> str:
+    """Identity of everything a generated report depends on.
+
+    Any change to the workspace, the accepted scenarios or their revisions, either consent
+    flag, or the experiment settings produces a different token. Callers cache a generated
+    report against its token and discard it when the token moves, so a stale report cannot
+    remain available for download.
+    """
+    return json.dumps(
+        {
+            "workspace": workspace_id,
+            "accepted": [[getattr(x, "id", None), getattr(x, "revision", None)] for x in accepted],
+            "notes_consent": bool(include_notes),
+            "custom_consent": bool(include_custom),
+            "config": config.fingerprint(),
+        },
+        sort_keys=True,
+    )
+
+
+def select_primary_scenario(accepted: Sequence, config: ExperimentConfig):
+    """Pick the scenario the experiment was configured on, without substituting silently.
+
+    Returns ``(scenario, note)``. The note is non-empty whenever the report could not use
+    the configured scenario, so the discrepancy is stated rather than hidden.
+    """
+    if not accepted:
+        return None, None
+    if not config.scenario_id:
+        return accepted[0], None
+
+    for scenario in accepted:
+        if getattr(scenario, "id", None) == config.scenario_id:
+            revision = getattr(scenario, "revision", None)
+            if config.scenario_revision is not None and revision != config.scenario_revision:
+                return scenario, (
+                    f"The experiment was configured on {config.scenario_id} revision "
+                    f"{config.scenario_revision}; this report uses the accepted revision {revision}."
+                )
+            return scenario, None
+
+    fallback = accepted[0]
+    return fallback, (
+        f"The experiment was configured on {config.scenario_id}, which is not among this "
+        f"report's accepted scenarios. Results below are for {getattr(fallback, 'id', 'the first accepted scenario')}."
+    )
+
 
 # Illustrative combined-storage bands. These mirror the bands the simulator applies in
 # basin_core.analysis.simulate_reservoir_drawdown; tests/test_pdf_report.py pins them to
@@ -89,11 +253,12 @@ class ReportMetrics:
         return self.unavailable_reason is None
 
 
-def compute_report_metrics(primary_scenario, init_frac: float, cons_frac: float) -> ReportMetrics:
+def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> ReportMetrics:
     """Run the illustrative experiment, or report why it could not be run.
 
     Shared by the HTML and vector renderers so the two paths cannot disagree about what
-    was computed or about whether anything was computed at all.
+    was computed, about the settings it was computed under, or about whether anything was
+    computed at all.
     """
     if primary_scenario is None:
         return ReportMetrics(unavailable_reason="no accepted scenario was supplied")
@@ -103,9 +268,25 @@ def compute_report_metrics(primary_scenario, init_frac: float, cons_frac: float)
         return ReportMetrics(unavailable_reason="the primary scenario carries no daily rainfall series")
 
     try:
-        spectrum_data = simulate_stress_spectrum(series, initial_pct=init_frac, conservation_pct=cons_frac)
-        sim_base = simulate_reservoir_drawdown(series, initial_pct=init_frac, conservation_pct=0.0)
-        sim_cons = simulate_reservoir_drawdown(series, initial_pct=init_frac, conservation_pct=cons_frac)
+        spectrum_data = simulate_stress_spectrum(
+            series,
+            tiers=config.tiers,
+            initial_pct=config.initial_pct,
+            conservation_pct=config.conservation_pct,
+            pipeline_active=config.pipeline_active,
+        )
+        sim_base = simulate_reservoir_drawdown(
+            series,
+            initial_pct=config.initial_pct,
+            conservation_pct=0.0,
+            pipeline_active=config.pipeline_active,
+        )
+        sim_cons = simulate_reservoir_drawdown(
+            series,
+            initial_pct=config.initial_pct,
+            conservation_pct=config.conservation_pct,
+            pipeline_active=config.pipeline_active,
+        )
     except Exception as exc:
         return ReportMetrics(unavailable_reason=f"the simulation raised {type(exc).__name__}")
 
@@ -182,17 +363,18 @@ def find_browser_executable() -> str | None:
 def render_html_report(
     workspace,
     accepted: Sequence,
-    initial_pct: float = 0.48,
-    conservation_pct: float = 0.15,
+    initial_pct: float | None = None,
+    conservation_pct: float | None = None,
     include_notes: bool = False,
+    config: ExperimentConfig | None = None,
 ) -> str:
     """Build a professional, print-optimized HTML report ready for PDF rendering."""
-    # Ensure percentages are proper fractions (0.0 to 1.0)
-    init_frac = initial_pct / 100.0 if initial_pct > 1.0 else initial_pct
-    cons_frac = conservation_pct / 100.0 if conservation_pct > 1.0 else conservation_pct
+    config = resolve_config(config, initial_pct, conservation_pct)
+    init_frac = config.initial_pct
+    cons_frac = config.conservation_pct
 
-    primary_scenario = accepted[0] if accepted else None
-    metrics = compute_report_metrics(primary_scenario, init_frac, cons_frac)
+    primary_scenario, scenario_note = select_primary_scenario(accepted, config)
+    metrics = compute_report_metrics(primary_scenario, config)
     spectrum_data = metrics.spectrum_data
 
     run_id = workspace.id
@@ -325,6 +507,21 @@ def render_html_report(
             f"It was intended to run at {init_frac * 100:.0f}% initial storage with "
             f"{cons_frac * 100:.0f}% emergency conservation, but no run was produced for this report."
         )
+
+    # A compact single line: the print layout is two pages and a full table here pushes the
+    # drought-band section onto a third. The app preview renders the same values as a table.
+    described = config.describe_rows()
+    config_summary_line = " · ".join(f"{label}: {value}" for label, value in described)
+    config_note_html = (
+        f'<p style="margin-top: 6px; font-weight: 600; color: #92400e;">{escape(scenario_note)}</p>'
+        if scenario_note else ""
+    )
+    config_default_html = (
+        ""
+        if config.selected else
+        '<p style="margin-top: 6px; color: #92400e; font-weight: 600;">No experiment was configured in Review. '
+        'The settings above are BASIN\'s documented defaults, not a record of an earlier run.</p>'
+    )
 
     unavailable_banner = (
         f'<p style="margin-top: 6px; font-weight: 600; color: #92400e;">{escape(unavailable_note)}</p>'
@@ -625,6 +822,10 @@ def render_html_report(
         {unavailable_banner}
     </div>
 
+    <p style="font-size: 7.5pt; color: #475569; margin: 2px 0 8px 0;"><strong>Experiment configuration:</strong> {escape(config_summary_line)}</p>
+    {config_note_html}
+    {config_default_html}
+
     <div class="kpi-row">
         <div class="kpi-card neutral">
             <div class="kpi-label">Illustrative Depletion Window (Stage 3)</div>
@@ -875,9 +1076,10 @@ class VectorPDFBuilder:
 def build_fallback_pdf(
     workspace_or_title,
     accepted_or_text=None,
-    initial_pct: float = 0.48,
-    conservation_pct: float = 0.15,
+    initial_pct: float | None = None,
+    conservation_pct: float | None = None,
     include_notes: bool = False,
+    config: ExperimentConfig | None = None,
 ) -> bytes:
     """Publication-grade pure-Python vector PDF generator.
     
@@ -888,8 +1090,10 @@ def build_fallback_pdf(
     doc = VectorPDFBuilder()
 
     # Determine input mode (Workspace object vs Title string)
-    init_frac = initial_pct / 100.0 if initial_pct > 1.0 else initial_pct
-    cons_frac = conservation_pct / 100.0 if conservation_pct > 1.0 else conservation_pct
+    config = resolve_config(config, initial_pct, conservation_pct)
+    init_frac = config.initial_pct
+    cons_frac = config.conservation_pct
+    scenario_note: str | None = None
 
     if isinstance(workspace_or_title, str):
         # Title/body mode carries no session. Nothing about a run, snapshot or simulation
@@ -901,7 +1105,7 @@ def build_fallback_pdf(
         stations = UNAVAILABLE
         snapshot_hash = UNAVAILABLE
         accepted = []
-        metrics = compute_report_metrics(None, init_frac, cons_frac)
+        metrics = compute_report_metrics(None, config)
     else:
         workspace = workspace_or_title
         accepted = list(accepted_or_text or [])
@@ -913,7 +1117,8 @@ def build_fallback_pdf(
         snapshot_hash = str(manifest.get("sha256", ""))[:16] or UNAVAILABLE
         title = f"BASIN Executive Technical Brief -- {run_id}"
         body_text = f"Evaluated {len(accepted)} accepted scenarios under {init_frac * 100:.0f}% starting storage."
-        metrics = compute_report_metrics(accepted[0] if accepted else None, init_frac, cons_frac)
+        primary_scenario, scenario_note = select_primary_scenario(accepted, config)
+        metrics = compute_report_metrics(primary_scenario, config)
 
     spectrum_data = metrics.spectrum_data
     unavailable_note = (
@@ -1095,6 +1300,19 @@ def build_fallback_pdf(
     doc.text(p1, 36, 226, f"That is this experiment's assumption, not a survey-verified figure: the project research packet records TWDB volumetric", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
     doc.text(p1, 36, 216, f"survey values summing to {surveyed_total:,.0f} ac-ft. Reconciling the two is open work; this report does not claim they agree.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
 
+    # Experiment configuration actually used for every simulated figure in this report
+    doc.rect(p1, 36, 96, 540, 108, fill=(0.98, 0.99, 1.0), stroke=(0.8, 0.85, 0.92))
+    doc.text(p1, 48, 192, "EXPERIMENT CONFIGURATION USED FOR THIS REPORT", font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
+    for row_index, (label, value) in enumerate(config.describe_rows()):
+        row_y = 178 - row_index * 12
+        doc.text(p1, 48, row_y, clip_text(label, 34), font="/F2", size=7.0, color=(0.35, 0.4, 0.48))
+        doc.text(p1, 210, row_y, clip_text(value, 78), font="/F1", size=7.0)
+
+    if scenario_note:
+        doc.text(p1, 48, 104, clip_text(scenario_note, 130), font="/F1", size=6.8, color=(0.7, 0.4, 0.05))
+    elif not config.selected:
+        doc.text(p1, 48, 104, "No experiment was configured in Review; these are BASIN's documented defaults, not an earlier run.", font="/F1", size=6.8, color=(0.7, 0.4, 0.05))
+
     # Page 1 Footer
     doc.line(p1, 36, 50, 576, 50, stroke=(0.8, 0.85, 0.9))
     doc.text(p1, 36, 38, "BASIN Calculation Engine * Illustrative Planning Model", font="/F1", size=7.0, color=(0.45, 0.5, 0.55))
@@ -1229,9 +1447,10 @@ def generate_pdf_report(
     workspace,
     accepted: Sequence,
     output_path: Path | str | None = None,
-    initial_pct: float = 0.48,
-    conservation_pct: float = 0.15,
+    initial_pct: float | None = None,
+    conservation_pct: float | None = None,
     include_notes: bool = False,
+    config: ExperimentConfig | None = None,
 ) -> bytes:
     """Generate a publication-grade PDF report.
 
@@ -1239,6 +1458,7 @@ def generate_pdf_report(
     4-tier stress spectrum sensitivity tables, shortlisted scenario features, and SHA-256
     cryptographic audit trails.
     """
+    config = resolve_config(config, initial_pct, conservation_pct)
     browser_bin = find_browser_executable()
     pdf_bytes: bytes | None = None
 
@@ -1246,9 +1466,8 @@ def generate_pdf_report(
         html_content = render_html_report(
             workspace,
             accepted,
-            initial_pct=initial_pct,
-            conservation_pct=conservation_pct,
             include_notes=include_notes,
+            config=config,
         )
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
@@ -1276,9 +1495,8 @@ def generate_pdf_report(
         pdf_bytes = build_fallback_pdf(
             workspace,
             accepted,
-            initial_pct=initial_pct,
-            conservation_pct=conservation_pct,
             include_notes=include_notes,
+            config=config,
         )
 
     if output_path:
