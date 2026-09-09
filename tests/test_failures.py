@@ -40,6 +40,7 @@ def test_ui_failed_save_does_not_claim_success(tmp_path, monkeypatch):
     original = Workspace.save
     monkeypatch.setattr(Workspace, "save", lambda self: original(self, tmp_path))
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    app.sidebar.radio[0].set_value("Workspace").run()
     next(b for b in app.button if b.label == "Create rainfall scenarios").click().run()
     def failed(*args, **kwargs): raise PermissionError("Test save denial")
     monkeypatch.setattr(Workspace, "save", failed)
@@ -61,6 +62,7 @@ def test_evidence_conflict_ui_workflow(tmp_path, monkeypatch):
     original = Workspace.save
     monkeypatch.setattr(Workspace, "save", lambda self: original(self, tmp_path))
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    app.sidebar.radio[0].set_value("Workspace").run()
     next(b for b in app.button if b.label == "Create rainfall scenarios").click().run()
     app.sidebar.radio[0].set_value("Review").run()
     next(t for t in app.text_input if t.label == "Public disagreement").set_value("Airport data may not represent the catchment")

@@ -12,6 +12,7 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
     assert not app.exception
     assert "A clearer starting point" not in str(app.markdown)
+    app.sidebar.radio[0].set_value("Workspace").run()
     next(b for b in app.button if b.label == "Create rainfall scenarios").click().run()
     assert not app.exception
     w = app.session_state.workspace
@@ -21,7 +22,7 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert w.notes == "Private planning note"
     app.sidebar.radio[0].set_value("Workspace").run()
     assert not app.exception
-    preset_box = next((s for s in app.sidebar.selectbox if s.label == "Community priority preset"), None)
+    preset_box = next((s for s in app.selectbox if s.label == "Community priority preset"), None)
     if preset_box:
         preset_box.set_value("Illustrative rural provider").run()
         assert app.session_state.workspace.weights["season"] == 50
@@ -65,19 +66,21 @@ def test_plain_language_four_stage_workflow(tmp_path, monkeypatch):
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
 
     assert not app.exception
-    assert app.session_state.page == "Workspace"
-    assert app.sidebar.radio[0].options == ["1. Check data", "2. Build scenarios", "3. Review choices", "4. Share results"]
-    assert any(item.value == "2. Build scenarios" for item in app.subheader)
-    assert any("Which rainfall scenarios deserve review?" in item.value for item in app.markdown)
-    assert next(slider for slider in app.sidebar.slider if slider.label == "Rainfall compared with original · %")
-    assert next(box for box in app.sidebar.selectbox if box.label == "Where reduced rainfall occurs")
-    assert next(box for box in app.sidebar.selectbox if box.label == "Scenarios to test")
-    assert next(box for box in app.sidebar.selectbox if box.label == "Scenarios to review")
+    assert app.session_state.page == "Data"
+    assert app.sidebar.radio[0].options == ["Data Dashboard", "Scenario Builder", "Review Selections", "Export"]
+    assert any("Can I trust and use these observations?" in item.value for item in app.markdown)
+
+    app.sidebar.radio[0].set_value("Workspace").run()
+    assert not app.exception
+    assert next(slider for slider in app.slider if slider.label == "Rainfall compared with original · %")
+    assert next(box for box in app.selectbox if box.label == "Where reduced rainfall occurs")
+    assert next(box for box in app.selectbox if box.label == "Scenarios to test")
+    assert next(box for box in app.selectbox if box.label == "Scenarios to review")
 
     next(button for button in app.button if button.label == "Create rainfall scenarios").click().run()
     assert not app.exception
+
     assert app.session_state.page == "Workspace"
-    assert any(item.value == "2. Build scenarios" for item in app.subheader)
     assert any("Decision summary" in item.value for item in app.markdown)
     assert any("Why it ranked here" in item.value for item in app.caption)
     assert any("scenarios selected for review" in item.value for item in app.caption)
@@ -85,9 +88,56 @@ def test_plain_language_four_stage_workflow(tmp_path, monkeypatch):
 
     app.sidebar.radio[0].set_value("Review").run()
     assert not app.exception
-    assert any(item.value == "3. Review choices" for item in app.subheader)
     assert any("Stations stressed together" in item.value for item in app.markdown)
     assert any("How unusual vs history" in item.value for item in app.markdown)
+
+
+def test_bottom_nav_syncs_sidebar_radio(tmp_path, monkeypatch):
+    """Assert that clicking forward/back action buttons mutates session_state
+    and cleanly re-renders the sidebar radio to the corresponding stage.
+    """
+    from basin_core.workspace import Workspace
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+
+    # Step 1 (Initial Landing)
+    assert app.session_state.page == "Data"
+    assert app.sidebar.radio[0].value == "Data"
+
+    # Click forward to Step 2 via acceptance button
+    next(b for b in app.button if "Accept Baseline & Proceed" in b.label).click().run()
+    assert not app.exception
+    assert app.session_state.page == "Workspace"
+    assert app.sidebar.radio[0].value == "Workspace"
+
+    # Click back to Step 1 via bottom button
+    next(b for b in app.button if "Back to Step 1" in b.label).click().run()
+    assert not app.exception
+    assert app.session_state.page == "Data"
+    assert app.sidebar.radio[0].value == "Data"
+
+    # Load example scenario set
+    next(b for b in app.button if b.label == "Try an example").click().run()
+    assert not app.exception
+    assert app.session_state.page == "Review"
+    assert app.sidebar.radio[0].value == "Review"
+
+    # Accept all shortlisted for export to unlock export gate
+    next(b for b in app.button if "Accept all shortlisted" in b.label).click().run()
+    assert not app.exception
+
+    # Click forward to Step 4 via bottom button
+    next(b for b in app.button if "Proceed to Step 4" in b.label).click().run()
+    assert not app.exception
+    assert app.session_state.page == "Exports"
+    assert app.sidebar.radio[0].value == "Exports"
+
+    # Click back to Step 3 via bottom button
+    next(b for b in app.button if "Back to Step 3" in b.label).click().run()
+    assert not app.exception
+    assert app.session_state.page == "Review"
+    assert app.sidebar.radio[0].value == "Review"
 
 
 def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
@@ -164,8 +214,7 @@ def test_first_use_example_is_reviewable_not_approved(tmp_path, monkeypatch):
     monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
     assert not app.exception
-    assert not app.get("file_uploader")
-    assert not app.get("plotly_chart")
+    assert app.session_state.page == "Data"
     next(b for b in app.button if b.label == "Try an example").click().run()
     assert not app.exception
     assert app.session_state.page == "Review"

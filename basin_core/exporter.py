@@ -53,7 +53,8 @@ def text_cell(value):
 
 def generate_brief(workspace, accepted):
     total = sum(workspace.weights.values())
-    lines = ['# BASIN — Rainfall Scenario Handoff', '', f'Run: `{workspace.id}` · created {workspace.created_at} · BASIN {__version__}', '',
+    lines = ['> ⚠️ **WHAT THIS ARTIFACT IS NOT:** This document is NOT a hydrologic drought-of-record analysis, NOT a safe-yield or delivery forecast, NOT a reservoir breach projection, and NOT validated against actual streamflow or surface evaporation.', '',
+             '# BASIN — Rainfall Scenario Handoff', '', f'Run: `{workspace.id}` · created {workspace.created_at} · BASIN {__version__}', '',
              '## Purpose and limits', '',
              'An analyst selected rainfall stress scenarios for deeper drought-planning analysis. Accept records a local rainfall-content review; it does not establish professional sign-off, validated catchment suitability, probability, water supply or restriction dates.', '',
              'Stations are provisional regional airport proxies. Rainfall retention cannot be applied directly to naturalized streamflow. A domain specialist must determine geographic suitability, rainfall–runoff modeling, operating rules and any appropriate downstream modeling application.', '',
@@ -98,6 +99,7 @@ def generate_brief(workspace, accepted):
 
 def summary_record(s):
     return {'scenario_id': s.id, 'revision': s.revision, 'priority_score': s.score,
+            'modeling_scope': 'HISTORICAL_PRECIP_DEFICIT_ONLY — NOT_A_YIELD_FORECAST',
             **{k: v for k, v in s.features.items() if not isinstance(v, dict)}}
 
 
@@ -116,7 +118,7 @@ def export_bundle(workspace, include_notes=False, include_custom=False):
              'audit.json': dumps(audit), 'Hydrologist_Handoff_Brief.md': generate_brief(workspace, accepted).encode(),
              'snapshot/observations.csv': workspace.source.raw, 'snapshot/manifest.json': dumps(workspace.source.manifest),
              'methodology.md': (ROOT / 'docs/methodology.md').read_bytes(),
-             'README.txt': b'BASIN rainfall scenarios for expert review. Historical dates are source labels, not forecasts.\nReplay with BASIN 0.2: python scripts/replay_bundle.py path/to/bundle.zip\nSee the handoff brief for verification scope, assumptions and unresolved issues. The reservoir experiment is excluded.\n'}
+             'README.txt': b'================================================================================\nWARNING: WHAT THIS ARTIFACT IS NOT\n- NOT a hydrologic drought-of-record analysis\n- NOT a safe-yield, firm-yield, or delivery forecast\n- NOT validated against actual streamflow or surface evaporation\n================================================================================\n\nBASIN rainfall scenarios for expert review. Historical dates are source labels, not forecasts.\nReplay with BASIN 0.2: python scripts/replay_bundle.py path/to/bundle.zip\nSee the handoff brief for verification scope, assumptions and unresolved issues. The reservoir experiment is excluded.\n'}
     manifest = {'schema_version': audit['schema_version'], 'basin_version': __version__, 'run_id': workspace.id,
                 'accepted_ids': [s.id for s in accepted], 'private_notes_included': include_notes,
                 'implementation': implementation_identity(), 'verification_scope': verification_scope(audit['schema_version']),
