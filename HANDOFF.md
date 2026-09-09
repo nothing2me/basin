@@ -1,5 +1,11 @@
 # BASIN current handoff
 
+## Latest integration checkpoint
+
+Noah's main commit `40a7023` is merged with security commit `dd5996a` (integration merge `502824a`). **172 tests passed in 122.44 seconds**: the prior four PDF/UI export failures are resolved. Snapshot checkout, offline Python smoke and independent replay passed (run `0d51fc36a996`, five scenarios/500 audit records, implementation matches). Visually inspected both pages of the generated Windows vector PDF. All security safeguards survived the automatic merge; no conflicts required manual resolution.
+
+Remaining: B17 report correctness/settings/claims and table truncation, live Ollama and actual-device security gates. The PDF still hard-codes a mismatched capacity and audit badge and substitutes example rows when spectrum data is unavailable; a rendered PDF is not equivalent to independently verified report contents. PDF tests currently rely on an existing local session. Prior failing-suite records below are historical and superseded by this checkpoint. No remote push performed by this integration pass.
+
 ## Security follow-up — current checkpoint
 
 User authorized security fixes, TODO updates and a commit. See docs/security_review_2026-09-08.md and SEC.1–SEC.5 in TODO.md. Fixed assistant loopback client configuration, malformed tool arguments, bounded history/calls, model-name escaping, explicit CLI export consent and tracked-only source packaging. Prior documentation changes below are included in this handoff; no team message or remote push is performed.

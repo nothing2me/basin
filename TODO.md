@@ -6,6 +6,12 @@ Updated: 2026-09-08 | Current review baseline: `f96c28a` (local HEAD matches rem
 
 ## September 8 team-context reconciliation
 
+### Combined-build verification after Noah's update
+
+Merged Noah's `40a7023` into the security branch (merge `502824a`). **172 tests passed in 122.44 s**, including the 13 security tests and the previously failing PDF/UI export workflows. Fresh-checkout snapshot, Python offline smoke and independent replay passed; run `0d51fc36a996`, five scenarios, 500 audit records, implementation matches. No custom comparisons in that smoke packet. A generated two-page Windows PDF was rendered and visually inspected. Security client restrictions, HTML escaping, CLI consent and tracked-only packaging survived the merge.
+
+The previous four test failures are resolved in this combined build. **B15.1's passing-suite gate is complete at this revision.** B17 remains partial: report settings propagation, text truncation, hard-coded 963,600 ac-ft versus the model's 919,900 ac-ft total, unconditional audit/PASS language and fabricated example rows when spectrum computation is unavailable need correction. Those report-content issues are not verified by the successful rainfall ZIP replay. Tests/test_pdf_report.py also depends on an existing local session; replace that dependency with an isolated fixture before claiming fresh-clone test portability. Live Ollama/device checks remain open.
+
 Security follow-up: [September 8 security review](docs/security_review_2026-09-08.md) records findings, fixes, tests and remaining gates. Application-level hardening is implemented; live Ollama/network validation and dependency advisory review remain open. Do not mark the entire application “secure” from these checks.
 
 - [x] **SEC.1** Fix assistant client destination/proxy/redirect configuration, model-name filtering, tool argument validation and bounded calls/history; add mocked boundary and invalid-call tests.
