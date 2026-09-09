@@ -9,10 +9,27 @@ from basin_core.workspace import Workspace
 from basin_core.engine import ScenarioParams
 from basin_core.analysis import simulate_stress_spectrum, simulate_reservoir_drawdown
 from basin_core.visualizers import (
-    pareto_frontier_figure,
+    rainfall_reference_figure,
+    rainfall_shortfall_figure,
     stage_trigger_milestone_figure,
     drought_anomaly_matrix_figure,
 )
+
+
+def test_station_reference_chart_keeps_reference_and_scenario_distinct():
+    dates = pd.date_range("2001-01-01", periods=35)
+    scenario = pd.Series(1.0, index=dates)
+    reference = pd.Series(3.0, index=dates)
+    fig = rainfall_reference_figure(scenario, reference)
+    assert list(fig.data[0].y) == list(range(3, 106, 3))
+    assert list(fig.data[1].y) == list(range(1, 36))
+    assert fig.data[0].name == "Historical monthly reference"
+    daily = rainfall_reference_figure(scenario, reference, "Daily rainfall")
+    assert set(daily.data[0].y) == {3.0}
+    assert set(daily.data[1].y) == {1.0}
+    deficit = rainfall_reference_figure(scenario, reference, "30-day deficit")
+    assert all(pd.isna(y) for y in deficit.data[0].y[:29])
+    assert list(deficit.data[0].y[29:]) == [60.0] * 6
 
 
 @pytest.fixture
@@ -36,30 +53,52 @@ def make_view(w):
                           "Selected for review": s.id in w.selected} for s in w.scenarios])
 
 
-def test_pareto_frontier_figure_structure(workspace):
+def test_shortfall_panels_preserve_scenario_values_and_selection(workspace):
     view = make_view(workspace)
-    fig = pareto_frontier_figure(view, workspace.selected)
+    fig = rainfall_shortfall_figure(view, workspace.selected, workspace.selected[0])
+    candidates = [t for t in fig.data if t.legendgroup.startswith("profile-")]
+    plotted = {d[0]: (x, y, d[6]) for t in candidates for x, y, d in zip(t.x, t.y, t.customdata)}
+    assert len(plotted) == len(view)
+    for _, row in view.iterrows():
+        assert plotted[row.ID][1:] == (row["Deficit mm"], row.Days)
+    for t in fig.data:
+        if t.legendgroup in {"shortlist", "focus", "maximum"}:
+            for x, y, d in zip(t.x, t.y, t.customdata):
+                assert (x, y, d[6]) == plotted[d[0]]
+    selected = {d[0] for t in fig.data if t.legendgroup == "shortlist" for d in t.customdata}
+    assert selected == set(workspace.selected)
+    assert sum(len(t.text) for t in fig.data if t.text is not None) == 1
+    yaxes = [fig.layout[k] for k in fig.layout if k.startswith("yaxis")]
+    assert len({tuple(axis.range) for axis in yaxes}) == 1
 
-    assert isinstance(fig, go.Figure)
-    assert len(fig.data) >= 3
 
-    trace_names = [t.name for t in fig.data if getattr(t, "name", None)]
-    assert any("Pareto" in n for n in trace_names)
-    assert any("Selected for review" in n for n in trace_names)
-
-    pareto_trace = next(t for t in fig.data if "Pareto" in (t.name or ""))
-    assert pareto_trace.line.dash == "dash"
-
-    shortlist_trace = next(t for t in fig.data if "Selected for review" in (t.name or ""))
-    assert len(shortlist_trace.x) == len(workspace.selected)
-
-
-def test_pareto_frontier_empty_shortlist(workspace):
+def test_shortfall_offsets_are_stable_and_maxima_are_per_duration(workspace):
     view = make_view(workspace)
-    fig = pareto_frontier_figure(view, [])
-    assert isinstance(fig, go.Figure)
-    trace_names = [t.name for t in fig.data if getattr(t, "name", None)]
-    assert any("Pareto" in n for n in trace_names)
+    # Equal deficits must remain separately selectable. A later duration can have
+    # a smaller maximum and still needs a maximum marker in its own panel.
+    view["Deficit mm"] = 1000 / view["Days"]
+    first = rainfall_shortfall_figure(view, [])
+    shuffled = rainfall_shortfall_figure(view.sample(frac=1, random_state=3), [])
+    def locations(fig):
+        return {d[0]: (t.xaxis, x, y) for t in fig.data if t.legendgroup.startswith("profile-")
+                for x, y, d in zip(t.x, t.y, t.customdata)}
+    assert locations(first) == locations(shuffled)
+    assert len(set(locations(first).values())) == len(view)
+    maxima = {d[0] for t in first.data if t.legendgroup == "maximum" for d in t.customdata}
+    assert maxima == set(view.ID)  # All tied maxima are represented.
+    assert not any(t.legendgroup == "shortlist" or "lines" in t.mode for t in first.data)
+
+
+def test_shortfall_empty_and_multiple_duration_layouts(workspace):
+    assert rainfall_shortfall_figure(pd.DataFrame()).layout.annotations
+    view = make_view(workspace).head(6).copy()
+    view["Days"] = [30, 60, 90, 180, 270, 365]
+    view["Group"] = 0
+    for count in (1, 4, 6):
+        fig = rainfall_shortfall_figure(view.head(count), colorblind=True)
+        assert len([key for key in fig.layout if key.startswith("yaxis")]) == count
+        profiles = [t for t in fig.data if t.legendgroup.startswith("profile-")]
+        assert len({(t.marker.color, t.marker.symbol) for t in profiles}) == 1
 
 
 def test_stage_trigger_milestone_multitier(workspace):

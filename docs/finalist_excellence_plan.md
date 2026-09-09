@@ -25,7 +25,7 @@ Retain the previously selected reservoir experiment as an explicitly illustrativ
 | Criterion | Evidence needed | Acceptance gate |
 |---|---|---|
 | Impact | A specific preparation task, a completed user exercise, and a recipient who can explain the packet's next use. | Record actual completion time, errors and assistance for BASIN and a reasonable existing process. Report only observed results, including failures and sample size. The recipient names the next analysis and what remains missing. |
-| Feasibility | A frozen build, reliable outputs, modest deployment requirements and an independent laptop run. | All relevant checks pass; three consecutive complete demo workflows succeed on the presentation laptop offline. Installation and optional-model requirements are measured and documented. |
+| Feasibility | A frozen build, reliable outputs, modest deployment requirements and an independent laptop run. | All relevant checks pass; three consecutive complete demo workflows succeed on the presentation laptop offline. Installation requirements are measured and documented. The embedded assistant needs no model installation. |
 | Community Centeredness | A real affected user changes the design and controls priorities, acceptance and sharing. | Record at least one concrete change arising from a rural-serving operator/planner and have that person review the response. Demonstrate that disagreement remains visible and private notes are excluded across every output by default. |
 | Innovation | Evidence that the combined workflow adds something useful beyond familiar methods. | Compare shortlist approaches blindly where feasible. The reviewer identifies a useful distinction or reduced review burden attributable to BASIN, with a written explanation and limitations. |
 | Clarity | One coherent story with claims tied to evidence. | Every factual pitch claim has a source, reproducible calculation or explicitly labeled study result. Two people unfamiliar with the project can explain who it serves, what it does, why the AI helps and what it cannot establish. |
@@ -60,11 +60,11 @@ Begin reviewer and potential operator scheduling immediately while technical rep
 
 - Expose only validated read-only tools. Validate argument names, types, ranges, dates and identifiers; make the chosen scenario and parameters visible.
 - If the question is ambiguous, use a fixed clarification response rather than guessing another scenario/year. Unsupported questions get a fixed abstention/help response.
-- Render factual answers from tool results. Do not display unrestricted LLM prose through the current no-tool branch or append it to verified answers. A deterministic suggestion menu can provide next steps.
-- Pin the actual selected model/version for the demo and document prerequisites. Remove “zero hallucinations” and “runs on any laptop” claims regardless of the chosen safeguards: routing and interpretation still need evaluation.
-- Keep the deterministic core accessible when Ollama is missing, stopped or slow.
+- Render factual answers from tool results. The embedded assistant uses fixed templates; unsupported questions should explain the available tools. A deterministic suggestion menu can provide next steps.
+- Record the application revision for the demo and document prerequisites. Remove “zero hallucinations” and “runs on any laptop” claims: routing and interpretation still need evaluation.
+- Verify the embedded assistant and core workflows without any model server or model download.
 
-**Done when:** the previously demonstrated arbitrary-text path is closed; invalid tool arguments are rejected; unavailable-model behavior preserves the core workflow; a 30-question evaluation records correct tool/parameter selection, clarifications, abstentions and failures. Proposed target: at least 90% correct handling overall, with zero critical failures such as exposing private information or presenting unsupported forecasts in the test set. This is a bounded test result, not a universal guarantee. If the gate fails by September 17, use deterministic controls for the primary demo.
+**Done when:** the previously demonstrated arbitrary-text path is closed; invalid tool arguments are rejected; the embedded assistant runs without any model service; a 30-question evaluation records correct tool/parameter selection, clarifications, abstentions and failures. Proposed target: at least 90% correct handling overall, with zero critical failures such as exposing private information or presenting unsupported forecasts in the test set. This is a bounded test result, not a universal guarantee. If the gate fails by September 17, use direct controls for the primary demo.
 
 ### Reconcile public claims
 
@@ -125,11 +125,11 @@ If no operator can participate by September 16, freeze the claims at “reviewer
 
 ## Phase 4: prove deployability and account for resources — September 16-19
 
-- Use a clean or freshly prepared account/device for setup. Document Python/WebView2, dependencies, disk use, support steps, and optional Ollama/model installation separately. Include the entire release footprint, not only the launcher executable.
+- Use a clean or freshly prepared account/device for setup. Document Python/WebView2, dependencies, disk use, and support steps. The embedded assistant requires no model installation. Include the entire release footprint, not only the launcher executable.
 - Freeze the core on September 17. Rebuild the release, regenerate the demo packet and backup recording from that release, and identify source/dependency versions. Afterward accept only fixes for correctness, privacy, failures or critical usability; rerun affected checks.
-- On the actual presentation laptop, run three consecutive complete workflows with Wi-Fi disabled, including fresh launch, edit/rejection, review, export and replay. Test the projector, sleep/resume, restore, missing-model fallback and recovery from a failed PDF build. Do not let a report failure discard the valid rainfall packet.
-- Record cold-start time, repeated core computation time, peak memory where measured, and optional assistant latency. Measure the core separately from LLM startup/inference and installation.
-- If a suitable energy meter is available, use repeated runs and an idle baseline, reporting the method and instrument resolution. Otherwise show an assumption-based range clearly labeled as such. Include a short water-footprint accounting note: which direct/indirect components are known, which are unmeasured, and how the core/optional LLM differ. Offline runtime does not imply zero total water impact.
+- On the actual presentation laptop, run three consecutive complete workflows with Wi-Fi disabled, including fresh launch, edit/rejection, review, export and replay. Test the projector, sleep/resume, restore, embedded chat and Quick Queries, and recovery from a failed PDF build. Do not let a report failure discard the valid rainfall packet.
+- Record cold-start time, repeated core computation time, peak memory where measured, and embedded assistant latency. Measure installation footprint separately from runtime performance.
+- If a suitable energy meter is available, use repeated runs and an idle baseline, reporting the method and instrument resolution. Otherwise show an assumption-based range clearly labeled as such. Include a short water-footprint accounting note: which direct/indirect components are known and which are unmeasured. Offline runtime does not imply zero total water impact.
 - Run the existing full suite and the focused regressions for the identified report/assistant/privacy cases. Recheck source data identity, fresh packet replay and current implementation identity. Passing tests do not replace the human exercises.
 
 **Done when:** another teammate can set up and demonstrate the frozen release from the instructions; three actual-laptop offline runs succeed; the current packet replays; costs and resource claims match measurements or explicitly labeled estimates.

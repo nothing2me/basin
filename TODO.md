@@ -1,5 +1,11 @@
 # BASIN team TODO
 
+## September 9 embedded assistant replacement
+
+Noah requested the embedded engine as the sole assistant implementation. Ollama routing, discovery, installation requirements, and the CLI retry path have been removed. Earlier task 4/Ollama-specific client pinning, model checks, and daemon gates below are superseded; do not reintroduce that stack. Keep the dependency-advisory review for current requirements and the actual-device/offline rehearsal open. Current demo/setup documents describe the embedded engine and its supported-question limitations.
+
+Review/chart integration with upstream report changes and the embedded assistant replacement passed **275 tests** in two non-overlapping groups. See the newest HANDOFF checkpoint for scope; concurrent water-system/summary work remains outside that verification.
+
 September 8 planning supplement: [September 22 finalist excellence plan](docs/finalist_excellence_plan.md) defines the prioritized repair, validation, deployment and presentation gates arising from the mock-judge assessment. It assumes access to a hydrologist or technical faculty reviewer; rural-serving operator participation remains unconfirmed. The supplement is a plan, not a completion record. Keep task ownership and status on this board.
 
 Updated: 2026-09-09 | Latest review: task 3 (`989dd7a` on `4d79822`) plus independent layout fixes. Earlier dated checkpoints are historical; consult the newest HANDOFF checkpoint for verification.
@@ -31,7 +37,7 @@ Security follow-up: [September 8 security review](docs/security_review_2026-09-0
 - [x] **SEC.1** Fix assistant client destination/proxy/redirect configuration, model-name filtering, tool argument validation and bounded calls/history; add mocked boundary and invalid-call tests.
 - [x] **SEC.2** Make CLI notes/custom exports opt-in, escape model-name HTML, and prevent untracked files being swept into source packages; test consent propagation and package exclusion.
 - [x] **SEC.3** Review existing loopback launcher configuration, bounded CSV input, packet inventory/size checks and private original storage; record limitations in the linked review.
-- [ ] **SEC.4** Validate live Ollama and daemon egress on the presentation laptop; run dependency advisory review and pin/test the optional stack.
+- [ ] **SEC.4** Run a dependency-advisory review against current requirements and rehearse the embedded assistant offline on the presentation laptop. Ollama-specific work is superseded by its removal.
 - [ ] **SEC.5** Complete actual-device browser/native/download/PDF checks, frozen-package privacy inspection and broader adversarial/session-input testing. Earlier B15 export test failures are resolved; these device/privacy acceptance checks remain open.
 
 Message (7) is the latest supplied backlog. It starts at item 2; its closing recommendation mentions baseline/units/scenario-selection repairs without supplying item 1. B15 records that prerequisite from inspected code rather than inventing a missing attachment section. Message (6) is the earlier backlog; messages (4)/(5) are duplicate efficiency guidance, not feature requirements. The private Discord transcript is context, not evidence of tests or authorization to contact people, publish, deploy or book travel.
@@ -506,7 +512,7 @@ Owner / reviewer: Unclaimed; B17.6 implemented by Claude on `fix/b17-report-cont
 
 Owner / reviewer: Unclaimed. Ollama routing and deterministic tools exist. Their presence does not establish zero hallucinations or zero cloud leakage.
 
-- [ ] **B18.1** Enforce local-only model connectivity and test remote-host configuration; show actual selected model/tag and availability. Current code uses the default Ollama client, and model preference matches family prefixes rather than exact tags.
+- [x] **B18.1** Replace model connectivity entirely with the embedded intent engine and show its active status. No daemon, model discovery, or model selection remains; regression checks exercise chat and Quick Queries with network connections blocked.
 - [ ] **B18.2** Verify missing/stopped/no-model/slow-model behavior while keeping core workflows usable.
 - [ ] **B18.3** Validate argument names, types, ranges, dates and IDs. Remove silent malformed-year fallback to 2011 and implicit scenario substitution; expose interpreted inputs and units.
 - [ ] **B18.4** Test ambiguous/unsupported questions and misleading supplied text; ensure final answers match tool data and retain limitations. Evaluate routing as well as arithmetic.

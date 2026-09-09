@@ -25,7 +25,7 @@ from basin_core.workspace import Workspace, session_dir
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
 from basin_core.custom_data import active_ids, digest
-from basin_core.visualizers import pareto_frontier_figure, stage_trigger_milestone_figure, drought_anomaly_matrix_figure
+from basin_core.visualizers import rainfall_reference_figure, rainfall_shortfall_figure, stage_trigger_milestone_figure, drought_anomaly_matrix_figure
 
 icon_file = ROOT / "assets/basin.ico"
 st.set_page_config(page_title="BASIN", page_icon=str(icon_file) if icon_file.exists() else "◉", layout="wide", initial_sidebar_state="collapsed")
@@ -286,21 +286,21 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150):
         specs=[[{"type": "bar"}, {"type": "xy"}]]
     )
 
-    init_row = sim_df.iloc[0]
+    init_row = sim_df.iloc[-1]
     fig.add_trace(go.Bar(
         x=["Lake Corpus Christi<br>(Max 257k)", "Choke Canyon<br>(Max 662k)"],
         y=[init_row["lcc_acft"], init_row["ccr_acft"]],
         marker=dict(color=["#0d9488", "#087e8b"], line=dict(width=1.5, color="#123d38")),
-        text=[f"{init_row['lcc_acft']:,.0f} ac-ft<br>({init_row['lcc_pct']}%)",
-              f"{init_row['ccr_acft']:,.0f} ac-ft<br>({init_row['ccr_pct']}%)"],
-        textposition="inside",
+        text=[f"{init_row['lcc_acft']:,.0f} ac-ft<br>({init_row['lcc_pct']:.1f}%)",
+              f"{init_row['ccr_acft']:,.0f} ac-ft<br>({init_row['ccr_pct']:.1f}%)"],
+        textposition="outside", textfont=dict(size=12), cliponaxis=False,
         name="Reservoir Storage",
         hovertemplate="<b>%{x}</b><br>Storage: %{y:,.0f} ac-ft<extra></extra>"
     ), row=1, col=1)
 
     fig.add_trace(go.Scatter(
-        x=[sim_df.iloc[0]["day"]],
-        y=[sim_df.iloc[0]["combined_pct"]],
+        x=sim_df["day"],
+        y=sim_df["combined_pct"],
         mode="lines",
         line=dict(color="#087e8b", width=2.5),
         name="Combined %",
@@ -323,8 +323,8 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150):
             data=[
                 go.Bar(
                     y=[row["lcc_acft"], row["ccr_acft"]],
-                    text=[f"{row['lcc_acft']:,.0f} ac-ft<br>({row['lcc_pct']}%)",
-                          f"{row['ccr_acft']:,.0f} ac-ft<br>({row['ccr_pct']}%)"]
+                    text=[f"{row['lcc_acft']:,.0f} ac-ft<br>({row['lcc_pct']:.1f}%)",
+                          f"{row['ccr_acft']:,.0f} ac-ft<br>({row['ccr_pct']:.1f}%)"]
                 ),
                 go.Scatter(
                     x=sub_df["day"].tolist(),
@@ -350,17 +350,18 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150):
         showlegend=False,
         updatemenus=[dict(
             type="buttons",
+            showactive=False, bgcolor="#243239", font=dict(color="#ffffff"),
             direction="left",
             x=0.0, y=1.24,
             buttons=[
                 dict(label="▶ Play Simulation", method="animate",
-                     args=[None, {"frame": {"duration": pace_ms, "redraw": True}, "fromcurrent": True, "mode": "immediate"}]),
+                     args=[None, {"frame": {"duration": pace_ms, "redraw": True}, "fromcurrent": False, "mode": "immediate"}]),
                 dict(label="⏸ Pause", method="animate",
                      args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate", "transition": {"duration": 0}}])
             ]
         )],
         sliders=[dict(
-            active=0,
+            active=len(indices) - 1,
             x=0.0, y=-0.18,
             len=1.0,
             currentvalue={"prefix": "Simulation: ", "visible": True, "xanchor": "right"},
@@ -377,10 +378,10 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150):
 def stress_spectrum_figure(spec: dict) -> go.Figure:
     fig = go.Figure()
     tier_styles = {
-        1.0: {"name": "100% Historical Baseline", "color": "#0d9488", "width": 2.5, "dash": "solid"},
-        0.8: {"name": "80% Moderate Stress (-20%)", "color": "#d97706", "width": 2.2, "dash": "solid"},
-        0.6: {"name": "60% Severe Stress (-40%)", "color": "#ea580c", "width": 2.2, "dash": "solid"},
-        0.4: {"name": "40% Catastrophic Stress (-60%)", "color": "#dc2626", "width": 2.2, "dash": "solid"},
+        1.0: {"name": "Selected scenario (100%)", "color": "#0d9488", "width": 2.5, "dash": "solid"},
+        0.8: {"name": "20% additional rainfall reduction", "color": "#d97706", "width": 2.2, "dash": "solid"},
+        0.6: {"name": "40% additional rainfall reduction", "color": "#ea580c", "width": 2.2, "dash": "solid"},
+        0.4: {"name": "60% additional rainfall reduction", "color": "#dc2626", "width": 2.2, "dash": "solid"},
     }
     for m, res in spec["tier_results"].items():
         style = tier_styles.get(m, {"name": f"{int(m*100)}% Rain", "color": "#64748b", "width": 2.0, "dash": "solid"})
@@ -395,18 +396,18 @@ def stress_spectrum_figure(spec: dict) -> go.Figure:
         ))
 
     # Threshold horizontal reference bands
-    fig.add_hline(y=40, line_dash="dash", line_color="#d97706", annotation_text="Stage 1 (40%)",
+    fig.add_hline(y=40, line_dash="dash", line_color="#d97706", annotation_text="Assumed 40% band",
                   annotation_position="top right")
-    fig.add_hline(y=30, line_dash="dash", line_color="#ea580c", annotation_text="Stage 2 (30%)",
+    fig.add_hline(y=30, line_dash="dash", line_color="#ea580c", annotation_text="Assumed 30% band",
                   annotation_position="top right")
-    fig.add_hline(y=20, line_dash="dash", line_color="#dc2626", annotation_text="Critical (20%)",
+    fig.add_hline(y=20, line_dash="dash", line_color="#dc2626", annotation_text="Assumed 20% band",
                   annotation_position="top right")
-    fig.add_hline(y=15, line_dash="dot", line_color="#991b1b", annotation_text="Emergency (15%)",
+    fig.add_hline(y=15, line_dash="dot", line_color="#991b1b", annotation_text="Assumed 15% band",
                   annotation_position="top right")
 
     fig.update_layout(
         height=360,
-        margin=dict(l=10, r=10, t=30, b=10),
+        margin=dict(l=10, r=10, t=60, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Arial", size=12),
@@ -441,7 +442,7 @@ PAGE_LABELS = {
 PAGE_QUESTIONS = {
     "Data": "Can I trust and use these observations?",
     "Workspace": "Which rainfall scenarios deserve review?",
-    "Review": "Does this scenario survive human challenge?",
+    "Review": "Which rainfall scenarios belong in the handoff?",
     "Exports": "What evidence should the recipient receive?",
 }
 
@@ -449,7 +450,7 @@ PAGE_QUESTIONS = {
 PAGE_ACTIONS = {
     "Data": "Check source identity, coverage, location and limitations before building scenarios.",
     "Workspace": "Configure settings, prioritize weights, and compare shortlisted candidates.",
-    "Review": "Inspect the evidence, record a rationale, and accept, reject or revise the rainfall.",
+    "Review": "Compare rainfall with its reference, check the evidence, and decide whether to include this revision.",
     "Exports": "Confirm the privacy choice, build the packet, and download the verified files.",
 }
 
@@ -600,7 +601,7 @@ TUTORIAL_STEPS = [
         "tag": "HUMAN REVIEW · RAINFALL CONTENT",
         "title": "6. Review, Challenge and Accept Rainfall",
         "desc": "Inspect evidence, record disagreements, and edit or accept rainfall content. Acceptance is a local review decision, not professional certification.",
-        "directive": "Enter an audit rationale note and click 'Accept' to approve this scenario.",
+        "directive": "Enter an audit rationale note and click 'Include this revision in handoff' to record your decision.",
         "review_mode": "Cumulative rainfall"
     },
     {
@@ -652,7 +653,7 @@ def tutorial_next():
             if not st.session_state.get("inspect_id") and curr_w.selected:
                 st.session_state.inspect_id = curr_w.selected[0]
         if TUTORIAL_STEPS[next_idx].get("review_mode"):
-            st.session_state.review_series_mode = TUTORIAL_STEPS[next_idx]["review_mode"]
+            st.session_state.storage_experiment = TUTORIAL_STEPS[next_idx]["review_mode"] == "Reservoir simulation"
     else:
         st.session_state.tutorial_active = False
 
@@ -663,7 +664,7 @@ def tutorial_prev():
     st.session_state.tutorial_step = prev_idx
     st.session_state.page = TUTORIAL_STEPS[prev_idx]["page"]
     if TUTORIAL_STEPS[prev_idx].get("review_mode"):
-        st.session_state.review_series_mode = TUTORIAL_STEPS[prev_idx]["review_mode"]
+        st.session_state.storage_experiment = TUTORIAL_STEPS[prev_idx]["review_mode"] == "Reservoir simulation"
 
 
 def tutorial_exit():
@@ -696,7 +697,7 @@ def return_to_tour_step():
         st.session_state.tutorial_visit = st.session_state.get("tutorial_visit", 0) + 1
         st.session_state.page = step["page"]
         if step.get("review_mode"):
-            st.session_state.review_series_mode = step["review_mode"]
+            st.session_state.storage_experiment = step["review_mode"] == "Reservoir simulation"
 
 
 def render_tour_guide(workspace):
@@ -752,7 +753,7 @@ names = {s["id"]: s["name"].title().replace(" Intl Ap", "").replace(" Rgnl Ap", 
 w = st.session_state.get("workspace")
 if w is not None and st.session_state.get("report_workspace_id") != w.id:
     for report_key in ("experiment_config", "preview_pdf", "packet",
-                       "review_initial_storage", "review_conservation", "review_pipeline_active"):
+                       "review_initial_storage", "review_conservation", "review_pipeline_active", "storage_experiment"):
         st.session_state.pop(report_key, None)
     st.session_state["report_workspace_id"] = w.id
 curr_target = TUTORIAL_STEPS[st.session_state.get("tutorial_step", 0)]["target"] if st.session_state.get("tutorial_active") else ""
@@ -1002,9 +1003,30 @@ elif page == "Workspace":
         left = st.container()
         right = st.expander("How ranking scores are calculated")
         with left:
-            st.markdown("**Pareto Frontier of Hydrologic Extremes**")
-            st.caption("Bubble size indicates multi-station concurrence %. The dashed amber curve connects the non-dominated Pareto frontier (worst-case historical rainfall shortfall envelope across duration tiers). Teal rings denote shortlisted candidates.")
-            st.plotly_chart(accessible_chart(pareto_frontier_figure(view, w.selected)), width="stretch")
+            st.markdown("**Compare rainfall shortfalls by duration**")
+            st.caption("Each dot is a scenario. Panels share the same deficit scale; sideways spacing only separates dots. Rings mark selections for review, diamonds mark each duration's highest deficit, and the square marks the scenario shown in details.")
+            plot_area, detail_area = st.columns([4, 1.3], gap="medium")
+            with detail_area:
+                detail_ids = view["ID"].tolist()
+                initial_id = w.selected[0] if w.selected else detail_ids[0]
+                focused_id = st.selectbox("Scenario details", detail_ids,
+                                          index=detail_ids.index(initial_id), key=f"shortfall_detail_{w.id}")
+                detail = view.loc[view["ID"] == focused_id].iloc[0]
+                st.caption(f"{detail['Days']:g} days · {detail['Onset']} onset")
+                st.metric("Total rainfall deficit", f"{detail['Deficit mm']:,.1f} mm")
+                st.caption(detail["Profile"])
+                concurrence = float(detail["Stations stressed together %"])
+                st.progress(min(1.0, max(0.0, concurrence / 100)),
+                            text=f"30-day windows with all selected stations stressed: {concurrence:.1f}%")
+                st.caption("Selected for review" if focused_id in w.selected else "Not selected for review")
+                st.button("Open scenario review", key=f"shortfall_review_{w.id}",
+                          on_click=open_review, args=(focused_id,))
+            with plot_area:
+                st.plotly_chart(rainfall_shortfall_figure(
+                    view, w.selected, focused_id,
+                    colorblind=st.session_state.get("appearance_colorblind", False),
+                ), width="stretch")
+            st.caption("Totals accumulate over the whole scenario. A larger deficit in a longer window does not, by itself, mean greater drought intensity.")
         with right:
             fig = go.Figure()
             for key in w.weights:
@@ -1074,22 +1096,97 @@ elif page == "Review":
     st.session_state.inspect_id = selected_id
     s = w.get(selected_id)
     f = s.features
+    st.markdown("### Understand this scenario")
+    st.write(f"A {f['duration_days']}-day rainfall scenario using the historical window "
+             f"{s.provenance['source_start']} to {s.provenance['source_end']} at {len(s.series.columns)} selected station(s). "
+             "Decide whether this revision belongs in your rainfall handoff.")
+    factors = list(s.provenance['retention_by_station'].values())
+    if min(factors) == max(factors):
+        construction = f"Original construction retained {factors[0]:.0%} of observed rainfall at every station."
+    else:
+        construction = f"Original construction retained {min(factors):.0%}–{max(factors):.0%} of observed rainfall, depending on station."
+    rainfall_edits = any(h['action'] in ('scale', 'replace') for h in s.history)
+    st.caption(construction + (" Later rainfall edits are included in the current chart; see revision history." if rainfall_edits else "")
+               + " Historical dates identify the source window; they are not forecast dates.")
     a, b = st.columns(2)
-    a.metric("Rainfall shortfall · mm", f"{f['deficit_mm']:.1f}")
-    b.metric("Duration · days", f["duration_days"])
-    with st.expander("Reference and ranking details"):
-        st.write(f"Rainfall shortfall: {f['deficit_mm']/25.4:.2f} inches")
-        st.write(f"{'Station stress frequency' if len(s.series.columns) == 1 else 'Stations stressed together'}: {f['concurrence']:.1%}")
-        st.write(f"How unusual vs history: {f['historical_percentile']:.0%}")
-        st.write(f"Ranking score: {s.score:.2f} (priority, not probability)")
-    left = st.container()
-    right = st.container()
+    a.metric("Average station shortfall over this scenario", f"{f['deficit_mm']:.1f} mm",
+             help="Each station's total reference minus scenario rainfall is clipped at zero, then averaged equally across stations.")
+    b.metric("Scenario duration", f"{f['duration_days']} days")
+    st.write(f"This shortfall equals or exceeds {f['historical_percentile']:.0%} of {f['benchmark_n']} matched historical windows "
+             "with the same duration, starting month and selected stations.")
+    st.caption("This describes the historical comparison, not the probability of a future drought. Reference windows end by 2015.")
+    left, right = st.columns([3, 1.25], gap="large")
     with left:
-        mode = st.radio("Series", ["Cumulative rainfall", "Daily rainfall", "30-day deficit", "Reservoir simulation"], horizontal=True, label_visibility="collapsed", key="review_series_mode")
-        if mode == "Reservoir simulation":
+        st.markdown("### Compare rainfall with its reference")
+        station = st.selectbox("Station to compare", list(s.series.columns), format_func=lambda i: names[i], key=f"review_station_{w.id}")
+        mode = st.radio("Rainfall view", ["Cumulative rainfall", "Daily rainfall", "30-day deficit"], horizontal=True, key="review_rainfall_view")
+        expected = pd.DataFrame(w.reference.expected(s.series.index), index=s.series.index, columns=s.series.columns)
+        fig = rainfall_reference_figure(s.series[station], expected[station], mode)
+        fig = chart(fig, 340)
+        if mode != "30-day deficit":
+            fig.data[0].line.dash = "dash"
+            fig.data[1].line.dash = "solid"
+        st.plotly_chart(fig, width="stretch")
+        actual_total, reference_total = s.series[station].sum(), expected[station].sum()
+        difference = reference_total - actual_total
+        st.write(f"Over these {len(s.series)} days, **{names[station]}** receives **{actual_total:.1f} mm** in the scenario "
+                 f"versus **{reference_total:.1f} mm** in the reference: **{abs(difference):.1f} mm {'less' if difference >= 0 else 'more'} rainfall**.")
+        st.caption("The dashed reference uses this station's 1991–2020 monthly mean daily rainfall. The scenario line includes your current edits.")
+        if mode == "30-day deficit":
+            st.caption("Above zero means less rainfall than the reference over the preceding 30 days; below zero means more. The first 29 days have no complete window.")
+        with st.expander("Historical comparison and ranking details"):
+            st.write(f"30-day windows with all selected stations stressed: {f['concurrence']:.1%} of {f['eligible_concurrence_days']} eligible windows.")
+            st.caption("Each station must exceed its own historical rainfall-deficit threshold in the same window. This is a frequency over time, not a percentage of stations.")
+            st.write(f"Largest shortfall in the matched historical reference: {f['benchmark_mm']:.1f} mm. "
+                     f"This scenario {'exceeds' if f['beyond_rainfall_reference'] else 'does not exceed'} that value.")
+            st.write(f"Ranking score: {s.score:.2f}. This reflects your priorities; it is not a probability or an evidence-quality score.")
+    with right:
+        with tour_target("review_decision"):
+            st.markdown("### Decide on the handoff")
+            status_label = {"accepted": "Included", "rejected": "Excluded", "unreviewed": "Needs review"}[s.status]
+            if s.status == "accepted" and s.approved_revision != s.revision:
+                status_label = "Needs review of current revision"
+            st.write(f"**{s.id} · Revision {s.revision} · {status_label}**")
+            pending = [i for i in w.selected if w.get(i).status == 'unreviewed' or
+                       (w.get(i).status == 'accepted' and w.get(i).approved_revision != w.get(i).revision)]
+            st.caption(f"{len(w.selected) - len(pending)} of {len(w.selected)} shortlisted scenarios reviewed")
+            attached = set(w.evidence_refs[s.id])
+            limitations = [e for e in w.evidence if e['id'] in attached and e['id'] == 'station-suitability']
+            for item in limitations:
+                st.warning(item['description'])
+            conflicts = [c for c in w.conflicts if c['status'] == 'unresolved' and
+                         (c['left_id'] in attached or c['right_id'] in attached)]
+            for conflict in conflicts:
+                st.warning("Unresolved evidence issue: " + conflict['disagreement'])
+            note = st.text_area("Review note", key=f"note_{s.id}_{w.id}", height=90,
+                                help="Record why you are including or excluding this revision. Notes are private unless explicitly included during export.")
+            st.caption("Inclusion records your choice of rainfall content. It does not certify hydrologic validity or approve the storage experiment.")
+            if s.id not in w.selected:
+                st.info("This candidate is outside the shortlist. Use Change rainfall or shortlist below to replace an entry first.")
+            with st.container(key="review_accept_box"):
+                if st.button("Include this revision in handoff", key=f"btn_accept_{s.id}_{s.revision}",
+                             type="primary", width="stretch", disabled=s.id not in w.selected):
+                    s.review(True, note)
+                    save(w)
+                    st.rerun()
+            if st.button("Exclude from handoff", key=f"btn_reject_{s.id}_{s.revision}", width="stretch", disabled=s.id not in w.selected):
+                try:
+                    s.review(False, note)
+                    save(w)
+                    st.rerun()
+                except ValueError as error:
+                    st.error(str(error))
+            remaining = [i for i in pending if i != s.id]
+            st.button("Next unreviewed scenario", disabled=not remaining,
+                      on_click=open_review, args=(remaining[0] if remaining else s.id,), width="stretch")
+    experiment = st.toggle("Explore storage under assumed conditions", value=curr_target == "review_simulation",
+                           key="storage_experiment", help="Show the optional storage experiment and its assumptions.")
+    if experiment:
+        with st.container(border=True):
+            st.caption("Optional experiment. These settings affect storage exploration; the handoff decision above concerns the rainfall revision.")
             sim_subview = st.radio(
                 "Simulation View",
-                ["Single Scenario Drawdown", "Multi-Tier Stress Spectrum (100% · 80% · 60% · 40%)"],
+                ["Selected scenario", "Additional rainfall reductions"],
                 horizontal=True,
                 key="reservoir_sim_subview"
             )
@@ -1104,15 +1201,14 @@ elif page == "Review":
                     if setting_key not in st.session_state:
                         st.session_state[setting_key] = setting_value
             c_pace, c_init, c_conserve = st.columns([1, 1, 1])
-            pace_choice = c_pace.selectbox("Playback pace", ["Presentation mode (2.5 min)", "Deliberate (45 sec)", "Rapid preview (10 sec)"], label_visibility="collapsed")
-            pace_ms = 2500 if "2.5 min" in pace_choice else (800 if "45 sec" in pace_choice else 150)
-            init_choice = c_init.selectbox("Initial storage", ["48% (illustrative)", "60% (illustrative)", "35% (illustrative)"], label_visibility="collapsed", key="review_initial_storage")
+            pace_choice = c_pace.selectbox("Playback pace", ["Slow", "Medium", "Fast"], label_visibility="visible")
+            pace_ms = 2500 if pace_choice == "Slow" else (800 if pace_choice == "Medium" else 150)
+            init_choice = c_init.selectbox("Initial storage", ["48% (illustrative)", "60% (illustrative)", "35% (illustrative)"], label_visibility="visible", key="review_initial_storage")
             init_pct = 0.48 if "48%" in init_choice else (0.60 if "60%" in init_choice else 0.35)
-            conserve_choice = c_conserve.select_slider("Emergency Conservation", options=[0, 10, 20, 30], value=0, format_func=lambda v: f"Conservation: {v}%", label_visibility="collapsed", key="review_conservation")
+            conserve_choice = c_conserve.select_slider("Assumed demand reduction", options=[0, 10, 20, 30], value=0, format_func=lambda v: f"{v}%", label_visibility="visible", key="review_conservation")
 
             pipeline_active = st.checkbox("Assume pipeline supply available", value=True, key="review_pipeline_active")
-
-            # The one configuration the report preview and both PDF paths render from.
+            # Preserve the report integration contract through the optional Review UI.
             st.session_state["experiment_config"] = ExperimentConfig(
                 initial_pct=init_pct,
                 conservation_pct=conserve_choice / 100.0,
@@ -1121,100 +1217,77 @@ elif page == "Review":
                 scenario_revision=s.revision,
                 selected=True,
             )
+            st.caption("These settings and this scenario revision are also used by report previews and the separate PDF. Hiding the experiment keeps that configuration for this workspace.")
             st.info("Illustrative experiment: conditional storage under assumed inputs. Not calibrated, not a forecast, and excluded from saved evidence packets and their verification.")
             with st.expander("All experiment assumptions and accounting"):
                 st.json(RESERVOIR_ASSUMPTIONS)
 
-            if sim_subview == "Multi-Tier Stress Spectrum (100% · 80% · 60% · 40%)":
+            if sim_subview == "Additional rainfall reductions":
                 spec = simulate_stress_spectrum(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active)
                 st.plotly_chart(accessible_chart(stress_spectrum_figure(spec)), width="stretch")
 
-                st.markdown("**Restriction Milestone Timeline (Gantt Analysis)**")
-                st.caption("Horizontal timeline showing elapsed days until mandatory restriction triggers (Stage 1 @ 40%, Stage 2 @ 30%, Critical @ 20%, Emergency @ 15%) across each rainfall tier.")
-                st.plotly_chart(accessible_chart(stage_trigger_milestone_figure(spec)), width="stretch")
+                st.markdown("**Time spent in assumed storage bands**")
+                st.caption("Colors show storage bands during the simulated window. The 40%, 30%, 20% and 15% boundaries are experiment assumptions, not official restriction triggers.")
+                st.plotly_chart(accessible_chart(stage_trigger_milestone_figure(spec)), width="stretch", config={"displayModeBar": False})
 
-                # Tipping point analysis
-                passed = [r for r in spec["summary_table"] if r["survived_critical_20pct"]]
-                failed = [r for r in spec["summary_table"] if not r["survived_critical_20pct"]]
+                # Describe only the tested window and threshold crossings.
+                passed = [r for r in spec["summary_table"] if r["day_stage3_20"] is None]
+                failed = [r for r in spec["summary_table"] if r["day_stage3_20"] is not None]
                 if passed and failed:
                     lowest_pass = min(passed, key=lambda x: x["retention_pct"])
                     highest_fail = max(failed, key=lambda x: x["retention_pct"])
                     st.warning(
-                        f"⚡ **Critical Breaking Point Identified**: Infrastructure survives at **{lowest_pass['retention_pct']:.0f}% rainfall**, "
-                        f"but breaches critical Stage 3 (20%) reserves under **{highest_fail['retention_pct']:.0f}% rainfall** on Day {highest_fail['day_stage3_20']}."
+                        f"During this {len(s.series)}-day experiment, storage stays above 20% with **{lowest_pass['retention_pct']:.0f}% of the selected scenario rainfall**, "
+                        f"and reaches the assumed 20% band with **{highest_fail['retention_pct']:.0f}%** on Day {highest_fail['day_stage3_20']}. Only these tested reductions are compared."
                     )
                 elif not failed:
-                    st.success("✅ **System Resilient Across All Tiers**: Storage remains above 20% critical reserve even under catastrophic 40% rainfall.")
+                    st.success(f"Storage stays above the assumed 20% band throughout this {len(s.series)}-day window for all four tested rainfall inputs.")
                 else:
-                    st.error(f"⚠️ **System Vulnerable Across All Tiers**: Critical 20% threshold is breached even under baseline rainfall on Day {failed[0]['day_stage3_20']}.")
+                    st.warning(f"All tested inputs reach the assumed 20% band within this window. The selected scenario reaches it on Day {failed[0]['day_stage3_20']}.")
 
                 countdown_df = pd.DataFrame([
                     {
-                        "Rainfall Tier": r["tier_label"],
-                        "Retention": f"{r['retention_pct']:.0f}%",
+                        "Rainfall input": r["tier_label"],
+                        "% of selected scenario": f"{r['retention_pct']:.0f}%",
                         "Lowest Storage": f"{r['min_pct']:.1f}% ({r['min_acft']:,.0f} ac-ft)",
                         "Final Storage": f"{r['final_pct']:.1f}%",
-                        "Stage 1 (40%)": f"Day {r['day_stage1_40']}" if r["day_stage1_40"] else "Not reached ✓",
-                        "Stage 2 (30%)": f"Day {r['day_stage2_30']}" if r["day_stage2_30"] else "Not reached ✓",
-                        "Critical (20%)": f"Day {r['day_stage3_20']}" if r["day_stage3_20"] else "Not reached ✓",
-                        "Outcome": r["status"],
+                        "At or below 40%": f"Day {r['day_stage1_40']}" if r["day_stage1_40"] else "Not reached in window",
+                        "At or below 30%": f"Day {r['day_stage2_30']}" if r["day_stage2_30"] else "Not reached in window",
+                        "At or below 20%": f"Day {r['day_stage3_20']}" if r["day_stage3_20"] else "Not reached in window",
+                        "20% band": "Not reached in window" if r["day_stage3_20"] is None else "Reached in window",
                     }
                     for r in spec["summary_table"]
                 ])
                 st.dataframe(countdown_df, hide_index=True, width="stretch")
-                st.caption("Countdown days indicate elapsed duration from scenario onset until stage triggers occur under each rainfall tier. Simulates simultaneous vulnerability across historical and climate-stressed regimes.")
+                st.caption("100% means the selected scenario, including any existing reductions and edits. Other inputs reduce that rainfall again; they do not reconstruct the original historical observations.")
             else:
                 sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active)
 
                 with tour_target("review_simulation"):
                     st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms)), width="stretch")
-                    st.plotly_chart(accessible_chart(stage_trigger_milestone_figure({"tier_results": {1.0: {"df": sim_df}}})), width="stretch")
+                    st.plotly_chart(accessible_chart(stage_trigger_milestone_figure({"tier_results": {1.0: {"df": sim_df}}})), width="stretch", config={"displayModeBar": False})
 
                 s1 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 40), None)
                 s2 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < 30), None)
                 term = sim_df.iloc[-1]
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Final Combined", f"{term['combined_pct']:.1f}%", f"{term['combined_acft']:,.0f} ac-ft")
-                m2.metric("Illustrative band", term["stage"])
-                m3.metric("Below 40% (conditional)", f"Day {s1}" if s1 else "Not breached")
-                m4.metric("Below 30% (conditional)", f"Day {s2}" if s2 else "Not breached")
-                st.caption("Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings reset independently of saved rainfall sessions.")
-        else:
-            expected = pd.DataFrame(w.reference.expected(s.series.index), index=s.series.index, columns=s.series.columns)
-            fig = go.Figure()
-            for station in s.series:
-                values = s.series[station].cumsum() if mode == "Cumulative rainfall" else s.series[station] if mode == "Daily rainfall" else (expected[station] - s.series[station]).rolling(30).sum()
-                fig.add_trace(go.Scatter(x=s.series.index, y=values, name=names[station], line=dict(width=1.7)))
-            if mode == "Cumulative rainfall":
-                fig.add_trace(go.Scatter(x=s.series.index, y=expected.mean(axis=1).cumsum(), name="Mean climatology", line=dict(color="#9ba8a0", dash="dot")))
-            fig.update_yaxes(title="mm")
-            st.plotly_chart(chart(fig, 320), width="stretch")
-            st.caption(f"Matched rainfall reference: {f['benchmark_mm']:.1f} mm ({f['benchmark_mm']/25.4:.2f} in) · n={f['benchmark_n']} · {'exceeded' if f['beyond_rainfall_reference'] else 'not exceeded'} · 30-day windows: {f['eligible_concurrence_days']}")
-    with right:
-        with tour_target("review_decision"):
-            st.markdown(f"**{s.id}** ({getattr(s, 'cluster_name', f'Group {s.cluster}')}) / revision {s.revision} / {s.status}")
-            note = st.text_area("Review note", key=f"note_{s.id}_{w.id}", height=90)
-            with st.container(key="review_accept_box"):
-                if st.button("Accept", key=f"btn_accept_{s.id}_{s.revision}", type="primary", width="stretch"):
-                    s.review(True, note)
-                    save(w)
-                    st.rerun()
-            if st.button("Reject", key=f"btn_reject_{s.id}_{s.revision}", width="stretch"):
+                m1.metric("Storage at window end", f"{term['combined_pct']:.1f}%")
+                m1.caption(f"{term['combined_acft']:,.0f} ac-ft combined")
+                m2.metric("Lowest combined storage", f"{sim_df['combined_pct'].min():.1f}%")
+                m3.metric("Below 40% (conditional)", f"Day {s1}" if s1 else "No crossing")
+                m4.metric("Below 30% (conditional)", f"Day {s2}" if s2 else "No crossing")
+                st.caption(f"Results cover this {len(s.series)}-day window only. Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings are retained for this workspace during the session; opening another workspace resets them.")
+    with st.expander("Change rainfall or shortlist"):
+        st.caption("Changing rainfall creates a revision and clears its previous acceptance. Add your reason in the review note first.")
+        with st.expander("Scale rainfall"):
+            factor = st.number_input("Multiplier", 0.0, 2.0, 0.8, 0.05, key=f"edit_{s.id}_{w.id}")
+            if st.button("Apply multiplier", key=f"btn_apply_multiplier_{s.id}_{s.revision}", width="stretch"):
                 try:
-                    s.review(False, note)
+                    w.edit(s.id, note, factor=factor)
                     save(w)
                     st.rerun()
                 except ValueError as error:
                     st.error(str(error))
-            with st.expander("Scale rainfall"):
-                factor = st.number_input("Multiplier", 0.0, 2.0, 0.8, 0.05, key=f"edit_{s.id}_{w.id}")
-                if st.button("Apply multiplier", key=f"btn_apply_multiplier_{s.id}_{s.revision}", width="stretch"):
-                    try:
-                        w.edit(s.id, note, factor=factor)
-                        save(w)
-                        st.rerun()
-                    except ValueError as error:
-                        st.error(str(error))
         with st.expander("Replace from CSV"):
             st.download_button("CSV template", s.series.rename_axis("date").to_csv(), f"{s.id}-template.csv", "text/csv", key=f"dl_template_{s.id}_{s.revision}")
             upload = st.file_uploader("Daily rainfall · mm", type="csv", key=f"replacement_{w.id}_{s.id}")
@@ -1242,62 +1315,57 @@ elif page == "Review":
                 w.swap(old, s.id)
                 save(w)
                 st.rerun()
-    data_tab, evidence_tab, history_tab = st.tabs(["Daily values", "Reference & provenance", "Revision history"])
-    with data_tab:
-        edited = st.data_editor(s.series.rename_axis("date"), width="stretch", height=300,
-                                key=f"daily_editor_{w.id}_{s.id}_{s.revision}",
-                                column_config={col: st.column_config.NumberColumn(names[col] + " · mm", min_value=0, format="%.3f") for col in s.series})
-        c_note, c_save = st.columns([3, 1])
-        daily_note = c_note.text_input("Edit rationale", value=note, key=f"daily_note_{w.id}_{s.id}_{s.revision}", placeholder="Reason for adjusting daily rainfall")
-        if c_save.button("Save daily edits", key=f"btn_save_daily_edits_{s.id}_{s.revision}", width="stretch"):
-            if not daily_note.strip():
-                st.warning("Please enter a brief rationale for the edit.")
-            elif edited.to_numpy().tolist() == s.series.to_numpy().tolist():
-                st.info("No daily values were modified.")
+    with st.expander("Source evidence, daily values and revision history"):
+        evidence_tab, data_tab, history_tab = st.tabs(["Source evidence", "Daily values", "Revision history"])
+        with data_tab:
+            edited = st.data_editor(s.series.rename_axis("date"), width="stretch", height=300,
+                                    key=f"daily_editor_{w.id}_{s.id}_{s.revision}",
+                                    column_config={col: st.column_config.NumberColumn(names[col] + " · mm", min_value=0, format="%.3f") for col in s.series})
+            c_note, c_save = st.columns([3, 1])
+            daily_note = c_note.text_input("Edit rationale", value=note, key=f"daily_note_{w.id}_{s.id}_{s.revision}", placeholder="Reason for adjusting daily rainfall")
+            if c_save.button("Save daily edits", key=f"btn_save_daily_edits_{s.id}_{s.revision}", width="stretch"):
+                if not daily_note.strip():
+                    st.warning("Please enter a brief rationale for the edit.")
+                elif edited.to_numpy().tolist() == s.series.to_numpy().tolist():
+                    st.info("No daily values were modified.")
+                else:
+                    try:
+                        w.edit(s.id, daily_note, replacement=edited)
+                        save(w)
+                        st.rerun()
+                    except (ValueError, TypeError) as error:
+                        st.error(str(error))
+        with evidence_tab:
+            st.dataframe(pd.DataFrame({"Station": list(s.provenance["retention_by_station"]),
+                                       "Scenario rainfall (fraction of observed)": list(s.provenance["retention_by_station"].values()),
+                                       "Current deficit mm": [f["station_deficits_mm"][i] for i in s.provenance["retention_by_station"]]}),
+                         hide_index=True, width="stretch")
+            evidence_panel(w, s, save)
+            st.json({"source": s.provenance, "features": f, "score_contributions": s.components, "snapshot_sha256": source.manifest["sha256"]})
+        with history_tab:
+            if s.history:
+                st.dataframe(pd.DataFrame([{k:v for k,v in event.items() if k != "replacement_values"} for event in s.history]), hide_index=True, width="stretch")
             else:
-                try:
-                    w.edit(s.id, daily_note, replacement=edited)
-                    save(w)
-                    st.rerun()
-                except (ValueError, TypeError) as error:
-                    st.error(str(error))
-    with evidence_tab:
-        st.dataframe(pd.DataFrame({"Station": list(s.provenance["retention_by_station"]),
-                                   "Scenario rainfall (fraction of observed)": list(s.provenance["retention_by_station"].values()),
-                                   "Current deficit mm": [f["station_deficits_mm"][i] for i in s.provenance["retention_by_station"]]}),
-                     hide_index=True, width="stretch")
-        evidence_panel(w, s, save)
-        st.json({"source": s.provenance, "features": f, "score_contributions": s.components, "snapshot_sha256": source.manifest["sha256"]})
-    with history_tab:
-        if s.history:
-            st.dataframe(pd.DataFrame([{k:v for k,v in event.items() if k != "replacement_values"} for event in s.history]), hide_index=True, width="stretch")
-        else:
-            st.caption("No revisions or review decisions")
+                st.caption("No revisions or review decisions")
     st.divider()
     all_reviewed = all(w.get(i).status in ("accepted", "rejected") for i in w.selected)
     has_accepted = any(w.get(i).status == "accepted" for i in w.selected)
-    export_ready = all_reviewed and has_accepted
+    export_ready = all_reviewed and has_accepted and all(
+        w.get(i).approved_revision == w.get(i).revision for i in w.selected if w.get(i).status == "accepted")
 
     with st.container():
         st.markdown('<div class="basin-gate-card">', unsafe_allow_html=True)
         g_r1, g_r2 = st.columns([3, 2])
         with g_r1:
             if export_ready:
-                st.markdown(f"**Step 3 Acceptance: Review Decisions Complete ({sum(w.get(i).status == 'accepted' for i in w.selected)} Accepted)**")
+                st.markdown(f"**Review complete · {sum(w.get(i).status == 'accepted' for i in w.selected)} scenarios included**")
                 st.caption("All shortlisted scenarios have documented review decisions. Step 4 (Export) is unlocked.")
             else:
-                unreviewed_count = sum(w.get(i).status == "unreviewed" for i in w.selected)
-                st.markdown(f"**Step 3 Gating: {unreviewed_count} Candidate(s) Awaiting Review Decision**")
-                st.caption("BASIN requires every shortlisted scenario to have a recorded Accept or Reject decision before export can be unlocked.")
+                unreviewed_count = len(pending)
+                st.markdown(f"**{unreviewed_count} scenarios still need a decision**" if unreviewed_count
+                            else "**All shortlisted scenarios are excluded. Include at least one to prepare a handoff.**")
+                st.caption("Record an include or exclude decision for each shortlisted scenario before preparing the handoff.")
         with g_r2:
-            if not export_ready:
-                if st.button("✅ Accept all shortlisted for export", key="btn_review_accept_all_shortlist", type="primary", width="stretch"):
-                    for cand_id in w.selected:
-                        cand = w.get(cand_id)
-                        if cand.status == "unreviewed":
-                            cand.review(True, "Batch accepted during review stage.")
-                    save(w)
-                    st.rerun()
             st.button(
                 "Proceed to Step 4: Export ➔",
                 key="btn_nav_to_exports",

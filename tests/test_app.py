@@ -17,6 +17,15 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert not app.exception
     w = app.session_state.workspace
     assert len(w.scenarios) == 300
+    detail_id = w.selected[-1]
+    app.selectbox(key=f"shortfall_detail_{w.id}").set_value(detail_id).run()
+    assert not app.exception
+    deficit_metric = next(m for m in app.metric if m.label == "Total rainfall deficit")
+    assert deficit_metric.value == f"{w.get(detail_id).features['deficit_mm']:,.1f} mm"
+    next(b for b in app.button if b.label == "Open scenario review").click().run()
+    assert app.session_state.inspect_id == detail_id
+    assert app.session_state.page == "Review"
+    app.sidebar.radio[0].set_value("Workspace").run()
     next(t for t in app.text_area if t.label == "Provider notes").set_value("Private planning note").run()
     next(b for b in app.button if b.label == "Save notes").click().run()
     assert w.notes == "Private planning note"
@@ -30,15 +39,14 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert app.session_state.workspace.weights["duration"] == 80
     app.sidebar.radio[0].set_value("Review").run()
     assert not app.exception
-    series_radio = next((r for r in app.radio if "Cumulative rainfall" in r.options), None)
-    if series_radio:
-        series_radio.set_value("Reservoir simulation").run()
-        assert not app.exception
-        series_radio.set_value("Cumulative rainfall").run()
-        assert not app.exception
+    app.toggle(key="storage_experiment").set_value(True).run()
+    app.radio(key="reservoir_sim_subview").set_value("Additional rainfall reductions").run()
+    assert not app.exception
+    app.radio(key="reservoir_sim_subview").set_value("Selected scenario").run()
+    assert not app.exception
     for identifier in list(w.selected):
         next(s for s in app.selectbox if s.label == "Scenario").set_value(identifier).run()
-        next(b for b in app.button if b.label == "Accept").click().run()
+        next(b for b in app.button if b.label == "Include this revision in handoff").click().run()
         assert not app.exception
     app.sidebar.radio[0].set_value("Exports").run()
     next(b for b in app.button if b.label == "Build verified export").click().run()
@@ -88,8 +96,8 @@ def test_plain_language_four_stage_workflow(tmp_path, monkeypatch):
 
     app.sidebar.radio[0].set_value("Review").run()
     assert not app.exception
-    assert any("Stations stressed together" in item.value for item in app.markdown)
-    assert any("How unusual vs history" in item.value for item in app.markdown)
+    assert any("30-day windows with all selected stations stressed" in item.value for item in app.markdown)
+    assert any("matched historical windows" in item.value for item in app.markdown)
 
 
 def test_bottom_nav_syncs_sidebar_radio(tmp_path, monkeypatch):
@@ -123,8 +131,14 @@ def test_bottom_nav_syncs_sidebar_radio(tmp_path, monkeypatch):
     assert app.session_state.page == "Review"
     assert app.sidebar.radio[0].value == "Review"
 
-    # Accept all shortlisted for export to unlock export gate
-    next(b for b in app.button if "Accept all shortlisted" in b.label).click().run()
+    # Review each current revision and advance through the remaining shortlist.
+    for index in range(len(app.session_state.workspace.selected)):
+        next(b for b in app.button if b.label == "Include this revision in handoff").click().run()
+        if index + 1 < len(app.session_state.workspace.selected):
+            before_id = app.session_state.inspect_id
+            next(b for b in app.button if b.label == "Next unreviewed scenario").click().run()
+            assert app.session_state.inspect_id != before_id
+            assert app.session_state.workspace.get(app.session_state.inspect_id).status == "unreviewed"
     assert not app.exception
 
     # Click forward to Step 4 via bottom button
@@ -248,7 +262,8 @@ def test_custom_colors_reset_and_accessible_charts(tmp_path, monkeypatch):
     assert not app.exception
     workspace = app.session_state.workspace
     before = [(s.id, s.score, s.status) for s in workspace.scenarios]
-    next(r for r in app.radio if "Reservoir simulation" in r.options).set_value("Reservoir simulation").run()
+    app.toggle(key="storage_experiment").set_value(True).run()
+    app.radio(key="reservoir_sim_subview").set_value("Additional rainfall reductions").run()
     assert not app.exception
     assert app.session_state.appearance_colorblind
     next(b for b in app.button if b.label == "Reset colors").click().run()

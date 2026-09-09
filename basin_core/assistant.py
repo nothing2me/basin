@@ -1,9 +1,8 @@
-"""BASIN analyst assistant — grounded local LLM with tool calling.
+"""BASIN analyst assistant — embedded, deterministic intent routing.
 
-The LLM (via Ollama) acts as an intent router: it selects tools and extracts
-parameters.  Tools compute answers from real workspace data.  Templates render
-results with fixed disclaimers.  The LLM adds brief connective prose but never
-generates numbers or scientific claims.
+The built-in engine extracts supported intents and parameters from questions.
+Read-only Python tools compute workspace results; fixed templates render them.
+No model server, model download, or external inference service is used.
 """
 from __future__ import annotations
 
@@ -16,104 +15,7 @@ from jsonschema import Draft202012Validator
 
 from basin_core.tools import TOOL_FUNCTIONS, TOOL_REGISTRY
 
-try:
-    import ollama as _ollama
-    _OLLAMA_AVAILABLE = True
-except ImportError:
-    _ollama = None  # type: ignore[assignment]
-    _OLLAMA_AVAILABLE = False
-
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Model configuration
-# ---------------------------------------------------------------------------
-
-PREFERRED_MODELS = ["qwen2.5:3b", "llama3.2:3b", "qwen2.5:7b", "llama3.1:8b", "mistral:7b"]
-_OLLAMA_CACHE: dict[str, Any] = {}
-
-
-def local_client():
-    """Ignore remote host/proxy configuration; never follow HTTP redirects."""
-    if not _OLLAMA_AVAILABLE:
-        raise RuntimeError("Ollama is not installed; use direct tools.")
-    return _ollama.Client(host="http://127.0.0.1:11434", trust_env=False,
-                          follow_redirects=False, timeout=30.0)
-
-
-def local_model(name):
-    # Ollama can route cloud-tagged models through its local daemon.
-    return isinstance(name, str) and bool(name) and "cloud" not in name.lower()
-
-
-def check_ollama(force_refresh: bool = False) -> dict:
-    """Return availability status and installed models (cached for 30s for instant UI response)."""
-    import time
-    now = time.time()
-    if not force_refresh and "data" in _OLLAMA_CACHE and (now - _OLLAMA_CACHE.get("timestamp", 0) < 30.0):
-        return _OLLAMA_CACHE["data"]
-
-    if not _OLLAMA_AVAILABLE:
-        res = {"available": False, "reason": "ollama package not installed",
-               "models": [], "selected": None}
-        _OLLAMA_CACHE["data"] = res
-        _OLLAMA_CACHE["timestamp"] = now
-        return res
-    try:
-        response = local_client().list()
-        installed = [m.model for m in response.models if local_model(m.model) and not getattr(m, "remote_host", None) and not getattr(m, "remote_model", None)] if response.models else []
-        selected = None
-        for preferred in PREFERRED_MODELS:
-            for installed_name in installed:
-                if installed_name == preferred:
-                    selected = installed_name
-                    break
-            if selected:
-                break
-        res = {"available": True, "models": installed,
-               "selected": selected or (installed[0] if installed else None)}
-    except Exception as exc:
-        res = {"available": False, "reason": str(exc),
-               "models": [], "selected": None}
-    _OLLAMA_CACHE["data"] = res
-    _OLLAMA_CACHE["timestamp"] = now
-    return res
-
-
-def get_model() -> str:
-    """Return the best available model name."""
-    status = check_ollama()
-    if status["selected"]:
-        return status["selected"]
-    raise RuntimeError("No Ollama model available. Install Ollama and pull a "
-                       "model: ollama pull qwen2.5:7b")
-
-
-# ---------------------------------------------------------------------------
-# System prompt
-# ---------------------------------------------------------------------------
-
-SYSTEM_PROMPT = """You are BASIN's analyst assistant, helping hydrologists explore rainfall scenario data for the Coastal Bend region of Texas.
-
-STRICT RULES — violations produce wrong answers:
-1. ALWAYS call one or more tools before answering factual questions. Never generate rainfall values, percentiles, scores, dates, or statistics from your own knowledge.
-2. If no tool covers the question, respond: "I don't have a tool for that. Here's what I can help with:" and list the available tools.
-3. NEVER claim a scenario is "safe", "dangerous", "likely", or "unlikely". BASIN does not forecast.
-4. NEVER modify, round differently, or reinterpret numbers returned by tools.
-5. Refer to the three airport stations as "provisional regional proxies" — their catchment suitability is unvalidated.
-6. The reservoir simulation is illustrative and excluded from evidence packets. Do not present its outputs as forecasts.
-7. Keep responses concise. Hydrologists value precision over length.
-8. You may add brief contextual observations between tool outputs, such as suggesting a next step or noting a relationship. Keep these to 1-2 sentences.
-9. If the user asks you to modify, accept, reject, or export anything, explain that you are read-only and direct them to the appropriate BASIN page.
-10. When presenting tool results, preserve all disclaimers and source citations exactly as provided.
-
-AVAILABLE CONTEXT:
-- Data source: NOAA NCEI GHCN-Daily bundled snapshot (1991-2025)
-- Stations: Corpus Christi, Victoria, San Antonio airport observations
-- Method: Synchronized historical window resampling with rainfall retention scaling
-- AI components: KMeans clustering for drought profile grouping, weighted priority scoring
-- All computations are local and deterministic
-"""
 
 # ---------------------------------------------------------------------------
 # Response templates — every number is a named variable from tool output
@@ -1054,63 +956,24 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
 def run_assistant(workspace, user_message: str,
                   history: list[dict]) -> tuple[str, list[dict]]:
-    """Execute the assistant query loop.
+    """Answer through the embedded engine and return bounded display history.
 
-    If a local Ollama daemon is running, routes via local LLM tool calling.
-    Otherwise, seamlessly executes the deterministic Embedded Semantic Entity
-    & Synonym Graph Engine (100% offline, zero external dependencies).
-
-    Returns (response_text, updated_history).
+    Each question is routed independently. History is retained for display,
+    never interpreted as instructions or sent to an inference service.
     """
     if not isinstance(user_message, str) or len(user_message) > 20000:
         raise ValueError("Question must contain at most 20,000 characters.")
+    if not user_message.strip():
+        raise ValueError("Enter a question about the workspace.")
 
-    model = get_model()
-    if model and _OLLAMA_AVAILABLE and local_model(model):
-        try:
-            messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-            messages.extend({"role": m["role"], "content": m["content"][:20000]}
-                            for m in history[-10:] if m.get("role") in {"user", "assistant"}
-                            and isinstance(m.get("content"), str))
-            messages.append({"role": "user", "content": user_message})
-
-            response = local_client().chat(
-                model=model,
-                messages=messages,
-                tools=TOOL_SCHEMAS,
-            )
-
-            if response.message.tool_calls:
-                rendered_parts = []
-                for call in response.message.tool_calls[:4]:
-                    fn_name = call.function.name
-                    fn_args = call.function.arguments or {}
-
-                    if fn_name not in TOOL_REGISTRY:
-                        error_msg = f"Unknown tool: {fn_name}. {TOOL_LIST_HELP}"
-                        rendered_parts.append(error_msg)
-                        continue
-
-                    try:
-                        fn_args = validate_tool_args(workspace, fn_name, fn_args)
-                        result = TOOL_REGISTRY[fn_name](workspace, **fn_args)
-                        rendered = render_tool_result(fn_name, result)
-                        rendered_parts.append(rendered)
-                    except (ValueError, KeyError, TypeError) as exc:
-                        rendered_parts.append(f"⚠️ Tool error ({fn_name}): {exc}")
-
-                full_response = "\n\n".join(rendered_parts)
-                updated = history + [
-                    {"role": "user", "content": user_message},
-                    {"role": "assistant", "content": full_response},
-                ]
-                return full_response, updated
-        except Exception as exc:
-            logger.warning("Local Ollama tool routing failed (%s); routing through embedded engine.", exc)
-
-    # Embedded Semantic Entity & Synonym Graph Engine (zero-dependency offline fallback)
     reply = semantic_query_route(workspace, user_message)
-    updated = history + [
+    previous = [
+        {"role": m["role"], "content": m["content"][:20000]}
+        for m in history[-10:]
+        if isinstance(m, dict) and m.get("role") in {"user", "assistant"}
+        and isinstance(m.get("content"), str)
+    ]
+    updated = previous + [
         {"role": "user", "content": user_message},
         {"role": "assistant", "content": reply},
     ]
@@ -1119,7 +982,7 @@ def run_assistant(workspace, user_message: str,
 
 def run_tool_directly(workspace, tool_name: str,
                       args: dict) -> str:
-    """Execute a single tool without the LLM — for manual/fallback mode."""
+    """Execute a validated read-only tool selected directly by the user."""
     if tool_name not in TOOL_REGISTRY:
         raise ValueError(f"Unknown tool: {tool_name}")
     args = validate_tool_args(workspace, tool_name, args)

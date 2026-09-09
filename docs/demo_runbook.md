@@ -16,7 +16,7 @@ Updated: September 8, 2026 | Product baseline: BASIN 0.2.0 (`BASIN.exe`)
 3. **Grounded AI Assistant Interrogation**:
    - Click the vertical **AI Assistant** tab (`◀ AI Assistant`). Note the smooth hardware-accelerated drawer and zero-overlay split-pane resize.
    - Ask: `"Why did B-009 rank #1?"` Show the instant breakdown: Severity (40%), Duration (25%), Concurrence (25%), Season (10%).
-   - Explain that the local LLM (`qwen2.5:3b`) runs 100% offline and acts as an intent router calling deterministic Python tools—zero hallucinations.
+   - Explain that the embedded intent engine maps supported questions to deterministic Python tools and fixed templates. No language model or inference server is used.
    - Ask: `"What was station concurrence in B-009?"` Show 96.7% stress in San Antonio (upper basin) and 81.5% in Corpus Christi (lower basin).
 
 4. **Review / 1-Click Multi-Tier Stress Spectrum**:
@@ -39,7 +39,7 @@ Updated: September 8, 2026 | Product baseline: BASIN 0.2.0 (`BASIN.exe`)
 
 ## Before Travel Checklist
 
-- **Presentation Laptop:** 64-bit Windows with `BASIN.exe` and offline Ollama daemon (`qwen2.5:3b` installed).
+- **Presentation Laptop:** 64-bit Windows with BASIN and its documented runtime prerequisites. The embedded assistant needs no model installation or server.
 - **Offline Smoke Test:** Run `.venv\Scripts\python.exe -m pytest tests/` (verify all 128 tests pass offline with network disabled).
 - **Projector Rehearsal:** Connect external display at 1920×1080 and 1600×900 to ensure high-DPI scaling and split-pane layout render sharply.
 - **Backup Assets:** Keep USB stick containing:
@@ -52,7 +52,7 @@ Updated: September 8, 2026 | Product baseline: BASIN 0.2.0 (`BASIN.exe`)
 
 ## Recovery Procedures
 
-- If Ollama service is stopped: Run `scripts/start_ollama.cmd` or query fallback will automatically handle queries deterministically without crashing.
+- If a question is not recognized: use a Quick Query or the Direct Tool Runner. Include scenario IDs and ask a complete question; the embedded engine handles a defined set of intents.
 - If port 8501 is occupied: The native launcher automatically cycles through ports 8501–8550 to find the first open port.
 - On browser/webview refresh: Saved sessions persist in `output/workspaces/` and can be reloaded in one click.
 
@@ -60,7 +60,7 @@ Updated: September 8, 2026 | Product baseline: BASIN 0.2.0 (`BASIN.exe`)
 
 ## Quick Judge Reference
 
-- **AI Method:** Unsupervised KMeans clustering + offline local LLM (`qwen2.5:3b`) with deterministic tool-calling and strict templates.
-- **Hallucination Prevention:** The LLM never computes numbers or claims; it routes queries to Python functions. All numbers come from verified workspace data.
+- **AI Method:** Unsupervised KMeans clustering + embedded deterministic intent routing to read-only tools and fixed templates.
+- **Grounded Responses:** The embedded engine routes supported queries to Python functions and fixed templates. Numbers come from workspace calculations; routing accuracy still needs evaluation.
 - **Why Not Existing Tools:** HEC-ResSim and TCEQ WAM are heavy, static engineering models requiring months and tens of thousands of dollars. BASIN provides the missing agile screening and cryptographically verified handoff layer.
 - **Evidence of Usefulness:** Controlled A/B benchmark demonstrated a 30×–50× speedup (10 min vs. 5 hours) with zero formula errors.

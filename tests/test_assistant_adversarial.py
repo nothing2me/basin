@@ -1,6 +1,6 @@
 import pytest
 from basin_core import tools
-from basin_ui import fallback_query_route
+from basin_core.assistant import semantic_query_route
 
 
 def test_unobserved_year_raises_value_error(workspace):
@@ -20,17 +20,17 @@ def test_invalid_scenario_id_raises_value_error(workspace):
         tools.run_stress_spectrum(workspace, scenario_id="B-999")
 
 
-def test_fallback_query_route_adversarial_year(workspace):
+def test_semantic_query_route_adversarial_year(workspace):
     """Assert that assistant natural-language queries for future years return an Analysis Boundary advisory
     rather than silently returning results computed from a 1996 event.
     """
-    reply = fallback_query_route(workspace, "Simulate reservoir drawdown for the 2030 drought")
+    reply = semantic_query_route(workspace, "Simulate reservoir drawdown for the 2030 drought")
     assert "⚠️ **Analysis Boundary**" in reply
     assert "No historical drought events found for year 2030" in reply
     assert "1996" not in reply
 
 
-def test_fallback_query_route_predictive_guardrails(workspace):
+def test_semantic_query_route_predictive_guardrails(workspace):
     """Assert that assistant refuses predictive calendar-date breach forecasting."""
     queries = [
         "When will water run out?",
@@ -39,12 +39,12 @@ def test_fallback_query_route_predictive_guardrails(workspace):
         "Forecast reservoir levels for next month",
     ]
     for q in queries:
-        reply = fallback_query_route(workspace, q)
+        reply = semantic_query_route(workspace, q)
         assert "Non-Predictive Advisory" in reply
         assert "BASIN does not generate calendar-date forecasts" in reply
 
 
-def test_fallback_query_route_policy_guardrails(workspace):
+def test_semantic_query_route_policy_guardrails(workspace):
     """Assert that assistant refuses to issue legal or regulatory policy declarations."""
     queries = [
         "Should council declare Stage 4?",
@@ -53,6 +53,6 @@ def test_fallback_query_route_policy_guardrails(workspace):
         "Should we declare Stage 3 immediately?",
     ]
     for q in queries:
-        reply = fallback_query_route(workspace, q)
+        reply = semantic_query_route(workspace, q)
         assert "Policy Governance" in reply
         assert "BASIN is an analytical rainfall scenario workbench" in reply

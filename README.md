@@ -2,7 +2,7 @@
 
 **Basin Analysis and Scenario Intelligence Navigator** is a local rainfall evidence workbench for the Coastal Bend / Region N hackathon project.
 
-Use public NOAA observations to construct rainfall stress scenarios, compare their measurements and priorities, challenge assumptions, and prepare a reviewed packet for deeper hydrologic analysis. The core calculation engine is 100% deterministic Python with local KMeans clustering and no required LLM or cloud inference. An optional local analyst assistant interface connects to local Ollama for read-only conversational inspection.
+Use public NOAA observations to construct rainfall stress scenarios, compare their measurements and priorities, challenge assumptions, and prepare a reviewed packet for deeper hydrologic analysis. The core calculation engine is 100% deterministic Python with local KMeans clustering and no required LLM or cloud inference. The built-in analyst assistant uses an embedded deterministic intent engine for read-only questions. It requires no Ollama installation, model download, or inference service.
 
 ## Key features
 
@@ -13,7 +13,7 @@ Use public NOAA observations to construct rainfall stress scenarios, compare the
 - **Executive brief (PDF deliverable):** Generate a publication-grade PDF summary for City Council members and water planners, featuring dynamic breach countdowns and illustrative drought response benchmarks.
 - **Illustrative stress spectrum:** Sweep 4-tier storage drawdowns (100%, 80%, 60%, 40% rainfall) on a two-pool reservoir model to identify Stage 3 tipping points and quantify emergency conservation benefits.
 - **Privacy-first & offline by design:** 100% local execution with loopback binding, zero cloud telemetry, and strict opt-in consent before exporting private reviewer notes.
-- **Optional analyst assistant:** Explore scenarios, station stress, and priority sensitivity via local Ollama, strictly bounded to deterministic calculation tools with zero synthetic numbers.
+- **Embedded analyst assistant:** Explore scenarios, station stress, and priority sensitivity using the built-in intent engine and deterministic calculation tools. Supported questions map to fixed templates; this is not a general-purpose language model. Ask complete questions and include scenario IDs when comparing.
 
 ## Supported Windows presentation path
 

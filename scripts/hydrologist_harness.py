@@ -29,7 +29,6 @@ from basin_core.workspace import Workspace
 from basin_core.assistant import run_assistant, run_tool_directly
 from basin_core.tools import run_stress_spectrum
 from basin_core.exporter import export_bundle, verify_bundle
-from basin_ui import fallback_query_route
 
 SESSION_FILE = ROOT / "output" / "hydrologist_session.json"
 WORKSPACE_DIR = ROOT / "output" / "workspaces"
@@ -104,14 +103,8 @@ def cmd_ask(args):
     print(f"\n[Hydrologist Query] -> \"{query}\"\n")
     try:
         reply, updated_history = run_assistant(ws, query, history)
-    except Exception as exc:
-        # Fallback to deterministic routing
-        print(f"(Note: LLM call diverted to deterministic tool routing: {exc})")
-        reply = fallback_query_route(ws, query)
-        updated_history = history + [
-            {"role": "user", "content": query},
-            {"role": "assistant", "content": reply}
-        ]
+    except ValueError as exc:
+        raise SystemExit(f"Invalid assistant question: {exc}") from exc
 
     meta["chat_history"] = updated_history
     save_workspace(ws, meta)

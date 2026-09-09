@@ -126,13 +126,9 @@ def comparison_panel(w, save):
             st.info("Use at least one positive weight and an eligible candidate.")
 
 
-from basin_core.assistant import semantic_query_route as fallback_query_route
-
-
-
 def assistant_panel(w, source=None, names=None):
     """Render the slide-out assistant panel with right-side tab, open by default."""
-    from basin_core.assistant import check_ollama, run_assistant, run_tool_directly
+    from basin_core.assistant import run_assistant, run_tool_directly
     from basin_core.tools import TOOL_REGISTRY
 
     st.session_state.setdefault("assistant_open", False)
@@ -169,11 +165,8 @@ def assistant_panel(w, source=None, names=None):
             st.session_state.assistant_open = False
             st.rerun()
 
-        status = check_ollama()
-        if status["available"] and status["selected"]:
-            st.markdown(f'<div class="basin-assistant-badge" style="color:#009E73">● Active: {html_escape(str(status["selected"]))} (Local Ollama)</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="basin-assistant-badge" style="color:#009E73">● Active: Embedded Intent Engine (Offline · Deterministic)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="basin-assistant-badge" style="color:#009E73">● Active: Embedded Intent Engine (Offline · Deterministic)</div>', unsafe_allow_html=True)
+        st.caption("Built into BASIN. Ask a complete question each time; include scenario IDs when comparing. No model setup is required.")
 
         st.caption("Quick Queries")
         q1, q2, q3, q4 = st.columns(4)

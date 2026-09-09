@@ -1,5 +1,15 @@
 # BASIN current handoff
 
+## September 9 Review integration and embedded assistant replacement
+
+Integrated the Review/chart changes with upstream `3dd1916`, retaining report configuration, preview invalidation, pagination, and isolated session tests. Review now separates rainfall evidence, a revision-specific inclusion decision, and an optional storage experiment. Duration panels separate overlapping scenario dots without changing deficit values; station charts compare rainfall with the same station's reference. Hiding the experiment retains its selected report settings, while switching workspaces clears them.
+
+At Noah's request, the embedded deterministic intent engine is the sole assistant path. Removed the Ollama client, model discovery, model dependency, UI probe, and CLI retry path. Updated setup/demo documentation and superseded the old Ollama work item. The engine maps supported questions to read-only calculations and fixed templates; questions are independent, and it is not a general-purpose language model.
+
+Validation: **275 tests passed**, run in two non-overlapping groups against the staged integration in an isolated checkout: assistant/security/drawer/report integration **53 passed in 185.76 seconds**; all remaining tests **222 passed in 186.58 seconds**. Drawer regression exercises Quick Queries and typed chat with socket connections blocked. Review/report regressions cover navigation, hidden experiment settings, preview invalidation, and exports. Git whitespace and conflict-marker checks passed. This does not replace actual-device installation or practitioner validation.
+
+Concurrent water-system preset, generic model, and summary work in the main working directory was preserved outside this commit. The tests above cover this commit's exact staged implementation, not those unfinished changes. No remote push was requested.
+
 ## September 9 task 3 independent integration review
 
 Reviewed `989dd7a` on `4d79822`. Original suite: **266 passed in 279.35 seconds**. Additional independent fixes cover a scenario note taller than one page (continue the row and repeat identifying cells), width measurement after symbol transliteration and conservative widths for non-ASCII WinAnsi glyphs, stable HTML scenario-table column widths, and wrapped vector spectrum labels. Numerical calculations are unchanged.
@@ -8,7 +18,7 @@ Final suite: **268 passed in 273.08 seconds** (`python -m pytest -q --tb=short`)
 
 B17.7 and the task 3 layout/isolation scope are complete. B17.3 stays unchecked because browser-renderer failure/degradation reporting is still outstanding. Base-font CJK/emoji support remains limited to disclosed replacements. Text metrics use exact ASCII standard-font widths and a conservative bound for other WinAnsi glyphs, rather than claiming exact metrics for all characters. The earlier branch-unmerged status is historical once this review is integrated.
 
-Next Claude task 4: determine/test an exact optional Ollama Python-client pin, prove real-client timeout/proxy/redirect compatibility with a controlled local fixture, document package versus daemon versus model, and run a reputable dependency-advisory scan with scope/date/limitations. Use the updated main as the base, commit separately and return for review before merge. No broad upgrades, model downloads, firewall changes or remote access. Package testing is not evidence of daemon egress behavior.
+Superseded next step: Noah requested replacing Ollama entirely with the embedded assistant. Do not add an Ollama client, model, or daemon. The dependency-advisory review remains open for the current requirements; prior client/daemon-specific work no longer applies.
 
 Manual checks and commands: `docs/report_device_acceptance.md`. Remaining separate gates include B15 terminology/reference/units review, B16 saved simulations, SEC.4/SEC.5 live/device checks, and named-human domain feedback and event-format confirmation.
 

@@ -1,8 +1,7 @@
 """Interactive hydrologic visualizers for BASIN.
 
 Provides:
-- pareto_frontier_figure: Multi-objective Pareto frontier of duration vs. rainfall deficit
-  with bubble sizing for multi-station concurrence and shortlist annotations.
+- rainfall_shortfall_figure: Shared-scale duration panels with separated scenario dots.
 - stage_trigger_milestone_figure: Horizontal milestone timeline (Gantt analysis)
   tracking storage progression through restriction stages (Normal, Stage 1, Stage 2,
   Critical Reserve, Emergency).
@@ -15,111 +14,141 @@ from __future__ import annotations
 import calendar
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
-def pareto_frontier_figure(view: pd.DataFrame, shortlist_ids: list[str] = None) -> go.Figure:
-    """Render a Pareto Frontier Bubble Plot comparing scenario duration vs. rainfall deficit.
+def rainfall_shortfall_figure(
+    view: pd.DataFrame, shortlist_ids: list[str] | None = None,
+    focused_id: str | None = None, *, colorblind: bool = False,
+) -> go.Figure:
+    """Compare total deficits on a shared scale; horizontal offsets only separate dots.
 
-    Bubble sizes represent multi-station concurrence %, colors represent drought profile groups,
-    and the dashed amber line connects the non-dominated maximum-deficit Pareto envelope.
+    Packing is deterministic and changes neither duration nor deficit. Each duration
+    has its own maximum, including ties; there is no implied interpolation between
+    durations or claim of multi-objective optimality.
     """
-    fig = go.Figure()
-    if shortlist_ids is None:
-        shortlist_ids = []
+    if view.empty:
+        fig = go.Figure()
+        fig.add_annotation(text="No scenarios to compare", showarrow=False)
+        return fig
 
-    cluster_colors = ["#087e8b", "#cc9145", "#638c72", "#826f9e", "#ac675d", "#4c6c94", "#858844", "#a25789"]
+    data = view.copy()
+    durations = sorted(data["Days"].unique())
+    cols = min(3, len(durations))
+    rows = (len(durations) + cols - 1) // cols
+    fig = make_subplots(
+        rows=rows, cols=cols, shared_yaxes="all",
+        specs=[[{} if r * cols + c < len(durations) else None for c in range(cols)] for r in range(rows)],
+        subplot_titles=[f"{d:g} days" for d in durations],
+        horizontal_spacing=0.07, vertical_spacing=0.15 if rows > 1 else 0,
+    )
+    low, high = min(0.0, data["Deficit mm"].min()), max(0.0, data["Deficit mm"].max())
+    span = max(high - low, 1.0)
+    y_range = [low - span * 0.04, high + span * 0.13]
+    # Approximate a 12px separation in each 300px-high plotting panel.
+    separation = (y_range[1] - y_range[0]) / 25
+    offsets = {}
+    for _, panel in data.groupby("Days"):
+        placed = []
+        for _, point in panel.sort_values(["Deficit mm", "ID"]).iterrows():
+            nearby = [(lane, y) for lane, y in placed if point["Deficit mm"] - y < separation]
+            lane = 0
+            for candidate in [0] + [v for n in range(1, len(nearby) + 2) for v in (n, -n)]:
+                if all((candidate - x) ** 2 + ((point["Deficit mm"] - y) / separation) ** 2 >= 1
+                       for x, y in nearby):
+                    lane = candidate
+                    break
+            offsets[point["ID"]] = lane
+            placed.append((lane, point["Deficit mm"]))
+    data["_offset"] = data["ID"].map(offsets)
+    extent = max(8, max(abs(v) for v in offsets.values()) + 2)
+    palette = (["#0072B2", "#E69F00", "#56B4E9", "#CC79A7", "#D55E00", "#009E73"]
+               if colorblind else
+               ["#087e8b", "#cc9145", "#638c72", "#826f9e", "#ac675d", "#4c6c94", "#858844", "#a25789"])
+    groups = sorted(data["Group"].unique())
+    symbols = ["circle", "square", "diamond", "cross", "triangle-up", "x"]
+    shown = set()
+    custom_columns = ["ID", "Profile", "Deficit in", "Stations stressed together %", "Score", "Onset", "Days"]
+    hover = (
+        "<b>Scenario %{customdata[0]}</b> · %{customdata[1]}<br>"
+        "Duration: %{customdata[6]} days · Onset: %{customdata[5]}<br>"
+        "Total deficit: %{y:.1f} mm (%{customdata[2]:.2f} in)<br>"
+        "30-day windows with all selected stations stressed: %{customdata[3]:.1f}%<br>"
+        "Ranking score: %{customdata[4]:.2f}<extra></extra>"
+    )
+    for index, duration in enumerate(durations):
+        row, col = index // cols + 1, index % cols + 1
+        panel = data[data["Days"] == duration]
 
-    # 1. Bubble scatter trace: All candidates categorized by drought group
-    for g in sorted(view["Group"].unique()):
-        sub = view[view["Group"] == g]
-        c = cluster_colors[g % len(cluster_colors)]
-        profile_name = sub["Profile"].iloc[0] if "Profile" in sub else f"Group {g}"
-        sizes = 8 + (sub["Stations stressed together %"] / 100.0) * 16
+        def add_points(points, name, group, marker, *, focus=False, rank=100):
+            if points.empty:
+                return
+            fig.add_trace(go.Scatter(
+                x=points["_offset"], y=points["Deficit mm"],
+                mode="markers+text" if focus else "markers",
+                text=points["ID"] if focus else None, textposition="top center",
+                name=name, legendgroup=group, legendrank=rank, showlegend=group not in shown and not focus,
+                marker=marker, customdata=points[custom_columns].values,
+                hovertemplate=hover, cliponaxis=False,
+            ), row=row, col=col)
+            shown.add(group)
 
-        fig.add_trace(go.Scatter(
-            x=sub["Days"],
-            y=sub["Deficit mm"],
-            mode="markers",
-            name=profile_name,
-            marker=dict(
-                size=sizes,
-                color=c,
-                opacity=0.65,
-                line=dict(width=1, color="rgba(255,255,255,0.4)")
-            ),
-            customdata=sub[["ID", "Profile", "Deficit in", "Stations stressed together %", "Score", "Onset"]].values,
-            hovertemplate=(
-                "<b>Scenario %{customdata[0]}</b> (%{customdata[1]})<br>"
-                "Duration: %{x} days · Onset: %{customdata[5]}<br>"
-                "Rainfall Deficit: %{y:.1f} mm (%{customdata[2]:.2f} in)<br>"
-                "Station Concurrence: %{customdata[3]:.1f}%<br>"
-                "Score: %{customdata[4]:.2f}<extra></extra>"
-            )
-        ))
-
-    # 2. Pareto Optimal Frontier (Upper Deficit Envelope across durations)
-    sorted_v = view.sort_values(by=["Days", "Deficit mm"], ascending=[True, False])
-    pareto_pts = []
-    curr_max = -1.0
-    for _, row in sorted_v.iterrows():
-        if row["Deficit mm"] > curr_max:
-            pareto_pts.append(row)
-            curr_max = row["Deficit mm"]
-
-    if pareto_pts:
-        pareto_df = pd.DataFrame(pareto_pts)
-        fig.add_trace(go.Scatter(
-            x=pareto_df["Days"],
-            y=pareto_df["Deficit mm"],
-            mode="lines+markers",
-            name="Pareto Optimal Frontier (Worst-Case)",
-            line=dict(color="#f59e0b", width=2.5, dash="dash"),
-            marker=dict(size=9, symbol="diamond", color="#f59e0b", line=dict(width=1.5, color="#ffffff")),
-            customdata=pareto_df[["ID", "Profile", "Deficit in", "Stations stressed together %"]].values,
-            hovertemplate=(
-                "<b>⚡ Pareto Boundary: %{customdata[0]}</b><br>"
-                "Duration: %{x} days<br>"
-                "Peak Deficit: %{y:.1f} mm (%{customdata[2]:.2f} in)<br>"
-                "Concurrence: %{customdata[3]:.1f}%<extra>Pareto Envelope</extra>"
-            )
-        ))
-
-    # 3. Shortlist Candidates Overlay with direct text labels
-    shortlist_rows = view[view["ID"].isin(shortlist_ids)]
-    if not shortlist_rows.empty:
-        fig.add_trace(go.Scatter(
-            x=shortlist_rows["Days"],
-            y=shortlist_rows["Deficit mm"],
-            mode="markers+text",
-            text=shortlist_rows["ID"],
-            textposition="top center",
-            textfont=dict(size=11, color="#00E5FF", family="Arial Black, Arial"),
-            marker=dict(
-                size=18,
-                symbol="circle-open",
-                line=dict(width=2.5, color="#00E5FF")
-            ),
-            name="Selected for review",
-            customdata=shortlist_rows[["ID", "Profile", "Deficit in", "Stations stressed together %", "Score"]].values,
-            hovertemplate=(
-                "<b>★ Shortlisted: %{customdata[0]}</b><br>"
-                "Duration: %{x} days<br>"
-                "Deficit: %{y:.1f} mm (%{customdata[2]:.2f} in)<br>"
-                "Concurrence: %{customdata[3]:.1f}%<br>"
-                "Score: %{customdata[4]:.2f}<extra>Shortlist Selection</extra>"
-            )
-        ))
+        for group, points in panel.groupby("Group"):
+            color_index = int(group)
+            add_points(points, points["Profile"].iloc[0], f"profile-{group}", dict(
+                size=8, opacity=0.8, color=palette[color_index % len(palette)],
+                symbol=symbols[color_index % len(symbols)] if colorblind else "circle",
+            ), rank=groups.index(group))
+        add_points(panel[panel["Deficit mm"] == panel["Deficit mm"].max()],
+                   "Highest deficit in each duration", "maximum",
+                   dict(size=12, symbol="diamond-open", color="#E69F00", line=dict(width=2)))
+        add_points(panel[panel["ID"].isin(shortlist_ids or [])], "Selected for review", "shortlist",
+                   dict(size=14, symbol="circle-open", color="#E69F00", line=dict(width=2)), rank=101)
+        add_points(panel[panel["ID"] == focused_id], "Scenario details", "focus",
+                   dict(size=18, symbol="square-open", color="#E69F00", line=dict(width=2)), focus=True)
+        fig.update_xaxes(range=[-extent, extent], visible=False, fixedrange=True, row=row, col=col)
+        fig.update_yaxes(range=y_range, showgrid=True, zeroline=False,
+                         title_text="Total rainfall deficit (mm)" if col == 1 else None,
+                         showticklabels=col == 1, row=row, col=col)
 
     fig.update_layout(
-        height=380,
-        margin=dict(l=10, r=10, t=25, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Arial", size=12),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0),
-        xaxis=dict(title="Scenario Duration (Days)", showgrid=False, zeroline=False),
-        yaxis=dict(title="Rainfall Deficit from Reference (mm)", showgrid=True, zeroline=False),
+        height=370 * rows + 110, margin=dict(l=55, r=20, t=45, b=100),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Arial", size=12), hovermode="closest",
+        legend=dict(orientation="h", yanchor="top", y=-0.06, xanchor="left", x=0,
+                    itemclick=False, itemdoubleclick=False),
     )
+    return fig
+
+
+def pareto_frontier_figure(view: pd.DataFrame, shortlist_ids: list[str] | None = None) -> go.Figure:
+    """Compatibility entry point for callers of the former frontier chart."""
+    return rainfall_shortfall_figure(view, shortlist_ids)
+
+
+def rainfall_reference_figure(series: pd.Series, reference: pd.Series, mode: str = "Cumulative rainfall") -> go.Figure:
+    """Compare one station with its own climatology on the same scenario days."""
+    days = list(range(1, len(series) + 1))
+    fig = go.Figure()
+    if mode == "30-day deficit":
+        values = (reference - series).rolling(30, min_periods=30).sum()
+        fig.add_trace(go.Scatter(x=days, y=values, name="30-day reference minus scenario",
+                                line=dict(color="#2878A0", width=2)))
+        fig.add_hline(y=0, line_dash="dot")
+        title = "Rolling 30-day rainfall difference (mm)"
+    else:
+        cumulative = mode == "Cumulative rainfall"
+        for values, name, dash, color in (
+            (reference, "Historical monthly reference", "dash", "#888888"),
+            (series, "Selected scenario", "solid", "#2878A0"),
+        ):
+            fig.add_trace(go.Scatter(x=days, y=values.cumsum() if cumulative else values,
+                                    name=name, line=dict(color=color, width=2.2, dash=dash)))
+        title = "Accumulated rainfall (mm)" if cumulative else "Daily rainfall (mm)"
+    fig.update_traces(hovertemplate="Day %{x}<br>%{y:.1f} mm<extra>%{fullData.name}</extra>")
+    fig.update_layout(height=340, margin=dict(l=15, r=15, t=15, b=15), hovermode="x unified",
+                      legend=dict(orientation="h", y=1.15),
+                      xaxis=dict(title="Days since scenario start"), yaxis=dict(title=title))
     return fig
 
 
@@ -128,21 +157,21 @@ def stage_trigger_milestone_figure(spec: dict) -> go.Figure:
     fig = go.Figure()
 
     stages_meta = [
-        {"name": "Normal (≥40%)", "color": "#059669"},
-        {"name": "Stage 1 Watch (30–40%)", "color": "#d97706"},
-        {"name": "Stage 2 Warning (20–30%)", "color": "#ea580c"},
-        {"name": "Stage 3 Critical (15–20%)", "color": "#dc2626"},
-        {"name": "Emergency (<15%)", "color": "#7f1d1d"},
+        {"name": "At least 40%", "color": "#059669"},
+        {"name": "30% to below 40%", "color": "#d97706"},
+        {"name": "20% to below 30%", "color": "#ea580c"},
+        {"name": "15% to below 20%", "color": "#dc2626"},
+        {"name": "Below 15%", "color": "#7f1d1d"},
     ]
 
     added_to_legend = set()
     tier_keys = sorted(list(spec["tier_results"].keys()))
 
     tier_display_names = {
-        1.0: "100% Baseline",
-        0.8: "80% Moderate",
-        0.6: "60% Severe",
-        0.4: "40% Catastrophic",
+        1.0: "Selected scenario",
+        0.8: "20% further reduction",
+        0.6: "40% further reduction",
+        0.4: "60% further reduction",
     }
 
     def get_stage_idx(pct):

@@ -29,7 +29,7 @@ def app(tmp_path, monkeypatch):
     at.sidebar.radio[0].set_value("Review").run()
     for identifier in list(workspace.selected):
         next(s for s in at.selectbox if s.label == "Scenario").set_value(identifier).run()
-        next(b for b in at.button if b.label == "Accept").click().run()
+        next(b for b in at.button if b.label == "Include this revision in handoff").click().run()
     at.sidebar.radio[0].set_value("Exports").run()
     assert not at.exception
     return at
@@ -48,7 +48,7 @@ def preview_download_offered(at) -> bool:
 def test_review_settings_become_the_shared_configuration(app):
     """The Review controls, not hard-coded defaults, define the report configuration."""
     app.sidebar.radio[0].set_value("Review").run()
-    next(r for r in app.radio if "Cumulative rainfall" in r.options).set_value("Reservoir simulation").run()
+    app.toggle(key="storage_experiment").set_value(True).run()
     assert not app.exception
 
     app.selectbox(key="review_initial_storage").set_value("35% (illustrative)").run()
@@ -75,7 +75,7 @@ def test_changing_experiment_settings_drops_a_prepared_preview(app):
     assert preview_download_offered(app)
 
     app.sidebar.radio[0].set_value("Review").run()
-    next(r for r in app.radio if "Cumulative rainfall" in r.options).set_value("Reservoir simulation").run()
+    app.toggle(key="storage_experiment").set_value(True).run()
     app.selectbox(key="review_initial_storage").set_value("60% (illustrative)").run()
     app.sidebar.radio[0].set_value("Exports").run()
     assert not app.exception
@@ -124,7 +124,7 @@ def test_built_export_is_discarded_when_settings_change(app):
     assert any("Download Executive Brief (PDF)" in b.label for b in app.download_button)
 
     app.sidebar.radio[0].set_value("Review").run()
-    next(r for r in app.radio if "Cumulative rainfall" in r.options).set_value("Reservoir simulation").run()
+    app.toggle(key="storage_experiment").set_value(True).run()
     app.select_slider(key="review_conservation").set_value(20).run()
     app.sidebar.radio[0].set_value("Exports").run()
     assert not app.exception
@@ -136,7 +136,7 @@ def test_built_export_is_discarded_when_settings_change(app):
 
 def test_exported_pdf_uses_the_selected_settings(app):
     app.sidebar.radio[0].set_value("Review").run()
-    next(r for r in app.radio if "Cumulative rainfall" in r.options).set_value("Reservoir simulation").run()
+    app.toggle(key="storage_experiment").set_value(True).run()
     app.selectbox(key="review_initial_storage").set_value("35% (illustrative)").run()
     app.select_slider(key="review_conservation").set_value(30).run()
     app.sidebar.radio[0].set_value("Exports").run()
@@ -196,15 +196,40 @@ def test_no_accepted_scenarios_discards_prepared_preview(app):
 
 def test_review_settings_survive_navigation(app):
     app.sidebar.radio[0].set_value("Review").run()
-    next(r for r in app.radio if "Cumulative rainfall" in r.options).set_value("Reservoir simulation").run()
+    app.toggle(key="storage_experiment").set_value(True).run()
     app.selectbox(key="review_initial_storage").set_value("35% (illustrative)").run()
     app.select_slider(key="review_conservation").set_value(30).run()
     app.checkbox(key="review_pipeline_active").set_value(False).run()
     app.sidebar.radio[0].set_value("Exports").run()
     app.sidebar.radio[0].set_value("Review").run()
-    next(r for r in app.radio if "Cumulative rainfall" in r.options).set_value("Reservoir simulation").run()
+    app.toggle(key="storage_experiment").set_value(True).run()
     assert not app.exception
     config = app.session_state["experiment_config"]
     assert config.initial_pct == pytest.approx(0.35)
     assert config.conservation_pct == pytest.approx(0.30)
     assert config.pipeline_active is False
+
+
+def test_hiding_experiment_preserves_report_configuration(app):
+    app.sidebar.radio[0].set_value("Review").run()
+    app.toggle(key="storage_experiment").set_value(True).run()
+    app.selectbox(key="review_initial_storage").set_value("35% (illustrative)").run()
+    app.select_slider(key="review_conservation").set_value(20).run()
+    app.checkbox(key="review_pipeline_active").set_value(False).run()
+    configured = app.session_state.experiment_config
+
+    app.toggle(key="storage_experiment").set_value(False).run()
+    assert not app.exception
+    assert app.session_state.experiment_config == configured
+    app.sidebar.radio[0].set_value("Exports").run()
+    next(b for b in app.button if b.label == "Build verified export").click().run()
+    assert not app.exception
+    assert app.session_state.packet["config"] == configured.fingerprint()
+    assert b"35% of combined capacity" in app.session_state.packet["pdf_bytes"]
+
+    app.sidebar.radio[0].set_value("Review").run()
+    app.toggle(key="storage_experiment").set_value(True).run()
+    assert not app.exception
+    assert app.selectbox(key="review_initial_storage").value == "35% (illustrative)"
+    assert app.select_slider(key="review_conservation").value == 20
+    assert app.checkbox(key="review_pipeline_active").value is False

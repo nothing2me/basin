@@ -213,10 +213,10 @@ def simulate_stress_spectrum(series: pd.DataFrame,
     summary_rows = []
 
     tier_labels = {
-        1.0: "100% Historical Baseline",
-        0.8: "80% Moderate Stress (-20%)",
-        0.6: "60% Severe Stress (-40%)",
-        0.4: "40% Catastrophic Stress (-60%)",
+        1.0: "Selected scenario (100%)",
+        0.8: "20% additional rainfall reduction",
+        0.6: "40% additional rainfall reduction",
+        0.4: "60% additional rainfall reduction",
     }
 
     for mult in tiers:

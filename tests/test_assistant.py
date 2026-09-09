@@ -2,7 +2,6 @@ import pytest
 
 from basin_core.assistant import (
     TEMPLATES,
-    check_ollama,
     render_tool_result,
     run_tool_directly,
 )
@@ -23,7 +22,7 @@ from basin_core.tools import (
     test_reservoir_infrastructure as tool_test_reservoir_infrastructure,
     run_stress_spectrum as tool_run_stress_spectrum,
 )
-from basin_ui import fallback_query_route
+from basin_core.assistant import semantic_query_route
 
 
 def test_tool_registry_has_thirteen_tools():
@@ -219,31 +218,31 @@ def test_all_templates_render_and_have_disclaimers(workspace):
         assert "⚠️" in rendered or "Source:" in rendered, f"Template {name} missing verification disclaimer"
 
 
-def test_fallback_query_route(workspace):
-    r1 = fallback_query_route(workspace, "Is this ready to export?")
+def test_semantic_query_route(workspace):
+    r1 = semantic_query_route(workspace, "Is this ready to export?")
     assert "Export readiness" in r1
 
-    r2 = fallback_query_route(workspace, "Compare scenarios")
+    r2 = semantic_query_route(workspace, "Compare scenarios")
     assert "Scenario comparison" in r2
 
-    r3 = fallback_query_route(workspace, "What is the station stress?")
+    r3 = semantic_query_route(workspace, "What is the station stress?")
     assert "Station stress analysis" in r3
 
-    r4 = fallback_query_route(workspace, "Sensitivity of weights")
+    r4 = semantic_query_route(workspace, "Sensitivity of weights")
     assert "Sensitivity test" in r4
 
-    r5 = fallback_query_route(workspace, "Where does this data come from?")
+    r5 = semantic_query_route(workspace, "Where does this data come from?")
     assert "NOAA NCEI GHCN-Daily" in r5
 
-    r6 = fallback_query_route(workspace, "Can our infrastructure survive a 2011-style event if rainfall is even 20% lower?")
+    r6 = semantic_query_route(workspace, "Can our infrastructure survive a 2011-style event if rainfall is even 20% lower?")
     assert "Reservoir Infrastructure Stress Test" in r6
     assert "2011" in r6
     assert "Illustrative two-pool simulation" in r6
 
-    r7 = fallback_query_route(workspace, "Find scenarios in 2011")
+    r7 = semantic_query_route(workspace, "Find scenarios in 2011")
     assert "2011" in r7
 
-    r8 = fallback_query_route(workspace, "Run stress spectrum sweep on 2011")
+    r8 = semantic_query_route(workspace, "Run stress spectrum sweep on 2011")
     assert "Reservoir Stress Spectrum" in r8
     assert "Tipping Point Analysis" in r8
 

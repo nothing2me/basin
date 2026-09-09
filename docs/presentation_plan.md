@@ -34,7 +34,7 @@ The sentence judges should remember:
 
 1. **The Decision Gap:** Small providers and regional planning groups need to screen plausible climate and drought stresses *before* committing $50k+ to formal engineering modeling.
 2. **The Product:** BASIN combines synchronized whole-window historical resampling, local unsupervised KMeans clustering, deterministic multi-attribute ranking, and a dual-pool mass-balance reservoir simulation.
-3. **The Grounded AI Assistant:** A 100% offline, private LLM (Ollama Qwen 2.5 3B) that acts strictly as an **intent router** executing 13 deterministic Python hydrology tools. Every number is bound to strict verification templates with zero hallucinations.
+3. **The Embedded Analyst Assistant:** A built-in deterministic intent engine that maps supported questions to 13 read-only Python analysis tools. Fixed templates display computed results. No language model, model download, or inference server is used.
 4. **1-Click Multi-Tier Stress Spectrum:** Simultaneously sweeps 4 climate stress tiers (100% Baseline, 80% Moderate, 60% Severe, 40% Catastrophic) to pinpoint exact breaking days and empirically test whether a 15% emergency conservation mandate buys days or months.
 5. **Cryptographic Proof of Integrity:** Produces a tamper-evident `.zip` handoff bundle (`daily_rainfall.csv`, `shortlist.csv`, `audit.json`, `Hydrologist_Handoff_Brief.md`) verified via SHA-256 digests.
 6. **Empirical Proof of Usefulness:** In controlled head-to-head benchmarking, an unassisted hydrologist coding from scratch took **4 to 6 hours** to reach the exact same physical conclusions that BASIN produced in **under 10 minutes** (a **30× to 50× turnaround acceleration**).
@@ -91,8 +91,8 @@ To definitively prove usefulness, we conducted an empirical benchmark: an indepe
 - **Conclusion:** The math is rigorous and identical, but BASIN eliminates the half-day programming friction and manual formula risk.
 
 ### 2. Architecture & Technical Novelty
-- **Dual-Model Safety:** Fast, lightweight local LLMs (`qwen2.5:3b`, `llama3.2:3b`) running via local Ollama daemon. Zero telemetry or external API calls.
-- **Strict Template Renderer:** 13 registered tool schemas. Results are rendered via deterministic Python functions into fixed markdown templates. The LLM only appends 1–2 sentences of connective prose.
+- **Embedded Intent Engine:** Built-in parsing of supported questions, scenario IDs, station names, years, and parameters. Each question is independent; the assistant uses no external inference service.
+- **Strict Template Renderer:** 13 registered tool schemas. Results are rendered via deterministic Python functions into fixed markdown templates. The embedded router selects a tool and its parameters; result text comes from templates.
 - **Hardware-Accelerated Split Pane:** 100ms GPU slide animation with zero-overlay window resizing, giving the user a dual-pane IDE experience.
 - **Native Packaging:** Compiled as `BASIN.exe` (23.87 MB) via PyInstaller, embedding Windows WebView2 (EdgeChromium) for zero-console native desktop operation.
 
@@ -126,7 +126,7 @@ To definitively prove usefulness, we conducted an empirical benchmark: an indepe
 **A:** The export packet contains SHA-256 digests of all raw data, scenario time series, and audit logs. The built-in `verify_bundle()` utility replays the calculations and checks hashes to mathematically prove that zero data was altered or fabricated.
 
 **Q: Can this run completely offline?**  
-**A:** Yes. BASIN is packaged as a single Windows executable (`BASIN.exe`) with local bundled dependencies and an offline local LLM. It requires zero cloud connectivity.
+**A:** The assistant and bundled-data calculations operate locally, without model downloads or inference services. The Windows launcher still needs its documented runtime prerequisites; verify the complete installation on the presentation laptop.
 
 ---
 
