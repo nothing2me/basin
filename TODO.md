@@ -1,5 +1,7 @@
 # BASIN team TODO
 
+September 8 planning supplement: [September 22 finalist excellence plan](docs/finalist_excellence_plan.md) defines the prioritized repair, validation, deployment and presentation gates arising from the mock-judge assessment. It assumes access to a hydrologist or technical faculty reviewer; rural-serving operator participation remains unconfirmed. The supplement is a plan, not a completion record. Keep task ownership and status on this board.
+
 Updated: 2026-09-07 | Planning baseline: `ebd8d59` on `main` | Status reconciled against `f78d692` on `origin/main`
 
 This is the shared task board for BASIN. Subdivide work here using stable IDs rather than maintaining separate TODO documents per person. A GitHub issue or PR may discuss implementation, but link its ID here and keep this board's owner/status current. This plan proposes work; it does not claim team approval of new product scope or assign real people without their agreement.

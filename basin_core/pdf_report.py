@@ -18,7 +18,7 @@ import sys
 import tempfile
 from typing import Sequence
 
-from basin_core.analysis import simulate_stress_spectrum
+from basin_core.analysis import simulate_stress_spectrum, simulate_reservoir_drawdown
 
 
 def find_browser_executable() -> str | None:
@@ -71,43 +71,96 @@ def render_html_report(
     workspace,
     accepted: Sequence,
     initial_pct: float = 0.48,
-    conservation_pct: float = 0.15
+    conservation_pct: float = 0.15,
+    include_notes: bool = False,
 ) -> str:
     """Build a professional, print-optimized HTML report ready for PDF rendering."""
     # Ensure percentages are proper fractions (0.0 to 1.0)
     init_frac = initial_pct / 100.0 if initial_pct > 1.0 else initial_pct
     cons_frac = conservation_pct / 100.0 if conservation_pct > 1.0 else conservation_pct
 
+    primary_scenario = accepted[0] if accepted else None
     spectrum_data = None
-    if accepted:
-        primary_scenario = accepted[0]
+    sim_base = None
+    sim_cons = None
+
+    if primary_scenario and hasattr(primary_scenario, "series") and len(primary_scenario.series):
         try:
             spectrum_data = simulate_stress_spectrum(
                 primary_scenario.series,
                 initial_pct=init_frac,
-                conservation_pct=cons_frac
+                conservation_pct=cons_frac,
+            )
+            sim_base = simulate_reservoir_drawdown(
+                primary_scenario.series,
+                initial_pct=init_frac,
+                conservation_pct=0.0,
+            )
+            sim_cons = simulate_reservoir_drawdown(
+                primary_scenario.series,
+                initial_pct=init_frac,
+                conservation_pct=cons_frac,
             )
         except Exception:
             spectrum_data = None
+            sim_base = None
+            sim_cons = None
 
     run_id = workspace.id
     created_date = workspace.created_at[:10] if getattr(workspace, "created_at", None) else "Current Session"
     snapshot_hash = workspace.source.manifest.get("sha256", "N/A")[:16]
     stations = ", ".join(workspace.params.stations)
     weights_summary = ", ".join(f"{k.capitalize()}: {v}%" for k, v in workspace.weights.items())
+    primary_id = primary_scenario.id if primary_scenario else "None"
 
+    # Numeric calculation of earliest Stage 3 breach day
+    earliest_breach_num: int | None = None
     tipping_point_tier = "None (System Resilient)"
-    earliest_breach_day = "No Breach"
 
     if spectrum_data and "summary_table" in spectrum_data:
-        rows = spectrum_data["summary_table"]
-        for r in rows:
-            if not r["survived_critical_20pct"]:
-                if tipping_point_tier == "None (System Resilient)":
+        for r in spectrum_data["summary_table"]:
+            d3 = r.get("day_stage3_20")
+            if d3 is not None:
+                if earliest_breach_num is None or d3 < earliest_breach_num:
+                    earliest_breach_num = d3
                     tipping_point_tier = r["tier_label"].split(" (")[0]
-                if r.get("day_stage3_20"):
-                    if earliest_breach_day == "No Breach" or r["day_stage3_20"] < int(earliest_breach_day):
-                        earliest_breach_day = f"Day {r['day_stage3_20']}"
+
+    earliest_breach_display = f"Day {earliest_breach_num}" if earliest_breach_num is not None else "No Breach"
+
+    # Dynamically calculate conservation mandate impact (difference between baseline & conservation)
+    day_base_3 = next((int(r["day"]) for _, r in sim_base.iterrows() if r["combined_pct"] <= 20.0), None) if sim_base is not None else None
+    day_cons_3 = next((int(r["day"]) for _, r in sim_cons.iterrows() if r["combined_pct"] <= 20.0), None) if sim_cons is not None else None
+
+    if day_base_3 is not None and day_cons_3 is not None:
+        diff = day_cons_3 - day_base_3
+        if diff > 0:
+            conservation_val = f"+{diff} Days"
+            conservation_sub = f"Breach deferred from Day {day_base_3} to Day {day_cons_3} ({cons_frac*100:.0f}% mandate)"
+        elif diff < 0:
+            conservation_val = f"{diff} Days"
+            conservation_sub = f"Accelerated under simulation settings"
+        else:
+            conservation_val = "0 Days"
+            conservation_sub = f"Evaporation dominates at Day {day_base_3}"
+    elif day_base_3 is not None and day_cons_3 is None:
+        conservation_val = "Breach Averted"
+        conservation_sub = f"Storage maintained >20% across entire modeled window"
+    elif day_base_3 is None and day_cons_3 is None:
+        conservation_val = "Buffer Intact"
+        conservation_sub = f"Storage remains >20% in baseline and conservation"
+    else:
+        conservation_val = "N/A"
+        conservation_sub = "Threshold not reached in modeled window"
+
+    # Dynamically compute primary loss driver
+    if sim_base is not None and len(sim_base):
+        avg_evap = float(sim_base["evap_acft"].mean())
+        avg_dem = float(sim_base["served_demand_acft"].mean())
+        loss_driver_val = f"{avg_evap:,.0f} ac-ft/day"
+        loss_driver_sub = f"Mean evaporation load (vs {avg_dem:,.0f} ac-ft/day demand)"
+    else:
+        loss_driver_val = "N/A"
+        loss_driver_sub = "Simulation unavailable"
 
     spectrum_html_rows = ""
     if spectrum_data and "summary_table" in spectrum_data:
@@ -138,7 +191,15 @@ def render_html_report(
         feat = getattr(s, "features", {})
         deficit_mm = feat.get("deficit_mm", 0.0)
         concurrence = feat.get("concurrence", 0.0)
-        note = s.history[-1]["note"] if s.history and s.history[-1].get("note") else "Accepted during review."
+
+        # Privacy gate: omit private review notes unless explicitly opted in
+        entry_note = (s.history[-1].get("private_note") or s.history[-1].get("note")) if s.history else None
+        if include_notes and entry_note:
+            note = entry_note
+        elif entry_note:
+            note = "Review note recorded (omitted: export privacy setting excludes private notes)"
+        else:
+            note = "No review note recorded."
 
         start_dt = prov.get("source_start")
         end_dt = prov.get("source_end")
@@ -224,10 +285,10 @@ def render_html_report(
     }}
     .meta-badge {{
         display: inline-block;
-        background: #ecfdf5;
-        color: #047857;
+        background: #f1f5f9;
+        color: #334155;
         font-weight: 700;
-        border: 1px solid #a7f3d0;
+        border: 1px solid #cbd5e1;
         border-radius: 4px;
         padding: 2px 8px;
         font-size: 7.5pt;
@@ -389,7 +450,7 @@ def render_html_report(
             <div class="brand-subtitle">Coastal Bend Regional Water Supply Vulnerability Assessment</div>
         </div>
         <div class="meta-box">
-            <div><span class="meta-badge">✓ Verified Handoff Packet</span></div>
+            <div><span class="meta-badge">Companion Brief · Illustrative Simulation</span></div>
             <div><strong>Run ID:</strong> <span class="font-mono">{escape(run_id)}</span></div>
             <div><strong>Date:</strong> {escape(created_date)} · NOAA GHCN-Daily</div>
         </div>
@@ -397,60 +458,61 @@ def render_html_report(
 
     <div class="callout">
         <div class="callout-title">The Bottom Line — Executive Overview</div>
-        <p>This report evaluates regional water storage resilience for <strong>Lake Corpus Christi</strong> (257k ac-ft max) and <strong>Choke Canyon Reservoir</strong> (662k ac-ft max) under severe historical rainfall deficits. Starting from an initial combined storage baseline of <strong>{initial_pct * 100:.0f}%</strong>, the analysis determines whether mandatory conservation measures safeguard the critical 20% reserve threshold (Stage 3 Emergency).</p>
+        <p>This report presents human-reviewed rainfall stress scenarios and an <strong>illustrative reservoir drawdown experiment</strong> for <strong>Lake Corpus Christi</strong> (257,300 ac-ft cap) and <strong>Choke Canyon Reservoir</strong> (662,600 ac-ft cap). Derived using primary scenario <strong>{escape(primary_id)}</strong> at <strong>{init_frac * 100:.0f}% initial storage</strong>, it evaluates whether emergency conservation ({cons_frac * 100:.0f}%) defers breaching the critical 20% reserve threshold (Stage 3). <em>This simulation is an exploratory planning tool and not an operational forecast.</em></p>
     </div>
 
     <div class="kpi-row">
-        <div class="kpi-card danger">
+        <div class="kpi-card {'danger' if earliest_breach_num is not None else 'success'}">
             <div class="kpi-label">Earliest Stage 3 Breach</div>
-            <div class="kpi-val">{earliest_breach_day}</div>
-            <div class="kpi-sub">Critical reserve breach threshold</div>
+            <div class="kpi-val">{earliest_breach_display}</div>
+            <div class="kpi-sub">Critical 20% reserve threshold</div>
         </div>
         <div class="kpi-card warning">
             <div class="kpi-label">Tipping Point Tier</div>
             <div class="kpi-val" style="font-size: 12pt; margin-top: 5px;">{escape(tipping_point_tier)}</div>
-            <div class="kpi-sub">Severe concurrent catchment stress</div>
+            <div class="kpi-sub">First tier breaching Stage 3</div>
         </div>
         <div class="kpi-card success">
             <div class="kpi-label">Conservation Mandate Impact</div>
-            <div class="kpi-val">+9 Days</div>
-            <div class="kpi-sub">Reserve extended under 15% mandate</div>
+            <div class="kpi-val">{conservation_val}</div>
+            <div class="kpi-sub">{conservation_sub}</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-label">Primary Loss Driver</div>
-            <div class="kpi-val" style="font-size: 12pt; margin-top: 5px;">750 ac-ft/day</div>
-            <div class="kpi-sub">Summer net lake evaporation</div>
+            <div class="kpi-val" style="font-size: 12pt; margin-top: 5px;">{loss_driver_val}</div>
+            <div class="kpi-sub">{loss_driver_sub}</div>
         </div>
     </div>
 
-    <div class="section-title">Council Action & Policy Decision Matrix</div>
+    <div class="section-title">Illustrative Drought Response Reference Framework</div>
+    <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">Reference framework based on typical regional drought contingency benchmarks (e.g., City of Corpus Christi Drought Contingency Plan). Illustrative reference only; not an operational command.</p>
     <table>
         <thead>
             <tr>
                 <th style="width: 22%;">Drought Trigger Stage</th>
                 <th style="width: 22%;">System Storage Trigger</th>
-                <th style="width: 30%;">Mandated Municipal & Industrial Actions</th>
-                <th style="width: 26%;">Expected Reserve Protection</th>
+                <th style="width: 32%;">Typical Planning Actions</th>
+                <th style="width: 24%;">Illustrative Reserve Impact</th>
             </tr>
         </thead>
         <tbody>
             <tr>
                 <td><strong>Stage 1 · Mild Drought</strong></td>
                 <td>Combined storage &le; 40%</td>
-                <td>Voluntary 5% reduction, public education, leak audit escalation.</td>
-                <td>Reduces baseline consumption by ~10 MGD.</td>
+                <td>Public awareness notices, voluntary 5% reduction, leak audit escalation.</td>
+                <td>Early demand dampening (~5–10 MGD reduction).</td>
             </tr>
             <tr>
                 <td><strong>Stage 2 · Moderate Drought</strong></td>
                 <td>Combined storage &le; 30%</td>
-                <td>Mandatory 1-day/week landscape watering, commercial car wash limits.</td>
-                <td>Saves ~22 MGD; defers Stage 3 entry by 18–25 days.</td>
+                <td>Mandatory 1-day/week landscape irrigation, non-essential water bans.</td>
+                <td>Extends intermediate reserves; curbs peak summer usage.</td>
             </tr>
             <tr>
                 <td><strong>Stage 3 · Critical Emergency</strong></td>
                 <td>Combined storage &le; 20%</td>
-                <td><strong>Mandatory 15% curtailment</strong> across all accounts, surcharge pricing.</td>
-                <td><strong>Guarantees emergency reserve life</strong> (+9 to +15 days under severe heat).</td>
+                <td>Mandatory emergency curtailment across all accounts, surcharge pricing.</td>
+                <td>Protects critical minimum reserve under extreme drought.</td>
             </tr>
         </tbody>
     </table>
@@ -468,7 +530,7 @@ def render_html_report(
     </div>
 
     <div class="section-title">Multi-Tier Rainfall Stress Spectrum & Countdown Matrix</div>
-    <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">Simulated drawdown across 4 rainfall retention tiers starting at {initial_pct*100:.0f}% initial storage with a {conservation_pct:.0f}% emergency conservation response.</p>
+    <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">Simulated drawdown across 4 rainfall tiers for {escape(primary_id)} starting at {init_frac*100:.0f}% initial storage with {cons_frac*100:.0f}% emergency conservation.</p>
     <table>
         <thead>
             <tr>
@@ -486,7 +548,7 @@ def render_html_report(
         </tbody>
     </table>
 
-    <div class="section-title">Shortlisted Scenario Inventory & Expert Justifications</div>
+    <div class="section-title">Shortlisted Scenario Inventory & Human Review Notes</div>
     <table>
         <thead>
             <tr>
@@ -495,7 +557,7 @@ def render_html_report(
                 <th>Duration</th>
                 <th>Precip Deficit</th>
                 <th>Concurrence</th>
-                <th>Hydrologist Justification Note</th>
+                <th>Review Disposition & Notes</th>
             </tr>
         </thead>
         <tbody>
@@ -503,18 +565,18 @@ def render_html_report(
         </tbody>
     </table>
 
-    <div class="section-title">Scientific Provenance & Cryptographic Audit Trail</div>
+    <div class="section-title">Scientific Provenance & Verification Scope</div>
     <div class="seal-box">
         <div class="seal-text">
-            <div><strong>NOAA Data Integrity:</strong> Verified GHCN-Daily Daily Precipitation (1991–2025)</div>
-            <div><strong>Stations Analyzed:</strong> {escape(stations)}</div>
-            <div><strong>Ranking Weights:</strong> {escape(weights_summary)}</div>
-            <div><strong>Verification Standard:</strong> Zero synthetic hallucination; pure historical replay with deterministic transforms.</div>
-            <div><strong>Replay Command:</strong> <span class="font-mono text-sm">python scripts/replay_bundle.py output/BASIN-{escape(run_id)}.zip</span></div>
+            <div><strong>Data Source:</strong> NOAA GHCN-Daily Daily Precipitation (1991–2025) · Stations: {escape(stations)}</div>
+            <div><strong>Shortlist Weights:</strong> {escape(weights_summary)}</div>
+            <div><strong>Verification Scope:</strong> Cryptographic SHA-256 validation applies to the companion ZIP data bundle (daily_rainfall.csv, shortlist.csv, audit.json, snapshot).</div>
+            <div><strong>Modeling Boundary:</strong> Reservoir drawdown is an illustrative planning experiment; point rainfall records are proxies and do not establish basin-wide calibrated inflow.</div>
+            <div><strong>Independent Replay:</strong> <span class="font-mono text-sm">python scripts/replay_bundle.py output/BASIN-{escape(run_id)}.zip</span></div>
         </div>
         <div class="seal-stamp">
-            <div>BASIN SEAL</div>
-            <div style="font-size: 11pt; font-weight: 800;">VERIFIED</div>
+            <div>BASIN AUDIT</div>
+            <div style="font-size: 11pt; font-weight: 800;">DATA PASS</div>
             <div class="font-mono" style="font-size: 6.5pt;">ID: {escape(run_id)}</div>
         </div>
     </div>
@@ -536,26 +598,27 @@ def build_fallback_pdf(title: str, text: str) -> bytes:
         "Coastal Bend Regional Water Supply Vulnerability Assessment",
         "--------------------------------------------------------------------------------",
         f"Title: {title}",
-        "Classification: Cryptographically Verified Engineering Handoff",
+        "Classification: Companion Brief to Cryptographically Verified Data Bundle",
         "Document Purpose: Executive decision support for City Council & Water Planners",
         "",
         "THE BOTTOM LINE:",
         "- Evaluates Lake Corpus Christi and Choke Canyon Reservoir combined storage.",
         "- Severe historical rainfall deficits modeled across 4 Stress Tiers (100% to 40%).",
         "- Emergency reserve threshold (Stage 3: 20%) breach day and conservation benefit quantified.",
-        "- Mandatory 15% conservation extends reserve life by +9 days under severe drought conditions.",
+        "- Conservation benefit calculated dynamically from active scenario and storage inputs.",
         "",
-        "POLICY RECOMMENDATIONS:",
+        "DROUGHT REFERENCE FRAMEWORK:",
         "1. Stage 1 (40%): Public notice, voluntary 5% reduction, leak abatement.",
         "2. Stage 2 (30%): Mandatory 1-day/week watering, commercial car wash limits.",
-        "3. Stage 3 (20%): Mandatory 15% curtailment, surcharge pricing, emergency supplies.",
+        "3. Stage 3 (20%): Mandatory emergency curtailment, surcharge pricing.",
         "",
-        "SCIENTIFIC PROVENANCE & AUDIT:",
+        "SCIENTIFIC PROVENANCE & AUDIT BOUNDARIES:",
         "- Source: NOAA GHCN-Daily (Corpus Christi, Victoria, San Antonio).",
-        "- Deterministic mathematical replay verified via SHA-256 manifest.",
+        "- Verification scope: Cryptographic validation covers the ZIP bundle (rainfall, shortlist, audit).",
+        "- Reservoir drawdown is an illustrative planning experiment, not a certified forecast.",
         "- Replay command: python scripts/replay_bundle.py output/BASIN-<id>.zip",
         "--------------------------------------------------------------------------------",
-        "Generated by BASIN 0.2 Calculation Engine · Zero Hallucination Standard"
+        "Generated by BASIN 0.2 Calculation Engine · Zero Synthetic Hallucination"
     ]
 
     bt_commands = ["BT", "/F1 14 Tf", "50 740 Td", f"({clean_txt(lines[0])}) Tj", "/F1 9 Tf"]
@@ -595,7 +658,8 @@ def generate_pdf_report(
     accepted: Sequence,
     output_path: Path | str | None = None,
     initial_pct: float = 0.48,
-    conservation_pct: float = 15.0
+    conservation_pct: float = 0.15,
+    include_notes: bool = False,
 ) -> bytes:
     """Generate a publication-grade PDF report.
 
@@ -606,7 +670,8 @@ def generate_pdf_report(
         workspace,
         accepted,
         initial_pct=initial_pct,
-        conservation_pct=conservation_pct
+        conservation_pct=conservation_pct,
+        include_notes=include_notes,
     )
 
     browser_bin = find_browser_executable()

@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 from basin_core.data import CachedSource
 from basin_core.workspace import Workspace
 from basin_core.pdf_report import render_html_report, generate_pdf_report, build_fallback_pdf, find_browser_executable
@@ -24,10 +24,16 @@ def test_render_html_report():
     html = render_html_report(workspace, accepted)
     assert "BASIN · EXECUTIVE TECHNICAL BRIEF" in html
     assert "The Bottom Line — Executive Overview" in html
-    assert "Council Action & Policy Decision Matrix" in html
+    assert "Illustrative Drought Response Reference Framework" in html
     assert "Multi-Tier Rainfall Stress Spectrum & Countdown Matrix" in html
-    assert "Scientific Provenance & Cryptographic Audit Trail" in html
+    assert "Scientific Provenance & Verification Scope" in html
     assert workspace.id in html
+    assert "omitted: export privacy setting excludes private notes" in html
+    assert "Accepted for unit test" not in html
+
+    # Test with include_notes=True
+    html_with_notes = render_html_report(workspace, accepted, include_notes=True)
+    assert "Accepted for unit test" in html_with_notes
 
 
 def test_generate_pdf_report(tmp_path):

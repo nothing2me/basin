@@ -29,7 +29,7 @@ from basin_core.custom_data import active_ids, digest
 icon_file = ROOT / "assets/basin.ico"
 st.set_page_config(page_title="BASIN", page_icon=str(icon_file) if icon_file.exists() else "◉", layout="wide")
 apply_design()
-if st.session_state.get("assistant_open", True):
+if st.session_state.get("assistant_open", False):
     st.html("""<style>
     .block-container, [data-testid="stMainBlockContainer"] {
         margin-right: 485px !important;
@@ -693,8 +693,8 @@ with st.sidebar:
         st.markdown('<div class="basin-brand"><strong>BASIN</strong><br><small>Rainfall intelligence</small></div>', unsafe_allow_html=True)
     page = st.radio("View", ["Data", "Workspace", "Review", "Exports"], key="page",
                     index=1, format_func=PAGE_LABELS.get, label_visibility="collapsed")
-    if st.button("🤖 AI Assistant (" + ("Open" if st.session_state.get("assistant_open", True) else "Closed") + ")", key="sidebar_assistant_btn", width="stretch"):
-        st.session_state.assistant_open = not st.session_state.get("assistant_open", True)
+    if st.button("🤖 AI Assistant (" + ("Open" if st.session_state.get("assistant_open", False) else "Closed") + ")", key="sidebar_assistant_btn", width="stretch"):
+        st.session_state.assistant_open = not st.session_state.get("assistant_open", False)
         st.rerun()
     with st.expander("Help & tutorial", expanded=st.session_state.get("tutorial_active", False)):
         st.markdown("**A guide to your workspace**")
@@ -1117,6 +1117,12 @@ elif page == "Exports":
     chosen = [w.get(i) for i in w.selected]
     st.markdown("**Review what your recipient will receive**")
     st.caption("A readable rainfall brief, daily values, source evidence and a replayable audit. Review decisions control what can be exported.")
+    share = st.checkbox("Include provider notes and free-text review notes", value=False, key=f"share_notes_{w.id}")
+    st.caption("Packet includes rainfall, metrics, public evidence, scenario links and all conflict dispositions. Private evidence annotations follow the same opt-in. Reservoir results are excluded.")
+    share_custom = False
+    if w.custom_uploads:
+        st.warning("This analysis contains custom evidence. Replay requires all saved normalized upload versions, station/location/source metadata and suitability rationale. Original CSV bytes are excluded. This consent is separate from private notes.")
+        share_custom = st.checkbox("Include custom numerical inputs and source metadata in this replayable export", key="custom_export_" + digest(w.custom_uploads))
     accepted_preview = [s for s in chosen if s.status == "accepted" and s.approved_revision == s.revision]
     with st.expander("Read the report preview", expanded=True):
         if accepted_preview:
@@ -1124,14 +1130,15 @@ elif page == "Exports":
             brief_preview_text = generate_brief(w, accepted_preview)
             col_prev_a, col_prev_b, col_prev_c = st.columns([2, 1, 1])
             with col_prev_b:
-                if f"preview_pdf_{w.id}" not in st.session_state:
+                preview_pdf_key = f"preview_pdf_{w.id}_{share}"
+                if preview_pdf_key not in st.session_state:
                     if st.button("📕 Prep PDF Preview", key=f"btn_prep_pdf_prev_{w.id}", width="stretch"):
-                        st.session_state[f"preview_pdf_{w.id}"] = generate_pdf_report(w, accepted_preview)
+                        st.session_state[preview_pdf_key] = generate_pdf_report(w, accepted_preview, include_notes=share)
                         st.rerun()
                 else:
                     st.download_button(
                         "📕 Download PDF Preview",
-                        st.session_state[f"preview_pdf_{w.id}"],
+                        st.session_state[preview_pdf_key],
                         f"BASIN-Executive-Brief-Preview-{w.id}.pdf",
                         "application/pdf",
                         key=f"dl_pdf_preview_{w.id}",
@@ -1154,12 +1161,6 @@ elif page == "Exports":
         selected_table = table(w)
         selected_table = selected_table[selected_table["Selected for review"]].drop(columns="Selected for review")
         st.dataframe(selected_table, hide_index=True, width="stretch")
-    share = st.checkbox("Include provider notes and free-text review notes", value=False)
-    st.caption("Packet includes rainfall, metrics, public evidence, scenario links and all conflict dispositions. Private evidence annotations follow the same opt-in. Reservoir results are excluded.")
-    share_custom = False
-    if w.custom_uploads:
-        st.warning("This analysis contains custom evidence. Replay requires all saved normalized upload versions, station/location/source metadata and suitability rationale. Original CSV bytes are excluded. This consent is separate from private notes.")
-        share_custom = st.checkbox("Include custom numerical inputs and source metadata in this replayable export", key="custom_export_" + digest(w.custom_uploads))
     unresolved = [c for c in w.conflicts if c["status"] == "unresolved"]
     if unresolved:
         st.warning(f"{len(unresolved)} unresolved evidence disagreement(s) will be included for the recipient.")
@@ -1206,7 +1207,7 @@ elif page == "Exports":
                 brief_text = generate_brief(w, w.exportable())
                 brief_path = out_dir / f"Hydrologist_Handoff_Brief_{w.id}.md"
                 brief_path.write_text(brief_text, encoding="utf-8")
-                pdf_bytes = generate_pdf_report(w, w.exportable())
+                pdf_bytes = generate_pdf_report(w, w.exportable(), include_notes=share)
                 pdf_path = out_dir / f"BASIN-Executive-Brief-{w.id}.pdf"
                 pdf_path.write_bytes(pdf_bytes)
                 st.session_state.packet = {
