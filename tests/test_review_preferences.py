@@ -252,8 +252,8 @@ def test_focus_survives_navigation_and_is_persisted_for_reopening(app, isolated_
 def test_choosing_own_data_never_implies_an_upload_happened(app):
     app.radio(key="review_setup_data").set_value("own").run()
     warnings = " ".join(w.value for w in app.warning)
-    assert "No file has been uploaded" in warnings
-    assert "no data has been validated" in warnings.lower()
+    assert "does not upload or validate a file" in warnings
+    assert "Existing data is unchanged" in warnings
 
     next(b for b in app.button if b.label == "Use this focus").click().run()
     assert "Nothing has been uploaded or validated by that choice" in rendered_text(app)
@@ -296,3 +296,29 @@ def test_an_older_saved_run_opens_without_a_preferences_file(app, isolated_sessi
     assert not preferences_path(workspace_id, isolated_sessions).exists()
     assert not app.exception
     assert set(top_level_tab_labels(app)) == TAB_LABEL_VALUES
+
+
+@pytest.mark.parametrize("value", ["false", "yes", 1, [], {}])
+def test_saved_booleans_do_not_accept_truthy_foreign_values(value):
+    prefs = ReviewPreferences.from_record({"configured": value, "dismissed": value,
+                                          "show_all_tools": value})
+    assert prefs == ReviewPreferences()
+
+
+def test_future_preferences_version_is_not_reinterpreted():
+    assert ReviewPreferences.from_record({"version": 999, "goal": "storage",
+                                          "configured": True}) == ReviewPreferences()
+
+
+def test_change_focus_opens_with_saved_choices(app):
+    app.radio(key="review_setup_goal").set_value("storage").run()
+    app.radio(key="review_setup_data").set_value("own").run()
+    app.radio(key="review_setup_guidance").set_value("technical").run()
+    next(b for b in app.button if b.label == "Use this focus").click().run()
+    app.sidebar.radio[0].set_value("Data").run()
+    app.sidebar.radio[0].set_value("Review").run()
+    next(b for b in app.button if b.label == "Change focus").click().run()
+    assert not app.exception
+    assert app.radio(key="review_setup_goal").value == "storage"
+    assert app.radio(key="review_setup_data").value == "own"
+    assert app.radio(key="review_setup_guidance").value == "technical"

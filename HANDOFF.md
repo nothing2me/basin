@@ -1,5 +1,11 @@
 # BASIN current handoff
 
+## September 10 — Combined tailored Review and Qwen review
+
+Integrated Claude b9c5bf6 and Qwen audit d8207c7 from e35a57b. Review fixes preserve saved choices when editing focus, reject foreign preference versions/non-boolean flags, and clarify own-data wording. Full combined suite: **414 passed, 1 skipped in 400.96s**; the skipped test requires absent Qwen weights. Snapshot checkout, demo smoke (run 3cff457731a8, five scenarios/500 audit records), explicit replay (`implementation_matches_current: true`), source packaging and install consistency passed.
+
+Tailored setup is at the top of Review, not before run creation. Light/narrow-screen/keyboard and actual-user checks remain open. No live native Qwen or clean-laptop installer certification is claimed. Existing scientific/reference-label and PDF failure-handling tasks remain open. Ready-to-run prompts are in docs/next_tasks/01_native_runtime.md through 06_laptop_and_people.md. Native setup and UI acceptance can run in parallel in separate worktrees; coordinate numerical/report/UI overlap. Older checkpoints below are historical.
+
 ## Qwen audit branch checkpoint
 
 Base e35a57b; branch codex/qwen-runtime-audit. Focused assistant/security/drawer checks: 90 passed, 1 skipped (weights absent). Grounded response rendering, bounded validated tool batches, model-byte verification and timeout termination implemented. See docs/qwen_security_review.md for findings, commands and open installation/live-runtime gates. app.py and basin_ui.py untouched. Integrate with Claude tailored Review and run the full combined suite before merging.

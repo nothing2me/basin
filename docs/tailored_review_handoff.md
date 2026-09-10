@@ -1,5 +1,7 @@
 # Tailored Review — implementation handoff
 
+Integration review (September 10): corrected Change focus to initialize controls from saved preferences, rejected foreign versions/truthy non-booleans when reading preferences, and clarified that selecting own data does not upload/validate or alter existing data. Focused Review tests: 43 passed. The original branch narrative below is historical. The panel remains in Review; pre-run placement and actual light/narrow/keyboard acceptance remain open.
+
 Branch `feat/tailored-review`, based on `origin/main` at
 **`e35a57b59c7b076dc94b0ec9281a3393e039e6b1`** (`e35a57b`). Built in the separate worktree
 `C:/Users/moham/Documents/GitHub/basin-tailored-review`. Not merged, not pushed.

@@ -188,13 +188,15 @@ class ReviewPreferences:
         """
         if not isinstance(record, dict):
             return cls()
+        if type(record.get("version", PREFERENCES_VERSION)) is not int or record.get("version", PREFERENCES_VERSION) != PREFERENCES_VERSION:
+            return cls()
         return cls(
             goal=_coerce(record.get("goal"), GOALS, "compare"),
             data_source=_coerce(record.get("data_source"), DATA_SOURCES, "regional"),
             guidance=_coerce(record.get("guidance"), GUIDANCE, "guided"),
-            configured=bool(record.get("configured", False)),
-            dismissed=bool(record.get("dismissed", False)),
-            show_all_tools=bool(record.get("show_all_tools", False)),
+            configured=record.get("configured") is True,
+            dismissed=record.get("dismissed") is True,
+            show_all_tools=record.get("show_all_tools") is True,
             version=PREFERENCES_VERSION,
         )
 

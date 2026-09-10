@@ -1,0 +1,13 @@
+# Task 1 — Optional native Qwen installation (Opus)
+
+Read repository instructions, TODO.md's newest checkpoint and the relevant handoff before editing. Inspect current Git status and fetch origin. Work in a separate worktree and task branch from current origin/main; record its SHA. Do not modify the main checkout or another agent's worktree. Treat older checked TODO claims as historical until supported by current evidence.
+
+Complete the bounded task, run focused behavioral checks, and commit on your branch. Do not merge or push main. Do not edit TODO.md or HANDOFF.md; write a task-specific handoff with changed files, exact commands/results, limitations, base/commit SHA and worktree path. Astra will review and integrate. Never invent expert approval, participant feedback, organizer requirements or successful manual checks. Do not broadly upgrade dependencies or alter unrelated features.
+
+Context: embedded assistant safeguards were reviewed in docs/qwen_security_review.md. Setup BASIN.cmd --with-ai downloads a pinned GGUF, but declared requirements do not install llama-cpp-python. The audited venv lacks it. Downloaded weights alone cannot activate inference.
+
+Implement a supported OPTIONAL Windows Python 3.12 x64 native-runtime install path. Determine a compatible exact version and wheel source from official upstream documentation; verify availability and provenance rather than repeating the old TODO pin. Keep the core install usable when AI is skipped or installation fails. Distinguish runtime, weights and readiness in setup messages. Preserve model hash enforcement, default offline operation, existing dependency pins and no-AI behavior. Package the optional requirements/setup files through existing mechanisms.
+
+Use dependency resolution and controlled installer/absence/failure fixtures. Do not automatically download model weights, build a huge native toolchain, alter firewall rules or enable remote access. If a real binary install is needed for a claim, report that gate as open until exercised. Review relevant advisories using a reputable tool and upstream sources; record scan date, scope, findings and exclusions. Do not call pip check a vulnerability scan. A mocked install is not a certified clean-laptop installation.
+
+Own optional requirements/setup/package integration and focused tests; avoid app.py, calculation/report modules and assistant response logic. Write docs/native_runtime_handoff.md. Acceptance: explicit optional install/repair path, compatible justified pin/source, honest failure/fallback messages, tested no-AI path, and actionable actual-device steps.

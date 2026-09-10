@@ -577,6 +577,9 @@ def review_preferences(workspace_id):
     if not isinstance(cached, tuple) or len(cached) != 2 or cached[0] != workspace_id:
         cached = (workspace_id, load_preferences(workspace_id))
         st.session_state["review_prefs"] = cached
+        st.session_state["review_setup_goal"] = cached[1].goal
+        st.session_state["review_setup_data"] = cached[1].data_source
+        st.session_state["review_setup_guidance"] = cached[1].guidance
     return cached[1]
 
 
@@ -1326,8 +1329,8 @@ elif page == "Review":
                     format_func=lambda key: GUIDANCE[key]["label"],
                     captions=[GUIDANCE[key]["help"] for key in GUIDANCE], key="review_setup_guidance")
                 if chosen_data == "own":
-                    st.warning("Choosing this records a preference only. No file has been uploaded and no data has been "
-                               "validated. Add and review a CSV in Step 1: Data Dashboard when you are ready.")
+                    st.warning("This choice only records a preference; it does not upload or validate a file. "
+                               "Existing data is unchanged. Add and review a CSV in Step 1: Data Dashboard when you are ready.")
                 if chosen_data == "example":
                     st.caption("The example run opens from Step 1 or Step 2 using the existing 'Try an example' control.")
                 apply_col, skip_col, _ = st.columns([1, 1, 2])
@@ -1349,6 +1352,9 @@ elif page == "Review":
                 prefs = prefs.replace(show_all_tools=show_all_tools)
                 store_review_preferences(w.id, prefs)
             if focus_change.button("Change focus", key=f"btn_review_change_focus_{w.id}", width="stretch"):
+                st.session_state["review_setup_goal"] = prefs.goal
+                st.session_state["review_setup_data"] = prefs.data_source
+                st.session_state["review_setup_guidance"] = prefs.guidance
                 store_review_preferences(w.id, prefs.replace(configured=False, dismissed=False))
                 st.rerun()
             if prefs.configured and prefs.data_source == "own":

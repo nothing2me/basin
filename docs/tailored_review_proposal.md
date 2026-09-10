@@ -1,6 +1,6 @@
 # Tailored Review proposal
 
-Status: proposed, not implemented. Based on Noah's pre-run questionnaire idea. Implement after the installation/security integration; use one owner for app.py.
+Status: first increment implemented at the top of Review. The original pre-run placement remains open. See docs/tailored_review_handoff.md and the newest HANDOFF integration checkpoint. The scope below remains the product proposal; it is not a claim that every acceptance check is complete.
 
 ## Short setup, with a skip option
 

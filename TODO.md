@@ -1,9 +1,13 @@
 # BASIN team TODO
 
+### Next work after Review/Qwen integration
+
+Ready-to-run prompts: [native install](docs/next_tasks/01_native_runtime.md), [numerical meaning](docs/next_tasks/02_numerical_meaning.md), [PDF failures](docs/next_tasks/03_pdf_failures.md), [Review acceptance](docs/next_tasks/04_review_acceptance.md), [status reconciliation](docs/next_tasks/05_status_reconciliation.md), [laptop/team acceptance](docs/next_tasks/06_laptop_and_people.md). Native install and Review acceptance may run in parallel; numerical/PDF/UI code overlaps must be coordinated. Larger B16/B19/B20/B21 scopes remain deferred pending team prioritization.
+
 ### Embedded Qwen audit branch checkpoint
 
 - [x] Add grounded-response enforcement, a three-call validated batch budget, streamed-index bounds, worker-load model hash/size checks and timeout termination. Focused checks: 90 passed, 1 model-dependent skip. See [audit evidence](docs/qwen_security_review.md).
-- [ ] Integrate this audit branch with tailored Review and run the combined full suite before merge.
+- [x] Combined Qwen audit and tailored Review in the integration branch; final verification is recorded in the newest HANDOFF checkpoint.
 - [ ] Establish the missing optional native-runtime installation path; verify native dependencies/advisories and actual-laptop inference/offline behavior. Model weights alone do not activate Qwen. Earlier live-model claims remain historical, not verified by this pass.
 
 ### Latest integration: installation pins and optional model helpers
@@ -11,7 +15,8 @@
 - [x] **SEC.7** Apply reviewed assistant dependency pins through the shared requirements include, ship every requirements file, and test independent archive resolution. Exact-pin checks reject wildcards and conditional pins.
 - [x] **SEC.8** Fix A-1 in optional Ollama helpers using raw inventory metadata and conservative eligibility checks. Active chat uses embedded Qwen and does not call these helpers; this is not active-chat egress validation.
 - [ ] Review the newer embedded-Qwen path separately: dependency/runtime installation, model identity enforcement, ungrounded model prose, tool-call limits and actual laptop/offline operation. The earlier Python advisory report does not cover this new native runtime.
-- [ ] Noah's tailored Review proposal: [design scope](docs/tailored_review_proposal.md). Proposed only; preserve Show all tools, calculation inputs, evidence and export consent.
+- [x] Tailored Review first increment: optional focus panel in Review, Show all tools, unchanged calculation/consent state, and saved display preferences.
+- [ ] Noah's original pre-run questionnaire placement remains open; light/narrow-screen/keyboard and intended-user acceptance remain unverified. See docs/next_tasks/04_review_acceptance.md.
 
 See the newest HANDOFF checkpoint for combined verification. Older completion counts are historical.
 
