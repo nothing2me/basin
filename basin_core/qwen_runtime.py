@@ -24,6 +24,22 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL_PATH = ROOT / "models" / "qwen2.5-3b-instruct-q4_k_m.gguf"
 MANIFEST_PATH = ROOT / "models" / "manifest.json"
 
+# Trusted application pin; a colocated manifest is descriptive, not authority.
+MODEL_SHA256 = "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d"
+MODEL_BYTES = 2104932768
+
+
+def verify_model_file(path: Path) -> None:
+    """Verify every worker load before passing bytes to the native parser."""
+    with path.open("rb") as source:
+        import os
+        if os.fstat(source.fileno()).st_size != MODEL_BYTES:
+            raise ValueError("Model size does not match the application pin")
+        digest = hashlib.file_digest(source, "sha256").hexdigest()
+    if digest != MODEL_SHA256:
+        raise ValueError("Model SHA-256 does not match the application pin")
+
+
 CONTEXT_WINDOW_TOKENS = 8192
 MAX_OUTPUT_TOKENS = 1024
 
@@ -53,13 +69,15 @@ def get_model_info() -> dict[str, Any]:
             manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
         except Exception:
             pass
+    if not isinstance(manifest, dict):
+        manifest = {}
 
     try:
         import llama_cpp
         runtime_version = getattr(llama_cpp, "__version__", "unknown")
         runtime_installed = True
-    except ImportError:
-        runtime_version = "not installed"
+    except (ImportError, OSError):
+        runtime_version = "not installed or unable to load"
         runtime_installed = False
 
     return {
@@ -70,7 +88,7 @@ def get_model_info() -> dict[str, Any]:
         "model_name": manifest.get("filename", "qwen2.5-3b-instruct-q4_k_m.gguf"),
         "model_repo": manifest.get("repo", "Qwen/Qwen2.5-3B-Instruct-GGUF"),
         "model_revision": manifest.get("revision", "7dabda4d13d513e3e842b20f0d435c732f172cbe"),
-        "expected_sha256": manifest.get("sha256", "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d"),
+        "expected_sha256": MODEL_SHA256,
         "quantization": manifest.get("quantization", "Q4_K_M"),
         "context_tokens": CONTEXT_WINDOW_TOKENS,
         "max_output_tokens": MAX_OUTPUT_TOKENS,
@@ -82,6 +100,12 @@ def _worker_process_main(model_path_str: str,
                          resp_queue: mp.Queue,
                          cancel_event: mp.Event):
     """Background worker process executing llama.cpp inference."""
+    try:
+        verify_model_file(Path(model_path_str))
+    except (OSError, ValueError) as err:
+        resp_queue.put({"type": "init_error", "error": f"Model verification failed: {err}"})
+        return
+
     try:
         from llama_cpp import Llama
     except ImportError as err:
@@ -166,6 +190,8 @@ def _worker_process_main(model_path_str: str,
                     if "tool_calls" in delta and delta["tool_calls"]:
                         for tc_chunk in delta["tool_calls"]:
                             idx = tc_chunk.get("index", 0)
+                            if type(idx) is not int or not 0 <= idx < 3:
+                                raise ValueError("Invalid or over-budget tool-call index")
                             while len(accumulated_tool_calls) <= idx:
                                 accumulated_tool_calls.append({
                                     "id": f"call_{len(accumulated_tool_calls)}_{int(time.time()*1000)}",
@@ -282,6 +308,10 @@ class QwenInferenceClient:
             self._error_message = f"Model file not found at {self.model_path}"
             return
 
+        # A restarted worker must not consume stale requests or shutdown messages.
+        self._req_queue = mp.Queue()
+        self._resp_queue = mp.Queue()
+        self._cancel_event = mp.Event()
         self._status = "loading"
         self._error_message = None
 
@@ -392,6 +422,7 @@ class QwenInferenceClient:
                     raise RuntimeError(resp.get("error", "Generation error"))
 
             self.cancel()
+            self.shutdown()
             raise TimeoutError(f"Generation timed out after {timeout} seconds")
 
     def shutdown(self):

@@ -1,5 +1,9 @@
 # BASIN current handoff
 
+## Qwen audit branch checkpoint
+
+Base e35a57b; branch codex/qwen-runtime-audit. Focused assistant/security/drawer checks: 90 passed, 1 skipped (weights absent). Grounded response rendering, bounded validated tool batches, model-byte verification and timeout termination implemented. See docs/qwen_security_review.md for findings, commands and open installation/live-runtime gates. app.py and basin_ui.py untouched. Integrate with Claude tailored Review and run the full combined suite before merging.
+
 ## Latest installation / optional model-helper integration
 
 Combined Claude `2f63dda` (applied as `16f4dd1`) and model-helper fix `e6bc136` (adapted as `88060b7`) with upstream through `48300fb`. Preserved upstream embedded-Qwen chat; did not restore the superseded Ollama chat route. Both helper metadata checks and requirements includes are covered by the combined suite. Added four negative checks for wildcard/conditional pins.
