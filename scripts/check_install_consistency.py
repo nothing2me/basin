@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from packaging.requirements import Requirement, InvalidRequirement
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -85,8 +86,17 @@ def unpinned(specs: dict[str, str], packages=ASSISTANT_PACKAGES) -> list[str]:
         spec = specs.get(normalise(package))
         if spec is None:
             problems.append(f"{package}: absent")
-        elif "==" not in spec:
-            problems.append(f"{package}: not pinned ({spec})")
+        else:
+            try:
+                requirement = Requirement(spec)
+                pins = list(requirement.specifier)
+                exact = (normalise(requirement.name) == normalise(package)
+                         and requirement.marker is None and len(pins) == 1
+                         and pins[0].operator == "==" and "*" not in pins[0].version)
+            except InvalidRequirement:
+                exact = False
+            if not exact:
+                problems.append(f"{package}: not pinned ({spec})")
     return problems
 
 

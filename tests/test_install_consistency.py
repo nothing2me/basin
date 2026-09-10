@@ -232,3 +232,8 @@ def test_core_imports_and_runs_without_the_ollama_package(tmp_path):
         cwd=str(ROOT), env={**__import__("os").environ, "PYTHONPATH": f"{tmp_path}{__import__('os').pathsep}{ROOT}"},
     )
     assert "core-ok" in result.stdout, result.stderr[-2000:]
+
+
+@pytest.mark.parametrize("spec", ["httpx==0.28.*", "httpx>=0.28.1", "httpx==0.28.1; python_version<'3.0'", "httpx===0.28.1"])
+def test_checker_does_not_accept_ranges_or_conditional_pins(spec):
+    assert consistency.unpinned({"httpx": spec}, packages=["httpx"])
