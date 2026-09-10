@@ -350,6 +350,11 @@ def check_export_readiness(workspace: Workspace) -> dict:
                         + ", ".join(s.id for s in stale))
     if not accepted:
         blockers.append("No scenarios currently accepted")
+    try:
+        workspace.exportable()
+    except ValueError as error:
+        if str(error) not in blockers:
+            blockers.append(str(error))
     return {
         "ready": len(blockers) == 0,
         "selected_count": len(selected),
@@ -433,128 +438,57 @@ def find_scenarios_by_year(workspace: Workspace, year: int = 2011) -> dict:
 # ---------------------------------------------------------------------------
 
 def test_reservoir_infrastructure(workspace: Workspace, scenario_id: str = "",
-                                  year: int = 2011,
+                                  year: int | None = None,
                                   rainfall_reduction_pct: float = 0.0,
-                                  initial_storage_pct: float = 0.48,
-                                  conservation_pct: float = 0.0) -> dict:
-    """Run an illustrative reservoir drawdown simulation on a scenario to test
-    if water infrastructure would survive under drought conditions, including
-    optional additional rainfall reduction (e.g. 20% lower). Use when the user
-    asks if infrastructure can survive, reservoir impact, storage levels, or
-    restriction thresholds."""
-    from basin_core.analysis import simulate_reservoir_drawdown
-
-    if scenario_id:
-        scenario = workspace.get(scenario_id)
-    else:
-        year_matches = [s for s in workspace.scenarios
-                        if s.provenance.get("source_start", "").startswith(str(year))]
-        if not year_matches:
-            raise ValueError(
-                f"No historical drought events found for year {year}. "
-                "The bundled NOAA record covers 1991–2025. "
-                "BASIN cannot simulate unobserved or future years."
-            )
-        else:
-            scenario = max(year_matches, key=lambda s: s.score)
-
-    series = scenario.series.copy()
-    reduction = max(0.0, min(100.0, float(rainfall_reduction_pct)))
-    if reduction > 0:
-        multiplier = (100.0 - reduction) / 100.0
-        series = series * multiplier
-
-    init_pct = max(0.05, min(1.0, float(initial_storage_pct)))
-    cons_pct = max(0.0, min(0.5, float(conservation_pct) / 100.0 if conservation_pct > 1 else float(conservation_pct)))
-
-    sim = simulate_reservoir_drawdown(series, initial_pct=init_pct, conservation_pct=cons_pct)
-
-    initial_acft = sim["combined_acft"].iloc[0]
-    final_acft = sim["combined_acft"].iloc[-1]
-    final_pct = sim["combined_pct"].iloc[-1]
-    min_pct = sim["combined_pct"].min()
-    min_acft = sim["combined_acft"].min()
-
-    day_band1 = next((int(r["day"]) for _, r in sim.iterrows() if r["combined_pct"] <= 40.0), None)
-    day_band2 = next((int(r["day"]) for _, r in sim.iterrows() if r["combined_pct"] <= 30.0), None)
-    day_band3 = next((int(r["day"]) for _, r in sim.iterrows() if r["combined_pct"] <= 20.0), None)
-    day_band4 = next((int(r["day"]) for _, r in sim.iterrows() if r["combined_pct"] <= 15.0), None)
-
-    survived = bool(min_pct > 20.0)
-
+                                  initial_storage_pct: float = 48.0,
+                                  conservation_pct: float = 0.0,
+                                  baseline_kind: str = "scenario_revision",
+                                  pipeline_active: bool = True,
+                                  revision: int | None = None) -> dict:
+    """Save an illustrative experiment. All public percentages use 0 to 100."""
+    from basin_core.simulation import SimulationSettings, percent_fraction, resolve_scenario, spectrum_view
+    scenario = resolve_scenario(workspace, scenario_id, year, revision)
+    reduction = percent_fraction(rainfall_reduction_pct, "Rainfall reduction")
+    settings = SimulationSettings.from_percent(initial_storage_percent=initial_storage_pct,
+        conservation_percent=conservation_pct,
+        baseline_kind=baseline_kind, pipeline_active=pipeline_active,
+        retention_percentages=((1 - reduction) * 100,))
+    run = workspace.run_simulation(scenario.id, settings)
+    spec = spectrum_view(run)
+    row = spec["summary_table"][0]
+    sim = next(iter(spec["tier_results"].values()))["df"]
     return {
-        "scenario_id": scenario.id,
-        "source_start": scenario.provenance["source_start"],
-        "source_end": scenario.provenance["source_end"],
-        "duration_days": scenario.features["duration_days"],
-        "rainfall_reduction_pct": round(reduction, 1),
-        "initial_pct": round(init_pct * 100, 1),
-        "initial_acft": round(initial_acft, 0),
-        "final_pct": round(final_pct, 1),
-        "final_acft": round(final_acft, 0),
-        "min_pct": round(min_pct, 1),
-        "min_acft": round(min_acft, 0),
-        "survived_critical_20pct": survived,
-        "day_band1_40pct": day_band1,
-        "day_band2_30pct": day_band2,
-        "day_band3_20pct": day_band3,
-        "day_band4_15pct": day_band4,
-        "total_inflow_acft": round(sim["inflow_acft"].sum(), 0),
-        "total_evap_acft": round(sim["evap_acft"].sum(), 0),
-        "total_demand_served_acft": round(sim["served_demand_acft"].sum(), 0),
+        "simulation_id": run["id"], "baseline_kind": baseline_kind,
+        "scenario_id": scenario.id, "scenario_revision": scenario.revision,
+        "source_start": scenario.provenance["source_start"], "source_end": scenario.provenance["source_end"],
+        "duration_days": spec["duration_days"], "rainfall_reduction_pct": rainfall_reduction_pct,
+        "initial_pct": spec["initial_pct"], "conservation_pct": spec["conservation_pct"],
+        "initial_acft": settings.initial_storage_fraction * 919900,
+        **{key: row[key] for key in ("final_pct", "final_acft", "min_pct", "min_acft", "survived_critical_20pct")},
+        "day_band1_40pct": row["day_stage1_40"], "day_band2_30pct": row["day_stage2_30"],
+        "day_band3_20pct": row["day_stage3_20"], "day_band4_15pct": row["day_emergency_15"],
+        "total_inflow_acft": round(float(sim["inflow_acft"].sum()), 0),
+        "total_evap_acft": round(float(sim["evap_acft"].sum()), 0),
+        "total_demand_served_acft": round(float(sim["served_demand_acft"].sum()), 0),
         "_snapshot": workspace.source.manifest["sha256"][:12],
     }
 
 
-# ---------------------------------------------------------------------------
-# Tool 13 — Multi-tier stress spectrum sweep
-# ---------------------------------------------------------------------------
-
-def run_stress_spectrum(workspace: Workspace, scenario_id: str = "",
-                        year: int = 2011,
-                        initial_storage_pct: float = 0.48,
-                        conservation_pct: float = 0.0) -> dict:
-    """Run an automated multi-tier stress spectrum sweep across 4 rainfall tiers
-    (100% baseline, 80% moderate, 60% severe, 40% catastrophic) to calculate
-    threshold breach days and system tipping points."""
-    from basin_core.analysis import simulate_stress_spectrum
-
-    if scenario_id:
-        scenario = workspace.get(scenario_id)
-    else:
-        year_matches = [s for s in workspace.scenarios
-                        if s.provenance.get("source_start", "").startswith(str(year))]
-        if not year_matches:
-            raise ValueError(
-                f"No historical drought events found for year {year}. "
-                "The bundled NOAA record covers 1991–2025. "
-                "BASIN cannot simulate unobserved or future years."
-            )
-        else:
-            scenario = max(year_matches, key=lambda s: s.score)
-
-    init_pct = max(0.05, min(1.0, float(initial_storage_pct)))
-    cons_pct = max(0.0, min(0.5, float(conservation_pct) / 100.0 if conservation_pct > 1 else float(conservation_pct)))
-
-    spec = simulate_stress_spectrum(
-        scenario.series,
-        tiers=(1.0, 0.8, 0.6, 0.4),
-        initial_pct=init_pct,
-        conservation_pct=cons_pct
-    )
-
-    return {
-        "scenario_id": scenario.id,
-        "source_start": scenario.provenance["source_start"],
-        "source_end": scenario.provenance["source_end"],
-        "duration_days": scenario.features["duration_days"],
-        "initial_pct": round(init_pct * 100, 1),
-        "conservation_pct": round(cons_pct * 100, 1),
-        "summary_table": spec["summary_table"],
-        "tiers": spec["summary_table"],
-        "tier_results": spec["tier_results"],
-        "_snapshot": workspace.source.manifest["sha256"][:12],
-    }
+def run_stress_spectrum(workspace: Workspace, scenario_id: str = "", year: int | None = None,
+                        initial_storage_pct: float = 48.0, conservation_pct: float = 0.0,
+                        baseline_kind: str = "scenario_revision", pipeline_active: bool = True,
+                        revision: int | None = None) -> dict:
+    """Save four additional rainfall stress tiers; public percentages are 0 to 100."""
+    from basin_core.simulation import SimulationSettings, resolve_scenario, spectrum_view
+    scenario = resolve_scenario(workspace, scenario_id, year, revision)
+    settings = SimulationSettings.from_percent(initial_storage_percent=initial_storage_pct,
+        conservation_percent=conservation_pct, baseline_kind=baseline_kind, pipeline_active=pipeline_active)
+    run = workspace.run_simulation(scenario.id, settings)
+    spec = spectrum_view(run)
+    return {**spec, "simulation_id": run["id"], "baseline_kind": baseline_kind,
+            "scenario_id": scenario.id, "scenario_revision": scenario.revision,
+            "source_start": scenario.provenance["source_start"], "source_end": scenario.provenance["source_end"],
+            "tiers": spec["summary_table"], "_snapshot": workspace.source.manifest["sha256"][:12]}
 
 
 # ---------------------------------------------------------------------------

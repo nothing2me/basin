@@ -360,6 +360,8 @@ def test_conflict_private_notes_stay_opt_in(approved):
         "Survey vintages disagree", "Different measurement years", "PRIVATE-CONFLICT-SENTINEL",
     )
     assert conflict_id
+    for identifier in approved.selected:
+        approved.get(identifier).review(True, "Accepted for unit test")
     accepted = approved.exportable()
 
     assert "PRIVATE-CONFLICT-SENTINEL" not in page_text(build_fallback_pdf(approved, accepted))

@@ -113,16 +113,17 @@ def cmd_ask(args):
 
 def cmd_spectrum(args):
     ws, meta = get_or_create_workspace()
-    sid = args.scenario_id or ws.selected[0]
+    sid = args.scenario_id
     init_pct = args.initial_pct
     cons_pct = args.conservation_pct
 
     print(f"\n=== Running Multi-Tier Stress Spectrum for {sid} ===")
-    print(f"Initial Storage: {init_pct*100:.1f}% | Conservation: {cons_pct:.1f}%\n")
+    print(f"Initial Storage: {init_pct:.1f}% | Conservation: {cons_pct:.1f}%\n")
 
     res = run_stress_spectrum(ws, scenario_id=sid,
                               initial_storage_pct=init_pct,
-                              conservation_pct=cons_pct)
+                              conservation_pct=cons_pct, baseline_kind=args.baseline, pipeline_active=not args.no_pipeline)
+    save_workspace(ws, meta)
     from basin_core.assistant import render_tool_result
     rendered = render_tool_result("run_stress_spectrum", res)
     print(rendered)
@@ -135,7 +136,13 @@ def cmd_review(args):
     accept = not args.reject
     note = args.note or "Hydrologist verified for drought contingency planning."
 
-    s.review(accept, note)
+    if args.simulation:
+        run = ws.active_simulation(sid)
+        if run is None or args.reject:
+            raise ValueError("Choose an existing current simulation to accept; omit --simulation for rainfall review")
+        ws.review_simulation(run["id"], note)
+    else:
+        s.review(accept, note)
     save_workspace(ws, meta)
     print(f"Successfully reviewed {sid}: status={s.status}, revision=r{s.revision}")
     print(f"Review note: \"{note}\"")
@@ -192,9 +199,11 @@ def main():
 
     # spectrum
     p_spectrum = subparsers.add_parser("spectrum", help="Run 1-click multi-tier stress spectrum sweep")
-    p_spectrum.add_argument("scenario_id", type=str, nargs="?", default="", help="Scenario ID (e.g. B-016)")
-    p_spectrum.add_argument("--initial-pct", type=float, default=0.48, help="Initial reservoir storage fraction (0.48 = 48%)")
+    p_spectrum.add_argument("scenario_id", type=str, help="Exact scenario ID (e.g. B-016)")
+    p_spectrum.add_argument("--initial-pct", type=float, default=48.0, help="Initial reservoir storage percent (48 = 48%)")
     p_spectrum.add_argument("--conservation-pct", type=float, default=0.0, help="Emergency conservation cut percentage (0 to 30)")
+    p_spectrum.add_argument("--baseline", choices=["scenario_revision", "observed_window"], default="scenario_revision")
+    p_spectrum.add_argument("--no-pipeline", action="store_true")
     p_spectrum.set_defaults(func=cmd_spectrum)
 
     # review
@@ -202,6 +211,7 @@ def main():
     p_review.add_argument("scenario_id", type=str, help="Scenario ID to review")
     p_review.add_argument("--reject", action="store_true", help="Reject scenario instead of accepting")
     p_review.add_argument("--note", type=str, required=True, help="Professional hydrologist justification note")
+    p_review.add_argument("--simulation", action="store_true", help="Review the active saved simulation rather than rainfall")
     p_review.set_defaults(func=cmd_review)
 
     # export

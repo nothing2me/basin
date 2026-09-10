@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -75,7 +76,7 @@ def reconstruct_record(record, reference, legacy=False):
             reference.features(frame)
             revision += 1
             status, approval = "unreviewed", None
-        elif action == "custom evidence changed":
+        elif action in ("custom evidence changed", "supporting evidence changed"):
             if legacy:
                 raise ValueError("Legacy audit cannot contain custom evidence changes")
             revision += 1
@@ -126,11 +127,42 @@ def reconstruct_audit(source, audit, legacy=False, require_export=False):
     if not legacy:
         validate_evidence(audit["evidence"], audit["evidence_refs"], audit["conflicts"], ids)
     custom = audit.get("custom_uploads", [])
-    if (audit["schema_version"] == "2.1") != bool(custom):
+    if audit["schema_version"] != "2.2" and (audit["schema_version"] == "2.1") != bool(custom):
         raise ValueError("Custom upload schema mismatch")
     validate_records(custom, source)
     if not legacy:
         validate_links(custom, audit["evidence_refs"], audit["evidence"], scenarios)
+    runs = audit.get("simulation_runs", [])
+    extended_history = any(e["action"] == "supporting evidence changed" or "review_context_sha256" in e for s in scenarios for e in s.history)
+    if (runs or extended_history) and audit["schema_version"] != "2.2":
+        raise ValueError("Simulation schema mismatch")
+    if audit["schema_version"] == "2.2":
+        from basin_core.simulation import validate_run, is_current, content_hash, evidence_context
+        by_id = {s.id: s for s in scenarios}
+        view = SimpleNamespace(source=source, reference=reference, get=lambda i: by_id[i],
+                               evidence=audit["evidence"], evidence_refs=audit["evidence_refs"], conflicts=audit["conflicts"])
+        by_run = {r["id"]: r for r in runs}
+        if len(by_run) != len(runs):
+            raise ValueError("Duplicate saved simulation IDs")
+        for run in runs:
+            validate_run(view, run)
+        active, reviews = audit["active_simulations"], audit["simulation_reviews"]
+        for sid, rid in active.items():
+            if sid not in by_id or rid not in by_run or by_run[rid]["scenario_id"] != sid:
+                raise ValueError("Active simulation identity mismatch")
+        for rid, review in reviews.items():
+            if rid not in by_run or review["run_id"] != rid or not isinstance(review["rationale"], str) or not review["rationale"].strip() or not review["at"]:
+                raise ValueError("Invalid simulation review")
+        if require_export:
+            for sid in selected:
+                scenario = by_id[sid]
+                if scenario.status != "accepted":
+                    continue
+                if sid in active and (active[sid] not in reviews or not is_current(view, by_run[active[sid]])):
+                    raise ValueError("Current simulation must be reviewed before export")
+                approvals = [e for e in scenario.history if e["action"] == "accepted"]
+                if approvals and approvals[-1].get("review_context_sha256", content_hash(evidence_context(view, scenario))) != content_hash(evidence_context(view, scenario)):
+                    raise ValueError("Approved evidence context changed")
     if require_export:
         chosen = [s for s in scenarios if s.id in selected]
         if any(s.status == "unreviewed" for s in chosen) or not any(s.status == "accepted" for s in chosen):

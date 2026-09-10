@@ -29,6 +29,10 @@ FILES = {'daily_rainfall.csv', 'shortlist.csv', 'audit.json', 'Hydrologist_Hando
 
 
 def verification_scope(version):
+    if version == "2.2":
+        scope = verification_scope("2.1")
+        return {"checks": scope["checks"] + ["saved simulation baselines, settings, trajectories and inclusive threshold replay", "current simulation review and evidence context"],
+                "excluded": [e for e in scope["excluded"] if e != "reservoir experiment and threshold timing"] + ["physical model calibration, forecasts and official policy interpretation"]}
     if version == "2.1":
         return {"checks": CHECKS + ["custom normalized rainfall, metadata hashes, version links and paired-day comparison replay", "custom evidence changes invalidate linked scenario approvals", "explicit custom data consent and original-byte exclusion"],
                 "excluded": [item.replace("saved comparison results", "saved ranking comparison results") for item in EXCLUDED] + ["original custom CSV byte identity without the private original; user-declared geographic and daily suitability"]}
@@ -95,6 +99,32 @@ def generate_brief(workspace, accepted):
                   "Comparisons are replayed against the bundled NOAA snapshot. They support scenario review; they do not replace scenario rainfall, establish catchment suitability or calibrate a model."]
         for record in workspace.custom_uploads:
             lines.append("- " + text_cell(record["id"]) + ": " + text_cell(record["station"]) + "; " + text_cell(record["comparison"]["status"]) + "; linked scenarios: " + ", ".join(record["scenario_ids"]))
+    if getattr(workspace, "simulation_runs", []):
+        from basin_core.analysis import threshold_text
+        lines = [line.replace("The separate illustrative reservoir experiment is excluded from this packet.", "Saved illustrative experiments are included below; numerical replay does not establish physical validity.") for line in lines]
+        lines += ["", "## Saved illustrative simulations", "",
+                  "Thresholds are inclusive (at or below), evaluated at initial storage (day 0) and daily endpoints. Not reached means only within the modeled period. These are not official restriction stages or forecasts.",
+                  "All saved experiment versions and numerical inputs are in audit.json. The following are the active experiments for accepted rainfall revisions; historical versions are not current approvals."]
+        by_run = {r["id"]: r for r in workspace.simulation_runs}
+        for scenario in accepted:
+            rid = workspace.active_simulations.get(scenario.id)
+            if rid is None:
+                lines.append(f"No saved simulation for {scenario.id}; no settings are inferred.")
+                continue
+            run = by_run[rid]
+            settings = run["settings"]
+            lines += ["", f"### {scenario.id}: {rid}",
+                      f"Scenario revision {run['scenario_revision']}; baseline {settings['baseline_kind']}; source SHA-256 {run['snapshot_sha256']}; baseline SHA-256 {run['baseline']['sha256']}.",
+                      f"Initial storage {settings['initial_storage_fraction'] * 100:g}%; conservation {settings['conservation_fraction'] * 100:g}%; pipeline available: {settings['pipeline_active']}. Model {run['model_version']}; threshold rules {run['threshold_version']}.",
+                      "Review rationale: " + text_cell(workspace.simulation_reviews.get(rid, {}).get("rationale", "Not reviewed")),
+                      "", "| Rainfall retained from baseline | Minimum storage | Final storage | At/below 20% |", "|---|---|---|---|"]
+            for row in run["results"]["summary_table"]:
+                lines.append(f"| {row['retention_pct']:g}% | {row['min_pct']:.1f}% | {row['final_pct']:.1f}% | {threshold_text(row['day_stage3_20'])} |")
+            lines += ["", "Conservation comparison: same baseline, pipeline and initial storage; only demand reduction changes. A delay is reported only when both runs reach the threshold within the modeled period."]
+            for comparison in run["results"]["conservation_comparison"]:
+                delay = f"{comparison['delay_days']} days" if comparison["delay_days"] is not None else "Not defined within modeled period"
+                lines.append(f"- {comparison['retention_percent']:g}% retained: no conservation = {threshold_text(comparison['no_conservation_day_20'])}; chosen conservation = {threshold_text(comparison['chosen_conservation_day_20'])}; delay = {delay}. Mean served evaporation {comparison['mean_evaporation_acft_per_day']:.1f} ac-ft/day; mean served demand {comparison['mean_served_demand_acft_per_day']:.1f} ac-ft/day.")
+            lines += ["", "Material assumptions:"] + [f"- {text_cell(k)}: {text_cell(v)}" for k, v in run["assumptions"].items()]
     return '\n'.join(lines) + '\n'
 
 
@@ -143,7 +173,7 @@ def _verify(payload):
         if sum(f.file_size for f in archive.infolist()) > 100_000_000:
             raise ValueError('Bundle is too large')
         manifest = json.loads(archive.read('bundle_manifest.json'))
-        if manifest['schema_version'] not in (SCHEMA, '2.1') or manifest['basin_version'] != __version__:
+        if manifest['schema_version'] not in (SCHEMA, '2.1', '2.2') or manifest['basin_version'] != __version__:
             raise ValueError('Unsupported bundle version; restore the original session and re-export with BASIN 0.2')
         if set(manifest['files']) != FILES:
             raise ValueError('Missing file checksums')
@@ -164,7 +194,7 @@ def _verify(payload):
             raise ValueError('Private annotations included despite privacy setting')
         if 'custom_originals' in audit:
             raise ValueError('Original private CSV bytes must not appear in a packet')
-        if audit['schema_version'] == '2.1' and manifest.get('custom_data_included') is not True:
+        if audit.get('custom_uploads') and manifest.get('custom_data_included') is not True:
             raise ValueError('Custom data consent is missing')
         params, reference, scenarios = reconstruct_audit(source, audit, require_export=True)
         by_id = {s.id: s for s in scenarios}
@@ -180,15 +210,26 @@ def _verify(payload):
         np.testing.assert_allclose(rainfall.precip_mm, expected.precip_mm, rtol=1e-10, atol=1e-10)
         summary = pd.read_csv(io.BytesIO(archive.read('shortlist.csv')), float_precision='round_trip')
         expected_summary = [summary_record(s) for s in accepted]
+        # Older 2.0/2.1 packets predate the context column. Accept only that named
+        # historical layout; all numerical fields still undergo the same replay.
+        if manifest['schema_version'] in ('2.0', '2.1') and 'modeling_scope' not in summary.columns:
+            expected_summary = [{k: v for k, v in row.items() if k != 'modeling_scope'} for row in expected_summary]
         if len(summary) != len(accepted) or list(summary.columns) != list(expected_summary[0]):
             raise ValueError('Shortlist summary inventory mismatch')
         for row, wanted in zip(summary.to_dict('records'), expected_summary): compare_values(row, wanted, 'Shortlist summary')
         view = SimpleNamespace(**{k: audit[k] for k in ('id', 'created_at', 'weights', 'evidence', 'evidence_refs', 'conflicts')})
         view.custom_uploads = audit.get('custom_uploads', [])
-        if archive.read('Hydrologist_Handoff_Brief.md') != generate_brief(view, accepted).encode():
+        view.simulation_runs = audit.get('simulation_runs', [])
+        view.active_simulations = audit.get('active_simulations', {})
+        view.simulation_reviews = audit.get('simulation_reviews', {})
+        expected_brief = generate_brief(view, accepted)
+        allowed_briefs = {expected_brief.encode()}
+        if manifest['schema_version'] in ('2.0', '2.1'):
+            allowed_briefs.add(expected_brief.split('\n', 2)[2].encode())
+        if archive.read('Hydrologist_Handoff_Brief.md') not in allowed_briefs:
             raise ValueError('Handoff brief differs from audited content')
         return {'verified': True, 'run_id': audit['id'], 'scenarios_replayed': len(accepted),
-                'audit_records_replayed': len(scenarios), 'custom_comparisons_replayed': len(audit.get('custom_uploads', [])), 'checks': manifest['verification_scope']['checks'], 'excluded': manifest['verification_scope']['excluded'],
+                'audit_records_replayed': len(scenarios), 'simulations_replayed': len(audit.get('simulation_runs', [])), 'custom_comparisons_replayed': len(audit.get('custom_uploads', [])), 'checks': manifest['verification_scope']['checks'], 'excluded': manifest['verification_scope']['excluded'],
                 'implementation_matches_current': identity == implementation_identity()}
 
 

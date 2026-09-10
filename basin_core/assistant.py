@@ -916,11 +916,11 @@ def semantic_query_route(workspace, prompt: str) -> str:
     if red_match:
         rainfall_reduction_pct = float(red_match.group(1))
 
-    initial_storage_pct = 0.48
+    initial_storage_pct = 48.0
     store_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:initial|starting|storage|capacity|pool)", p)
     if store_match:
         val = float(store_match.group(1))
-        initial_storage_pct = val / 100.0 if val > 1.0 else val
+        initial_storage_pct = val
 
     # 4. Extract Station
     station_id = None
@@ -962,7 +962,7 @@ def semantic_query_route(workspace, prompt: str) -> str:
             res = run_stress_spectrum(
                 workspace,
                 scenario_id=default_id if id_matches else "",
-                year=year if year is not None else 2011,
+                year=year,
                 initial_storage_pct=initial_storage_pct,
                 conservation_pct=conservation_pct,
             )
@@ -973,7 +973,7 @@ def semantic_query_route(workspace, prompt: str) -> str:
             res = test_reservoir_infrastructure(
                 workspace,
                 scenario_id=default_id if id_matches else "",
-                year=year if year is not None else 2011,
+                year=year,
                 rainfall_reduction_pct=rainfall_reduction_pct,
                 initial_storage_pct=initial_storage_pct,
                 conservation_pct=conservation_pct,

@@ -271,6 +271,17 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
     return pd.DataFrame(records)
 
 
+def threshold_crossing_day(simulation: pd.DataFrame, initial_fraction: float, threshold_percent: float) -> int | None:
+    if initial_fraction * 100 <= threshold_percent:
+        return 0
+    crossed = simulation.loc[simulation["combined_pct"] <= threshold_percent, "day"]
+    return int(crossed.iloc[0]) if len(crossed) else None
+
+
+def threshold_text(day: int | None) -> str:
+    return "Not reached within modeled period" if day is None else "Already at/below at start (day 0)" if day == 0 else f"Day {day} (end of day)"
+
+
 def simulate_stress_spectrum(series: pd.DataFrame,
                              tiers: tuple[float, ...] = (1.0, 0.8, 0.6, 0.4),
                              initial_pct: float = 0.48,
@@ -304,17 +315,18 @@ def simulate_stress_spectrum(series: pd.DataFrame,
             pipeline_active=pipeline_active,
             config=cfg,
         )
-        min_pct = round(float(sim_df["combined_pct"].min()), 1)
+        unrounded_min = float(sim_df["combined_pct"].min())
+        min_pct = round(unrounded_min, 1)
         min_acft = round(float(sim_df["combined_acft"].min()), 0)
         final_pct = round(float(sim_df["combined_pct"].iloc[-1]), 1)
         final_acft = round(float(sim_df["combined_acft"].iloc[-1]), 0)
 
         critical_thresh = cfg.stage_bands_pct[2] * 100 if len(cfg.stage_bands_pct) >= 3 else 20.0
-        day_b1 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= (cfg.stage_bands_pct[0] * 100 if len(cfg.stage_bands_pct) >= 1 else 40.0)), None)
-        day_b2 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= (cfg.stage_bands_pct[1] * 100 if len(cfg.stage_bands_pct) >= 2 else 30.0)), None)
-        day_b3 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= critical_thresh), None)
-        day_b4 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= (cfg.stage_bands_pct[3] * 100 if len(cfg.stage_bands_pct) >= 4 else 15.0)), None)
-        survived = bool(min_pct > critical_thresh)
+        day_b1 = threshold_crossing_day(sim_df, initial_pct, cfg.stage_bands_pct[0] * 100 if len(cfg.stage_bands_pct) >= 1 else 40.0)
+        day_b2 = threshold_crossing_day(sim_df, initial_pct, cfg.stage_bands_pct[1] * 100 if len(cfg.stage_bands_pct) >= 2 else 30.0)
+        day_b3 = threshold_crossing_day(sim_df, initial_pct, critical_thresh)
+        day_b4 = threshold_crossing_day(sim_df, initial_pct, cfg.stage_bands_pct[3] * 100 if len(cfg.stage_bands_pct) >= 4 else 15.0)
+        survived = bool(initial_pct * 100 > critical_thresh and unrounded_min > critical_thresh)
 
         label = tier_labels.get(round(m, 2), f"{int(round(m * 100))}% ({(int(round(m * 100)) - 100):+d}% Rain)")
 

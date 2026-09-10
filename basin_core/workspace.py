@@ -56,6 +56,9 @@ class Workspace:
         self.comparisons = []
         self.custom_uploads = []
         self.custom_originals = {}
+        self.simulation_runs = []
+        self.active_simulations = {}
+        self.simulation_reviews = {}
         elapsed = time.perf_counter() - wall
         self.footprint = {"wall_seconds": elapsed, "cpu_seconds": time.process_time() - cpu,
                           "process_rss_mib_at_end": psutil.Process().memory_info().rss / 1024**2,
@@ -71,6 +74,49 @@ class Workspace:
             if scenario.id == identifier:
                 return scenario
         raise ValueError(f"Unknown scenario: {identifier}")
+
+    def run_simulation(self, identifier: str, settings: SimulationSettings) -> dict:
+        from basin_core.simulation import create_run
+        run = create_run(self, self.get(identifier), settings)
+        if run["id"] not in {r["id"] for r in self.simulation_runs}:
+            self.simulation_runs.append(run)
+        self.active_simulations[identifier] = run["id"]
+        return run
+
+    def active_simulation(self, identifier: str) -> dict | None:
+        return next((r for r in self.simulation_runs if r["id"] == self.active_simulations.get(identifier)), None)
+
+    def review_simulation(self, run_id: str, rationale: str) -> None:
+        from basin_core.simulation import is_current, validate_run
+        run = next((r for r in self.simulation_runs if r["id"] == run_id), None)
+        if run is None or not is_current(self, run) or self.active_simulations.get(run["scenario_id"]) != run_id:
+            raise ValueError("Simulation changed or is stale; run and inspect the current inputs")
+        if not rationale.strip():
+            raise ValueError("Record a public simulation review rationale")
+        validate_run(self, run)
+        self.simulation_reviews[run_id] = {"run_id": run_id, "at": utc_now(), "rationale": rationale.strip()}
+
+    def review_token(self, identifier: str) -> str:
+        from basin_core.simulation import content_hash, evidence_context
+        return content_hash(evidence_context(self, self.get(identifier)))
+
+    def accept_reviewed(self, tokens: dict[str, str], note: str) -> None:
+        if not tokens or not note.strip():
+            raise ValueError("Select reviewed revisions and record your rationale")
+        for identifier, token in tokens.items():
+            if identifier not in self.selected or self.get(identifier).status == "rejected" or token != self.review_token(identifier):
+                raise ValueError("A selected revision changed or is rejected; inspect it in Review")
+        for identifier in tokens:
+            self.get(identifier).review(True, note)
+            self.get(identifier).history[-1]["review_context_sha256"] = tokens[identifier]
+
+    def _invalidate_evidence(self, identifiers: list[str]) -> None:
+        for identifier in identifiers:
+            scenario = self.get(identifier)
+            scenario.revision += 1
+            scenario.status, scenario.approved_revision = "unreviewed", None
+            scenario.history.append({"at": utc_now(), "action": "supporting evidence changed",
+                                     "revision": scenario.revision, "series_sha256": scenario.digest()})
 
     def rerank(self, weights: dict):
         previous = self.weights.copy()
@@ -89,6 +135,7 @@ class Workspace:
             refs[identifier].append(record["id"])
         validate_evidence(records, refs, self.conflicts, refs)
         self.evidence, self.evidence_refs = records, refs
+        self._invalidate_evidence(list(scenario_ids))
         self.evidence_history.append({"at": utc_now(), "action": "add evidence", "record": dict(record), "scenario_ids": list(scenario_ids)})
 
     def save_custom_upload(self, raw: bytes, *, reviewed: bool, **metadata):
@@ -130,6 +177,7 @@ class Workspace:
                     "status": "unresolved", "resolution": "", "private_note": private_note}
         validate_evidence(self.evidence, self.evidence_refs, self.conflicts + [conflict], self.evidence_refs)
         self.conflicts.append(conflict)
+        self._invalidate_evidence([i for i, refs in self.evidence_refs.items() if left_id in refs or right_id in refs])
         self.evidence_history.append({"at": utc_now(), "action": "add conflict", "record": conflict.copy()})
         return conflict["id"]
 
@@ -142,6 +190,7 @@ class Workspace:
         conflicts = [updated if c["id"] == identifier else c for c in self.conflicts]
         validate_evidence(self.evidence, self.evidence_refs, conflicts, self.evidence_refs)
         self.conflicts = conflicts
+        self._invalidate_evidence([i for i, refs in self.evidence_refs.items() if updated["left_id"] in refs or updated["right_id"] in refs])
         self.evidence_history.append({"at": utc_now(), "action": "conflict disposition", "before": previous, "after": updated.copy()})
 
     def compare_weights(self, weights, save_result=False):
@@ -213,6 +262,12 @@ class Workspace:
             approvals = [e for e in s.history if e["action"] == "accepted"]
             if not approvals or approvals[-1]["series_sha256"] != s.digest():
                 raise ValueError("Approved rainfall changed; review the current revision again")
+            run = self.active_simulation(s.id)
+            if run is not None:
+                from basin_core.simulation import is_current, validate_run
+                if not is_current(self, run) or run["id"] not in self.simulation_reviews:
+                    raise ValueError(f"Review the current saved simulation for {s.id} before exporting")
+                validate_run(self, run)
         return accepted
 
     def record(self, include_notes=False, include_series=False, include_custom=False):
@@ -221,7 +276,10 @@ class Workspace:
             raise ValueError("Explicit consent is required to include custom numerical data and source metadata")
         validate_records(self.custom_uploads, self.source)
         validate_links(self.custom_uploads, self.evidence_refs, self.evidence, self.scenarios)
-        result = {"schema_version": "2.1" if self.custom_uploads else "2.0", "id": self.id, "created_at": self.created_at,
+        extended = bool(self.simulation_runs) or any(
+            e["action"] == "supporting evidence changed" or "review_context_sha256" in e
+            for scenario in self.scenarios for e in scenario.history)
+        result = {"schema_version": "2.2" if extended else "2.1" if self.custom_uploads else "2.0", "id": self.id, "created_at": self.created_at,
                   "snapshot_sha256": self.source.manifest["sha256"], "params": asdict(self.params),
                   "weights": self.weights, "selected": self.selected, "generation": self.generation,
                   "clustering": self.clustering, "footprint": self.footprint, "selection_history": self.selection_history,
@@ -230,6 +288,9 @@ class Workspace:
                       evidence_history=self.evidence_history, comparisons=self.comparisons)
         if self.custom_uploads:
             result["custom_uploads"] = self.custom_uploads
+        if extended:
+            result.update(simulation_runs=self.simulation_runs, active_simulations=self.active_simulations,
+                          simulation_reviews=self.simulation_reviews)
         if include_notes:
             result["provider_notes"] = self.notes
         return public_copy(result, include_notes)
@@ -257,7 +318,7 @@ class Workspace:
     @classmethod
     def load(cls, source, path):
         data = json.loads(Path(path).read_text(encoding="utf-8"))
-        if data["schema_version"] not in ("1.0", "2.0", "2.1"):
+        if data["schema_version"] not in ("1.0", "2.0", "2.1", "2.2"):
             raise ValueError("Saved session uses an unsupported schema version")
         legacy_warning = None
         if data.get("snapshot_sha256") != source.manifest["sha256"]:
@@ -277,6 +338,9 @@ class Workspace:
         obj.custom_originals = data.get("custom_originals", {})
         validate_records(obj.custom_uploads, source, obj.custom_originals)
         obj.notes = data.get("provider_notes", "")
+        obj.simulation_runs = data.get("simulation_runs", [])
+        obj.active_simulations = data.get("active_simulations", {})
+        obj.simulation_reviews = data.get("simulation_reviews", {})
         for record, scenario in zip(data["scenarios"], obj.scenarios):
             frame = pd.DataFrame(record["values"], index=pd.to_datetime(record["dates"]), columns=record["stations"])
             if list(frame.columns) != obj.reference.stations or not frame.index.equals(scenario.series.index):

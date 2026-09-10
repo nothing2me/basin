@@ -56,6 +56,7 @@ class ExperimentConfig:
     scenario_id: str | None = None
     scenario_revision: int | None = None
     selected: bool = False
+    saved_run_id: str | None = None
     system_config: WaterSystemConfig | None = None
 
     def __post_init__(self) -> None:
@@ -74,11 +75,17 @@ class ExperimentConfig:
             raise ValueError("Scenario revision must be an integer")
         if self.scenario_id is not None and not isinstance(self.scenario_id, str):
             raise ValueError("Scenario identifier must be a string")
+        if self.saved_run_id is not None and not isinstance(self.saved_run_id, str):
+            raise ValueError("Saved run identifier must be a string")
+        if self.system_config is not None:
+            if not isinstance(self.system_config, WaterSystemConfig):
+                raise ValueError("Water system must be a WaterSystemConfig")
+            self.system_config.validate()
 
     @property
     def source_label(self) -> str:
         if self.selected:
-            return "Selected in Review"
+            return f"Saved reviewed run {self.saved_run_id}" if self.saved_run_id else "Selected in Review"
         return "BASIN default; no experiment was run in Review"
 
     @property
@@ -98,8 +105,8 @@ class ExperimentConfig:
         rows = [
             ("Configuration source", self.source_label),
             ("Experiment scenario", self.scenario_label),
-            ("Initial storage", f"{self.initial_pct * 100:.0f}% of combined capacity"),
-            ("Emergency conservation", f"{self.conservation_pct * 100:.0f}% demand reduction"),
+            ("Initial storage", f"{self.initial_pct * 100:g}% of combined capacity"),
+            ("Emergency conservation", f"{self.conservation_pct * 100:g}% demand reduction"),
             ("Pipeline supply", "Assumed available" if self.pipeline_active else "Assumed unavailable"),
             ("Rainfall retention tiers", self.tier_label),
         ]
@@ -118,9 +125,10 @@ class ExperimentConfig:
             "scenario_id": self.scenario_id,
             "scenario_revision": self.scenario_revision,
             "selected": bool(self.selected),
+            "saved_run_id": self.saved_run_id,
         }
         if self.system_config is not None:
-            data["system_config"] = self.system_config.name
+            data["system_config"] = self.system_config.describe_assumptions()
         return json.dumps(data, sort_keys=True)
 
 
@@ -417,6 +425,78 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
     )
 
 
+def _metrics_from_saved_run(run: dict) -> ReportMetrics:
+    """Project one validated saved run without recalculating report-only results."""
+    results = run["results"]
+    summary = results["summary_table"]
+    earliest: int | None = None
+    tipping: str | None = None
+    for row in summary:
+        day = row.get("day_stage3_20")
+        if day is not None and (earliest is None or day < earliest):
+            earliest = int(day)
+            tipping = row["tier_label"].split(" (")[0]
+    comparisons = results.get("conservation_comparison", [])
+    comparison = next((row for row in comparisons if row.get("retention_percent") == 100), comparisons[0] if comparisons else {})
+    reference_rows = results.get("no_conservation_trajectories", {}).get("1.0", [])
+    mean_evaporation = (
+        sum(float(row["evap_acft"]) for row in reference_rows) / len(reference_rows)
+        if reference_rows else comparison.get("mean_evaporation_acft_per_day")
+    )
+    mean_demand = (
+        sum(float(row["served_demand_acft"]) for row in reference_rows) / len(reference_rows)
+        if reference_rows else comparison.get("mean_served_demand_acft_per_day")
+    )
+    return ReportMetrics(
+        spectrum_data={"summary_table": summary},
+        earliest_breach_day=earliest,
+        tipping_point_tier=tipping,
+        day_base_stage3=comparison.get("no_conservation_day_20"),
+        day_cons_stage3=comparison.get("chosen_conservation_day_20"),
+        mean_evaporation_acft=float(mean_evaporation) if mean_evaporation is not None else None,
+        mean_served_demand_acft=float(mean_demand) if mean_demand is not None else None,
+    )
+
+
+def _report_context(workspace, accepted: Sequence, config: ExperimentConfig):
+    """Resolve the exact scenario and prefer its current reviewed saved experiment."""
+    primary, note = select_primary_scenario(accepted, config)
+    run = None
+    if config.saved_run_id:
+        run = next((item for item in getattr(workspace, "simulation_runs", []) if item.get("id") == config.saved_run_id), None)
+        if run is None:
+            return config, primary, "The configured saved experiment is unavailable; no replacement was simulated.", ReportMetrics(unavailable_reason="the configured saved experiment is unavailable")
+    elif primary is not None and hasattr(workspace, "active_simulation"):
+        candidate = workspace.active_simulation(primary.id)
+        if candidate and candidate.get("id") in getattr(workspace, "simulation_reviews", {}):
+            run = candidate
+    if run is None:
+        return config, primary, note, compute_report_metrics(primary, config)
+
+    from basin_core.simulation import is_current, settings_from_run, validate_run
+    try:
+        validate_run(workspace, run)
+    except ValueError as error:
+        return config, primary, str(error), ReportMetrics(unavailable_reason="saved experiment validation failed")
+    if not is_current(workspace, run) or run["id"] not in getattr(workspace, "simulation_reviews", {}):
+        return config, primary, "The saved experiment is stale or unreviewed; no replacement was simulated.", ReportMetrics(unavailable_reason="the saved experiment is stale or unreviewed")
+    scenario = next((item for item in accepted if item.id == run["scenario_id"] and item.revision == run["scenario_revision"]), None)
+    if scenario is None:
+        return config, primary, "The saved experiment scenario/revision is not accepted; no replacement was simulated.", ReportMetrics(unavailable_reason="the saved experiment scenario/revision is not accepted")
+    settings = settings_from_run(run)
+    saved_config = ExperimentConfig(
+        initial_pct=settings.initial_storage_fraction,
+        conservation_pct=settings.conservation_fraction,
+        pipeline_active=settings.pipeline_active,
+        tiers=settings.retention_fractions,
+        scenario_id=run["scenario_id"],
+        scenario_revision=run["scenario_revision"],
+        selected=True,
+        saved_run_id=run["id"],
+    )
+    return saved_config, scenario, None, _metrics_from_saved_run(run)
+
+
 def find_browser_executable() -> str | None:
     """Find a Chromium-based browser (Edge, Chrome, Chromium) for headless PDF rendering."""
     env_browser = os.environ.get("BASIN_BROWSER_PATH")
@@ -473,11 +553,9 @@ def render_html_report(
 ) -> str:
     """Build a professional, print-optimized HTML report ready for PDF rendering."""
     config = resolve_config(config, initial_pct, conservation_pct)
+    config, primary_scenario, scenario_note, metrics = _report_context(workspace, accepted, config)
     init_frac = config.initial_pct
     cons_frac = config.conservation_pct
-
-    primary_scenario, scenario_note = select_primary_scenario(accepted, config)
-    metrics = compute_report_metrics(primary_scenario, config)
     spectrum_data = metrics.spectrum_data
 
     run_id = workspace.id
@@ -516,7 +594,7 @@ def render_html_report(
         depletion_range_sub = "*Storage >20% across modeled window (toy model)"
         tipping_point_tier = "No tier reached Stage 3 in sim"
 
-    # Conservation mandate impact, measured as the difference between baseline and mandate runs
+    # Matched conservation comparison. A delay is defined only when both runs cross.
     day_base_3 = metrics.day_base_stage3
     day_cons_3 = metrics.day_cons_stage3
 
@@ -526,8 +604,8 @@ def render_html_report(
     elif day_base_3 is not None and day_cons_3 is not None:
         diff = day_cons_3 - day_base_3
         if diff > 0:
-            conservation_val = f"+{diff} Days Gained*"
-            conservation_sub = f"*Simulated deferral from Day {day_base_3} to Day {day_cons_3} ({cons_frac*100:.0f}% mandate)"
+            conservation_val = f"+{diff} Days to Threshold*"
+            conservation_sub = f"*Simulated deferral from Day {day_base_3} to Day {day_cons_3} ({cons_frac*100:g}% conservation)"
         elif diff < 0:
             conservation_val = f"{diff} Days*"
             conservation_sub = "*Accelerated under simulation settings"
@@ -535,14 +613,14 @@ def render_html_report(
             conservation_val = "0 Days*"
             conservation_sub = f"*Evaporation dominates at Day {day_base_3}"
     elif day_base_3 is not None and day_cons_3 is None:
-        conservation_val = "Trigger Averted in Sim*"
-        conservation_sub = "*Storage maintained >20% across entire modeled window"
+        conservation_val = "Delay not defined*"
+        conservation_sub = "*Chosen run did not reach 20% within the modeled window"
     elif day_base_3 is None and day_cons_3 is None:
-        conservation_val = "Buffer Intact*"
-        conservation_sub = "*Storage remains >20% in baseline and conservation"
+        conservation_val = "Delay not defined*"
+        conservation_sub = "*Neither matched run reached 20% within the modeled window"
     else:
-        conservation_val = "Threshold not reached in baseline*"
-        conservation_sub = "*Baseline stayed above 20% while the mandate run did not"
+        conservation_val = "Delay not defined*"
+        conservation_sub = "*Matched runs did not both reach 20% within the modeled window"
 
     # Primary loss driver
     if metrics.available and metrics.mean_evaporation_acft is not None:
@@ -556,9 +634,9 @@ def render_html_report(
     if spectrum_data and "summary_table" in spectrum_data:
         for r in spectrum_data["summary_table"]:
             status_badge = (
-                '<span class="badge badge-success">Resilient in Sim</span>'
+                '<span class="badge badge-success">Above 20% in window</span>'
                 if r["survived_critical_20pct"]
-                else '<span class="badge badge-neutral">Simulated Trigger</span>'
+                else '<span class="badge badge-neutral">At/below 20% in window</span>'
             )
             d1 = f"Day {r['day_stage1_40']}*" if r.get("day_stage1_40") else "—"
             d2 = f"Day {r['day_stage2_30']}*" if r.get("day_stage2_30") else "—"
@@ -602,13 +680,13 @@ def render_html_report(
         overview_sentence = (
             f"Derived using primary scenario <strong>{escape(primary_id)}</strong> at "
             f"<strong>{init_frac * 100:.0f}% initial storage</strong>, it evaluates whether emergency "
-            f"conservation ({cons_frac * 100:.0f}%) defers breaching the illustrative 20% reserve band (Stage 3)."
+            f"conservation ({cons_frac * 100:g}%) defers breaching the illustrative 20% reserve band (Stage 3)."
         )
     else:
         tipping_point_sub = unavailable_note
         overview_sentence = (
             f"It was intended to run at {init_frac * 100:.0f}% initial storage with "
-            f"{cons_frac * 100:.0f}% emergency conservation, but no run was produced for this report."
+            f"{cons_frac * 100:g}% emergency conservation, but no run was produced for this report."
         )
 
     # A compact single line: the print layout is two pages and a full table here pushes the
@@ -635,7 +713,7 @@ def render_html_report(
     if metrics.available:
         spectrum_caption = (
             f"Simulated drawdown across {tier_count} rainfall tiers for {primary_id} starting at "
-            f"{init_frac * 100:.0f}% initial storage with {cons_frac * 100:.0f}% emergency conservation. "
+            f"{init_frac * 100:g}% initial storage with {cons_frac * 100:g}% emergency conservation. "
             "Asterisks mark days inside the uncalibrated modeled window."
         )
     else:
@@ -1420,6 +1498,8 @@ def build_fallback_pdf(
         stations = UNAVAILABLE
         snapshot_hash = UNAVAILABLE
         accepted = []
+        init_frac = config.initial_pct
+        cons_frac = config.conservation_pct
         metrics = compute_report_metrics(None, config)
     else:
         workspace = workspace_or_title
@@ -1431,9 +1511,10 @@ def build_fallback_pdf(
         manifest = getattr(getattr(workspace, "source", None), "manifest", None) or {}
         snapshot_hash = str(manifest.get("sha256", ""))[:16] or UNAVAILABLE
         title = f"BASIN Executive Technical Brief -- {run_id}"
-        body_text = f"Evaluated {len(accepted)} accepted scenarios under {init_frac * 100:.0f}% starting storage."
-        primary_scenario, scenario_note = select_primary_scenario(accepted, config)
-        metrics = compute_report_metrics(primary_scenario, config)
+        config, primary_scenario, scenario_note, metrics = _report_context(workspace, accepted, config)
+        init_frac = config.initial_pct
+        cons_frac = config.conservation_pct
+        body_text = f"Evaluated {len(accepted)} accepted scenarios under {init_frac * 100:g}% starting storage."
 
     spectrum_data = metrics.spectrum_data
     unavailable_note = (
@@ -1462,7 +1543,7 @@ def build_fallback_pdf(
     elif day_base_3 is not None and day_cons_3 is not None:
         diff = day_cons_3 - day_base_3
         if diff > 0:
-            conservation_val = f"+{diff} Days Gained*"
+            conservation_val = f"+{diff} Days to Threshold*"
             conservation_sub = f"*Deferred Day {day_base_3} to Day {day_cons_3}"
         elif diff < 0:
             conservation_val = f"{diff} Days*"
@@ -1471,14 +1552,14 @@ def build_fallback_pdf(
             conservation_val = "0 Days*"
             conservation_sub = "*Evaporation dominates storage"
     elif day_base_3 is not None and day_cons_3 is None:
-        conservation_val = "Trigger Averted*"
-        conservation_sub = "*Storage maintained above 20%"
+        conservation_val = "Delay not defined*"
+        conservation_sub = "*Chosen run did not reach 20% in the modeled window"
     elif day_base_3 is None and day_cons_3 is None:
-        conservation_val = "Buffer Intact*"
-        conservation_sub = "*Threshold not breached in window"
+        conservation_val = "Delay not defined*"
+        conservation_sub = "*Neither matched run reached 20% in the modeled window"
     else:
-        conservation_val = "Baseline Above 20%*"
-        conservation_sub = "*Mandate run breached, baseline did not"
+        conservation_val = "Delay not defined*"
+        conservation_sub = "*Matched runs did not both reach 20% in the modeled window"
 
     # Dominant loss driver
     if metrics.available and metrics.mean_evaporation_acft is not None:
@@ -1549,24 +1630,24 @@ def build_fallback_pdf(
         )
 
     if not metrics.available:
-        mandate_finding = "- Conservation effect not computed for this report."
+        mandate_finding = "- Conservation comparison not computed for this report."
     elif day_base_3 is not None and day_cons_3 is not None:
         verb = "deferred" if day_cons_3 > day_base_3 else "did not defer"
         mandate_finding = (
-            f"- In this run the {cons_frac * 100:.0f}% mandate {verb} the 20% band "
-            f"(baseline Day {day_base_3}, mandate Day {day_cons_3})."
+            f"- In this run the {cons_frac * 100:g}% conservation setting {verb} the 20% band "
+            f"(no-conservation Day {day_base_3}, chosen-conservation Day {day_cons_3})."
         )
     elif day_base_3 is None and day_cons_3 is None:
-        mandate_finding = "- Neither the baseline nor the mandate run reached the 20% band in the modeled window."
+        mandate_finding = "- Neither matched conservation run reached the 20% band in the modeled window; no delay is defined."
     else:
-        mandate_finding = "- Baseline and mandate runs disagreed on reaching the 20% band; see page 2."
+        mandate_finding = "- The matched conservation runs did not both reach the 20% band; no delay is defined."
 
     findings = [
         f"- Combined storage across the model's reservoirs: {total_capacity:,.0f} ac-ft "
         f"({capacity_breakdown} ac-ft).",
-        (f"- Tested under initial storage of {init_frac * 100:.0f}%, with {cons_frac * 100:.0f}% emergency demand reduction modeled."
+        (f"- Tested under initial storage of {init_frac * 100:g}%, with {cons_frac * 100:g}% emergency demand reduction modeled."
          if metrics.available else
-         f"- Requested settings were {init_frac * 100:.0f}% initial storage and {cons_frac * 100:.0f}% emergency demand reduction; nothing was simulated."),
+         f"- Requested settings were {init_frac * 100:g}% initial storage and {cons_frac * 100:g}% emergency demand reduction; nothing was simulated."),
         f"- Multi-station drought proxy reconstructed from NOAA GHCN-Daily stations: {clip_text(stations, 60)}.",
         tier_finding,
         mandate_finding,
@@ -1670,7 +1751,7 @@ def build_fallback_pdf(
         d1 = f"Day {r['day_stage1_40']}" if r.get("day_stage1_40") else "--"
         d2 = f"Day {r['day_stage2_30']}" if r.get("day_stage2_30") else "--"
         d3 = f"Day {r['day_stage3_20']}" if r.get("day_stage3_20") else "--"
-        stat = "Resilient" if r.get("survived_critical_20pct") else "Triggered"
+        stat = "Above 20%" if r.get("survived_critical_20pct") else "At/below 20%"
         stat_col = (0.1, 0.55, 0.35) if r.get("survived_critical_20pct") else (0.75, 0.25, 0.2)
 
         label_lines = wrap_text(r["tier_label"].split(" (")[0], "/F2", 6.5, 87, max_lines=2)

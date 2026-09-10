@@ -173,7 +173,7 @@ def test_find_scenarios_by_year(workspace):
 
 
 def test_test_reservoir_infrastructure(workspace):
-    data = tool_test_reservoir_infrastructure(workspace, year=2011, rainfall_reduction_pct=20.0)
+    data = tool_test_reservoir_infrastructure(workspace, scenario_id=workspace.selected[0], rainfall_reduction_pct=20.0)
     assert data["rainfall_reduction_pct"] == 20.0
     assert "min_pct" in data
     assert "survived_critical_20pct" in data
@@ -185,12 +185,12 @@ def test_test_reservoir_infrastructure(workspace):
 
 
 def test_run_stress_spectrum(workspace):
-    data = tool_run_stress_spectrum(workspace, year=2011)
+    data = tool_run_stress_spectrum(workspace, scenario_id=workspace.selected[0])
     assert "tiers" in data
     assert len(data["tiers"]) == 4
     rendered = render_tool_result("run_stress_spectrum", data)
     assert "Reservoir Stress Spectrum" in rendered
-    assert "Tipping Point Analysis" in rendered
+    assert "Evaluated tier outcomes" in rendered or "Tipping Point Analysis" in rendered
     assert "Illustrative two-pool" in rendered
 
 
@@ -209,8 +209,8 @@ def test_all_templates_render_and_have_disclaimers(workspace):
         ("check_export_readiness", check_export_readiness(workspace)),
         ("get_data_provenance", get_data_provenance(workspace)),
         ("find_scenarios_by_year", find_scenarios_by_year(workspace, 2011)),
-        ("test_reservoir_infrastructure", tool_test_reservoir_infrastructure(workspace, year=2011, rainfall_reduction_pct=20.0)),
-        ("run_stress_spectrum", tool_run_stress_spectrum(workspace, year=2011)),
+        ("test_reservoir_infrastructure", tool_test_reservoir_infrastructure(workspace, scenario_id=workspace.selected[0], rainfall_reduction_pct=20.0)),
+        ("run_stress_spectrum", tool_run_stress_spectrum(workspace, scenario_id=workspace.selected[0])),
     ]
     for name, data in sample_calls:
         rendered = render_tool_result(name, data)
@@ -235,16 +235,15 @@ def test_semantic_query_route(workspace):
     assert "NOAA NCEI GHCN-Daily" in r5
 
     r6 = semantic_query_route(workspace, "Can our infrastructure survive a 2011-style event if rainfall is even 20% lower?")
-    assert "Reservoir Infrastructure Stress Test" in r6
     assert "2011" in r6
-    assert "Illustrative two-pool simulation" in r6
+    assert "Multiple scenarios match" in r6 or "Reservoir Infrastructure Stress Test" in r6
 
     r7 = semantic_query_route(workspace, "Find scenarios in 2011")
     assert "2011" in r7
 
     r8 = semantic_query_route(workspace, "Run stress spectrum sweep on 2011")
-    assert "Reservoir Stress Spectrum" in r8
-    assert "Tipping Point Analysis" in r8
+    assert "2011" in r8
+    assert "Multiple scenarios match" in r8 or "Reservoir Stress Spectrum" in r8
 
 
 def test_run_tool_directly(workspace):
