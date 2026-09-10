@@ -179,9 +179,24 @@ def assistant_panel(w, source=None, names=None):
             badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">🔵 Active: Deterministic Intent Router</div>'
             sub_text = "Deterministic calculation engine · Strict templates · Read-only queries"
 
-        h_col, c_col = st.columns([5, 1])
+        h_col, w_col, c_col = st.columns([3.5, 2.3, 0.6])
         h_col.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
         h_col.markdown(f'<div class="basin-assistant-sub">{sub_text}</div>', unsafe_allow_html=True)
+        cur_w = st.session_state.get("assistant_width", 500)
+        with w_col:
+            w_opts = [420, 520, 650, 800]
+            if hasattr(st, "segmented_control"):
+                sel_w = st.segmented_control(
+                    "Drawer Width",
+                    w_opts,
+                    default=cur_w if cur_w in w_opts else 520,
+                    format_func=lambda px: f"↔ {px}px",
+                    label_visibility="collapsed",
+                    key="assistant_width_selector"
+                )
+                if sel_w and sel_w != cur_w:
+                    st.session_state.assistant_width = sel_w
+                    st.rerun()
         if c_col.button("✕", key="assistant_close_x", help="Close Assistant"):
             st.session_state.assistant_open = False
             st.rerun()
