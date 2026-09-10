@@ -8,7 +8,8 @@ from __future__ import annotations
 import pandas as pd
 
 
-def scenario_summary(features: dict, station_names: dict[str, str] | None = None) -> str:
+def scenario_summary(features: dict, station_names: dict[str, str] | None = None,
+                     unit_system: str = "us") -> str:
     """Generate a clear, 2-3 sentence plain-language interpretation of scenario rainfall metrics."""
     duration = features.get("duration_days", 0)
     deficit = features.get("deficit_mm", 0.0)
@@ -28,8 +29,13 @@ def scenario_summary(features: dict, station_names: dict[str, str] | None = None
         rarity = "a deficit within typical historical variation"
 
     deficit_in = deficit / 25.4
+    if unit_system == "metric":
+        deficit_fmt = f"**{deficit:,.1f} mm ({deficit_in:,.2f} in)**"
+    else:
+        deficit_fmt = f"**{deficit_in:,.2f} in ({deficit:,.1f} mm)**"
+
     summary_parts = [
-        f"This **{duration}-day scenario** produces an average rainfall deficit of **{deficit:,.1f} mm ({deficit_in:,.2f} in)** across monitored stations — "
+        f"This **{duration}-day scenario** produces an average rainfall deficit of {deficit_fmt} across monitored stations — "
         f"{rarity} (exceeding **{percentile * 100:.0f}%** of {benchmark_n} comparable historical windows)."
     ]
 

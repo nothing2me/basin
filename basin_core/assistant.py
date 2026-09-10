@@ -1069,6 +1069,47 @@ def semantic_query_route(workspace, prompt: str) -> str:
         return f"⚠️ **Query Processing Error**: {ex}"
 
 
+def select_candidate_tools(query: str, max_tools: int = 3) -> list[dict[str, Any]]:
+    """Select the most query-relevant tool schemas to keep prompt size small and fast on CPU."""
+    q = query.lower()
+    matches = []
+
+    keywords = {
+        "describe_scenario": ["scenario", "profile", "tell me about", "describe", "b-", "cand"],
+        "compare_scenarios": ["compare", "difference", "vs", "versus", "between"],
+        "explain_ranking": ["rank", "score", "why is", "position", "leader", "order"],
+        "check_concurrence": ["concurrence", "stress", "spatial", "simultaneous", "all stations"],
+        "run_sensitivity": ["sensitiv", "weight", "priority"],
+        "check_export_readiness": ["export", "ready", "readiness", "package", "deliverable"],
+        "describe_cluster": ["cluster", "group", "k-means", "diversity"],
+        "query_rainfall": ["rain", "precipitation", "station", "gauge", "history"],
+        "calculate_crop_water_deficit": ["crop", "irrigation", "etc", "eto", "evapotranspiration", "agronomic", "agriculture"],
+        "calculate_kbdi": ["kbdi", "fire", "burn", "wildfire", "danger"],
+    }
+
+    for tool in TOOL_SCHEMAS:
+        name = tool["function"]["name"]
+        words = keywords.get(name, [])
+        score = sum(1 for w in words if w in q)
+        if score > 0:
+            matches.append((score, tool))
+
+    matches.sort(key=lambda x: x[0], reverse=True)
+    selected = [t for _, t in matches[:max_tools]]
+
+    names_present = {t["function"]["name"] for t in selected}
+    for default_name in ("describe_scenario", "compare_scenarios", "explain_ranking"):
+        if len(selected) >= max_tools:
+            break
+        if default_name not in names_present:
+            found = next((t for t in TOOL_SCHEMAS if t["function"]["name"] == default_name), None)
+            if found:
+                selected.append(found)
+                names_present.add(default_name)
+
+    return selected
+
+
 def run_assistant(workspace, user_message: str,
                   history: list[dict],
                   use_qwen: bool = True) -> tuple[str, list[dict]]:
@@ -1111,7 +1152,8 @@ def run_assistant(workspace, user_message: str,
 
                 messages.append({"role": "user", "content": user_message})
 
-                resp = client.generate(messages, tools=TOOL_SCHEMAS, temperature=0.1, max_tokens=512)
+                candidate_tools = select_candidate_tools(user_message, max_tools=3)
+                resp = client.generate(messages, tools=candidate_tools, temperature=0.1, max_tokens=256, timeout=25.0)
                 tool_calls = resp.get("tool_calls")
                 raw_content = resp.get("content") or ""
 

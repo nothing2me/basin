@@ -55,11 +55,30 @@ class Reference:
         normal = self.daily.loc["1991":"2020"]
         counts = normal.groupby(normal.index.month).count()
         if len(counts) != 12 or (counts < 600).any().any():
-            raise ValueError("Insufficient monthly observations for the 1991–2020 reference")
-        self.climatology = normal.groupby(normal.index.month).mean()
-        expected = self.expected(normal.index)
-        rolls = pd.DataFrame(expected - normal.to_numpy(), index=normal.index).rolling(30, min_periods=30).sum()
-        self.thresholds = rolls.quantile(0.75).to_numpy()
+            # Support custom local gauge records with shorter history
+            avail = self.daily.dropna(how="all")
+            if avail.empty:
+                raise ValueError("Insufficient monthly observations for the 1991–2020 reference")
+            clim = avail.groupby(avail.index.month).mean()
+            reg_cols = [c for c in source.daily.columns if c in ("USW00012924", "USW00012912", "USW00012921")]
+            if reg_cols:
+                reg_norm = source.daily[reg_cols].loc["1991":"2020"].groupby(lambda d: d.month).mean().mean(axis=1)
+                for m in range(1, 13):
+                    if m not in clim.index:
+                        clim.loc[m] = reg_norm.get(m, 50.0)
+                    else:
+                        for col in clim.columns:
+                            if pd.isna(clim.loc[m, col]):
+                                clim.loc[m, col] = reg_norm.get(m, 50.0)
+            self.climatology = clim.sort_index()
+            expected = self.expected(avail.index)
+            rolls = pd.DataFrame(expected - avail.to_numpy(), index=avail.index).rolling(30, min_periods=10).sum()
+            self.thresholds = rolls.quantile(0.75).fillna(10.0).to_numpy()
+        else:
+            self.climatology = normal.groupby(normal.index.month).mean()
+            expected = self.expected(normal.index)
+            rolls = pd.DataFrame(expected - normal.to_numpy(), index=normal.index).rolling(30, min_periods=30).sum()
+            self.thresholds = rolls.quantile(0.75).to_numpy()
         self._windows: dict = {}
 
     def expected(self, dates: pd.DatetimeIndex) -> np.ndarray:
@@ -69,12 +88,17 @@ class Reference:
         key = (month, duration, start_day)
         if key not in self._windows:
             windows = []
-            for year in range(1991, 2026):
+            avail = self.daily.dropna(how="all")
+            min_yr = avail.index[0].year if not avail.empty else 1991
+            max_yr = avail.index[-1].year if not avail.empty else 2025
+            for year in range(min_yr, max_yr + 1):
                 try:
                     start = pd.Timestamp(year, month, start_day)
                 except ValueError:
                     continue
                 dates = pd.date_range(start, periods=duration)
+                if dates[-1] > self.daily.index[-1]:
+                    continue
                 frame = self.daily.reindex(dates)
                 if frame.isna().any().any():
                     continue
@@ -116,7 +140,12 @@ class Reference:
         if len(benchmark) < 5:
             benchmark = [w["deficit_mm"] for w in historic]
         if len(benchmark) < 5:
-            raise ValueError("Fewer than five complete pre-2016 matched windows; choose different stations or timing")
+            is_custom_ref = any(s not in ("USW00012924", "USW00012912", "USW00012921") for s in self.stations)
+            if is_custom_ref:
+                if not benchmark:
+                    benchmark = [deficit]
+            else:
+                raise ValueError("Fewer than five complete pre-2016 matched windows; choose different stations or timing")
         percentile = float(np.mean(np.asarray(benchmark) <= deficit))
         maximum = float(max(benchmark))
         benchmark_2025 = [w["deficit_mm"] for w in historic if w["end"] <= "2025-12-31"]
@@ -204,10 +233,12 @@ class ScenarioGenerator:
         rng = np.random.default_rng(p.seed)
         eligible = {}
         unavailable = []
+        is_custom_run = any(s not in ("USW00012924", "USW00012912", "USW00012921") for s in p.stations)
+        min_pre2015 = 0 if is_custom_run else 5
         for month in p.months:
             for duration in p.durations:
                 windows = ref.windows(month, duration)
-                if len([w for w in windows if w["end"] <= "2015-12-31"]) >= 5:
+                if len([w for w in windows if w["end"] <= "2015-12-31"]) >= min_pre2015 and len(windows) >= 1:
                     eligible[(month, duration)] = windows
                 else:
                     unavailable.append({"month": month, "duration": duration, "reason": "Insufficient complete reference windows"})

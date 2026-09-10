@@ -166,6 +166,9 @@ def assistant_panel(w, source=None, names=None):
         if status == "ready":
             badge_html = f'<div class="basin-assistant-badge" style="color:#009E73">🟢 Ready: Qwen2.5-3B ({model_info["quantization"]} · CPU)</div>'
             sub_text = "Real local Qwen2.5-3B LLM · Grounded in verified hydrologic tools"
+        elif status == "model_missing":
+            badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">⚪ Offline Mode: Instant Direct Tools Active</div>'
+            sub_text = "100% offline · Instant direct tools · Run scripts/fetch_model.py to enable local AI"
         elif status == "loading":
             badge_html = '<div class="basin-assistant-badge" style="color:#E69F00">🟡 Loading Qwen2.5-3B runtime...</div>'
             sub_text = "Initializing local llama.cpp background worker..."
@@ -173,12 +176,27 @@ def assistant_panel(w, source=None, names=None):
             badge_html = '<div class="basin-assistant-badge" style="color:#dc2626">🔴 Qwen runtime crashed (deterministic fallback active)</div>'
             sub_text = "Operating via verified local deterministic router"
         else:
-            badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">🔵 Active: Deterministic Intent Router (Model Not Loaded)</div>'
+            badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">🔵 Active: Deterministic Intent Router</div>'
             sub_text = "Deterministic calculation engine · Strict templates · Read-only queries"
 
-        h_col, c_col = st.columns([5, 1])
+        h_col, w_col, c_col = st.columns([3.5, 2.3, 0.6])
         h_col.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
         h_col.markdown(f'<div class="basin-assistant-sub">{sub_text}</div>', unsafe_allow_html=True)
+        cur_w = st.session_state.get("assistant_width", 500)
+        with w_col:
+            w_opts = [420, 520, 650, 800]
+            if hasattr(st, "segmented_control"):
+                sel_w = st.segmented_control(
+                    "Drawer Width",
+                    w_opts,
+                    default=cur_w if cur_w in w_opts else 520,
+                    format_func=lambda px: f"↔ {px}px",
+                    label_visibility="collapsed",
+                    key="assistant_width_selector"
+                )
+                if sel_w and sel_w != cur_w:
+                    st.session_state.assistant_width = sel_w
+                    st.rerun()
         if c_col.button("✕", key="assistant_close_x", help="Close Assistant"):
             st.session_state.assistant_open = False
             st.rerun()
@@ -186,18 +204,44 @@ def assistant_panel(w, source=None, names=None):
         st.markdown(badge_html, unsafe_allow_html=True)
         st.caption("Ask about scenario profiles, compare candidates, check station stress, or test priority weights. Grounded in verified hydrologic data.")
 
-        st.caption("Quick Queries")
-        q1, q2, q3, q4 = st.columns(4)
+        st.caption("⚡ Instant Analysis Chips (0.01s, zero LLM overhead)")
         preset_prompt = None
-        if q1.button("📋 Top #1", key="quick_top1", width="stretch", help="Profile the top-ranked scenario"):
-            sid = w.selected[0] if w.selected else w.scenarios[0].id
-            preset_prompt = f"Tell me about scenario {sid}"
-        if q2.button("⚖️ Compare", key="quick_compare", width="stretch", help="Compare top shortlisted scenarios"):
-            preset_prompt = "Compare the top shortlisted scenarios"
-        if q3.button("⚡ Sens.", key="quick_sens", width="stretch", help="Test ranking weight sensitivities"):
-            preset_prompt = "Run sensitivity test on ranking weights"
-        if q4.button("📦 Export", key="quick_export", width="stretch", help="Check export readiness"):
-            preset_prompt = "Is the workspace ready for export?"
+        q1, q2, q3 = st.columns(3)
+        q4, q5, q6 = st.columns(3)
+        direct_tool_run = None
+        sid = w.selected[0] if w.selected else (w.scenarios[0].id if w.scenarios else "B-001")
+
+        if q1.button("📊 Top #1 Profile", key="quick_top1", width="stretch", help="Profile top scenario"):
+            direct_tool_run = ("describe_scenario", {"scenario_id": sid}, f"Tell me about scenario {sid}")
+        if q2.button("⚖️ Compare Top 2", key="quick_compare", width="stretch", help="Compare top scenarios"):
+            id1 = w.selected[0] if w.selected else sid
+            id2 = w.selected[1] if len(w.selected) > 1 else id1
+            direct_tool_run = ("compare_scenarios", {"scenario_id_1": id1, "scenario_id_2": id2}, f"Compare scenario {id1} and {id2}")
+        if q3.button("⚡ Stress Concurrence", key="quick_concur", width="stretch", help="Check station stress"):
+            direct_tool_run = ("check_concurrence", {"scenario_id": sid}, f"Check station stress concurrence for {sid}")
+        if q4.button("🎯 Ranking Breakdown", key="quick_ranking", width="stretch", help="Explain score"):
+            direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
+        if q5.button("🌾 Crop ET Deficit", key="quick_crop_et", width="stretch", help="Crop irrigation gap"):
+            from basin_core.agronomics import calculate_crop_water_deficit
+            sc = w.get(sid)
+            c_res = calculate_crop_water_deficit(sc.series)
+            direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in/acre** |\n"
+            st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
+            st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
+            st.rerun()
+        if q6.button("📦 Export Readiness", key="quick_export", width="stretch", help="Check readiness"):
+            direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
+
+        if direct_tool_run:
+            t_name, t_args, u_msg = direct_tool_run
+            try:
+                res = run_tool_directly(w, t_name, t_args)
+                st.session_state.assistant_messages.append({"role": "user", "content": u_msg})
+                st.session_state.assistant_messages.append({"role": "assistant", "content": res})
+                st.rerun()
+            except Exception as exc:
+                st.session_state.assistant_messages.append({"role": "assistant", "content": f"⚠️ Error: {exc}"})
+                st.rerun()
 
         chat_box = st.container(height=380)
         with chat_box:
@@ -219,7 +263,11 @@ def assistant_panel(w, source=None, names=None):
             st.session_state.assistant_messages.append({"role": "user", "content": active_query})
             with st.spinner("Analyzing workspace data..."):
                 try:
+                    import time
+                    t0 = time.time()
                     reply, new_hist = run_assistant(w, active_query, st.session_state.assistant_history)
+                    dt = time.time() - t0
+                    st.session_state["assistant_inference_seconds"] = st.session_state.get("assistant_inference_seconds", 0.0) + dt
                     st.session_state.assistant_history = new_hist
                     st.session_state.assistant_messages.append({"role": "assistant", "content": reply})
                 except Exception as ex:

@@ -122,3 +122,20 @@ def test_flexible_headers_and_us_date_format():
     res_auto = preview_rainfall(auto_data, "Gauge Auto", "Texas Hill", "mm", date_format="auto")
     assert res_auto.valid_days == 1
 
+
+def test_custom_station_drives_scenario_generation():
+    import pandas as pd
+    from basin_core.data import CachedSource
+    from basin_core.engine import ScenarioParams, ScenarioGenerator
+    source = CachedSource()
+    dates = pd.date_range("2021-01-01", "2023-12-31")
+    custom_series = pd.Series(1.5, index=dates)
+    aug_source = source.with_custom_station("MY_GAUGE", "Farm Rain Gauge", custom_series)
+    assert "MY_GAUGE" in aug_source.daily.columns
+    params = ScenarioParams(stations=("MY_GAUGE",), durations=(90,), months=(1, 4), candidates=10, seed=42)
+    gen = ScenarioGenerator(aug_source, params)
+    scenarios, meta = gen.generate()
+    assert len(scenarios) == 10
+    assert scenarios[0].series.columns[0] == "MY_GAUGE"
+    assert len(scenarios[0].series) == 90
+
