@@ -1,14 +1,45 @@
 # BASIN current handoff
 
-## September 10 — Combined tailored Review and Qwen review
+## September 10 — P0 Baseline, Custom Gauge Lineage, Simulation Consistency & Scientific Claim Audit (P0-A through P0-D Complete)
 
-Integrated Claude b9c5bf6 and Qwen audit d8207c7 from e35a57b. Review fixes preserve saved choices when editing focus, reject foreign preference versions/non-boolean flags, and clarify own-data wording. Full combined suite: **414 passed, 1 skipped in 400.96s**; the skipped test requires absent Qwen weights. Snapshot checkout, demo smoke (run 3cff457731a8, five scenarios/500 audit records), explicit replay (`implementation_matches_current: true`), source packaging and install consistency passed.
+Completed the 4-phase sequential engineering roadmap in clean worktree `basin-clean` on branch `codex/p0-baseline`, tracking `origin/main` at `a6ef717`:
 
-Tailored setup is at the top of Review, not before run creation. Light/narrow-screen/keyboard and actual-user checks remain open. No live native Qwen or clean-laptop installer certification is claimed. Existing scientific/reference-label and PDF failure-handling tasks remain open. Ready-to-run prompts are in docs/next_tasks/01_native_runtime.md through 06_laptop_and_people.md. Native setup and UI acceptance can run in parallel in separate worktrees; coordinate numerical/report/UI overlap. Older checkpoints below are historical.
+1. **P0-A (One Trustworthy Baseline)**:
+   - Clean worktree initialized at `basin-clean` tracking upstream `origin/main`.
+   - Windows pytest ACL permissions resolved (`pytest.ini` basetemp).
+   - Reconciled rural usability, data sovereignty, and embedded Qwen runtime against baseline.
 
-## Qwen audit branch checkpoint
+2. **P0-B (Custom Gauge Lineage & Replay Audit)**:
+   - Hardened `basin_core/data.py` (`with_custom_station`): strictly rejects station ID collisions with NOAA network, checks for conflicting duplicate dates, and restricts records to the 1991–2025 window.
+   - Hardened `basin_core/workspace.py` (`Workspace.load`): clear error when loading sessions referencing unimported custom stations.
+   - Comprehensive test suite added: `tests/test_custom_gauge_lineage.py` (7 passed, 100%).
 
-Base e35a57b; branch codex/qwen-runtime-audit. Focused assistant/security/drawer checks: 90 passed, 1 skipped (weights absent). Grounded response rendering, bounded validated tool batches, model-byte verification and timeout termination implemented. See docs/qwen_security_review.md for findings, commands and open installation/live-runtime gates. app.py and basin_ui.py untouched. Integrate with Claude tailored Review and run the full combined suite before merging.
+3. **P0-C (Simulation & Report Consistency)**:
+   - Ported `SimulationSettings` with validated 0–100% public inputs and named internal fractions.
+   - Added Schema 2.2 content-addressed simulation run serialization, active simulation tracking, and review tokens (`basin_core/simulation.py`, `basin_core/workspace.py`, `basin_core/integrity.py`).
+   - Implemented shared inclusive threshold evaluator on unrounded values, day-zero detection, and conservation delay defined only when both runs cross 20%.
+   - Enabled native PDF report projection of saved reviewed simulations without on-the-fly recalculation (`basin_core/pdf_report.py`).
+   - Linked evidence changes (attachments, conflicts, dispositions) to automatic scenario review invalidation (`_invalidate_evidence`).
+   - Verified 100% test passage on `tests/test_simulation_contract.py` (26/26) and `scripts/evaluate_routing_quality.py` (50/50).
+
+4. **P0-D (Scientific & Policy Claim Audit)**:
+   - Audited Texas Region N Reference ETo (58.1 in/yr) against Texas ET Network normals and regional crop coefficients ($K_c$) for 5 staple crops.
+   - Hardened KBDI calculation with boundary clipping [0, 800] and 0.20-inch initial interception deduction (`basin_core/agronomics.py`).
+   - Added explicit illustrative decision-support disclaimers to KBDI takeaways and UI labels (burn bans enacted by County Commissioners Courts under Tex. Local Gov't Code § 352.081, not software declarations).
+   - Documented agronomic and wildfire index claims and boundaries in `docs/claim_inventory.md`.
+   - Expanded tests in `tests/test_agronomics.py` (9 passed, 100%).
+
+### Current Verification Status
+- **Full test suite**: 419 passed, 2 skipped (require absent 2.1 GB Qwen model weights), 0 failed.
+- **End-to-end smoke & bundle replay**: `scripts/demo_smoke.py` (`verified: true`, 5 scenarios / 500 audit records).
+- **Assistant routing & quality benchmark**: `scripts/evaluate_routing_quality.py` (**50/50 passed (100.0%)** in 0.83s).
+- **Working directory clean**: Branch `codex/p0-baseline` cleanly committed, preserving `basin` untouched as reference.
+
+### Blocker
+None.
+
+### Next Action
+Finalist presentation rehearsal, laptop projector resolution review, and teammate independent bundle verification ahead of the September 22 competition.
 
 ## Latest installation / optional model-helper integration
 
