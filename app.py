@@ -17,6 +17,9 @@ import streamlit as st
 from basin_core.analysis import comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMPTIONS, simulate_reservoir_drawdown, simulate_stress_spectrum
 from basin_core.water_system import WaterSource, WaterSystemConfig, REGION_N_PRESET, SMALL_MUNI_PRESET, RURAL_FARM_PRESET, SYSTEM_PRESETS
 from basin_core.summary import scenario_summary, reservoir_summary
+from basin_core.review_preferences import (DATA_SOURCES, GOALS, GUIDANCE, GUIDED_TAB_NOTES,
+                                           TAB_LABELS, ReviewPreferences, load_preferences,
+                                           save_preferences)
 from basin_ui import evidence_panel, comparison_panel, assistant_panel
 from basin_theme import apply_design, appearance_picker, custom_appearance, accessible_chart, reveal_tour_target
 from basin_core.data import CachedSource, ROOT
@@ -566,6 +569,21 @@ def decision_summary(w):
 def open_review(identifier):
     st.session_state.inspect_id = identifier
     st.session_state.page = "Review"
+
+
+def review_preferences(workspace_id):
+    """Display preferences for this run, cached in session state across navigation."""
+    cached = st.session_state.get("review_prefs")
+    if not isinstance(cached, tuple) or len(cached) != 2 or cached[0] != workspace_id:
+        cached = (workspace_id, load_preferences(workspace_id))
+        st.session_state["review_prefs"] = cached
+    return cached[1]
+
+
+def store_review_preferences(workspace_id, preferences):
+    """Persist display choices beside the run. Never touches the audited record."""
+    st.session_state["review_prefs"] = (workspace_id, preferences)
+    save_preferences(workspace_id, preferences)
 
 
 def switch_page(name):
@@ -1287,6 +1305,60 @@ elif page == "Review":
         st.info("💡 **No Active Analysis Run**: To review drought scenarios, first configure and start a run in **Scenario Builder**.")
         st.button("➔ Go to Step 2: Scenario Builder", key="btn_review_to_workspace_empty", on_click=switch_page, args=("Workspace",), type="primary")
     else:
+        prefs = review_preferences(w.id)
+
+        if prefs.needs_setup:
+            with st.container(border=True):
+                st.markdown("#### Set up this Review (optional)")
+                st.caption("Three questions decide which tools appear first. Every tool stays reachable, "
+                           "and none of this changes calculations, ranking weights, review decisions or export consent.")
+                setup_goal, setup_data, setup_guide = st.columns(3)
+                chosen_goal = setup_goal.radio(
+                    "What are you trying to do?", list(GOALS),
+                    format_func=lambda key: GOALS[key]["label"],
+                    captions=[GOALS[key]["help"] for key in GOALS], key="review_setup_goal")
+                chosen_data = setup_data.radio(
+                    "Which data will you use?", list(DATA_SOURCES),
+                    format_func=lambda key: DATA_SOURCES[key]["label"],
+                    captions=[DATA_SOURCES[key]["help"] for key in DATA_SOURCES], key="review_setup_data")
+                chosen_guidance = setup_guide.radio(
+                    "How much guidance do you want?", list(GUIDANCE),
+                    format_func=lambda key: GUIDANCE[key]["label"],
+                    captions=[GUIDANCE[key]["help"] for key in GUIDANCE], key="review_setup_guidance")
+                if chosen_data == "own":
+                    st.warning("Choosing this records a preference only. No file has been uploaded and no data has been "
+                               "validated. Add and review a CSV in Step 1: Data Dashboard when you are ready.")
+                if chosen_data == "example":
+                    st.caption("The example run opens from Step 1 or Step 2 using the existing 'Try an example' control.")
+                apply_col, skip_col, _ = st.columns([1, 1, 2])
+                if apply_col.button("Use this focus", key="btn_review_setup_apply", type="primary", width="stretch"):
+                    store_review_preferences(w.id, prefs.replace(
+                        goal=chosen_goal, data_source=chosen_data, guidance=chosen_guidance,
+                        configured=True, dismissed=True))
+                    st.rerun()
+                if skip_col.button("Skip for now", key="btn_review_setup_skip", width="stretch"):
+                    store_review_preferences(w.id, prefs.replace(dismissed=True))
+                    st.rerun()
+        else:
+            focus_text, focus_toggle, focus_change = st.columns([3, 1, 1])
+            focus_text.caption("**Review focus:** " + prefs.summary())
+            show_all_tools = focus_toggle.toggle(
+                "Show all tools", value=prefs.show_all_tools, key=f"review_show_all_tools_{w.id}",
+                help="Show every Review tool in one row instead of only your focus.")
+            if show_all_tools != prefs.show_all_tools:
+                prefs = prefs.replace(show_all_tools=show_all_tools)
+                store_review_preferences(w.id, prefs)
+            if focus_change.button("Change focus", key=f"btn_review_change_focus_{w.id}", width="stretch"):
+                store_review_preferences(w.id, prefs.replace(configured=False, dismissed=False))
+                st.rerun()
+            if prefs.configured and prefs.data_source == "own":
+                st.caption("Your focus records an intent to use your own rainfall data. Nothing has been uploaded or "
+                           "validated by that choice; add a CSV in Step 1: Data Dashboard.")
+            suggested = prefs.suggested_preset()
+            if suggested:
+                st.caption(f"This focus often pairs with the *{suggested}* ranking preset. Ranking weights are not "
+                           "changed by your focus; apply a preset yourself in Step 2: Scenario Builder if you want it.")
+
         col_scen_sel, col_scen_opt = st.columns([3, 1])
         show_all_candidates = col_scen_opt.checkbox("Show all candidates", value=False, key=f"review_show_all_{w.id}", help="Expand dropdown beyond the 6 shortlisted candidates to all generated candidates")
         if show_all_candidates:
@@ -1380,14 +1452,23 @@ elif page == "Review":
                 st.button("Next unreviewed scenario", disabled=not remaining,
                           on_click=open_review, args=(remaining[0] if remaining else s.id,), width="stretch")
 
-        # 5 High-Density Full-Width Tabs (Zero Nested Expanders)
-        tab_storage, tab_agro, tab_rainfall, tab_edits, tab_provenance = st.tabs([
-            "💧 Storage Drawdown & Water System",
-            "🌾 Crop Irrigation & Wildfire Risk",
-            "📈 Rainfall Deficit & Historical Context",
-            "✏️ Edit Rainfall & Refine Shortlist",
-            "📋 Source Evidence & Daily Values"
-        ])
+        # Tabs are ordered by the reader's focus. A focus reorders the page; it never
+        # removes a tool, so every tab below lands in exactly one of the two groups.
+        primary_keys, secondary_keys = prefs.tab_layout()
+        panes = dict(zip(primary_keys, st.tabs([TAB_LABELS[key] for key in primary_keys])))
+        if secondary_keys:
+            with st.expander(f"More tools ({len(secondary_keys)})", expanded=False):
+                st.caption("Everything outside your current focus. Nothing here is disabled, and your work is unchanged.")
+                panes.update(zip(secondary_keys, st.tabs([TAB_LABELS[key] for key in secondary_keys])))
+        if prefs.guided and prefs.configured:
+            for pane_key, pane in panes.items():
+                with pane:
+                    st.caption(GUIDED_TAB_NOTES[pane_key])
+        tab_storage = panes["storage"]
+        tab_agro = panes["agronomics"]
+        tab_rainfall = panes["rainfall"]
+        tab_edits = panes["edits"]
+        tab_provenance = panes["provenance"]
 
         with tab_storage:
             experiment = st.toggle("Explore storage under assumed conditions", value=curr_target == "review_simulation" or st.session_state.get("storage_experiment", False),
