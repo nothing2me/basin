@@ -273,56 +273,12 @@ def chart(fig, height=300):
 
 
 def basin_map(stations_df):
-    """Render station locations on an interactive map with offline vector fallback."""
-    offline = st.session_state.get("map_offline_mode", False)
-    if offline:
-        fig = go.Figure(go.Scatter(
-            x=stations_df["longitude"],
-            y=stations_df["latitude"],
-            mode="markers+text",
-            text=stations_df["name"],
-            textposition="top right",
-            customdata=stations_df["station_id"],
-            marker=dict(size=14, color="#00E5FF", line=dict(width=2, color="#0284c7")),
-            textfont=dict(size=11),
-            hovertemplate="<b>%{text}</b><br>Station: %{customdata}<br>Lat: %{y:.4f}, Lon: %{x:.4f}<extra></extra>"
-        ))
-        fig.update_layout(
-            height=380,
-            margin=dict(l=20, r=20, t=35, b=20),
-            title=dict(text="Station locations · Offline schematic scatter view", font=dict(size=14)),
-            xaxis=dict(title="Longitude (°W)", showgrid=True, zeroline=False),
-            yaxis=dict(title="Latitude (°N)", showgrid=True, zeroline=False),
-            paper_bgcolor="rgba(0,0,0,0)"
-        )
-        return fig
-
-    fig = go.Figure(go.Scattermap(
-        lat=stations_df["latitude"],
-        lon=stations_df["longitude"],
-        mode="markers+text",
-        text=stations_df["name"],
-        textposition="top right",
-        customdata=stations_df["station_id"],
-        marker=dict(size=14, color="#00E5FF"),
-        textfont=dict(size=11, color="#FFFFFF"),
-        hovertemplate="<b>%{text}</b><br>Station: %{customdata}<br>Lat: %{lat:.4f}, Lon: %{lon:.4f}<extra></extra>"))
-    fig.update_layout(
-        height=380,
-        margin=dict(l=10, r=10, t=35, b=10),
-        title=dict(text="Station locations · High-resolution satellite view", font=dict(size=14)),
-        map=dict(
-            style="white-bg",
-            layers=[{
-                "below": "traces",
-                "sourcetype": "raster",
-                "source": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]
-            }],
-            center=dict(lat=28.7, lon=-97.8),
-            zoom=6.6,
-        ),
-        paper_bgcolor="rgba(0,0,0,0)")
-    return fig
+    """Render station locations on a baked-in offline GIS map or optional satellite overlay."""
+    from basin_core.geo_map import build_basin_map
+    satellite = st.session_state.get("map_satellite_mode", False)
+    if st.session_state.get("map_offline_mode", False):
+        satellite = False
+    return build_basin_map(stations_df, use_satellite=satellite)
 
 
 def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config: WaterSystemConfig | None = None):
@@ -987,9 +943,9 @@ if page == "Data":
         metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
         quality = pd.DataFrame(source.manifest["quality"])
         station_table = metadata.merge(quality, on="station_id")
-        col_map_top, col_map_tog = st.columns([3, 1])
-        col_map_tog.toggle("🗺️ Offline map mode", key="map_offline_mode", help="Switch from satellite imagery to an offline vector scatter view if network tiles are blocked or slow.")
-        st.plotly_chart(accessible_chart(basin_map(station_table)), width="stretch", config={"displayModeBar": False})
+        col_map_top, col_map_tog = st.columns([2.8, 1.2])
+        col_map_tog.toggle("🛰️ Satellite photo overlay", key="map_satellite_mode", help="Overlay high-resolution satellite imagery tiles (requires active internet connection). When off or offline, BASIN renders the baked-in Texas vector GIS map.")
+        st.plotly_chart(basin_map(station_table), width="stretch", config={"displayModeBar": False})
         st.caption("Corpus Christi, Victoria and San Antonio airport observations are provisional regional proxies. These coordinates do not establish catchment coverage. Station suitability and spatial aggregation require practitioner review. The coordinate overview works offline.")
         with st.expander("Station details and completeness"):
             st.dataframe(station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
