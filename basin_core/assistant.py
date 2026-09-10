@@ -1,8 +1,7 @@
-"""BASIN analyst assistant — embedded, deterministic intent routing.
+"""BASIN assistant: optional embedded intent selection with deterministic answers.
 
-The built-in engine extracts supported intents and parameters from questions.
-Read-only Python tools compute workspace results; fixed templates render them.
-No model server, model download, or external inference service is used.
+Model output is untrusted. Only validated read-only tool results are rendered;
+unsupported or unavailable model responses use the deterministic fallback.
 """
 from __future__ import annotations
 
@@ -1155,35 +1154,29 @@ def run_assistant(workspace, user_message: str,
                 candidate_tools = select_candidate_tools(user_message, max_tools=3)
                 resp = client.generate(messages, tools=candidate_tools, temperature=0.1, max_tokens=256, timeout=25.0)
                 tool_calls = resp.get("tool_calls")
-                raw_content = resp.get("content") or ""
-
+                # Reject the entire batch before executing any work if malformed,
+                # cancelled, or over budget. Never display ungrounded model prose.
+                if resp.get("cancelled"):
+                    raise ValueError("Model generation was cancelled")
                 if tool_calls:
-                    tool_results_md = []
+                    if not isinstance(tool_calls, list) or len(tool_calls) > 3:
+                        raise ValueError("Model tool-call budget exceeded")
+                    validated = []
                     for call in tool_calls:
-                        fn_name = call.get("function", {}).get("name")
-                        raw_args = call.get("function", {}).get("arguments", {})
-                        args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
-                        if fn_name in TOOL_REGISTRY:
-                            try:
-                                val_args = validate_tool_args(workspace, fn_name, args)
-                                res = TOOL_REGISTRY[fn_name](workspace, **val_args)
-                                tool_results_md.append(render_tool_result(fn_name, res))
-                            except Exception as tool_err:
-                                tool_results_md.append(f"⚠️ Tool `{fn_name}` notice: {tool_err}")
-
-                    clean_text = re.sub(r"<tool_call>.*?</tool_call>", "", raw_content, flags=re.DOTALL).strip()
-                    if tool_results_md:
-                        joined_tools = "\n\n".join(tool_results_md)
-                        if clean_text:
-                            reply = f"{clean_text}\n\n{joined_tools}"
-                        else:
-                            reply = joined_tools
-                    elif clean_text:
-                        reply = clean_text
-                else:
-                    clean_text = re.sub(r"<tool_call>.*?</tool_call>", "", raw_content, flags=re.DOTALL).strip()
-                    if clean_text:
-                        reply = clean_text
+                        if not isinstance(call, dict) or not isinstance(call.get("function"), dict):
+                            raise ValueError("Malformed model tool call")
+                        function = call["function"]
+                        fn_name = function.get("name")
+                        if not isinstance(fn_name, str) or fn_name not in TOOL_REGISTRY:
+                            raise ValueError("Unknown model tool")
+                        raw_args = function.get("arguments", {})
+                        args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                        validated.append((fn_name, validate_tool_args(workspace, fn_name, args)))
+                    tool_results_md = []
+                    for fn_name, args in validated:
+                        res = TOOL_REGISTRY[fn_name](workspace, **args)
+                        tool_results_md.append(render_tool_result(fn_name, res))
+                    reply = "\n\n".join(tool_results_md)
 
         except Exception as ex:
             logger.warning("Qwen inference error, falling back to deterministic router: %s", ex)

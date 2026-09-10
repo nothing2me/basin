@@ -1,5 +1,11 @@
 # BASIN team TODO
 
+### Embedded Qwen audit branch checkpoint
+
+- [x] Add grounded-response enforcement, a three-call validated batch budget, streamed-index bounds, worker-load model hash/size checks and timeout termination. Focused checks: 90 passed, 1 model-dependent skip. See [audit evidence](docs/qwen_security_review.md).
+- [ ] Integrate this audit branch with tailored Review and run the combined full suite before merge.
+- [ ] Establish the missing optional native-runtime installation path; verify native dependencies/advisories and actual-laptop inference/offline behavior. Model weights alone do not activate Qwen. Earlier live-model claims remain historical, not verified by this pass.
+
 ### Latest integration: installation pins and optional model helpers
 
 - [x] **SEC.7** Apply reviewed assistant dependency pins through the shared requirements include, ship every requirements file, and test independent archive resolution. Exact-pin checks reject wildcards and conditional pins.
