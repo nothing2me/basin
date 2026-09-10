@@ -59,11 +59,44 @@ class CachedSource:
     def with_custom_station(self, station_id: str, name: str, series: pd.Series,
                             location: str = "") -> CachedSource:
         """Return a new CachedSource augmenting the verified snapshot with a local custom gauge."""
-        if not station_id or not isinstance(series, pd.Series):
-            raise ValueError("Invalid custom station identifier or series")
+        if not isinstance(station_id, str) or not station_id.strip():
+            raise ValueError("Invalid custom station identifier: must be a non-empty string")
+        station_id = station_id.strip()
+
+        # Custom gauge must not collide with authoritative reference stations
+        reference_station_ids = {s["id"] for s in self.manifest["stations"] if not s.get("custom")}
+        if station_id in reference_station_ids:
+            raise ValueError(f"Custom station ID '{station_id}' collides with reference station")
+
+        if not isinstance(series, pd.Series) or series.empty:
+            raise ValueError("Invalid custom station series: must be a non-empty pandas Series")
+
+        parsed_index = pd.to_datetime(series.index, errors="coerce")
+        if parsed_index.isna().any():
+            raise ValueError("Custom station dates must be valid dates")
+
+        # Validate numeric, non-negative, and finite values
+        clean_vals = pd.to_numeric(series.dropna(), errors="coerce")
+        if clean_vals.isna().any() or not np.isfinite(clean_vals.to_numpy()).all() or (clean_vals.to_numpy() < 0).any():
+            raise ValueError("Invalid precipitation in custom station: values must be finite and non-negative")
+
+        # Check for conflicting duplicate dates
+        dups = parsed_index[parsed_index.duplicated(keep=False)]
+        if not dups.empty:
+            dup_df = pd.DataFrame({"val": series.to_numpy()}, index=parsed_index)
+            grouped = dup_df.groupby(dup_df.index)["val"].nunique()
+            if (grouped > 1).any():
+                raise ValueError("Duplicate dates with conflicting precipitation values in custom station series")
+
+        # Ensure overlap with declared public period
+        start_ts, end_ts = pd.Timestamp(self.manifest["start"]), pd.Timestamp(self.manifest["end"])
+        overlap = parsed_index.to_series().between(start_ts, end_ts)
+        if not overlap.any():
+            raise ValueError(f"Custom station dates have no overlap with declared period ({self.manifest['start']} to {self.manifest['end']})")
+
         new_daily = self.daily.copy()
         custom_series = series.copy()
-        custom_series.index = pd.to_datetime(custom_series.index)
+        custom_series.index = parsed_index
         custom_series = custom_series[~custom_series.index.duplicated(keep="first")].sort_index()
         new_daily[station_id] = custom_series.reindex(new_daily.index)
 
@@ -71,8 +104,8 @@ class CachedSource:
         new_manifest["stations"] = [s for s in new_manifest["stations"] if s.get("id") != station_id]
         new_manifest["stations"].append({
             "id": station_id,
-            "name": name,
-            "location": location or name,
+            "name": name.strip() if isinstance(name, str) and name.strip() else station_id,
+            "location": location or name or station_id,
             "custom": True,
             "elevation_m": None,
             "latitude": None,

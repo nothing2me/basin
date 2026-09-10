@@ -262,6 +262,10 @@ class Workspace:
         legacy_warning = None
         if data.get("snapshot_sha256") != source.manifest["sha256"]:
             legacy_warning = f"Notice: Saved session was generated with NOAA snapshot {str(data.get('snapshot_sha256'))[:8]}… (current: {source.manifest['sha256'][:8]}…)."
+        missing_stations = [s for s in data.get("params", {}).get("stations", []) if s not in source.daily.columns]
+        if missing_stations:
+            raise ValueError(f"Saved session requires station(s) absent from source snapshot: {', '.join(missing_stations)}. "
+                             "If this analysis used custom gauges, activate the custom gauge before loading.")
         obj = cls.__new__(cls)
         obj.source = source
         obj.legacy_warning = legacy_warning
