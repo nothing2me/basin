@@ -67,6 +67,15 @@ Claim states used here:
 | The presentation is three minutes or sixty minutes. | Unknown | Those are internal drafts. The supplied August 10 materials do not specify the finalist presentation length or detailed format. B11.7 remains open. |
 | The team has four speakers or a lead hydrologist. | False for the current roster | The team has three named students. Roles must be claimed by those teammates; do not invent credentials. |
 
+## Agronomic and wildfire index claims
+
+| Claim | Current state | Evidence and boundary |
+|---|---|---|
+| Regional Reference Evapotranspiration ($ET_o$) reflects long-term South Texas / Region N monthly normals. | Implemented and internally verified | `basin_core/agronomics.py`, Texas ET Network (Texas A&M AgriLife) published normals for Corpus Christi/Coastal Bend totaling ~58.1 inches (~1476 mm) annually. Normals are fixed regional monthly averages; they are not real-time station micrometeorological measurements. |
+| Crop water demand ($ET_c = ET_o \times K_c$) and irrigation gap quantify agricultural water stress for regional staple crops. | Implemented and internally verified | FAO-56 / Texas A&M AgriLifeExtension crop coefficients ($K_c$) for Cotton (1.10), Grain Sorghum (1.05), Corn (1.15), Pasture (0.85), and General Row Crop (0.95). Excludes complex soil moisture profile dynamics, root-zone depth transitions, and groundwater contributions. Serves as illustrative exploratory decision support, not certified irrigation scheduling. |
+| Keetch-Byram Drought Index (KBDI) tracks soil moisture depletion from 0 (saturated) to 800 (extreme drought). | Implemented and internally verified | Standard Keetch-Byram (1968) formula using South Texas monthly temperature approximations, 32-inch annual precipitation, and 0.20-inch initial rainfall interception threshold. Unit tested across wet, dry, boundary-clipping, and multi-day scenarios. |
+| KBDI $\ge 600$ indicates county burn ban consideration. | Implemented as illustrative decision support; non-regulatory | Texas A&M Forest Service guidelines recommend county burn ban evaluation around KBDI 575–600. BASIN displays this as an illustrative decision-support indicator. Official burn bans are statutory acts enacted exclusively by County Commissioners Courts under Texas Local Government Code § 352.081; BASIN never issues regulatory or legal declarations. |
+
 ## Current conflicts to resolve before freeze
 
 1. Confirm finalist presentation length, deck/demo submission mechanism, A/V constraints and travel instructions.
@@ -77,3 +86,10 @@ Claim states used here:
 6. Review AI-use and third-party disclosures as a team.
 
 No claim above converts discovery evidence, automated checks or local acceptance into professional validation.
+
+## Saved-simulation and multi-sector integration
+
+The optional local assistant returns deterministic tool results or clarification/boundary messages; it does not append unconstrained numerical interpretations. This is not a blanket network-isolation or zero-hallucination certification. Simulation requests explicitly create an unreviewed saved result, but cannot approve it through the assistant.
+
+Schema 2.2 numerical replay includes saved illustrative simulations, matched conservation comparisons, and provenance-linked review tokens. Neither the UI nor reports claim a calibrated forecast, official restriction date, exact breaking point, certified signature, or generic system survival. Missing source-year scenarios fail; multiple matches require selection. The PDF remains a readable companion to the replayable ZIP, with privacy opt-ins and no fabricated fallback outcomes.
+

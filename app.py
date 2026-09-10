@@ -1604,7 +1604,7 @@ elif page == "Review":
                         st.caption(f"Results cover this {len(s.series)}-day window only. Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings are retained for this workspace during the session; opening another workspace resets them.")
 
         with tab_agro:
-            st.caption("Cross-sector operational impacts calculated from daily scenario rainfall.")
+            st.caption("Cross-sector operational impacts calculated from daily scenario rainfall. Illustrative decision-support estimates based on Texas ET Network and Texas A&M Forest Service guidelines; not regulatory declarations or official crop/burn directives.")
             c_agro_tab, c_fire_tab = st.tabs(["🌾 Crop Water Deficit (ETc)", "🔥 Wildfire Risk (KBDI)"])
             with c_agro_tab:
                 st.markdown("##### 🌾 Crop Evapotranspiration & Irrigation Deficit")
@@ -1632,10 +1632,10 @@ elif page == "Review":
                 st.dataframe(m_df, hide_index=True, width="stretch")
 
             with c_fire_tab:
-                st.markdown("##### 🔥 Keetch-Byram Drought Index (KBDI) & Burn Ban Danger")
+                st.markdown("##### 🔥 Keetch-Byram Drought Index (KBDI) & Wildfire Stress")
                 f1, f2 = st.columns([2, 1])
                 start_kbdi = f1.slider("Starting KBDI (Soil Dryness)", 0, 800, 400, 10, key=f"kbdi_start_{s.id}_{w.id}",
-                                      help="0 = fully saturated soil, 800 = extreme drought. Texas A&M Forest Service initiates county burn bans at 600+.")
+                                      help="0 = fully saturated soil, 800 = extreme drought. Texas county commissioners courts frequently evaluate outdoor burn bans around KBDI 575–600 (illustrative decision support, not an official declaration).")
                 kbdi_res = calculate_kbdi(s.series, initial_kbdi=float(start_kbdi))
                 f2.metric("Danger Class", kbdi_res.danger_class)
 
@@ -1643,14 +1643,15 @@ elif page == "Review":
                 k1.metric("Initial KBDI", f"{kbdi_res.initial_kbdi:.0f}")
                 k2.metric("Peak KBDI", f"{kbdi_res.peak_kbdi:.0f}")
                 k3.metric("Final KBDI", f"{kbdi_res.final_kbdi:.0f}")
-                k4.metric("County Burn Ban (>600)", "⚠️ TRIGGERED" if kbdi_res.burn_ban_breached else "✅ Below 600")
+                k4.metric("Burn Ban Trigger (≥600)", "⚠️ Triggered (Illustrative)" if kbdi_res.burn_ban_breached else "✅ Below 600")
 
                 if kbdi_res.burn_ban_breached:
-                    st.warning(f"🚨 **County Burn Ban Threshold Breached**: KBDI reaches {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.burn_ban_day}. Texas county commissioners typically enact mandatory outdoor burning bans at KBDI ≥ 600.")
+                    st.warning(f"🚨 **Illustrative Burn Ban Threshold Breached**: KBDI reaches {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.burn_ban_day}. Texas county commissioners courts evaluate outdoor burn bans around KBDI ≥ 600 as decision support; this is an illustrative modeling threshold, not a statutory declaration.")
                 else:
-                    st.success(f"✅ KBDI peaks at {kbdi_res.peak_kbdi:.0f}, remaining below the statutory county burn-ban threshold (600).")
+                    st.success(f"✅ KBDI peaks at {kbdi_res.peak_kbdi:.0f}, remaining below typical county burn-ban triggers (600).")
 
                 st.info("📢 **Operational Takeaway**: " + kbdi_res.takeaway)
+                st.caption("KBDI and crop water balance models provide exploratory scenario impacts. Official burn bans are enacted exclusively by County Commissioners Courts under Tex. Local Gov't Code § 352.081. Reservoir stages reflect illustrative operating rules, not municipal emergency orders.")
 
         with tab_rainfall:
             st.markdown("### Compare rainfall with its reference")

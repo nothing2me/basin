@@ -269,7 +269,7 @@ def calculate_kbdi(
     if peak_kbdi >= 700:
         danger_class = "Extreme (700–800)"
     elif peak_kbdi >= 600:
-        danger_class = "Severe (600–700) · County Burn Ban Threshold"
+        danger_class = "Severe (600–700) · Illustrative Burn Ban Trigger"
     elif peak_kbdi >= 400:
         danger_class = "High (400–600)"
     elif peak_kbdi >= 200:
@@ -281,17 +281,17 @@ def calculate_kbdi(
         takeaway = (
             f"Soil moisture depletes steadily, driving KBDI to breach the **600 burn-ban threshold on Day {burn_ban_day}** "
             f"and peaking at **{peak_kbdi:.0f}** ({danger_class}) on Day {peak_day}. "
-            f"High wildfire risk and mandatory agricultural burn restrictions would be expected."
+            f"Elevated wildfire risk indicated; Texas county commissioners courts evaluate outdoor burn restrictions around this level (illustrative decision support, not an official legal declaration)."
         )
     elif peak_kbdi >= 500:
         takeaway = (
             f"KBDI reaches a high of **{peak_kbdi:.0f}** ({danger_class}) on Day {peak_day}, "
-            "approaching county burn-ban triggers but staying below mandatory restriction levels."
+            "approaching typical county burn-ban evaluation levels (KBDI 575–600) but remaining below mandatory restriction triggers."
         )
     else:
         takeaway = (
             f"KBDI peaks at **{peak_kbdi:.0f}** ({danger_class}), indicating adequate soil moisture retention "
-            "and low-to-moderate wildfire danger."
+            "and low-to-moderate wildfire risk indicators."
         )
 
     return KBDISummary(
