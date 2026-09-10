@@ -1,5 +1,6 @@
 """Exercise the actual assistant drawer without an inference service."""
 import socket
+from types import SimpleNamespace
 
 from streamlit.testing.v1 import AppTest
 
@@ -10,6 +11,9 @@ def test_embedded_drawer_chat_and_quick_queries(workspace, monkeypatch):
 
     monkeypatch.setattr(socket.socket, "connect", no_network)
     monkeypatch.setattr(socket, "create_connection", no_network)
+    from basin_core import qwen_runtime
+    offline_client = SimpleNamespace(status="model_missing")
+    monkeypatch.setattr(qwen_runtime, "get_qwen_client", lambda: offline_client)
     app = AppTest.from_string(
         "import streamlit as st\n"
         "from basin_ui import assistant_panel\n"
@@ -20,7 +24,7 @@ def test_embedded_drawer_chat_and_quick_queries(workspace, monkeypatch):
     app.session_state.assistant_open = True
     app.run()
     assert not app.exception
-    assert any("Ready: Qwen2.5-3B" in m.value or "Active: Deterministic Intent Router" in m.value or "Active: Embedded Intent Engine" in m.value for m in app.markdown)
+    assert any("Offline Mode: Instant Direct Tools Active" in m.value for m in app.markdown)
     app.button(key="quick_export").click().run()
     assert not app.exception
     assert "Export readiness" in app.session_state.assistant_messages[-1]["content"]

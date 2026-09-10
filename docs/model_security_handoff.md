@@ -1,3 +1,9 @@
+# Integration scope correction
+
+The original branch below was built on `3545909`. Upstream changed active chat to embedded Qwen before integration. On integrated main, `run_assistant()` does not call the Ollama helpers: the raw-inventory fix is defense in depth for optional helpers, not a per-question check on active chat. `get_model()` revalidates inventory when explicitly called and returns None for no eligible model; tests preserve that optional API contract. Active embedded routing remains unchanged.
+
+The old cached-alias/chat tests were adapted to assert helper revalidation and that active chat does not submit questions to Ollama. Claims below about pre-question checks describe the original branch only. No live Qwen model or daemon traffic was verified by this integration.
+
 # Assistant model eligibility review
 
 Branch: `codex/assistant-model-security`, based on `3545909`. Worktree: `../basin-model-security`. Kept separate from Claude's installation consistency work. Not integrated into main by this task.

@@ -1,5 +1,13 @@
 # BASIN current handoff
 
+## Latest installation / optional model-helper integration
+
+Combined Claude `2f63dda` (applied as `16f4dd1`) and model-helper fix `e6bc136` (adapted as `88060b7`) with upstream through `48300fb`. Preserved upstream embedded-Qwen chat; did not restore the superseded Ollama chat route. Both helper metadata checks and requirements includes are covered by the combined suite. Added four negative checks for wildcard/conditional pins.
+
+Final combined suite: **355 passed, 1 skipped** in 376.22s on September 9, 2026. The skipped test requires model weights. Snapshot checkout, demo smoke (run f6ec073b63f5), explicit bundle replay (`implementation_matches_current: true`) and source packaging passed after merging upstream through 48300fb. Installation checker resolves 58 packages with all seven assistant pins exact. The earlier six Excel failures came from missing declared openpyxl; version 3.1.5 is now present. One stale drawer-label test was updated to deterministically exercise the current missing-model fallback, including network-blocked chat and quick queries. No native installer build, model download, daemon traffic audit or live Qwen test is claimed here. The previous 40-point/Qwen verification narrative below is teammate-reported, not independently revalidated by this integration.
+
+Next: separate review of active Qwen grounding and runtime distribution, actual-device acceptance, and the proposed tailored Review flow in docs/tailored_review_proposal.md. Shared status corrections distinguish completed optional-helper work from active chat.
+
 ## September 9 Rural Usability, Data Sovereignty, Agronomics & Optional AI Installer — Complete
 
 ### 1. Optional AI Assistant in Setup & 100% Offline Resilience

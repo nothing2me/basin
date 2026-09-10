@@ -1,4 +1,10 @@
-# Optional analyst assistant — setup and boundaries
+# Optional Ollama helpers — setup and boundaries
+
+Current main uses embedded Qwen with deterministic fallback for active chat. Ollama
+helpers are retained for compatibility/auditing; installing Ollama does not enable a
+second chat route. These instructions cover those optional helpers, not embedded Qwen.
+The raw inventory filter now rejects remote or ambiguous metadata; see
+`docs/model_security_handoff.md`. The older A-1 finding is fixed for these helpers.
 
 BASIN's calculation engine, scenario generation, review workflow, export bundle and PDF
 report all run with none of this installed. The assistant is optional throughout: when any
@@ -104,8 +110,9 @@ Not established by any of this:
   on the presentation machine (open under SEC.4).
 - **Model behaviour.** Pinning a client version is not a statement about hallucination,
   and the deterministic tools remain the only source of numbers.
-- **Cloud-model filtering.** `check_ollama()` also tests `remote_host` and `remote_model`
-  attributes. The pinned client parses responses into pydantic models that drop unknown
-  fields, so those two checks cannot fire against a real daemon; only the `"cloud"`
-  substring check on the model name applies. See
-  `docs/dependency_advisories_2026-09-09.md` finding A-1.
+- **Independent proof of local model execution.** The optional helpers now inspect raw
+  `/api/tags` metadata before the typed client can discard remote fields. They reject
+  remote/cloud markers, inconsistent aliases and incomplete local-model metadata.
+  This fixes finding A-1's metadata-loss issue; daemon-reported metadata still does
+  not prove where inference executes. The current embedded chat does not call these
+  Ollama helpers. See `docs/model_security_handoff.md` for scope and evidence.

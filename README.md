@@ -2,7 +2,7 @@
 
 **Basin Analysis and Scenario Intelligence Navigator** is a local rainfall evidence workbench for the Coastal Bend / Region N hackathon project.
 
-Use public NOAA observations to construct rainfall stress scenarios, compare their measurements and priorities, challenge assumptions, and prepare a reviewed packet for deeper hydrologic analysis. The core calculation engine is 100% deterministic Python with local KMeans clustering and no required LLM or cloud inference. The built-in analyst assistant uses an embedded deterministic intent engine for read-only questions. It requires no Ollama installation, model download, or inference service.
+Use public NOAA observations to construct rainfall stress scenarios, compare their measurements and priorities, challenge assumptions, and prepare a reviewed packet for deeper hydrologic analysis. The core calculation engine is 100% deterministic Python with local KMeans clustering and no required LLM or cloud inference. The built-in analyst assistant supports an optional embedded Qwen runtime and a deterministic fallback for read-only questions. Core calculations and the fallback require no model download or Ollama service.
 
 ## Key features
 
@@ -13,7 +13,7 @@ Use public NOAA observations to construct rainfall stress scenarios, compare the
 - **Executive brief (PDF deliverable):** Generate a publication-grade PDF summary for City Council members and water planners, featuring dynamic breach countdowns and illustrative drought response benchmarks.
 - **Illustrative stress spectrum:** Sweep 4-tier storage drawdowns (100%, 80%, 60%, 40% rainfall) on a two-pool reservoir model to identify Stage 3 tipping points and quantify emergency conservation benefits.
 - **Privacy-first & offline by design:** 100% local execution with loopback binding, zero cloud telemetry, and strict opt-in consent before exporting private reviewer notes.
-- **Embedded analyst assistant:** Explore scenarios, station stress, and priority sensitivity using the built-in intent engine and deterministic calculation tools. Supported questions map to fixed templates; this is not a general-purpose language model. Ask complete questions and include scenario IDs when comparing.
+- **Embedded analyst assistant:** Explore scenarios, station stress, and priority sensitivity using the built-in intent engine and deterministic calculation tools. The deterministic fallback maps supported questions to fixed templates; optional embedded Qwen provides an additional language-model path. Ask complete questions and include scenario IDs when comparing.
 
 ## Supported Windows presentation path
 
@@ -29,7 +29,7 @@ py -3.12 -m venv .venv
 
 The offline Windows wheel bundle is specific to CPython 3.12 x64. Python itself must be installed beforehand. macOS/Linux require their own dependency installation and validation; `start_basin.sh` is provided without a presentation-support claim.
 
-The optional analyst assistant needs three separate pieces: the pinned `ollama` Python package and its reviewed dependency pins (both installed by the command above, since `requirements.txt` includes `requirements-assistant.txt`), the Ollama service (a separate native download), and a pulled model. BASIN runs without any of them. See [docs/ollama_setup.md](docs/ollama_setup.md) for how they differ, how to install each, and what the client boundary does and does not establish.
+The optional Ollama compatibility helpers, which do not power the current embedded chat, use three separate pieces: the pinned `ollama` Python package and its reviewed dependency pins (both installed by the command above, since `requirements.txt` includes `requirements-assistant.txt`), the Ollama service (a separate native download), and a pulled model. BASIN runs without any of them. See [docs/ollama_setup.md](docs/ollama_setup.md) for how they differ, how to install each, and what the client boundary does and does not establish.
 
 ## Appearance and help
 
@@ -37,7 +37,7 @@ Start with **Try an example** to open an unapproved rainfall scenario, or **Use 
 
 Open **Settings** in the sidebar for Light, Dark or System appearance and color customization. Three horizontal color pickers control buttons, selected options and the sidebar; choose **Apply colors** to apply drafts or **Reset colors** to restore defaults. Custom choices last for the current session; the native theme choice is remembered by the browser. **Color-blind mode** uses a consistent interface accent and chart colors with line styles, shapes and patterns. This is an accessibility aid, not a complete accessibility certification.
 
-**Take a tour** or **Help & tutorial** starts the guided walkthrough. Instructions appear beside the highlighted target and the app scrolls to it automatically. **AI Assistant** opens a slide-out drawer for conversational questions about scenarios, station stress, and sensitivity (routing strictly to deterministic read-only tools). **Personal notes** is available at the top right of an active analysis; notes save locally and are excluded from exports unless explicitly included. **Exports** offers an in-app brief preview, downloadable Markdown brief, and publication-ready **PDF Executive Brief** before building the verified packet. Previewing does not bypass approval requirements.
+**Take a tour** or **Help & tutorial** starts the guided walkthrough. Instructions appear beside the highlighted target and the app scrolls to it automatically. **AI Assistant** opens a slide-out drawer for conversational questions about scenarios, station stress, and sensitivity (with deterministic read-only tools and an optional embedded language-model path). **Personal notes** is available at the top right of an active analysis; notes save locally and are excluded from exports unless explicitly included. **Exports** offers an in-app brief preview, downloadable Markdown brief, and publication-ready **PDF Executive Brief** before building the verified packet. Previewing does not bypass approval requirements.
 
 After pulling updates, restart the running app to load changed Python modules and theme configuration. Saved analyses remain in the local directory; save notes before stopping the process. See [UX research and foundation checklist](docs/ux_research_and_simplification.md) for implementation status and remaining area-model work.
 
