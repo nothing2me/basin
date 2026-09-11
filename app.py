@@ -380,6 +380,21 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
     fig.add_hline(y=b20, line_dash="dash", line_color="#dc2626", annotation_text=f"Band 3 ({b20:.0f}%)",
                   annotation_position="top right", row=1, col=2)
 
+    if len(cfg.stage_bands_pct) >= 4:
+        b10 = cfg.stage_bands_pct[3] * 100
+        fig.add_hline(y=b10, line_dash="dot", line_color="#991b1b", annotation_text=f"Stage 4 Emergency ({b10:.0f}%)",
+                      annotation_position="top right", row=1, col=2)
+
+    dead_acft = getattr(cfg, "dead_storage_acft", 0.0)
+    if dead_acft > 0 and cfg.total_capacity_acft > 0:
+        dead_pct = dead_acft / cfg.total_capacity_acft * 100
+        fig.add_hline(y=dead_pct, line_dash="dot", line_color="#450a0a", annotation_text=f"Dead Storage Reserve ({dead_pct:.1f}%)",
+                      annotation_position="bottom right", row=1, col=2)
+
+    if "Region N" in cfg.name or "Corpus Christi" in cfg.name:
+        fig.add_hline(y=7.7, line_dash="dot", line_color="#7f1d1d", annotation_text="April 2026 Record Low (7.7%)",
+                      annotation_position="bottom left", row=1, col=2)
+
     frames = []
     for idx in indices:
         row = sim_df.iloc[idx]
@@ -1642,6 +1657,7 @@ elif page == "Review":
                                 "At or below 30%": f"Day {r['day_stage2_30']}" if r["day_stage2_30"] else "Not reached in window",
                                 "At or below 20%": f"Day {r['day_stage3_20']}" if r["day_stage3_20"] else "Not reached in window",
                                 "Critical band": "Not reached in window" if r["day_stage3_20"] is None else "Reached in window",
+                                "Dead Storage / Day Zero": f"Day {r['day_zero']}" if r.get("day_zero") else ("Day " + str(r['day_dead_storage']) if r.get("day_dead_storage") else "Not reached"),
                             }
                             for r in spec["summary_table"]
                         ])
@@ -1654,15 +1670,51 @@ elif page == "Review":
                             st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms, config=chosen_sys)), width="stretch", config={"displayModeBar": False})
                             st.plotly_chart(accessible_chart(stage_trigger_milestone_figure({"tier_results": {1.0: {"df": sim_df}}}, chosen_sys.stage_bands_pct)), width="stretch", config={"displayModeBar": False})
 
+                        # Dire Condition & Day Zero Warning
+                        if sim_df["is_day_zero"].any():
+                            day_zero_val = int(sim_df.loc[sim_df["is_day_zero"], "day"].iloc[0])
+                            st.error(
+                                f"🚨 **Day Zero Failure**: Reservoir storage entered the inactive dead storage reserve on **Day {day_zero_val}**. "
+                                f"Intake pumps cavitate and raw water deliveries cease. Cumulative unserved demand reached **{sim_df['unmet_demand_acft'].sum():,.0f} ac-ft**."
+                            )
+                        elif sim_df["combined_pct"].min() <= 7.7 and ("Region N" in chosen_sys.name or "Corpus Christi" in chosen_sys.name):
+                            st.warning(f"⚠️ **Historic Record Low Exceeded**: Storage dropped to **{sim_df['combined_pct'].min():.1f}%**, falling below the mid-April 2026 all-time low of 7.7% and the TWDB 75,000 ac-ft inactive reserve.")
+
                         s1 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < (chosen_sys.stage_bands_pct[0]*100 if len(chosen_sys.stage_bands_pct) >= 1 else 40)), None)
                         s2 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < (chosen_sys.stage_bands_pct[1]*100 if len(chosen_sys.stage_bands_pct) >= 2 else 30)), None)
+                        s3 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < (chosen_sys.stage_bands_pct[2]*100 if len(chosen_sys.stage_bands_pct) >= 3 else 20)), None)
+                        s4 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < (chosen_sys.stage_bands_pct[3]*100 if len(chosen_sys.stage_bands_pct) >= 4 else 10)), None)
                         term = sim_df.iloc[-1]
                         m1, m2, m3, m4 = st.columns(4)
                         m1.metric("Storage at window end", f"{term['combined_pct']:.1f}%")
                         m1.caption(f"{term['combined_acft']:,.0f} ac-ft combined")
                         m2.metric("Lowest combined storage", f"{sim_df['combined_pct'].min():.1f}%")
-                        m3.metric("Below Stage 1 (conditional)", f"Day {s1}" if s1 else "No crossing")
-                        m4.metric("Below Stage 2 (conditional)", f"Day {s2}" if s2 else "No crossing")
+                        m3.metric("Below Stage 1 (40%)", f"Day {s1}" if s1 else "No crossing")
+                        m4.metric("Below Stage 3 (20%)", f"Day {s3}" if s3 else "No crossing")
+
+                        # Multi-Sector Delivery Breakdown
+                        if "served_domestic_acft" in sim_df.columns and sim_df["served_demand_acft"].sum() > 0:
+                            st.markdown("##### 👥 Multi-Sector Water Delivery")
+                            sec1, sec2, sec3 = st.columns(3)
+                            sec1.metric("Domestic Baseload", f"{sim_df['served_domestic_acft'].sum():,.0f} ac-ft")
+                            sec2.metric("Industrial Contracted", f"{sim_df['served_industrial_acft'].sum():,.0f} ac-ft")
+                            sec3.metric("Outdoor / Irrigation", f"{sim_df['served_outdoor_acft'].sum():,.0f} ac-ft")
+
+                        # Pipeline Outage Resilience Counterfactual
+                        if pipeline_active and getattr(chosen_sys, "pipeline_capacity_mgd", 0) > 0 and chosen_sys.demand_no_pipeline_acft_day is not None:
+                            sim_no_pipe = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=False, config=chosen_sys)
+                            crit_pct = chosen_sys.stage_bands_pct[2] * 100 if len(chosen_sys.stage_bands_pct) >= 3 else 20.0
+                            s_crit_with = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < crit_pct), None)
+                            s_crit_without = next((r["day"] for _, r in sim_no_pipe.iterrows() if r["combined_pct"] < crit_pct), None)
+                            if s_crit_with and s_crit_without and s_crit_with > s_crit_without:
+                                st.info(f"🛡️ **Pipeline Resilience Metric**: The Mary Rhodes Pipeline ({chosen_sys.pipeline_capacity_mgd:.0f} MGD) extends the Stage 3 survival runway by **{s_crit_with - s_crit_without} days** compared to a total pipeline outage.")
+                            elif s_crit_without and not s_crit_with:
+                                st.info(f"🛡️ **Pipeline Resilience Metric**: The Mary Rhodes Pipeline ({chosen_sys.pipeline_capacity_mgd:.0f} MGD) completely prevents Stage 3 breach in this window (which breaches on Day {s_crit_without} under a pipeline outage).")
+
+                        # TCEQ Emergency Inflow Status
+                        if getattr(chosen_sys, "estuary_order_active", False) and sim_df["estuary_pass_through_acft"].sum() == 0:
+                            st.caption(f"🌿 **TCEQ 2026 Emergency Inflow Order Active**: Estuary pass-through suspended while storage ≤ {getattr(chosen_sys, 'estuary_threshold_pct', 0.50)*100:.0f}%, retaining 100% of inflow in municipal storage.")
+
                         st.info("📢 **Operational Takeaway**: " + reservoir_summary(sim_df, chosen_sys.name))
                         st.caption(f"Results cover this {len(s.series)}-day window only. Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings are retained for this workspace during the session; opening another workspace resets them.")
 

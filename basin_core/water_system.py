@@ -65,6 +65,14 @@ class WaterSystemConfig:
     allocation_secondary_fraction: float = 0.15
     use_smooth_evap: bool = False
     use_eac_scaling: bool = False
+    dead_storage_acft: float = 0.0
+    stage_curtailment_active: bool = False
+    demand_domestic_pct: float = 40.0
+    demand_industrial_pct: float = 50.0
+    demand_outdoor_pct: float = 10.0
+    estuary_order_active: bool = False
+    estuary_threshold_pct: float = 0.50
+    pipeline_capacity_mgd: float = 72.0
 
     def validate(self) -> None:
         if not self.name:
@@ -81,6 +89,17 @@ class WaterSystemConfig:
         for b in self.stage_bands_pct:
             if not isinstance(b, (int, float)) or not 0 <= b <= 1:
                 raise ValueError("stage_bands_pct values must be between 0 and 1")
+        if not isinstance(self.dead_storage_acft, (int, float)) or not math.isfinite(self.dead_storage_acft) or self.dead_storage_acft < 0:
+            raise ValueError("dead_storage_acft must be a non-negative number")
+        for p in (self.demand_domestic_pct, self.demand_industrial_pct, self.demand_outdoor_pct):
+            if not isinstance(p, (int, float)) or not math.isfinite(p) or p < 0:
+                raise ValueError("Sector demand percentages must be non-negative numbers")
+        if abs(self.demand_domestic_pct + self.demand_industrial_pct + self.demand_outdoor_pct - 100.0) > 0.01:
+            raise ValueError("Sector demand percentages must sum to 100")
+        if not isinstance(self.estuary_threshold_pct, (int, float)) or not 0 <= self.estuary_threshold_pct <= 1:
+            raise ValueError("estuary_threshold_pct must be between 0 and 1")
+        if not isinstance(self.pipeline_capacity_mgd, (int, float)) or not math.isfinite(self.pipeline_capacity_mgd) or self.pipeline_capacity_mgd < 0:
+            raise ValueError("pipeline_capacity_mgd must be a non-negative number")
 
     @property
     def total_capacity_acft(self) -> float:
@@ -117,6 +136,27 @@ REGION_N_PRESET = WaterSystemConfig(
     allocation_secondary_fraction=0.15,
 )
 
+REGION_N_MODERN_PRESET = WaterSystemConfig(
+    name="Region N Modern Stress (2026 Crisis & Dead Storage)",
+    sources=(
+        WaterSource("Lake Corpus Christi", 257300.0, inflow_base_acft=30.0, inflow_sensitivity=45.0, evap_summer_acft=750.0, evap_winter_acft=380.0),
+        WaterSource("Choke Canyon", 662600.0, inflow_base_acft=0.0, inflow_sensitivity=0.0, evap_summer_acft=0.0, evap_winter_acft=0.0),
+    ),
+    demand_acft_day=370.0,
+    demand_no_pipeline_acft_day=554.0,
+    stage_bands_pct=(0.40, 0.30, 0.20, 0.10),
+    allocation_threshold_pct=0.20,
+    allocation_primary_fraction=0.65,
+    allocation_secondary_fraction=0.15,
+    use_smooth_evap=True,
+    use_eac_scaling=True,
+    dead_storage_acft=75000.0,
+    stage_curtailment_active=True,
+    estuary_order_active=True,
+    estuary_threshold_pct=0.50,
+    pipeline_capacity_mgd=72.0,
+)
+
 SMALL_MUNI_PRESET = WaterSystemConfig(
     name="Small Municipal District (single reservoir)",
     sources=(
@@ -141,4 +181,5 @@ SYSTEM_PRESETS: dict[str, WaterSystemConfig] = {
     "Small Municipal District (12k ac-ft)": SMALL_MUNI_PRESET,
     "Rural Farm Pond (1.5k ac-ft)": RURAL_FARM_PRESET,
     "Region N (Corpus Christi — 2 reservoirs)": REGION_N_PRESET,
+    "Region N Modern Stress (2026 Crisis & Dead Storage)": REGION_N_MODERN_PRESET,
 }

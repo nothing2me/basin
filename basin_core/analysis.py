@@ -174,6 +174,14 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
         beginning = float(storage.sum())
         inflow = base_inflow + float(rain) * inflow_sens
 
+        # TCEQ Emergency Inflow Order pass-through accounting
+        estuary_pass_through = 0.0
+        if getattr(cfg, "estuary_order_active", False):
+            thresh = getattr(cfg, "estuary_threshold_pct", 0.50)
+            if total_cap > 0 and (beginning / total_cap) > thresh:
+                estuary_pass_through = min(inflow * 0.35, 100.0)
+                inflow -= estuary_pass_through
+
         smooth_active = use_smooth_evap or getattr(cfg, "use_smooth_evap", False)
         eac_active = use_eac_scaling or getattr(cfg, "use_eac_scaling", False)
 
@@ -197,34 +205,85 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
             dem = cfg.demand_acft_day
         else:
             dem = cfg.demand_no_pipeline_acft_day
-        requested_demand = dem * (1 - conservation_pct)
+
+        dom_base = dem * (getattr(cfg, "demand_domestic_pct", 40.0) / 100.0)
+        ind_base = dem * (getattr(cfg, "demand_industrial_pct", 50.0) / 100.0)
+        out_base = dem * (getattr(cfg, "demand_outdoor_pct", 10.0) / 100.0)
+
+        # Dynamic hierarchical stage curtailment
+        if getattr(cfg, "stage_curtailment_active", False):
+            current_pct = (beginning / total_cap * 100.0) if total_cap > 0 else 0.0
+            if current_pct < 10.0:  # Stage 4 Emergency
+                dom_req = dom_base * 0.80
+                ind_req = ind_base * 0.70
+                out_req = 0.0
+            elif current_pct < 20.0:  # Stage 3 Critical
+                dom_req = dom_base * 0.90
+                ind_req = ind_base
+                out_req = 0.0
+            elif current_pct < 30.0:  # Stage 2 Moderate
+                dom_req = dom_base
+                ind_req = ind_base
+                out_req = out_base * 0.50
+            elif current_pct < 40.0:  # Stage 1 Mild
+                dom_req = dom_base
+                ind_req = ind_base
+                out_req = out_base * 0.85
+            else:
+                dom_req = dom_base
+                ind_req = ind_base
+                out_req = out_base
+            requested_demand = (dom_req + ind_req + out_req) * (1 - conservation_pct)
+        else:
+            requested_demand = dem * (1 - conservation_pct)
+            dom_req = requested_demand * (getattr(cfg, "demand_domestic_pct", 40.0) / 100.0)
+            ind_req = requested_demand * (getattr(cfg, "demand_industrial_pct", 50.0) / 100.0)
+            out_req = requested_demand * (getattr(cfg, "demand_outdoor_pct", 10.0) / 100.0)
 
         storage += inflow * caps / caps.sum()
         actual_evap = min(potential_evap, float(storage.sum()))
         if storage.sum() > 0:
             storage -= actual_evap * storage / storage.sum()
 
+        # Dead Storage & Physical Withdrawal Cap
+        dead_storage = float(getattr(cfg, "dead_storage_acft", 0.0))
+        available_above_dead = max(0.0, float(storage.sum()) - dead_storage)
+        deliverable_demand = min(available_above_dead, requested_demand)
+
         if n_sources == 2:
             fraction = cfg.allocation_primary_fraction if storage[0] > caps[0] * cfg.allocation_threshold_pct else cfg.allocation_secondary_fraction
-            withdrawals = np.minimum(storage, requested_demand * np.array([fraction, 1 - fraction]))
+            withdrawals = np.minimum(storage, deliverable_demand * np.array([fraction, 1 - fraction]))
             storage -= withdrawals
             served = float(withdrawals.sum())
             for tank in (0, 1):
-                extra = min(float(storage[tank]), max(0.0, requested_demand - served))
+                extra = min(float(storage[tank]), max(0.0, deliverable_demand - served))
                 storage[tank] -= extra
                 served += extra
         elif n_sources == 1:
-            served = min(float(storage[0]), requested_demand)
+            served = min(float(storage[0]), deliverable_demand)
             storage[0] -= served
         else:
             proportions = storage / storage.sum() if storage.sum() > 0 else caps / caps.sum()
-            withdrawals = np.minimum(storage, requested_demand * proportions)
+            withdrawals = np.minimum(storage, deliverable_demand * proportions)
             storage -= withdrawals
             served = float(withdrawals.sum())
             for tank in range(n_sources):
-                extra = min(float(storage[tank]), max(0.0, requested_demand - served))
+                extra = min(float(storage[tank]), max(0.0, deliverable_demand - served))
                 storage[tank] -= extra
                 served += extra
+
+        # Sector delivery breakdown
+        dom_target = dom_req * (1 - conservation_pct) if getattr(cfg, "stage_curtailment_active", False) else dom_req
+        ind_target = ind_req * (1 - conservation_pct) if getattr(cfg, "stage_curtailment_active", False) else ind_req
+        out_target = out_req * (1 - conservation_pct) if getattr(cfg, "stage_curtailment_active", False) else out_req
+
+        delivered_dom = min(dom_target, served)
+        rem_served = served - delivered_dom
+        delivered_ind = min(ind_target, rem_served)
+        rem_served -= delivered_ind
+        delivered_out = min(out_target, rem_served)
+
+        is_day_zero = bool(available_above_dead <= 1e-6 and requested_demand > 0.0)
 
         spill = float(np.maximum(storage - caps, 0).sum())
         storage = np.clip(storage, 0, caps)
@@ -240,6 +299,9 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
                 if pct < b_thresh * 100:
                     band = b_idx + 1
 
+        bal_err = combined - (beginning + inflow - actual_evap - served - spill)
+        assert abs(bal_err) < 1e-6, f"Mass balance error on day {step+1}: {bal_err}"
+
         rec = {
             "day": step + 1, "date": str(date.date()),
             "combined_acft": combined, "combined_pct": pct, "beginning_acft": beginning,
@@ -249,7 +311,17 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
             "demand_acft": requested_demand, "served_demand_acft": served,
             "unmet_demand_acft": max(0.0, requested_demand - served), "spill_acft": spill,
             "net_loss_acft": requested_demand + potential_evap - inflow,
-            "balance_error_acft": combined - (beginning + inflow - actual_evap - served - spill),
+            "balance_error_acft": bal_err,
+            "is_day_zero": is_day_zero,
+            "active_storage_acft": max(0.0, combined - dead_storage),
+            "dead_storage_acft": dead_storage,
+            "served_domestic_acft": delivered_dom,
+            "served_industrial_acft": delivered_ind,
+            "served_outdoor_acft": delivered_out,
+            "curtailed_domestic_acft": max(0.0, dom_base - delivered_dom) if getattr(cfg, "stage_curtailment_active", False) else 0.0,
+            "curtailed_industrial_acft": max(0.0, ind_base - delivered_ind) if getattr(cfg, "stage_curtailment_active", False) else 0.0,
+            "curtailed_outdoor_acft": max(0.0, out_base - delivered_out) if getattr(cfg, "stage_curtailment_active", False) else 0.0,
+            "estuary_pass_through_acft": estuary_pass_through,
         }
         for i, s in enumerate(cfg.sources):
             rec[f"source_{i}_name"] = s.name
@@ -326,6 +398,9 @@ def simulate_stress_spectrum(series: pd.DataFrame,
         day_b2 = threshold_crossing_day(sim_df, initial_pct, cfg.stage_bands_pct[1] * 100 if len(cfg.stage_bands_pct) >= 2 else 30.0)
         day_b3 = threshold_crossing_day(sim_df, initial_pct, critical_thresh)
         day_b4 = threshold_crossing_day(sim_df, initial_pct, cfg.stage_bands_pct[3] * 100 if len(cfg.stage_bands_pct) >= 4 else 15.0)
+        dead_thresh = (getattr(cfg, "dead_storage_acft", 0.0) / cfg.total_capacity_acft * 100) if cfg.total_capacity_acft > 0 else 0.0
+        day_dead = threshold_crossing_day(sim_df, initial_pct, dead_thresh) if dead_thresh > 0 else None
+        day_zero = next((int(r["day"]) for _, r in sim_df.iterrows() if r.get("is_day_zero")), None)
         survived = bool(initial_pct * 100 > critical_thresh and unrounded_min > critical_thresh)
 
         label = tier_labels.get(round(m, 2), f"{int(round(m * 100))}% ({(int(round(m * 100)) - 100):+d}% Rain)")
@@ -343,6 +418,8 @@ def simulate_stress_spectrum(series: pd.DataFrame,
             "day_stage2_30": day_b2,
             "day_stage3_20": day_b3,
             "day_emergency_15": day_b4,
+            "day_dead_storage": day_dead,
+            "day_zero": day_zero,
             "survived_critical_20pct": survived,
             "status": "✅ Survived" if survived else "❌ Breached (Stage 3)",
         }

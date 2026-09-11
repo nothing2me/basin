@@ -1,5 +1,37 @@
 # BASIN current handoff
 
+## September 11 — Post-2015 Hydrology Integration & Dire Visual Simulation Architecture (Complete)
+
+- **Official Post-2015 Research & Documentation (`docs/post_2015_hydrology_and_simulation_plan.md`):**
+  - Integrated primary findings from TWDB, TCEQ, Texas 2036, and the City of Corpus Christi.
+  - Documented the pre-2015 model cutoff (TWDB variance) and the 2020–2026 Drought of Record.
+  - Sourced the mid-April 2026 all-time low of 7.7% combined storage (~70,800 ac-ft), breaching the 75,000 ac-ft inactive safe-yield reserve.
+  - Documented S&P Global Ratings negative debt outlook revision (May 20, 2026), Texas 2036 report (*The State Water Plan & The Coastal Bend Water Crisis*, Aug 19, 2026), and Governor Abbott's state takeover warning.
+  - Documented TCEQ's unanimous emergency order of September 9, 2026 raising estuary pass-through suspension to 50% combined storage through Dec 23, 2026 (with 60-day automatic extension to February 2027), saving 2.4 billion gallons.
+  - Documented the 70–72 MGD Mary Rhodes Pipeline expansion (March 2025), carrying 70% of regional supply.
+  - Documented the City Council's 5–3 rejection of the $700M–$1B seawater desalination design contract (Sept 1, 2026) and the $175M Brackish Groundwater RO plant at ONSWTP (21.3 MGD, phasing 2027–2028).
+  - Documented extreme asymmetric recovery as of Sept 10, 2026 (Lake Corpus Christi 87.1% vs Choke Canyon 22.9%, combined 47.6%) and TWDB NexSens CB-650 floating buoys.
+- **Water System Configuration (`basin_core/water_system.py`):**
+  - Added `dead_storage_acft`, `stage_curtailment_active`, sector demand percentages (Domestic 40%, Industrial 50%, Outdoor 10%), `estuary_order_active`, `estuary_threshold_pct`, and `pipeline_capacity_mgd`.
+  - Added `REGION_N_MODERN_PRESET` with 75k ac-ft dead storage, Stage 4 emergency (10%), dynamic curtailment, and 72 MGD pipeline.
+- **Simulation Engine Hardening (`basin_core/analysis.py`):**
+  - Enforced dead storage floor: active storage $= \max(0, S - \text{dead\_storage})$; flags `is_day_zero` and tracks unmet demand when active storage reaches zero.
+  - Implemented dynamic hierarchical multi-sector curtailment (Outdoor cut first, then voluntary Domestic, then Industrial in Stage 4).
+  - Implemented TCEQ emergency order inflow pass-through accounting.
+  - Asserted exact zero mass balance error ($|\text{Error}| < 10^{-6}$) on every daily step.
+  - Tracked `day_dead_storage` and `day_zero` in stress spectrum summaries.
+- **Visual Simulation UI (`app.py`):**
+  - Added guide lines for Stage 4 Emergency (10%), Dead Storage Reserve (75k ac-ft / 8.2%), and April 2026 Record Low (7.7%) on the storage trajectory plot.
+  - Added prominent Day Zero alert banner when active storage breaches zero.
+  - Added multi-sector delivered volume breakdown (Domestic vs Industrial vs Outdoor).
+  - Added live Mary Rhodes Pipeline resilience metric showing days of Stage 3 survival gained.
+- **Files changed:** `basin_core/water_system.py`, `basin_core/analysis.py`, `app.py`, `tests/test_water_system.py`, `docs/post_2015_hydrology_and_simulation_plan.md`, `HANDOFF.md`.
+- **Verified commands:**
+  - `pytest tests/test_water_system.py tests/test_reservoir.py`: 30 passed.
+  - `pytest tests/test_simulation_contract.py`: 26 passed.
+  - `pytest tests/test_visualizers.py tests/test_app.py`: passing.
+- **Blocker:** none. Next action: commit and push to remote.
+
 ## September 11 — Part A: Tailored Workflow & Review Interface (Complete)
 
 - **A1 (Entry Paths):**
