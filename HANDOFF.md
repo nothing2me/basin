@@ -22,10 +22,12 @@ Verification:
 - Diff inspection found no `.py`, `.cmd`, `.sh`, `.toml`, `.txt` or `.json` changes.
 - Part B regression baseline remains **554 passed, 3 skipped**; routing **50/50**; demo replay verified.
 
-Blocker: GitHub fetch initially failed because sandbox network access was unavailable; repeat immediately before commit. Actual presentation-laptop install/offline/native/download/PDF/projector checks, intended-user exercise, organizer format and final rehearsal remain not run. No weights were downloaded and no network/firewall settings were changed.
+The earlier GitHub fetch limitation is resolved; upstream was fetched and integrated in this review. Actual presentation-laptop install/offline/native/download/PDF/projector checks, intended-user exercise, organizer format and final rehearsal remain not run. No weights were downloaded and no network/firewall settings were changed.
 
-Next action: compare any new `origin/main` commits, integrate safely, commit/push the documentation checkpoint, then run Task 6 on the actual presentation laptop with the user controlling connectivity and model download authorization.
+Next action: run Task 6 on the actual presentation laptop with the user controlling connectivity and model download authorization.
 
 ## Task-branch integration
 
 Task branches `864d95f` and `127a344` are integrated with newer upstream `0098dad`. The newer live board, source/persistence distinctions, browser evidence and presentation disclaimers take precedence. Original branch handoffs are retained in `docs/archive/task_branch_review_acceptance_handoff.md` and `docs/archive/task_branch_status_reconciliation_handoff.md`. The newer logo styling is preserved without a second padded wrapper; the original checkbox/radio keyboard-focus rule is retained. Task 6 remains external acceptance; its new-chat prompt is in `docs/next_tasks/06_laptop_and_people.md`.
+
+Final integration verification: `python -m pytest -q --tb=short tests/test_review_preferences.py tests/test_app.py tests/test_ui_improvements.py` passed **61 tests in 134.42s** on the final merged code. An earlier focused UI/storage run passed 119 tests before the last upstream reconciliation; it is not a final full-suite result. `git diff --check` passed. No fresh physical-device or browser acceptance is claimed by this integration review.
