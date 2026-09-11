@@ -1,6 +1,9 @@
 # This snapshot is verified byte-for-byte against data/manifest.json.
 /data/observations.csv text eol=lf
 
+# Windows batch files keep CRLF endings; cmd.exe can fail to find goto labels in LF-only files.
+*.cmd text eol=crlf
+
 # Preserve original research bytes recorded in the import manifest.
 /research/incoming/* -text
 /research/sources/*.pdf -text
