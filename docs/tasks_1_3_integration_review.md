@@ -27,7 +27,7 @@ The diskcache advisory remains listed for <=5.6.3 with no patched release: https
 
 Version-1 saved simulation results are not silently migrated: rerun and re-review the experiment before exporting under the new threshold contract. Do not delete sessions to bypass validation.
 
-Continue Task 4 (actual UI acceptance), Task 5 (current-status reconciliation), and Task 6 (presentation laptop/offline/user/rehearsal acceptance). Keep these follow-ups visible: Region N assistant simulations versus selectable Review systems; operational-sounding takeaways; legacy report argument percentage ambiguity; custom-observation source wording; VC++/CPU requirements and offline vcomp140.dll; model license/provenance. Storage timing remains illustrative and needs a separate calibration/domain decision for operational use.
+Task 4 actual UI acceptance completed on the development Windows machine at `cf374bd`; see `review_acceptance_handoff.md`. Task 5 current-status reconciliation followed it. Task 6 presentation-laptop/offline/user/rehearsal acceptance remains open. Keep these follow-ups visible: Region N assistant simulations versus selectable Review systems; legacy report argument percentage ambiguity; custom-observation source wording; VC++/CPU requirements and offline vcomp140.dll; model license/provenance. Storage timing remains illustrative and needs a separate calibration/domain decision for operational use.
 
 
 ## Upstream follow-up before push

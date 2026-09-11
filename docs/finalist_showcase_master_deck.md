@@ -1,9 +1,11 @@
 # BASIN Finalist Showcase: Master Presentation Deck & Script
 
+> **Historical draft — do not present as verified.** This script contains unconfirmed format, judge-persona, benchmark, hardware, scientific and policy claims. Use [the reconciled presentation plan](presentation_plan.md) and [claim inventory](claim_inventory.md) to rebuild the final deck after organizer, device and domain acceptance.
+
 **Event:** Zoho "From The Ground Up" AI Hackathon — Finalist Showcase  
 **Location:** Zoho Pleasanton Headquarters, Pleasanton, California  
 **Date:** Tuesday, September 22, 2026  
-**Session Format:** Exactly 60 Minutes (45 Min Presentation + 15 Min Q&A)  
+**Session Format:** Unconfirmed; verify from organizer communication before rehearsal
 **Team:** Noah Wilborn, Mohammed Asad Khan, Misha Stegall  
 **Target Judges:** 
 - *Judge 1 (The Social Good Journalist):* Community impact, environmental justice, human stories, equity.

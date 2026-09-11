@@ -1,5 +1,7 @@
 # BASIN Social Media Campaign & Promotion Schedule
 
+> **Unconfirmed planning draft.** The number of required posts, deadline, tags, coordinator details and publication copy have not been substantiated by repository source material. The team must verify requirements and approve claims before anything is published. No post has been sent by this project work.
+
 **Competition:** Zoho "From The Ground Up" AI Hackathon (2026)  
 **Coordinator Lead:** Mira (Zoho Corporate Communications / Social Media Lead)  
 **Hard Completion Deadline:** **Friday, September 18, 2026 (End of Day)**  

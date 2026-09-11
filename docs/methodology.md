@@ -1,6 +1,6 @@
 # BASIN methodology v2
 
-BASIN prepares rainfall stress scenarios and traceable evidence for professional review. The rainfall packet does not estimate water supply, reservoir levels, restriction dates, future probabilities, or the hydrologic drought of record. A separately labeled reservoir experiment is illustrative and excluded from the packet. Numerical checks are not expert validation.
+BASIN prepares rainfall stress scenarios and traceable evidence for professional review. Rainfall scenarios do not estimate water supply, reservoir levels, restriction dates, future probabilities, or the hydrologic drought of record. A separately labeled storage-system experiment is illustrative. Assistant-created Region N experiments can be saved and reviewed for schema 2.2 numerical replay. Review’s selectable-system preview is retained for the session/report and does not yet use the same persistence contract. Neither path establishes physical validity. Numerical checks are not expert validation.
 
 ## Data contract
 
@@ -57,13 +57,13 @@ Initial records reuse the NOAA manifest and identify station suitability, rainfa
 
 Public descriptions and dispositions are intentionally exportable. `private_note` and `provider_notes` fields are recursively removed from the audit and history unless the common export opt-in is selected. Public text is not a place to enter private details. Save/load validates references, required fields, statuses and supported versions. Session 1.0 migration adds provisional baseline evidence without inventing past expert review.
 
-## Illustrative reservoir experiment (selected Path B)
+## Illustrative storage-system experiments (selected Path B)
 
-The user selected this path on September 6. Capacities are illustrative fixed parameters of 257,300 and 662,600 ac-ft, with both starting at the selected fraction. Daily inflow is `30 + 45 * equal-station mean rainfall_mm`, allocated by capacity. Potential evaporation is 750 ac-ft/day in June–September and 380 otherwise. Requested demand is 370 ac-ft/day with assumed pipeline supply, 554 without it, reduced by the conservation fraction.
+The saved schema 2.2 path currently uses the illustrative Region N parameters: capacities of 257,300 and 662,600 ac-ft, both starting at the selected fraction; daily inflow `30 + 45 * equal-station mean rainfall_mm`; potential evaporation of 750 ac-ft/day in June–September and 380 otherwise; and requested demand of 370 ac-ft/day with assumed pipeline supply or 554 without it, reduced by the conservation fraction. Review also exposes single-pool, regional and custom configurations for transient exploration and report settings. Those configurations use the assumptions displayed by the interface and are not yet saved as schema 2.2 runs.
 
 Each day adds inflow, serves evaporation from available water, allocates demand (65% initially from the first pool when above 20%, otherwise 15%, with available water covering shortfalls), then spills excess capacity. Outputs report end-of-day storage, actual evaporation, served demand, unmet evaporation/demand, inflow, spill and a balance residual. The conservation identity is end storage = beginning storage + inflow - actual evaporation - served demand - spill. No water is created or silently discarded.
 
-These coefficients, allocation rules, initial conditions and 40/30/20/15% bands are assumptions, not calibrated system behavior or current official policy. The experiment excludes estuary releases, water rights, real transfers and observed inflow calibration. It is not a validated impact model. Settings/results are transient and explicitly outside the evidence packet; changing them does not change rainfall approval.
+These coefficients, allocation rules, initial conditions and configured bands are assumptions, not calibrated system behavior or current official policy. The experiment excludes estuary releases, water rights, real transfers and observed inflow calibration. It is not a validated impact model. Current experiments can be saved, reviewed and replayed in schema 2.2 packets; replay proves internal numerical consistency only. Changing experiment settings creates a new experiment record and does not approve the rainfall revision.
 
 ## Geographic and time-scale limitations
 

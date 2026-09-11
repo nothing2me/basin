@@ -1,148 +1,106 @@
-# BASIN Finalist Showcase Presentation Plan
+# BASIN finalist showcase presentation plan
 
-Updated: September 11, 2026 | Product baseline: BASIN 0.2.0 (`BASIN.exe` Native Desktop Edition)
+Updated: 2026-09-11 | Product line: BASIN 0.2.0
 
-## Confirmed Event Context & Rules (Zoho Coordinator Briefing)
+This is a rehearsal plan, not an organizer rules record. The repository supports the September 22, 2026 Pleasanton event and a three-person team from supplied material. Speaking time, submission mechanism/deadline, A/V constraints, publicity requirements and any day-of assignment still require organizer confirmation. Do not call a 45+15 or 60-minute format authoritative until that evidence is recorded.
 
-- **Event:** Zoho "From the Ground Up" AI Hackathon — Finalist Showcase (Pleasanton, CA)
-- **Location:** Zoho Pleasanton Headquarters, Pleasanton, California
-- **Date:** Tuesday, September 22, 2026
-- **Travel Window:** Monday, September 21 (Hyatt House Pleasanton)
-- **Team:** Noah Wilborn, Mohammed Asad Khan, and Misha Stegall
-- **Session Duration:** **Strict 60-Minute Maximum** (Recommended: **45 Min Presentation + 15 Min Q&A**; hard cutoff at 60:00)
-- **Day-Of Surprise Requirement:** Delivered at **7:00 AM on Sept 22**; master deck due at **9:00 AM sharp** (see [Day-Of Surprise Rapid Response Guide](day_of_surprise_rapid_response_guide.md)).
-- **Mandatory Social Media:** 3 posts due by **end of day September 18** (see [Social Media Assets & Schedule](social_media_assets_and_schedule.md)).
-- **Master 25-Slide Deck & Script:** See [Finalist Showcase Master Deck](finalist_showcase_master_deck.md).
-- **Judging Themes:** Impact, Feasibility, Community Centeredness, Innovation, and Clarity.
+## Presentation claim rule
 
-The plan below details the authoritative 60-minute presentation structure, speaker lanes, live demo, and judge defense.
-
----
-
-## What BASIN Is & The Gap It Fills
-
-BASIN helps a Region N or rural-serving municipal water analyst turn public NOAA rainfall observations into transparent, multi-station drought stress scenarios, discover system tipping points in minutes, and hand a cryptographically verified packet to a hydrologist for deeper modeling.
-
-### The Missing Layer in the Water Industry:
-- **Heavy Engineering Simulators (TCEQ WAM, USACE HEC-ResSim, RiverWare):** Industry standards for statutory water rights and dam safety. However, they cost $50,000+ in consulting contracts, take 3 to 12 months to configure, and are completely inaccessible for rapid exploratory questions.
-- **The "Dirty Secret" (Ad-hoc Excel & Notebooks):** When water managers need quick answers before a council meeting, they cobble together un-audited spreadsheets or throwaway Python scripts. These take 4 to 6 hours, carry high formula-error risks, and provide zero cryptographic auditability.
-- **Where BASIN Sits:** BASIN provides the missing **Agile L0/L1 Screening & Auditable Handoff Layer**—compressing a half-day programming slog into a 5-minute interactive session that produces certified, re-playable data bundles.
+Use only behavior demonstrated by the frozen release. Say “internally replayed” for the verified ZIP, “illustrative” for storage experiments and “observed on the development machine” for current browser acceptance. Do not say certified, zero-hallucination, any laptop, exact operational breaking point, independently validated, or measured productivity improvement.
 
 The sentence judges should remember:
 
-> **BASIN turns scattered rainfall evidence and uncalibrated spreadsheets into a transparent, stress-tested request for expert analysis.**
+> **BASIN turns public rainfall observations and explicit assumptions into a transparent scenario shortlist for expert review.**
 
----
+## Three-minute core demonstration
 
-## The Presentation Argument
+### 0:00–0:25 — Decision gap
 
-1. **The Decision Gap:** Small providers and regional planning groups need to screen plausible climate and drought stresses *before* committing $50k+ to formal engineering modeling.
-2. **The Product:** BASIN combines synchronized whole-window historical resampling, local unsupervised KMeans clustering, deterministic multi-attribute ranking, and a dual-pool mass-balance reservoir simulation.
-3. **The Embedded Analyst Assistant:** A built-in deterministic intent engine that maps supported questions to 13 read-only Python analysis tools. Fixed templates display computed results. No language model, model download, or inference server is used.
-4. **1-Click Multi-Tier Stress Spectrum:** Simultaneously sweeps 4 climate stress tiers (100% Baseline, 80% Moderate, 60% Severe, 40% Catastrophic) to pinpoint exact breaking days and empirically test whether a 15% emergency conservation mandate buys days or months.
-5. **Cryptographic Proof of Integrity:** Produces a tamper-evident `.zip` handoff bundle (`daily_rainfall.csv`, `shortlist.csv`, `audit.json`, `Hydrologist_Handoff_Brief.md`) verified via SHA-256 digests.
-6. **Empirical Proof of Usefulness:** In controlled head-to-head benchmarking, an unassisted hydrologist coding from scratch took **4 to 6 hours** to reach the exact same physical conclusions that BASIN produced in **under 10 minutes** (a **30× to 50× turnaround acceleration**).
+- Explain that small providers need a transparent way to screen rainfall-stress questions before commissioning formal hydrologic modeling.
+- State the boundary: BASIN organizes evidence and assumptions; it does not replace WAM, HEC-ResSim, a hydrologist or an official water-supply model.
 
----
+### 0:25–0:55 — Data and tailored setup
 
-## Compact Three-Minute Demonstration Script
+- Open **Data** and identify the bundled NOAA snapshot and airport-station proxy limitation.
+- Open **Workspace** and answer the three setup questions. Explain that the answers tailor Review layout and do not change calculations or ranking.
+- Generate the example shortlist and show synchronized whole historical windows and visible ranking contributions.
 
-### 0:00–0:25 — Frame the Decision & The Industry Gap
-- **Say:** *"When a municipal water provider faces a looming drought, they can't wait six months and spend $50,000 on a consulting firm to run HEC-ResSim or TCEQ WAM just to screen initial stress scenarios. Today, they hack together un-audited Excel spreadsheets. BASIN gives them an agile, verified screening platform that runs entirely offline on a laptop."*
-- **Action:** Show the native `BASIN.exe` desktop application. Highlight the 4-stage workflow: **Check Data → Build Scenarios → Review Choices → Share Results**.
+### 0:55–1:30 — Grounded interrogation
 
-### 0:25–0:50 — Check Data & Synchronized Construction
-- **Action:** Open **Data**. Point out the NOAA GHCN-Daily snapshot (1991–2025) with its recorded cryptographic hash (`672c23f8...`).
-- **Action:** Open **Workspace**. Click **Generate** (300 candidates, 6 shortlisted, seed 22).
-- **Say:** *"Unlike weather tools that artificially splice synthetic data, BASIN preserves whole historical windows across Corpus Christi, Victoria, and San Antonio simultaneously, conserving real spatial correlation across the basin."*
-- **Action:** Show the diverse shortlist grouped by local KMeans clustering.
+- Open **AI Assistant** and use one deterministic chip or supported question such as “Why did this scenario rank first?”
+- Explain that numerical answers come from read-only Python tools. Embedded Qwen is optional and should be demonstrated only if the frozen laptop acceptance records it as ready.
+- Avoid a “cannot hallucinate” guarantee; unsupported or ambiguous questions can still require clarification, and generated language has a bounded but nonzero risk.
 
-### 0:50–1:40 — Interrogate the Grounded AI Assistant
-- **Action:** Click the vertical **AI Assistant** tab.
-- **Action:** Ask the assistant: *"Why did B-009 rank #1?"*
-- **Show Response:** The assistant executes `explain_ranking`, showing exact weighted score contributions: Severity (40%), Duration (25%), Concurrence (25%), Season (10%).
-- **Say:** *"Notice this AI is 100% offline and zero-hallucination. The LLM acts purely as an intent router to select deterministic Python tools. It cannot invent numbers; every calculation comes directly from the verified workspace."*
-- **Action:** Ask: *"What was station concurrence in B-009?"* Show that San Antonio was stressed in 96.7% of windows (severed upper-basin inflow) while Corpus Christi was at 81.5%.
+### 1:30–2:15 — Tailored Review and illustrative storage
 
-### 1:40–2:25 — 1-Click Multi-Tier Stress Spectrum & Tipping Points
-- **Action:** In **Review**, select **Reservoir simulation** and click **Multi-Tier Stress Spectrum (100% · 80% · 60% · 40%)**. Set starting storage to 35%.
-- **Show Chart & Matrix:** The multi-line trajectory and Countdown Matrix instantly render.
-- **Say:** *"Here is BASIN's core insight in one click: Under 35% starting storage, the system breaches critical Stage 3 (20%) reserves on Day 151 across all rainfall tiers."*
-- **Action:** Move the Emergency Conservation slider to **15%**.
-- **Show Result:** Stage 3 breach extends from Day 151 to Day 160 (**exactly +9 days**).
-- **Say:** *"Why does a 15% mandatory cut only buy nine days? Because summer evaporation in South Texas is 750 acre-feet per day, which dwarfs municipal demand savings by 13.5 to 1. BASIN proves this physical reality to council members in seconds."*
+- Show the chosen Review focus and the **More tools** disclosure.
+- If storage is relevant, select a configured system and identify all assumptions on screen. The Review preview is retained for the current session/report; do not call it a saved schema 2.2 experiment.
+- Describe threshold days as outcomes of those inputs. Do not convert them into official restriction dates, forecasts or policy recommendations.
+- If demonstrating a saved assistant-created Region N experiment, record its review rationale so its provenance can be replayed. Explain that selectable Review systems do not yet share this persistence path.
 
-### 2:25–2:45 — Human Decision & Cryptographic Handoff
-- **Action:** Accept the scenario, add a hydrologist note (*"Verified: acute summer concurrent deficit"*), and navigate to **Exports**.
-- **Action:** Click **Build verified export bundle**.
-- **Show:** The SHA-256 verification report (`verified: true`, 30 audit records replayed, 3 accepted scenarios).
-- **Say:** *"The export bundle contains the raw rainfall CSVs, the human review notes, and a cryptographic audit log that any downstream engineer can independently replay and verify with zero data drift."*
+### 2:15–2:45 — Human decision and handoff
 
-### 2:45–3:00 — Close on Value & Feasibility
-- **Say:** *"BASIN does not replace the hydrologist or legal river basin models. It bridges the gap between public climate observations and formal engineering analysis. It is packaged as a single 24 MB executable that runs on any laptop without internet access, tested across 128 automated verification tests."*
+- Review or revise a rainfall scenario and show that edits invalidate prior acceptance.
+- Build outputs only after the current revisions and any saved experiment have the required review state.
+- Describe the ZIP as internally consistent and replayable within its manifest scope. Describe the PDF as a companion brief.
 
----
+### 2:45–3:00 — Close
 
-## Expansion Modules (For Longer Showcase Slots)
+- Reiterate that BASIN helps a user decide what deserves deeper modeling and preserves how that shortlist was constructed.
+- Name the next validation step: a domain expert checks station/catchment suitability and the handoff’s usefulness.
 
-### 1. The Controlled A/B Benchmark (Proof of Usefulness)
-To definitively prove usefulness, we conducted an empirical benchmark: an independent hydrologist solved the exact same regional planning challenge without BASIN, using raw Python and GitHub open-source tools:
-- **Turnaround Time:** BASIN took **5 to 10 minutes**; unassisted coding took **4 to 6 hours** (**30× to 50× speedup**).
-- **Physical Convergence:** Both pipelines independently converged on the exact same physical numbers:
-  - Starting storage 35%: Stage 3 (20%) breached on **Day 151** (August 29).
-  - 15% conservation: Stage 3 breach delayed to **Day 160** (**+9 days gained**).
-  - Both identified that 750 ac-ft/day summer evaporation exceeds the 55.5 ac-ft/day conservation savings by 13.5:1.
-- **Conclusion:** The math is rigorous and identical, but BASIN eliminates the half-day programming friction and manual formula risk.
+## Longer-format modules
 
-### 2. Architecture & Technical Novelty
-- **Embedded Intent Engine:** Built-in parsing of supported questions, scenario IDs, station names, years, and parameters. Each question is independent; the assistant uses no external inference service.
-- **Strict Template Renderer:** 13 registered tool schemas. Results are rendered via deterministic Python functions into fixed markdown templates. The embedded router selects a tool and its parameters; result text comes from templates.
-- **Hardware-Accelerated Split Pane:** 100ms GPU slide animation with zero-overlay window resizing, giving the user a dual-pane IDE experience.
-- **Native Packaging:** Compiled as `BASIN.exe` (23.87 MB) via PyInstaller, embedding Windows WebView2 (EdgeChromium) for zero-console native desktop operation.
+Use these only after the organizer confirms the available time:
 
----
+1. **Method walkthrough:** synchronized windows, retention, clustering, ranking and revision history.
+2. **Evidence disagreements:** source comparison, public disposition and private-note consent.
+3. **Saved experiment replay:** selected system, assumptions, conservation comparison, review rationale and verifier scope.
+4. **Custom rainfall evidence:** preview, paired-date comparison, explicit source declarations and schema 2.1 consent.
+5. **Architecture:** local deterministic core, optional embedded model, process isolation and single-operator limits.
+6. **Questions and limitations:** catchment fit, calibrated modeling, source authenticity, accessibility and final-device status.
 
-## Three-Person Speaking Lanes
+## Three-person speaking lanes
 
-| Lane | Speaker Role | Presentation Responsibilities |
-|---|---|---|
-| **Lane 1: Problem & Decision Gap** | Community Advocate / Policy Lead | Open with the Region N decision gap, why heavy tools (WAM/HEC-ResSim) are inaccessible to smaller utilities, and how BASIN provides community control. |
-| **Lane 2: Live Demo & AI Copilot** | Technical / Product Lead | Drive the live software: NOAA data check, workspace clustering, and live interrogation of the grounded offline AI Assistant. |
-| **Lane 3: Stress Spectrum & Verification** | Hydrologic & Verification Lead | Demonstrate the Multi-Tier Stress Spectrum (Day 151 / Day 160 countdown), explain the 13.5:1 evaporation reality, show the cryptographic `.zip` verification, and close. |
+The team must assign these roles; the repository does not assign credentials.
 
----
+| Lane | Responsibility |
+|---|---|
+| Problem and community context | Explain the screening need, target users and scientific boundary. |
+| Product demonstration | Drive Data, tailored Workspace, Review and assistant flow. |
+| Evidence and handoff | Show saved experiment provenance, export scope, replay and next expert step. |
 
-## Judge Q&A Matrix (Anticipated Questions & Concise Answers)
+## Defensible Q&A
 
-**Q: Are there industry tools like HEC-ResSim or TCEQ WAM that already do this?**  
-**A:** Those are heavy statutory and physical routing tools. They take 3 to 12 months and $50,000+ in consulting fees to configure. When water managers need rapid screening before a meeting, they use un-audited Excel sheets. BASIN solves that missing agile screening and verified handoff layer.
+**How is this different from WAM or HEC-ResSim?**
+BASIN prepares rainfall-stress evidence and an auditable shortlist for deeper work. It does not reproduce statutory water-rights accounting, calibrated reservoir operations or dam-safety models.
 
-**Q: Why is this considered AI?**  
-**A:** BASIN uses a hybrid AI architecture: (1) Unsupervised KMeans clustering to group multi-dimensional drought feature spaces, and (2) a local, offline LLM agent acting as an intent router with tool-calling capabilities to translate plain-language hydrologic questions into deterministic math.
+**Why is this AI?**
+The core uses local KMeans grouping and deterministic ranking. The optional embedded Qwen path maps supported language to constrained read-only tools; direct deterministic tools remain available without it.
 
-**Q: How do you guarantee the AI doesn't hallucinate numbers?**  
-**A:** The LLM is forbidden from computing numbers. It only extracts parameters and calls pure Python tools operating on the verified workspace. Outputs are populated into fixed string templates with mandatory disclaimers. The LLM only provides connective prose.
+**Can generated answers invent numbers?**
+Tool results come from application-owned calculations and rendering, with validation and call limits. This narrows risk but is not a universal guarantee. Users should rely on cited scenario/tool outputs and review assumptions.
 
-**Q: Does a 15% conservation mandate save the reservoir in a severe drought?**  
-**A:** Under depressed starting storage (35%), no. It only buys 9 days (delaying breach from Day 151 to Day 160) because South Texas summer evaporation (750 ac-ft/day) exceeds the conservation savings (55.5 ac-ft/day) by 13.5 to 1. BASIN proves that deeper curtailments or earlier Stage 2 triggers are required.
+**What does verified mean?**
+The ZIP verifier recomputes the declared numerical and provenance scope and checks SHA-256 file identities. It does not authenticate upstream sources, digitally sign the packet or validate scientific assumptions.
 
-**Q: What does “cryptographically verified” mean?**  
-**A:** The export packet contains SHA-256 digests of all raw data, scenario time series, and audit logs. The built-in `verify_bundle()` utility replays the calculations and checks hashes to mathematically prove that zero data was altered or fabricated.
+**Does the storage experiment predict an emergency date?**
+No. It shows what the configured accounting assumptions produce for a saved rainfall scenario. Coefficients, capacities and bands require domain review and calibration before operational use.
 
-**Q: Can this run completely offline?**  
-**A:** The assistant and bundled-data calculations operate locally, without model downloads or inference services. The Windows launcher still needs its documented runtime prerequisites; verify the complete installation on the presentation laptop.
+**Does it run offline?**
+Core Python workflows have passed a socket-blocked smoke test. The final browser/native/model workflow must still pass on the presentation laptop with connectivity controlled by the user.
 
----
+## Release and rehearsal gates
 
-## Final Preparation Checklist (September 11–22)
+- [x] Tailored Review implementation and automated tests.
+- [x] Development-machine browser acceptance at desktop/narrow widths and light/dark appearance.
+- [x] Schema 2.2 saved experiment persistence and numerical replay tests.
+- [ ] Freeze a release SHA and package hash.
+- [ ] Complete clean setup, no-AI and optional native-AI checks on the presentation laptop.
+- [ ] Inspect final PDF and ZIP with consent off/on/revoked and replay the downloaded packet.
+- [ ] Check projector readability, keyboard flow and failed-start recovery.
+- [ ] Run an uncoached intended-user review/export exercise.
+- [ ] Confirm organizer speaking time, submission requirements, A/V constraints and required disclosures.
+- [ ] Rehearse the confirmed format and prepare the team-approved backup recording/media.
 
-- [x] Compile and verify native `BASIN.exe` with custom brand icon (23.87 MB).
-- [x] Verify full regression test suite: **438 passed, 2 skipped, 0 failed in 507s**.
-- [x] Complete the 1-Click Multi-Tier Stress Spectrum and Tipping Point visualization.
-- [x] Conduct and document the unassisted A/B hydrologist benchmark comparison.
-- [x] Structure 60-minute master presentation deck and speaking script ([`finalist_showcase_master_deck.md`](finalist_showcase_master_deck.md)).
-- [x] Prepare 3-post social media campaign due September 18 ([`social_media_assets_and_schedule.md`](social_media_assets_and_schedule.md)).
-- [x] Establish 7:00 AM – 9:00 AM surprise rapid-response playbook ([`day_of_surprise_rapid_response_guide.md`](day_of_surprise_rapid_response_guide.md)).
-- [ ] Connect with assigned Zoho AI mentor (`slow@zohocorp.com` / `sandy.s@zohocorp.com`) for mock pitch rehearsal.
-- [ ] Test on the actual presentation laptop with Wi-Fi disabled and external 1080p projector connected during AV test window.
-- [ ] Keep backup video (`media/`) and offline USB copy ready.
+Record results in [device acceptance](device_acceptance_results.md). Historical draft scripts may contain unsupported figures; use this plan and the [claim inventory](claim_inventory.md) for the final presentation.
