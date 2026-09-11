@@ -233,3 +233,65 @@ def test_hiding_experiment_preserves_report_configuration(app):
     assert app.selectbox(key="review_initial_storage").value == "35% (illustrative)"
     assert app.select_slider(key="review_conservation").value == 20
     assert app.checkbox(key="review_pipeline_active").value is False
+
+
+def test_export_reports_which_renderer_produced_the_pdf(app):
+    """On this platform BASIN's built-in renderer runs; the export flow discloses that."""
+    next(b for b in app.button if b.label == "Build verified export").click().run()
+    assert not app.exception
+    packet = app.session_state.packet
+    assert packet["pdf_renderer"] == "vector_fallback"
+    assert packet["pdf_degraded"] is False
+    assert any("PDF renderer:" in c.value for c in app.caption)
+
+
+def test_export_surfaces_a_degraded_browser_fallback_to_the_user(app, monkeypatch):
+    """A browser found but failing to render must show a visible warning, not a quiet swap."""
+    import basin_core.pdf_report as pdf_report
+
+    real_generate = pdf_report.generate_pdf_report_with_status
+
+    def _forced_degraded(workspace, accepted, **kwargs):
+        outcome = real_generate(workspace, accepted, **kwargs)
+        return pdf_report.RenderOutcome(
+            pdf_bytes=outcome.pdf_bytes,
+            renderer="vector_fallback",
+            degraded=True,
+            detail="synthetic forced fallback for the app-level UI test",
+        )
+
+    # app.py imports this name at module load time, so patch the module attribute it
+    # re-reads on every Streamlit script rerun rather than mutating global interpreter state.
+    monkeypatch.setattr(pdf_report, "generate_pdf_report_with_status", _forced_degraded)
+
+    next(b for b in app.button if b.label == "Build verified export").click().run()
+    assert not app.exception
+    packet = app.session_state.packet
+    assert packet["pdf_renderer"] == "vector_fallback"
+    assert packet["pdf_degraded"] is True
+    assert any("PDF renderer fallback" in w.value for w in app.warning)
+    # The fallback PDF must still be the complete, valid report, not an empty/broken file.
+    assert packet["pdf_bytes"].startswith(b"%PDF-")
+    assert len(packet["pdf_bytes"]) > 1000
+
+
+def test_revoking_note_consent_removes_sentinel_from_a_rebuilt_pdf(app):
+    """Consent revocation must actually remove private content from the next real export."""
+    w = app.session_state.workspace
+    scenario = w.get(w.selected[0])
+    scenario.review(True, "PRIVATE-DEMO-SENTINEL")
+
+    app.checkbox(key=f"share_notes_{w.id}").set_value(True).run()
+    next(b for b in app.button if b.label == "Build verified export").click().run()
+    assert not app.exception
+    assert b"PRIVATE-DEMO-SENTINEL" in app.session_state.packet["pdf_bytes"]
+
+    # Revoke consent: the stale (notes-included) packet must be dropped, not merely hidden.
+    app.checkbox(key=f"share_notes_{w.id}").set_value(False).run()
+    assert not app.exception
+    assert "packet" not in app.session_state
+    assert not any("Download Executive Brief (PDF)" in b.label for b in app.download_button)
+
+    next(b for b in app.button if b.label == "Build verified export").click().run()
+    assert not app.exception
+    assert b"PRIVATE-DEMO-SENTINEL" not in app.session_state.packet["pdf_bytes"]

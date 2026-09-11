@@ -1941,32 +1941,43 @@ def build_fallback_pdf(
     return doc.render()
 
 
-def generate_pdf_report(
+# Browsers cold-starting a new profile can take several seconds, especially on the first
+# launch after boot; 2 seconds (the previous value) was shorter than a real render even on a
+# fast dev machine (~1.3s observed), so any load at all turned a working browser into a
+# reported "failure". This is generous enough to avoid false negatives while still bounding
+# how long a broken/hung renderer can block export.
+BROWSER_RENDER_TIMEOUT_S = 15
+
+
+@dataclass(frozen=True)
+class RenderOutcome:
+    """What actually produced a PDF, so callers can be honest with the user about it."""
+
+    pdf_bytes: bytes
+    renderer: str  # "browser" or "vector_fallback"
+    degraded: bool  # True only when a browser was available but rendering it failed
+    detail: str
+
+
+def _render_pdf_with_status(
     workspace,
     accepted: Sequence,
-    output_path: Path | str | None = None,
-    initial_pct: float | None = None,
-    conservation_pct: float | None = None,
-    include_notes: bool = False,
-    config: ExperimentConfig | None = None,
-) -> bytes:
-    """Generate a publication-grade PDF report.
-
-    Renders a complete, professional multi-page vector PDF containing executive takeaways,
-    4-tier stress spectrum sensitivity tables, shortlisted scenario features, and SHA-256
-    cryptographic audit trails.
-    """
-    config = resolve_config(config, initial_pct, conservation_pct)
+    include_notes: bool,
+    config: ExperimentConfig,
+) -> RenderOutcome:
     browser_bin = find_browser_executable()
-    pdf_bytes: bytes | None = None
 
-    if browser_bin and sys.platform != "win32":
-        html_content = render_html_report(
-            workspace,
-            accepted,
-            include_notes=include_notes,
-            config=config,
+    if not browser_bin:
+        pdf_bytes = build_fallback_pdf(workspace, accepted, include_notes=include_notes, config=config)
+        return RenderOutcome(
+            pdf_bytes=pdf_bytes,
+            renderer="vector_fallback",
+            degraded=False,
+            detail="No Chromium-based browser (Edge/Chrome) was found; used BASIN's built-in report renderer.",
         )
+
+    try:
+        html_content = render_html_report(workspace, accepted, include_notes=include_notes, config=config)
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             html_file = tmp_path / f"report_{workspace.id}.html"
@@ -1981,26 +1992,105 @@ def generate_pdf_report(
                 f"--print-to-pdf={pdf_file.resolve()}",
                 str(html_file.resolve())
             ]
-
-            try:
-                subprocess.run(cmd, check=True, capture_output=True, timeout=2)
-                if pdf_file.exists() and pdf_file.stat().st_size > 1000:
-                    pdf_bytes = pdf_file.read_bytes()
-            except Exception:
-                pdf_bytes = None
-
-    if pdf_bytes is None:
-        pdf_bytes = build_fallback_pdf(
-            workspace,
-            accepted,
-            include_notes=include_notes,
-            config=config,
+            result = subprocess.run(cmd, capture_output=True, timeout=BROWSER_RENDER_TIMEOUT_S)
+            if result.returncode != 0:
+                stderr = result.stderr.decode("utf-8", errors="replace")[:300]
+                raise RuntimeError(f"browser exited with code {result.returncode}: {stderr!r}")
+            if not pdf_file.exists() or pdf_file.stat().st_size <= 1000:
+                raise RuntimeError("browser did not produce a usable PDF file")
+            pdf_bytes = pdf_file.read_bytes()
+        return RenderOutcome(
+            pdf_bytes=pdf_bytes,
+            renderer="browser",
+            degraded=False,
+            detail=f"Rendered with the system browser ({Path(browser_bin).name}).",
         )
+    except Exception as error:
+        pdf_bytes = build_fallback_pdf(workspace, accepted, include_notes=include_notes, config=config)
+        return RenderOutcome(
+            pdf_bytes=pdf_bytes,
+            renderer="vector_fallback",
+            degraded=True,
+            detail=(
+                f"The browser renderer ({Path(browser_bin).name}) failed ({error}); "
+                "BASIN's built-in report renderer was used instead. Content is complete; "
+                "only the rendering path differs from the usual one."
+            ),
+        )
+
+
+def generate_pdf_report_with_status(
+    workspace,
+    accepted: Sequence,
+    output_path: Path | str | None = None,
+    initial_pct: float | None = None,
+    conservation_pct: float | None = None,
+    include_notes: bool = False,
+    config: ExperimentConfig | None = None,
+) -> RenderOutcome:
+    """Generate the PDF report and report which renderer actually produced it.
+
+    Always attempts the system-browser HTML renderer first, then BASIN's own vector
+    renderer if a browser is unavailable or fails. Both paths render the full report; the
+    returned outcome tells the caller which one actually ran, so a degraded fallback is
+    never presented to the user as an unqualified success. Writing to ``output_path`` is
+    not swallowed: a file-write failure raises and no packet may be reported as saved.
+    """
+    config = resolve_config(config, initial_pct, conservation_pct)
+
+    if sys.platform == "win32":
+        # Headless-browser print-to-pdf is not exercised on Windows: it has not been
+        # verified end-to-end on the presentation laptop, and BASIN's own vector renderer
+        # already produces the complete report (verified in tests/test_report_layout.py).
+        # This is now a disclosed, explicit choice rather than a silent one; the browser
+        # path itself, including its failure handling, is implemented and tested via
+        # _render_pdf_with_status for the platforms that use it.
+        pdf_bytes = build_fallback_pdf(workspace, accepted, include_notes=include_notes, config=config)
+        outcome = RenderOutcome(
+            pdf_bytes=pdf_bytes,
+            renderer="vector_fallback",
+            degraded=False,
+            detail=(
+                "BASIN's built-in report renderer was used. On Windows (the supported "
+                "presentation platform), a system browser is not used for PDF generation."
+            ),
+        )
+    else:
+        outcome = _render_pdf_with_status(workspace, accepted, include_notes, config)
 
     if output_path:
         out_p = Path(output_path)
         out_p.parent.mkdir(parents=True, exist_ok=True)
-        out_p.write_bytes(pdf_bytes)
+        out_p.write_bytes(outcome.pdf_bytes)
 
-    return pdf_bytes
+    return outcome
+
+
+def generate_pdf_report(
+    workspace,
+    accepted: Sequence,
+    output_path: Path | str | None = None,
+    initial_pct: float | None = None,
+    conservation_pct: float | None = None,
+    include_notes: bool = False,
+    config: ExperimentConfig | None = None,
+) -> bytes:
+    """Generate a publication-grade PDF report.
+
+    Renders a complete, professional multi-page vector PDF containing executive takeaways,
+    4-tier stress spectrum sensitivity tables, shortlisted scenario features, and SHA-256
+    cryptographic audit trails.
+
+    Kept as a bytes-only convenience wrapper around :func:`generate_pdf_report_with_status`
+    for existing callers; use that function directly to learn which renderer actually ran.
+    """
+    return generate_pdf_report_with_status(
+        workspace,
+        accepted,
+        output_path=output_path,
+        initial_pct=initial_pct,
+        conservation_pct=conservation_pct,
+        include_notes=include_notes,
+        config=config,
+    ).pdf_bytes
 
