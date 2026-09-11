@@ -1,5 +1,7 @@
 # BASIN Day-Of Surprise Requirement: Rapid-Response Playbook
 
+> **Unconfirmed contingency draft.** The 7:00–9:00 window, submission destination, assigned roles and surprise requirement are not established by repository evidence. Confirm organizer instructions and team roles before using this playbook. Example response tracks are prompts for rehearsal, not validated BASIN forecasts or regulatory guidance.
+
 **Event Date:** Tuesday, September 22, 2026  
 **Window:** Exactly 2 Hours (**7:00 AM Release – 9:00 AM Submission Deadline**)  
 **Submission Location:** Zoho WorkDrive Finalist Folder & Email to `garrett@zohocorp.com` / `ariel@zohocorp.com`  

@@ -1,104 +1,73 @@
 # BASIN claim inventory
 
-Updated: 2026-09-11 (status-reconciliation pass; corrected the custom-evidence export row below and added the native/PDF/Review section) | Source baseline: `5679637` on `main`. Rows not touched by this update still describe the state at their original date; check `TODO.md`'s B-board for the current status of any specific item.
+Updated: 2026-09-11 | Release line: `main`
 
-This inventory separates what the current product implements, what automated checks verify, what a human has observed, and what remains proposed or unvalidated. Historical submission wording is preserved in `submission_record.md`; it is not automatically a current capability claim.
+This inventory separates source availability, automated verification, local observation and external acceptance. Historical wording in `submission_record.md` records the original proposal; it does not automatically describe the current product.
 
-Claim states used here:
+States used below:
 
-- **Implemented:** present in the current source or tracked release artifact.
-- **Internally verified:** recomputed or exercised by the named automated checks within their declared scope.
-- **Observed locally:** inspected on this development computer; not established on the presentation device.
-- **Pending human review:** requires a practitioner, teammate, recipient or organizer confirmation.
-- **Excluded:** deliberately outside the product or verification claim.
+- **Implemented:** present in current source.
+- **Automatically verified:** exercised or recomputed by named tests within their declared scope.
+- **Observed locally:** inspected on this development computer.
+- **Pending external acceptance:** requires the presentation device, an intended user, a domain expert, the team or the organizer.
+- **Excluded:** outside the product claim.
 
-## Product, data and method claims
+## Current product claims
 
-| Claim | Current state | Evidence and boundary |
+| Claim | State | Evidence and boundary |
 |---|---|---|
-| BASIN is a local rainfall-scenario decision-support workbench. | Implemented | `app.py`, `basin_core/`, README and the tracked Windows launcher. It does not host a shared cloud service. |
-| Core runtime AI is local KMeans plus deterministic weighted ranking; no LLM is required for core workflows. | Implemented and internally verified | `basin_core/analysis.py`, pinned scikit-learn, deterministic tests and offline smoke. Development used AI assistance and is disclosed separately. |
-| Built-in analyst assistant routes supported questions through an embedded deterministic intent engine. | Implemented; regression tested | `basin_core/assistant.py`, read-only tools, and fixed templates. No model server or download required. Not a general-purpose LLM; excluded from verified rainfall packets. |
-| The bundled observations cover 1991-2025 at Corpus Christi, Victoria and San Antonio airport stations. | Internally verified | `data/manifest.json`, snapshot SHA-256 and fresh-checkout verification. These are provisional regional proxies, not validated source-catchment rainfall. |
-| BASIN builds complete synchronized historical windows and applies explicit rainfall-retention transformations. | Implemented and internally verified | Engine, methodology, numerical tests and bundle replay. Retention scales rainfall only; it is not a streamflow, inflow or shortage multiplier. |
-| Scenarios cover configured 30-365 day durations and declared onset months/stations. | Implemented and internally verified | Parameter validation and replay. The product does not answer multi-year hydrologic drought questions outside this range. |
-| Scenario groups and ranking are explainable. | Implemented with limited verification | Feature values, scores and normalized components are recomputed. KMeans labels, semantic profile names and saved comparison results are recorded/hash-checked but not replay-certified as scientific truth. |
-| Exact score ties are deterministic, and increasing a weight need not improve a scenario's rank. | Internally verified | B06.7 regression cases use stable scenario-ID tie-breaking and a nondiscriminating duration-weight example. Priority values remain illustrative pending practitioner review. |
-| Users can challenge, edit, reject, replace and approve rainfall revisions. | Implemented and internally verified | Workspace history, revision invalidation, AppTest workflow and bundle replay. Acceptance is local rainfall-content review, not engineering certification. |
+| BASIN is a local rainfall-scenario evidence workbench. | Implemented; automatically verified in core workflows | `app.py`, `basin_core/`, regression tests and offline Python smoke. It is a single-operator loopback application, not a hosted multiuser service. |
+| Core scenario generation and ranking do not require an LLM. | Implemented; automatically verified | Complete synchronized windows, declared rainfall retention, KMeans grouping and deterministic weighted ranking are covered by tests and packet replay. Retention scales rainfall, not streamflow or shortage. |
+| The bundled snapshot contains 1991–2025 NOAA GHCN-Daily observations for three airport stations. | Automatically verified | `data/manifest.json` and snapshot checks. The stations are reproducible regional proxies, not validated catchment rainfall. |
+| Users can edit, reject, approve and trace rainfall revisions and evidence disagreements. | Implemented; automatically verified | Session/history tests and bundle replay. Approval is a local content decision, not engineering certification. |
+| Review is tailored to a stated use case. | Implemented; automatically verified; observed locally | Three pre-run questions select one of four display profiles. The profile changes ordering/disclosure only. Review also offers an optional focus chooser for sessions without that setup. Browser evidence is in `review_acceptance_handoff.md`. |
+| Assistant-created Region N storage experiments persist and replay. | Implemented; automatically verified | Schema 2.2 stores versioned settings, trajectories, evidence context and review rationale. Review’s selectable-system preview and report configuration are a separate path and do not yet create these saved records. Replay checks internal numerical consistency; it does not establish physical or operational validity. |
+| The optional assistant can use embedded Qwen when its pinned runtime and weights are ready. | Implemented; automatically tested without claiming device readiness | Deterministic tools remain available without the model. Model outputs are constrained and checked, but there is no blanket “zero hallucination” or network-isolation certification. Actual-laptop load time and offline behavior remain open. |
 
-## Evidence, uploads and export claims
+## Evidence, uploads and outputs
 
-| Claim | Current state | Evidence and boundary |
+| Claim | State | Evidence and boundary |
 |---|---|---|
-| Users can trace assumptions, compare evidence records and preserve unresolved disagreements. | Implemented and internally verified | Schema 2.0 evidence/conflict records, save/restore tests and privacy-aware export. The app does not decide which source is true. |
-| Local rainfall CSVs can be previewed without changing the workspace. | Implemented and internally verified | Bounded parser and Streamlit tests. The parser, README and `.streamlit/config.toml` are aligned to 10 MB (`maxUploadSize = 10`). |
-| Uploaded rainfall can be compared descriptively with one selected bundled NOAA station. | Implemented and internally verified | Same-date paired-valid-day calculation, blocking declarations, zero-reference handling and opt-in JSON report. Geography and observation-day compatibility are user declarations, not independent validation. |
-| Upload comparison results enter saved scenarios and the verified ZIP. | Implemented and internally verified (B14, corrected 2026-09-11; this row was stale) | Normalized observations, source metadata, review rationale and all saved comparison versions are persisted, linked to scenarios, included in the ZIP's `audit.json` under explicit custom-data consent, and replayed against the bundled snapshot. Original CSV bytes/filenames stay excluded. No independent teammate has exercised this with their own sample (B14's one remaining subtask). |
-| The evidence packet is internally consistent and replayable within a declared scope. | Internally verified | File inventory/hashes, source identity, transformations, revisions, accepted IDs, rainfall values, features, ranking components, evidence links, privacy defaults and regenerated brief are checked. Bundles are unsigned and do not prove source authenticity. |
-| The packet is directly import-compatible with Texas WAM Run 3 or HEC-ResSim. | Pending human/tool validation | The Stage 1 submission commits to interoperable open handoff. Current CSV/Markdown files support human transfer, but no direct importer/exporter interoperability test is recorded. Do not say “verified WAM export.” |
-| The recipient can independently use the CSV and brief in their workflow. | Pending human review | B04.10 and B09.6 require an independent recipient exercise. Automated replay is insufficient evidence. |
+| Local CSVs can be previewed, compared with a selected public station and saved as versioned supporting evidence. | Implemented; automatically verified | Paired valid dates, explicit comparison declarations, consent and schema 2.1 replay are tested. BASIN does not establish station identity, observation-period compatibility, source authenticity or catchment fit. |
+| A verified ZIP is internally consistent and replayable. | Automatically verified | SHA-256 inventory, source identity, scenario transformations/revisions, accepted IDs, consented evidence and schema 2.2 saved experiments are checked. The hashes are unsigned and do not prove source authenticity or prevent coordinated replacement. |
+| The PDF is a readable companion brief. | Implemented; renderer and consent paths automatically verified | PDF success/failure status and cross-output consent/revocation are tested. Current pages still need inspection on the final device and with the final release data. The PDF is not covered by the ZIP’s cryptographic verification claim. |
+| The packet imports directly into WAM or HEC-ResSim. | Pending external acceptance | Current CSV/Markdown outputs support human handoff; no direct importer or recipient interoperability exercise is recorded. |
 
-## Deployment, privacy and appearance claims
+## Deployment, privacy and accessibility
 
-| Claim | Current state | Evidence and boundary |
+| Claim | State | Evidence and boundary |
 |---|---|---|
-| Python calculation paths can run with network sockets blocked. | Internally verified | `scripts/demo_smoke.py`. Browser/native UI network isolation remains untested on the presentation laptop. |
-| A branded native Windows executable exists. | Implemented and observed locally | Tracked `BASIN.exe` matches `origin/main`; browser launcher remains a fallback. Clean reproducible build dependencies are pinned in `requirements-build.txt`; presentation-device execution remains open. |
-| Local notes and uploads stay on the operator's device unless explicitly exported. | Implemented with stated limits | Loopback server, ignored local storage, no telemetry, private-note opt-in. Local files are not encrypted and the app is single-operator, not an authenticated multiuser service. |
-| Application controls are readable in coordinated light/dark themes and plots retain distinct colors. | Implemented and observed locally | Current Streamlit theme/CSS, prior desktop visual review and UI tests. Projector and presentation-resolution review remain open. |
-| The source kit excludes private sessions, notes and correspondence. | Internally verified for the recorded package | Package inspection is historical and must be repeated for the frozen kit. The tracked executable is a separate release artifact. |
-| BASIN has a measured low environmental footprint. | Not established broadly | Individual runs record time and completion-time memory. The 15-65 W energy range is an illustrative assumption, not a power measurement; water impact and full lifecycle footprint are unquantified. |
+| Python core workflows run with sockets blocked. | Automatically verified | `scripts/demo_smoke.py`. This does not prove browser/native/model network behavior on the presentation laptop. |
+| A Windows launcher and tracked native executable exist. | Implemented | Python 3.12 x64, VC++/CPU requirements and optional model components are documented. Clean presentation-laptop installation, frozen-package inspection and native Qwen acceptance remain open. |
+| Notes and uploads remain local unless explicitly exported. | Implemented with stated limits; automatically verified at application boundaries | Loopback binding, ignored local storage, no telemetry and separate consent controls. Local files are unencrypted; OS, browser and dependency behavior are outside this narrow claim. |
+| Review controls are usable in light/dark desktop and narrow layouts. | Observed locally | Actual Chromium checks covered 1280×720 and 375×812, focus profiles, save/restore, tutorial and visible keyboard focus. Projector, screen-reader and intended-user acceptance remain open. |
+| BASIN has a measured low environmental footprint. | Not established broadly | The app reports timing/memory and an assumption-based 15–65 W range, not meter readings or lifecycle impact. |
 
-## Reservoir and impact claims
+## Scientific and outcome boundaries
 
-| Claim | Current state | Evidence and boundary |
+| Claim | State | Evidence and boundary |
 |---|---|---|
-| The two-pool reservoir view conserves its defined daily accounting quantities. | Internally verified as an experiment | Wet/dry/empty/full tests cover inflow, evaporation, served demand, unmet demand and spill under the stated toy assumptions. |
-| Reservoir levels, safe yield, deliveries or restriction dates are forecast. | Excluded | The reservoir view is uncalibrated and illustrative, is excluded from evidence packets, and cannot support official timing or performance claims. |
-| BASIN improves analyst productivity or water outcomes. | Proposed benefit; pending human review | Three anonymous discovery responses support the problem framing. No completed product-use baseline, practitioner session, recipient exercise or measured outcome exists yet. |
-| Community users control scenario priorities and final selections. | Implemented; practical usefulness pending | Controls, shortlist preservation, review and rejection exist. B09 must show that intended users understand and can use them without coaching. |
+| Storage experiments conserve their defined accounting quantities. | Automatically verified as numerical experiments | Tests cover configured systems, inflow, evaporation, served/unmet demand, spill, bands and day-zero/inclusive crossings. These tests do not calibrate coefficients or validate the system representation. |
+| BASIN forecasts reservoir levels, safe yield, deliveries or official restriction dates. | Excluded | The storage view is explicitly illustrative. No operational decision should use its timing without a suitable calibrated model and domain review. |
+| Agronomic and KBDI panels provide exploratory indicators. | Implemented; automatically verified as formulas | Fixed regional assumptions are shown. They are not field irrigation schedules, current burn-ban determinations or regulatory advice. |
+| BASIN improves analyst productivity or water outcomes. | Pending external acceptance | No completed independent product-use benchmark, recipient exercise or measured outcome is recorded. Do not present a 30×–50× speedup as evidence. |
+| Current stations, ranking priorities and terminology are suitable for Region N decisions. | Pending domain review | A hydrologist/provider must review catchment fit, baseline meaning, model language and handoff usefulness. |
 
-## Competition and presentation claims
+## Competition and release questions
 
-| Claim | Current state | Evidence and boundary |
+| Claim | State | Evidence and boundary |
 |---|---|---|
-| The event is September 22, 2026 in Pleasanton, with September 21 expected for travel. | Confirmed in supplied organizer material | Official rules and finalist Q&A record. Later organizer instructions can modify logistics. |
-| Judging considers impact, feasibility, community centeredness, innovation and clarity. | Confirmed in supplied organizer material | Official rules. Weights and additional Stage 2 guidance may change. |
-| The presentation is three minutes or sixty minutes. | Unknown | Those are internal drafts. The supplied August 10 materials do not specify the finalist presentation length or detailed format. B11.7 remains open. |
-| The team has four speakers or a lead hydrologist. | False for the current roster | The team has three named students. Roles must be claimed by those teammates; do not invent credentials. |
+| The finalist event is September 22, 2026 in Pleasanton, with September 21 expected for travel. | Recorded from supplied organizer material | Reconfirm late logistics with the organizer. |
+| Judging considers impact, feasibility, community centeredness, innovation and clarity. | Recorded from supplied organizer material | Weights or later Stage 2 guidance are not established here. |
+| The session is 60 minutes, the deck is due at 9:00 AM, or three social posts are mandatory. | Unconfirmed | These appear in planning drafts without source evidence in the repository. The team must verify speaking time, submission mechanism/deadline, A/V rules and publicity requirements from organizer communication. |
+| The final release works offline on the presentation laptop. | Pending external acceptance | Follow `device_acceptance_results.md`; development-machine checks cannot satisfy this claim. |
 
-## Agronomic and wildfire index claims
+## Open conflicts before freeze
 
-| Claim | Current state | Evidence and boundary |
-|---|---|---|
-| Regional Reference Evapotranspiration ($ET_o$) reflects long-term South Texas / Region N monthly normals. | Implemented and internally verified | `basin_core/agronomics.py`, Texas ET Network (Texas A&M AgriLife) published normals for Corpus Christi/Coastal Bend totaling ~58.1 inches (~1476 mm) annually. Normals are fixed regional monthly averages; they are not real-time station micrometeorological measurements. |
-| Crop water demand ($ET_c = ET_o \times K_c$) and irrigation gap quantify agricultural water stress for regional staple crops. | Implemented and internally verified | FAO-56 / Texas A&M AgriLifeExtension crop coefficients ($K_c$) for Cotton (1.10), Grain Sorghum (1.05), Corn (1.15), Pasture (0.85), and General Row Crop (0.95). Excludes complex soil moisture profile dynamics, root-zone depth transitions, and groundwater contributions. Serves as illustrative exploratory decision support, not certified irrigation scheduling. |
-| Keetch-Byram Drought Index (KBDI) tracks soil moisture depletion from 0 (saturated) to 800 (extreme drought). | Implemented and internally verified | Standard Keetch-Byram (1968) formula using South Texas monthly temperature approximations, 32-inch annual precipitation, and 0.20-inch initial rainfall interception threshold. Unit tested across wet, dry, boundary-clipping, and multi-day scenarios. |
-| KBDI $\ge 600$ indicates county burn ban consideration. | Implemented as illustrative decision support; non-regulatory | Texas A&M Forest Service guidelines recommend county burn ban evaluation around KBDI 575–600. BASIN displays this as an illustrative decision-support indicator. Official burn bans are statutory acts enacted exclusively by County Commissioners Courts under Texas Local Government Code § 352.081; BASIN never issues regulatory or legal declarations. |
+1. Align assistant storage-system selection with Review’s selectable systems.
+2. Resolve remaining legacy percentage wording and custom-observation source descriptions.
+3. Decide the catchment/area/calibration contract with a domain expert before expanding the model.
+4. Complete native prerequisites, license/provenance and advisory review on the frozen package.
+5. Complete presentation-laptop, output/privacy, projector, intended-user and organizer-format acceptance.
 
-## Current conflicts to resolve before freeze
-
-1. Confirm finalist presentation length, deck/demo submission mechanism, A/V constraints and travel instructions.
-2. Reconcile the documented 10 MB CSV limit with Streamlit's current 5 MB application limit.
-3. Pin native build-only dependencies and rebuild/test the executable on the presentation laptop.
-4. Obtain practitioner review of station/catchment suitability, method language and the illustrative reservoir framing.
-5. Run the novice and recipient exercises; record actual comprehension and format changes.
-6. Review AI-use and third-party disclosures as a team.
-
-No claim above converts discovery evidence, automated checks or local acceptance into professional validation.
-
-## Saved-simulation and multi-sector integration
-
-The optional local assistant returns deterministic tool results or clarification/boundary messages; it does not append unconstrained numerical interpretations. This is not a blanket network-isolation or zero-hallucination certification. Simulation requests explicitly create an unreviewed saved result, but cannot approve it through the assistant.
-
-Schema 2.2 numerical replay includes saved illustrative simulations, matched conservation comparisons, and provenance-linked review tokens. These outputs must not be treated as calibrated forecasts, official restriction dates, exact breaking points, certified signatures, or generic system survival. Upstream storage wording was corrected; broader wording acceptance remains open under B15.4. Missing source-year scenarios fail; multiple matches require selection. The PDF remains a readable companion to the replayable ZIP, with privacy opt-ins and no fabricated fallback outcomes.
-
-## Native runtime, PDF renderer and tailored Review claims (added 2026-09-11)
-
-| Claim | Current state | Evidence and boundary |
-|---|---|---|
-| An optional native Qwen runtime can be installed/repaired independently of model weights, with hash-locked pins. | Implemented and internally verified | `scripts/install_native_runtime.py`, `docs/native_runtime_handoff.md`. Not device-tested: clean-laptop install, live offline inference timing, native egress observation and model license/provenance review are explicitly open, not attempted. |
-| PDF generation discloses which renderer actually produced the file and any degraded fallback, and consent is honored identically across the ZIP and both PDF renderers. | Implemented and internally verified | `basin_core/pdf_report.py`'s `RenderOutcome`; `docs/pdf_failure_handoff.md`'s cross-output consent tests. Windows deliberately never attempts the browser renderer (disclosed choice); actual browser/native download and write-failure recovery on the presentation laptop (B17.5) is untested. |
-| A Review focus panel tailors which tools lead, without changing calculations, ranking, shortlist, revisions or export consent. | Implemented and internally verified (51 tests) | `basin_core/review_preferences.py`. Four goals exist (`compare`, `storage`, `operations`, `handoff`); a separate, additional pre-run entry point exists in Scenario Builder alongside the original Review-page panel — the two are not reconciled into one place. |
-| The Review focus panel is usable in light theme, at a narrow viewport, and by keyboard only, and its tutorial targets work. | Partially observed; not established broadly | The now-integrated branch (`task/review-acceptance-checks`, `864d95f`) drove a real browser and confirmed focus/toggle/navigation behavior, light theme, and keyboard focus (fixing two real accessibility defects in the process), but could not exercise narrow-viewport reflow or the Saved-Runs/Settings popovers in that automation session. An earlier HANDOFF claim of full desktop/narrow/keyboard/tutorial verification could not be independently corroborated. Details are in that branch's own `docs/review_acceptance_handoff.md`, included in this integration. |
-
+No automated or local result above converts into practitioner approval, scientific validation or final-device acceptance.

@@ -82,8 +82,8 @@ h3{font-size:1.6rem!important;font-weight:650!important}
     font-weight:500!important;
     color:color-mix(in srgb,currentColor 45%,transparent)!important;
 }
-.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:4px 8px;margin:0 auto;background:#20292E;border-radius:8px;box-sizing:border-box}
-.basin-top-logo{height:46px;width:auto;max-width:260px;object-fit:contain;display:block}
+.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:4px 0;margin:0 auto}
+.basin-top-logo{height:46px;width:auto;max-width:260px;object-fit:contain;display:block;background:#20292E;padding:7px 12px;border-radius:8px;box-sizing:content-box}
 .st-key-notes_slide_drawer{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:min(620px,92vw)!important;z-index:99990!important;transition:left .35s cubic-bezier(0.16, 1, 0.3, 1)!important;pointer-events:none!important}
 .st-key-notes_slide_drawer *{pointer-events:auto!important}
 body:has(.st-key-assistant_drawer) .st-key-notes_slide_drawer{left:calc((100vw - var(--basin-assistant-width, 500px))/2)!important}
