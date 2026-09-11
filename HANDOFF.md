@@ -1,5 +1,27 @@
 # BASIN current handoff
 
+## September 11 — The 'First City in America to Run Out of Water' Analysis, Policy Simulation, & Grounding (Complete)
+
+- **Comprehensive Grounding & Documentation (`docs/post_2015_hydrology_and_simulation_plan.md` - Section 2.7):**
+  - Integrated primary findings and investigative reporting from *Inside Climate News* (Dylan Baddour), *The Texas Tribune*, *Deceleration News* (Gaige Davila), *Circle of Blue*, and *Futurism* covering the national framing of Corpus Christi as "the first city in America to run out of water" (America's modern Day Zero).
+  - Documented the mid-April 2026 all-time record low of **7.7% combined storage (~70,800 ac-ft)**, breaching the TWDB 75,000 ac-ft inactive safe-yield reserve pool; local emergency declarations across wholesale customers (San Patricio MWD, Alice, Port Aransas); and launch of citizen tracker `corpusdayzero.com`.
+  - Sourced the City of Corpus Christi's formal pushback (City Manager Peter Zanoni, Mayor Paulette Guajardo, Water Dept) labeling "running out of water" claims as misinformation:
+    1. A Level 1 Water Emergency is an administrative 180-day planning trigger, not an announcement that pipes have run dry.
+    2. The Mary Rhodes Pipeline (MRP) pumps 70–72 MGD (~221 ac-ft/day, meeting ~70% of regional demand) from Lake Texana and the Colorado River, guaranteeing a firm baseload preventing complete dry-pipe failure even at dead pool.
+    3. The $1.1B capital program actively constructing 66 MGD of diversified supplies, including the $175M Brackish Groundwater RO plant at ONSWTP (21.3 MGD, phasing 2027–2028).
+  - Investigated the socio-political equity battle: heavy petrochemical/refinery facilities consuming >50% of regional potable water were shielded from drought surcharges and mandatory production cuts under the **Drought Surcharge Exemption Fee (DSEF)** ($0.31/kGal fee yielding ~$6M/yr), while residential households endured 20 months under Stage 3 sprinkler bans and $4.00–$8.00/kGal punitive surcharges.
+  - Documented the grassroots petition drive (~13,000 certified signatures by *For the Greater Good* and *Texas Campaign for the Environment*) and the Corpus Christi City Council **6–2 vote on August 11, 2026** placing the **Fair Water Amendment** on the **November 3, 2026 general election ballot** to outlaw DSEF exemptions and mandate industrial drought curtailments.
+  - Analyzed the Texas Wagstaff Act (*Tex. Water Code § 11.024*) domestic priority statutory standard vs. municipal utility contract enforcement.
+  - Sourced the Texas 2036 Report (*The State Water Plan & The Coastal Bend Water Crisis* by Jeremy Mazur, Aug 19, 2026) demonstrating 25 years of planning failure where neither the state nor Region N projected any 2020s shortage due to statutory bans on modeling climate change in WAM and a 2015 planning freeze.
+  - Documented September 2026 conditions: summer rains lifted storage to 47.6% and delayed the Level 1 date to September 2028, but extreme asymmetry (Lake Corpus Christi 87% vs Choke Canyon 23%) and City Council's 5–3 vote against seawater desalination (Sept 1, 2026) leave the region on the Day Zero trajectory once drought resumes.
+- **Review Interface Policy Context (`app.py`):**
+  - Added dedicated interactive expander `"🏛️ Regional Policy & 'Day Zero' Context (Corpus Christi / Region N)"` in the Review Storage view.
+  - Bridges technical simulation and real-world policy: explains how BASIN's Multi-Sector Curtailment feature models the exact policy question of the November 3, 2026 Fair Water Charter Amendment (curtailing industrial demand by 30% in Stage 4 vs. protecting industrial baseload under DSEF).
+- **Files changed:** `docs/post_2015_hydrology_and_simulation_plan.md`, `app.py`, `HANDOFF.md`.
+- **Verified commands:**
+  - `pytest tests/test_water_system.py tests/test_reservoir.py tests/test_simulation_contract.py tests/test_app.py`: **62 passed in 114.41s**.
+- **Blocker:** None. Next action: commit and push to remote.
+
 ## September 11 — Post-2015 Hydrology Integration & Dire Visual Simulation Architecture (Complete)
 
 - **Official Post-2015 Research & Documentation (`docs/post_2015_hydrology_and_simulation_plan.md`):**

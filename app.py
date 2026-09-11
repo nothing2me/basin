@@ -1718,6 +1718,16 @@ elif page == "Review":
                         st.info("📢 **Operational Takeaway**: " + reservoir_summary(sim_df, chosen_sys.name))
                         st.caption(f"Results cover this {len(s.series)}-day window only. Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings are retained for this workspace during the session; opening another workspace resets them.")
 
+                        with st.expander("🏛️ Regional Policy & 'Day Zero' Context (Corpus Christi / Region N)", expanded=False):
+                            st.markdown(
+                                """
+                                **The 'First City in America to Run Out of Water' Narrative vs. Operational Realities:**
+                                - **National Coverage vs. City Rebuttal**: Throughout early-to-mid 2026, national reports (*Texas Tribune*, *Inside Climate News*, *Circle of Blue*, *Futurism*, *Deceleration News*) highlighted projections that Corpus Christi could become America's first modern "Day Zero" metropolis when combined storage plummeted to an all-time low of **7.7% in mid-April 2026**. The City pushed back, clarifying that a **Level 1 Water Emergency** is an administrative 180-day planning trigger, and that the **Mary Rhodes Pipeline** (70–72 MGD) guarantees a firm regional baseload (~70% of demand) preventing complete dry-pipe failure even if reservoirs hit dead pool.
+                                - **The Fair Water Charter Amendment (Nov 3, 2026 Ballot)**: On August 11, 2026, City Council voted 6–2 to place a charter amendment on the ballot (prompted by ~13,000 citizen signatures) to eliminate the **Drought Surcharge Exemption Fee (DSEF)**. Under DSEF, industrial plants consuming >50% of regional potable water paid $0.31/kGal to bypass drought surcharges, while residents faced 20 months of Stage 3 sprinkler bans and $4–$8/kGal surcharges.
+                                - **Simulating Policy Choices in BASIN**: The Multi-Sector Water Delivery metrics above reflect these dynamics. When combined storage breaches Stage 4 (10%), BASIN models the Fair Water policy mandate by curtailing industrial demand by 30% and outdoor use by 100%, protecting essential domestic baseload and extending reservoir lifespan.
+                                """
+                            )
+
         with tab_agro:
             st.caption("Cross-sector operational impacts calculated from daily scenario rainfall. Illustrative decision-support estimates based on Texas ET Network and Texas A&M Forest Service guidelines; not regulatory declarations or official crop/burn directives.")
             c_agro_tab, c_fire_tab = st.tabs(["🌾 Crop Water Deficit (ETc)", "🔥 Wildfire Risk (KBDI)"])
