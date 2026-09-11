@@ -53,7 +53,10 @@ if st.session_state.get("assistant_open", False):
         transition: margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }}
     .st-key-assistant_drawer {{
-        width: {assistant_w}px !important;
+        width: {assistant_w}px;
+        min-width: 360px;
+        max-width: 90vw;
+        resize: horizontal;
     }}
     .st-key-assistant_tab_open {{
         right: {assistant_w}px !important;
@@ -84,8 +87,8 @@ def load_source():
 
 
 
-def local_rainfall_preview():
-    with st.expander("Upload and observe your custom CSV."):
+def local_rainfall_preview(expanded=False):
+    with st.expander("Upload and observe your custom CSV.", expanded=expanded):
         st.caption("One station per file. Preview only: uploads do not change scenarios or the NOAA snapshot. Preview stays in this session until you explicitly save reviewed evidence to an active analysis.")
         st.download_button("Local rainfall template", TEMPLATE, "local-rainfall-template.csv", "text/csv")
         station = st.text_input("Local station name", key="local_station")
@@ -681,7 +684,8 @@ def personal_notes_panel(w):
             with st.container(key="notes_body_content"):
                 st.caption("Saved locally with this analysis. Included in exports only if you opt in.")
                 p_key = f"provider_{w.id}" if w else "provider_default"
-                note = st.text_area("Provider notes", value=current_val, key=p_key, height=130)
+                cur_h = st.session_state.get("notes_height", 420)
+                note = st.text_area("Provider notes", value=current_val, key=p_key, height=max(130, cur_h - 180))
                 if st.button("Save notes", key=f"btn_save_notes_{w.id if w else 'default'}", width="stretch", type="primary"):
                     st.session_state["personal_notes"] = note
                     if w:
@@ -902,6 +906,15 @@ if w is not None and st.session_state.get("report_workspace_id") != w.id:
     st.session_state["report_workspace_id"] = w.id
 curr_target = TUTORIAL_STEPS[st.session_state.get("tutorial_step", 0)]["target"] if st.session_state.get("tutorial_active") else ""
 
+profile_context = w.id if w else "new-run"
+profile_defaults = review_preferences(w.id) if w else ReviewPreferences()
+if st.session_state.get("run_focus_context") != profile_context:
+    st.session_state["run_focus_context"] = profile_context
+    st.session_state["run_focus_goal"] = profile_defaults.goal
+    st.session_state["run_focus_data"] = profile_defaults.data_source
+    st.session_state["run_focus_guidance"] = profile_defaults.guidance
+    st.session_state["run_focus_skip"] = profile_defaults.dismissed and not profile_defaults.configured
+
 with st.sidebar:
     page = st.radio("View", ["Data", "Workspace", "Review", "Exports"], key="page",
                     index=0, format_func=PAGE_LABELS.get, label_visibility="collapsed")
@@ -1017,7 +1030,57 @@ if w is None and page == "Data":
 
 if page == "Data":
     saved_custom_panel(w)
-    local_rainfall_preview()
+    
+    # 1. Direct Data & Focus Intake (High-density, 0-friction)
+    intake_col1, intake_col2 = st.columns([1.6, 2.4])
+    with intake_col1:
+        st.markdown("**1. Select Data Source**")
+        curr_d = st.session_state.get("run_focus_data", profile_defaults.data_source)
+        d_idx = 1 if curr_d == "own" else 0
+        chosen_data_mode = st.radio(
+            "Data Source",
+            ["🏛️ Regional NOAA Baseline", "📂 Upload Custom CSV"],
+            index=d_idx,
+            horizontal=True,
+            label_visibility="collapsed",
+            key="step1_data_mode_radio"
+        )
+        st.session_state["run_focus_data"] = "own" if "Upload" in chosen_data_mode else "standard"
+
+    with intake_col2:
+        st.markdown("**2. Analysis Focus (Tailors Review)**")
+        goal_labels = {
+            "storage": "🌊 Storage Stress",
+            "operations": "🌾 Agronomics",
+            "handoff": "📋 Regulatory Handoff",
+            "compare": "⚖️ Comparison"
+        }
+        curr_g = st.session_state.get("run_focus_goal", profile_defaults.goal)
+        g_keys = list(goal_labels.keys())
+        g_idx = g_keys.index(curr_g) if curr_g in g_keys else 0
+        if hasattr(st, "segmented_control"):
+            chosen_goal = st.segmented_control(
+                "Analysis Focus",
+                g_keys,
+                default=curr_g if curr_g in g_keys else "storage",
+                format_func=goal_labels.get,
+                label_visibility="collapsed",
+                key="step1_goal_segmented"
+            )
+            if chosen_goal:
+                st.session_state["run_focus_goal"] = chosen_goal
+        else:
+            chosen_goal = st.selectbox(
+                "Analysis Focus",
+                g_keys,
+                index=g_idx,
+                format_func=goal_labels.get,
+                label_visibility="collapsed",
+                key="step1_goal_selectbox"
+            )
+            st.session_state["run_focus_goal"] = chosen_goal
+
+    local_rainfall_preview(expanded=(st.session_state.get("run_focus_data") == "own"))
     with tour_target("data_map"):
         metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
         quality = pd.DataFrame(source.manifest["quality"])
@@ -1139,10 +1202,8 @@ elif page == "Workspace":
         st.session_state["run_focus_guidance"] = profile_defaults.guidance
         st.session_state["run_focus_skip"] = profile_defaults.dismissed and not profile_defaults.configured
 
-    with st.container(border=True):
-        st.markdown("##### 1. Tailor this run")
-        st.caption("These choices only organize Review. They do not change rainfall, calculations, ranking weights, "
-                   "review decisions, or export consent.")
+    with st.expander("⚙️ Analysis Focus & Settings (Optional)", expanded=False):
+        st.caption("Configures which visuals and tools appear first in Review. Does not change numerical calculations or export consent.")
         focus_goal_col, focus_data_col, focus_guidance_col = st.columns(3)
         run_focus_goal = focus_goal_col.selectbox(
             "What are you trying to do?", list(GOALS),
@@ -1160,16 +1221,27 @@ elif page == "Workspace":
             "Skip tailoring and show every Review tool", key="run_focus_skip",
             help="You can tailor the Review later without losing work.")
         if run_focus_data == "own":
-            st.caption("Add and review a CSV in Step 1. Selecting this option does not upload or validate a file.")
-        if run_focus_skip:
+            has_custom = any(s.startswith("LOCAL_") for s in names)
+            if has_custom:
+                local_name = next(names[s] for s in names if s.startswith("LOCAL_"))
+                st.success(f"✅ **Custom Gauge Active**: Generating scenarios from uploaded data: **{local_name}**.")
+            else:
+                st.info("📂 **Upload your rainfall CSV here to drive scenarios with your own gauge:**")
+                local_rainfall_preview(expanded=True)
+                st.caption("Tip: You can also explore full NOAA paired-station comparisons in Step 1: Data Dashboard.")
+        elif run_focus_data == "example":
+            col_ex1, col_ex2 = st.columns([2.5, 1.5])
+            col_ex1.caption("⚡ The reproducible example pre-loads 6 diverse drought candidates (Seed 22).")
+            col_ex2.button("🚀 Load Example Run ➔", key="btn_builder_load_example_inline", on_click=start_example, args=(source, names), type="primary", width="stretch")
+        elif run_focus_skip:
             st.caption("This run will use the full Review layout. You can choose a focus later in Review.")
 
-    # 2. Scenario Generation & Priority Weights Builder
+    # Scenario Generation & Priority Weights Builder
     c_gen, c_weights = st.columns([1, 1])
     with c_gen:
         with tour_target("sidebar_generator"):
             with st.form("generate", border=True):
-                st.markdown("##### 2. Resample Weather Windows")
+                st.markdown("##### Resample Weather Windows")
                 stations = st.multiselect("Stations", list(names), default=list(w.params.stations) if w else list(names), format_func=names.get)
                 durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
                 months = st.multiselect("Starting months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
@@ -1219,7 +1291,7 @@ elif page == "Workspace":
     with c_weights:
         with tour_target("sidebar_presets"):
             with st.container(border=True):
-                st.markdown("##### 3. Ranking Priorities & Weights")
+                st.markdown("##### Ranking Priorities & Weights")
                 preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
                 matched = "Custom weights"
                 curr_weights = dict(w.weights) if w else {"severity": 40, "duration": 30, "concurrence": 20, "season": 10}
