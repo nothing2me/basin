@@ -1059,15 +1059,16 @@ if page == "Data":
             elif interval == "Monthly":
                 groups = observations.resample("MS")
                 observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
-            else:
-                observed = observations
+            is_us = st.session_state.get("unit_mode", "us") == "us"
+            plot_obs = (observed / 25.4).round(2) if is_us else observed
             fig = go.Figure()
-            for station in observed:
-                fig.add_trace(go.Scatter(x=observed.index, y=observed[station], name=names[station], mode="lines", connectgaps=False))
-            fig.update_yaxes(title="Precipitation · mm")
+            for station in plot_obs:
+                fig.add_trace(go.Scatter(x=plot_obs.index, y=plot_obs[station], name=names[station], mode="lines", connectgaps=False))
+            fig.update_yaxes(title="Precipitation · inches" if is_us else "Precipitation · mm")
             st.plotly_chart(chart(fig, 350), width="stretch", config={"displayModeBar": False})
-            st.markdown("**Synchronized Daily Observations**")
-            st.dataframe(observations, width="stretch", height=240)
+            st.markdown(f"**Synchronized Daily Observations ({'inches' if is_us else 'mm'})**")
+            table_obs = (observations / 25.4).round(2) if is_us else observations.round(1)
+            st.dataframe(table_obs, width="stretch", height=240)
     with tab_heatmap:
         st.markdown("**35-Year Monthly Climatological Anomaly Matrix (1991–2025)**")
         st.caption("Displays percentage departure from the 35-year monthly mean baseline for each month. Crimson cells indicate severe drought deficits; teal/emerald cells indicate rainfall surpluses. Exposes historical multi-month drought runs (such as 1996, 2011, and 2022) across the record.")
@@ -1275,7 +1276,11 @@ elif page == "Workspace":
                                       index=detail_ids.index(initial_id), key=f"shortfall_detail_{w.id}")
             detail = view.loc[view["ID"] == focused_id].iloc[0]
             st.caption(f"{detail['Days']:g} days · {detail['Onset']} onset")
-            st.metric("Total rainfall deficit", f"{detail['Deficit mm']:,.1f} mm", delta=f"{detail['Deficit mm']/25.4:,.2f} in", delta_color="off")
+            is_us = st.session_state.get("unit_mode", "us") == "us"
+            if is_us:
+                st.metric("Total rainfall deficit", f"{detail['Deficit in']:,.2f} in", delta=f"{detail['Deficit mm']:,.1f} mm", delta_color="off")
+            else:
+                st.metric("Total rainfall deficit", f"{detail['Deficit mm']:,.1f} mm", delta=f"{detail['Deficit in']:,.2f} in", delta_color="off")
             st.caption(detail["Profile"])
             concurrence = float(detail["Stations stressed together %"])
             concurrence_label = (
@@ -1289,9 +1294,11 @@ elif page == "Workspace":
             st.button("Open scenario review", key=f"shortfall_review_{w.id}",
                       on_click=open_review, args=(focused_id,))
         with plot_area:
+            is_us = st.session_state.get("unit_mode", "us") == "us"
             st.plotly_chart(rainfall_shortfall_figure(
                 view, w.selected, focused_id,
                 colorblind=st.session_state.get("appearance_colorblind", False),
+                unit="in" if is_us else "mm",
             ), width="stretch", config={"displayModeBar": False})
         st.caption("Totals accumulate over the whole scenario. A larger deficit in a longer window does not, by itself, mean greater drought intensity.")
         st.button("Review selected scenarios", key="btn_review_selected_scenarios", on_click=open_review, args=(w.selected[0],), type="primary")
@@ -1888,10 +1895,15 @@ elif page == "Review":
                         except (ValueError, TypeError) as error:
                             st.error(str(error))
             with evidence_tab:
-                st.dataframe(pd.DataFrame({"Station": list(s.provenance["retention_by_station"]),
-                                           "Scenario rainfall (fraction of observed)": list(s.provenance["retention_by_station"].values()),
-                                           "Current deficit mm": [f["station_deficits_mm"][i] for i in s.provenance["retention_by_station"]]}),
-                             hide_index=True, width="stretch")
+                is_us = st.session_state.get("unit_mode", "us") == "us"
+                ev_data = {
+                    "Station": list(s.provenance["retention_by_station"]),
+                    "Scenario rainfall (fraction of observed)": list(s.provenance["retention_by_station"].values()),
+                    "Current deficit mm": [f["station_deficits_mm"][i] for i in s.provenance["retention_by_station"]],
+                }
+                if is_us:
+                    ev_data["Current deficit in"] = [round(f["station_deficits_mm"][i] / 25.4, 2) for i in s.provenance["retention_by_station"]]
+                st.dataframe(pd.DataFrame(ev_data), hide_index=True, width="stretch")
                 evidence_panel(w, s, save)
                 st.json({"source": s.provenance, "features": f, "score_contributions": s.components, "snapshot_sha256": source.manifest["sha256"]})
             with history_tab:

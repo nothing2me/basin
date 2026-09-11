@@ -21,7 +21,9 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     app.selectbox(key=f"shortfall_detail_{w.id}").set_value(detail_id).run()
     assert not app.exception
     deficit_metric = next(m for m in app.metric if m.label == "Total rainfall deficit")
-    assert deficit_metric.value == f"{w.get(detail_id).features['deficit_mm']:,.1f} mm"
+    is_us = app.session_state.unit_mode == "us"
+    expected_val = f"{w.get(detail_id).features['deficit_mm'] / 25.4:,.2f} in" if is_us else f"{w.get(detail_id).features['deficit_mm']:,.1f} mm"
+    assert deficit_metric.value == expected_val
     next(b for b in app.button if b.label == "Open scenario review").click().run()
     assert app.session_state.inspect_id == detail_id
     assert app.session_state.page == "Review"

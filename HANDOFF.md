@@ -1,5 +1,24 @@
 # BASIN current handoff
 
+## September 11 — Live Demo UI Unit Harmonization & Workflow Presentation Polish (Complete)
+
+- **Unit Mode Adaptation across Step 1 (Data Dashboard) (`app.py`):**
+  - Observed time series chart dynamically switches y-axis and plotted points between `Precipitation · inches` and `Precipitation · mm` based on `global_unit_selector` (`unit_mode == "us"` vs `"metric"`).
+  - Synchronized daily observation table renders numbers in inches (`(observations / 25.4).round(2)`) with dynamic header `Synchronized Daily Observations (inches)` when US Customary is selected.
+- **Unit Mode Adaptation across Step 2 (Scenario Builder) (`app.py`):**
+  - Scenario details metric `Total rainfall deficit` now leads with inches (`{detail['Deficit in']:,.2f} in`) with mm delta under US Customary, and mm with inch delta under Metric.
+  - Rainfall shortfall multi-duration figure now receives `unit="in" if is_us else "mm"`, plotting deficit in inches with y-axis title `Total rainfall deficit (in)`.
+- **Review Evidence Tab Unit Harmonization (`app.py`):**
+  - Evidence tab now displays `Current deficit in` alongside `Current deficit mm` when US Customary is active.
+- **Dynamic Infrastructure Capacity in Assistant Tools (`basin_core/tools.py`):**
+  - Replaced hardcoded literal `919900` in `test_reservoir_infrastructure` with dynamic `sum(RESERVOIR_ASSUMPTIONS["capacities_acft"].values())`.
+- **Automated Verification & Unit Tests (`tests/test_visualizers.py`, `tests/test_app.py`):**
+  - Added `test_shortfall_panels_unit_in` asserting exact inch-scaled coordinates and yaxis titles in `tests/test_visualizers.py`.
+  - Updated `test_app.py` full workflow test to verify dynamic unit adaptation on metrics.
+  - Verified `scripts/demo_smoke.py` passes offline (`verified: true`, `implementation_matches_current: true`).
+- **Files changed:** `app.py`, `basin_core/tools.py`, `tests/test_app.py`, `tests/test_visualizers.py`, `HANDOFF.md`.
+- **Next action:** Commit and push to origin/main.
+
 ## September 11 — The 'First City in America to Run Out of Water' Analysis, Policy Simulation, & Grounding (Complete)
 
 - **Comprehensive Grounding & Documentation (`docs/post_2015_hydrology_and_simulation_plan.md` - Section 2.7):**

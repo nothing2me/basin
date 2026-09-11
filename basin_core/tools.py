@@ -11,7 +11,7 @@ import calendar
 import numpy as np
 import pandas as pd
 
-from basin_core.analysis import vector
+from basin_core.analysis import RESERVOIR_ASSUMPTIONS, vector
 from basin_core.workspace import Workspace
 
 
@@ -463,7 +463,7 @@ def test_reservoir_infrastructure(workspace: Workspace, scenario_id: str = "",
         "source_start": scenario.provenance["source_start"], "source_end": scenario.provenance["source_end"],
         "duration_days": spec["duration_days"], "rainfall_reduction_pct": rainfall_reduction_pct,
         "initial_pct": spec["initial_pct"], "conservation_pct": spec["conservation_pct"],
-        "initial_acft": settings.initial_storage_fraction * 919900,
+        "initial_acft": settings.initial_storage_fraction * sum(RESERVOIR_ASSUMPTIONS["capacities_acft"].values()),
         **{key: row[key] for key in ("final_pct", "final_acft", "min_pct", "min_acft", "survived_critical_20pct")},
         "day_band1_40pct": row["day_stage1_40"], "day_band2_30pct": row["day_stage2_30"],
         "day_band3_20pct": row["day_stage3_20"], "day_band4_15pct": row["day_emergency_15"],
