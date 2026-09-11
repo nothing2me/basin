@@ -17,10 +17,11 @@
 - **Review Interface Policy Context (`app.py`):**
   - Added dedicated interactive expander `"🏛️ Regional Policy & 'Day Zero' Context (Corpus Christi / Region N)"` in the Review Storage view.
   - Bridges technical simulation and real-world policy: explains how BASIN's Multi-Sector Curtailment feature models the exact policy question of the November 3, 2026 Fair Water Charter Amendment (curtailing industrial demand by 30% in Stage 4 vs. protecting industrial baseload under DSEF).
-- **Files changed:** `docs/post_2015_hydrology_and_simulation_plan.md`, `app.py`, `HANDOFF.md`.
+- **Files changed:** `docs/post_2015_hydrology_and_simulation_plan.md`, `docs/methodology.md`, `app.py`, `HANDOFF.md`.
 - **Verified commands:**
   - `pytest tests/test_water_system.py tests/test_reservoir.py tests/test_simulation_contract.py tests/test_app.py`: **62 passed in 114.41s**.
-- **Blocker:** None. Next action: commit and push to remote.
+  - Full regression suite: `pytest -q --tb=short`: **438 passed, 2 skipped, 0 failed in 507.82s**.
+- **Blocker:** None. Next action: push commit to remote.
 
 ## September 11 — Post-2015 Hydrology Integration & Dire Visual Simulation Architecture (Complete)
 
