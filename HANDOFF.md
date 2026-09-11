@@ -1,19 +1,18 @@
 # BASIN current handoff
 
-## September 11 — Tailored Review and storage experiment integration complete
+## September 11 — Part C Review browser acceptance
 
-Current state: `codex/part-b` is rebased on `origin/main` at `5c0412a` and includes Gemini's tailored pre-run Review workflow, the later native-runtime/PDF/unit/navigation work, and the reconciled Part B storage experiment. Review focus changes presentation only. Reservoir runs now use explicit rainfall identity and percentage-point inputs, inclusive threshold/day-zero semantics, configurable storage and sector assumptions, content-addressed replay, and fail-closed malformed-session validation.
+Current state: `main` is based on verified Part B release `d88650a`. Actual browser acceptance exercised the tailored Review at desktop 1280 × 720 and narrow 375 × 812 in Dark and Light appearances. All four focus profiles, skipped setup, Show all tools, Change focus, saved-workspace reopening, keyboard focus and the Step 5 storage tutorial target behaved as documented. Focus changes preserved scenario `B-209` revision 1 and the unchanged `0 of 6` review state.
 
-The modern Region N preset retains inactive storage, sector delivery, estuary pass-through and pipeline-case sensitivity outputs. Its interface describes these as configured assumptions. It no longer claims pump cavitation, guaranteed supply, adopted restriction actions, a live TCEQ determination, or implementation of a ballot proposal. Dated City context cites the reported 7.8% April 16 combined storage, the 180-day Level 1 supply condition, and the reported 72–79 MGD pipeline operation while keeping those facts outside the model contract.
+Two localized defects were corrected: the white BASIN bitmap now has a theme-independent dark backing so it remains readable in Light appearance, and the tutorial uses `storage-balance experiment` because selectable systems may contain one or multiple pools.
 
-Files changed in the final reconciliation: `app.py`, `basin_core/analysis.py`, `basin_core/integrity.py`, `basin_core/simulation.py`, `basin_core/summary.py`, `basin_core/water_system.py`, `basin_core/workspace.py`, `docs/post_2015_hydrology_and_simulation_plan.md`, `tests/test_simulation_contract.py`, `tests/test_summary.py`, and `tests/test_water_system.py`.
+Files changed: `app.py`, `basin_theme.py`, and `docs/review_acceptance_handoff.md`.
 
-Verified commands:
+Verified commands and evidence:
 
-- `python -m pytest -q --tb=short`: **554 passed, 3 skipped** in 856.84s. Skips are opt-in/genuine runtime or absent-model cases.
-- Focused cross-integration suite: **93 passed** in 96.20s.
-- `scripts/evaluate_routing_quality.py`: **50/50 passed (100.0%)** in 0.91s.
-- `scripts/demo_smoke.py`: `verified: true`, five scenarios and 500 audit records replayed, `implementation_matches_current: true`.
-- `python -m compileall -q basin_core` and `git diff --check`: passed.
+- Live Streamlit browser acceptance is recorded in `docs/review_acceptance_handoff.md`.
+- Focused Review/App/UI run: 60 tests passed; one AppTest workflow timed out at 60 seconds while the live browser server competed for resources.
+- The timed-out `tests/test_app.py::test_full_user_workflow` passed alone in 51.87s after stopping the server.
+- Part B release base: **554 passed, 3 skipped**; routing **50/50**; demo replay verified.
 
-Blocker: none. Next action: fast-forward the main checkout and push `main`, then perform optional visual/device acceptance in the browser. These checks establish implementation consistency and deterministic replay; they do not establish physical calibration, source suitability, forecast skill, professional approval, or official policy meaning.
+Blocker: none for Part C browser acceptance on this machine. Next action: reconcile TODO, README, claims, methodology and presentation status against the merged implementation. The separate presentation-laptop, offline native-model, projector, download, intended-user and organizer-format checks remain physical/team tasks and are not established here.

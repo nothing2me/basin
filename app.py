@@ -737,7 +737,7 @@ TUTORIAL_STEPS = [
         "page": "Review",
         "tag": "OPTIONAL · ILLUSTRATIVE EXPERIMENT",
         "title": "5. Explore an Illustrative Water Balance",
-        "desc": "Uncalibrated two-pool experiment with assumed inflow, evaporation, demand and capacity. Its outputs are excluded from the evidence packet.",
+        "desc": "Uncalibrated storage-balance experiment with assumed inflow, evaporation, demand and capacity. Its outputs are excluded from the evidence packet.",
         "directive": "Inspect assumptions, then play the conditional storage trajectory. Bands are illustrative, not official restriction dates.",
         "review_mode": "Reservoir simulation"
     },
