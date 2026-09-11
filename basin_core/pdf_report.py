@@ -9,7 +9,7 @@ Features dual-tier presentation:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from html import escape
 import json
 import math
@@ -25,6 +25,8 @@ from basin_core.analysis import (
     RESERVOIR_ASSUMPTIONS,
     simulate_reservoir_drawdown,
     simulate_stress_spectrum,
+    threshold_crossing_day,
+    threshold_day_label,
 )
 from basin_core.water_system import WaterSystemConfig, REGION_N_PRESET
 
@@ -92,9 +94,9 @@ class ExperimentConfig:
     def scenario_label(self) -> str:
         if not self.scenario_id:
             return "Not tied to a specific scenario"
-        if self.scenario_revision is None:
-            return self.scenario_id
-        return f"{self.scenario_id} (revision {self.scenario_revision})"
+        label = self.scenario_id if self.scenario_revision is None else f"{self.scenario_id} (revision {self.scenario_revision})"
+        # A default report is computed on the first accepted scenario; it says so.
+        return label if self.selected else f"{label} - first accepted scenario; not chosen in Review"
 
     @property
     def tier_label(self) -> str:
@@ -150,7 +152,11 @@ def resolve_config(config: ExperimentConfig | None, initial_pct=None, conservati
 
 
 def _as_fraction(value) -> float:
-    """Accept a percentage or a fraction, as the report entry points always have."""
+    """Accept a percentage or a fraction, as the report entry points always have.
+
+    Known ambiguity, deliberately not changed here: 1.0 is read as 100% but 1.5 as 1.5%.
+    No product path uses these legacy arguments; the app passes an ExperimentConfig.
+    """
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
         raise ValueError("Storage and conservation settings must be finite numbers")
     return float(value) / 100.0 if value > 1.0 else float(value)
@@ -355,10 +361,27 @@ class ReportMetrics:
     day_cons_stage3: int | None = None
     mean_evaporation_acft: float | None = None
     mean_served_demand_acft: float | None = None
+    input_rainfall: dict | None = None
 
     @property
     def available(self) -> bool:
         return self.unavailable_reason is None
+
+
+def _describe_input(scenario, baseline_kind: str, revision) -> dict | None:
+    """What the 100% tier is, or None when the scenario carries no provenance to say."""
+    from basin_core.simulation import describe_input_rainfall
+    try:
+        return describe_input_rainfall(scenario, baseline_kind, revision)
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return None
+
+
+def _input_sentence(metrics: "ReportMetrics") -> str:
+    info = metrics.input_rainfall
+    if not info:
+        return "The rainfall input for these tiers could not be described."
+    return f"Tiers multiply the input rainfall: {info['summary']}. {info['hundred_percent_meaning']}"
 
 
 def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> ReportMetrics:
@@ -409,10 +432,15 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
             earliest_breach_day = day3
             tipping_point_tier = row["tier_label"].split(" (")[0]
 
+    system = config.system_config or REGION_N_PRESET
+    band_20 = system.stage_bands_pct[2] * 100 if len(system.stage_bands_pct) >= 3 else 20.0
+
     def first_stage3(sim) -> int | None:
-        return next((int(r["day"]) for _, r in sim.iterrows() if r["combined_pct"] <= 20.0), None)
+        # Shared inclusive rule, including day 0 when storage starts at or below the band.
+        return threshold_crossing_day(sim, config.initial_pct, band_20)
 
     return ReportMetrics(
+        input_rainfall=_describe_input(primary_scenario, "scenario_revision", getattr(primary_scenario, "revision", None)),
         spectrum_data=spectrum_data,
         sim_base=sim_base,
         sim_cons=sim_cons,
@@ -425,9 +453,11 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
     )
 
 
-def _metrics_from_saved_run(run: dict) -> ReportMetrics:
+def _metrics_from_saved_run(run: dict, scenario=None) -> ReportMetrics:
     """Project one validated saved run without recalculating report-only results."""
     results = run["results"]
+    input_rainfall = (_describe_input(scenario, run["settings"]["baseline_kind"], run["scenario_revision"])
+                      if scenario is not None else None)
     summary = results["summary_table"]
     earliest: int | None = None
     tipping: str | None = None
@@ -448,6 +478,7 @@ def _metrics_from_saved_run(run: dict) -> ReportMetrics:
         if reference_rows else comparison.get("mean_served_demand_acft_per_day")
     )
     return ReportMetrics(
+        input_rainfall=input_rainfall,
         spectrum_data={"summary_table": summary},
         earliest_breach_day=earliest,
         tipping_point_tier=tipping,
@@ -471,6 +502,10 @@ def _report_context(workspace, accepted: Sequence, config: ExperimentConfig):
         if candidate and candidate.get("id") in getattr(workspace, "simulation_reviews", {}):
             run = candidate
     if run is None:
+        if primary is not None and not config.scenario_id and getattr(primary, "id", None):
+            # Defaults are applied to the first accepted scenario; name it rather than
+            # printing "Not tied to a specific scenario" beside its results.
+            config = replace(config, scenario_id=primary.id, scenario_revision=getattr(primary, "revision", None))
         return config, primary, note, compute_report_metrics(primary, config)
 
     from basin_core.simulation import is_current, settings_from_run, validate_run
@@ -494,7 +529,7 @@ def _report_context(workspace, accepted: Sequence, config: ExperimentConfig):
         selected=True,
         saved_run_id=run["id"],
     )
-    return saved_config, scenario, None, _metrics_from_saved_run(run)
+    return saved_config, scenario, None, _metrics_from_saved_run(run, scenario)
 
 
 def find_browser_executable() -> str | None:
@@ -638,9 +673,9 @@ def render_html_report(
                 if r["survived_critical_20pct"]
                 else '<span class="badge badge-neutral">At/below 20% in window</span>'
             )
-            d1 = f"Day {r['day_stage1_40']}*" if r.get("day_stage1_40") else "—"
-            d2 = f"Day {r['day_stage2_30']}*" if r.get("day_stage2_30") else "—"
-            d3 = f"Day {r['day_stage3_20']}*" if r.get("day_stage3_20") else "—"
+            # Day 0 is a crossing at the start, not an absent value.
+            d1, d2, d3 = ("—" if r.get(key) is None else f"{threshold_day_label(r[key])}*"
+                          for key in ("day_stage1_40", "day_stage2_30", "day_stage3_20"))
             spectrum_html_rows += f"""
             <tr>
                 <td><strong>{escape(r['tier_label'])}</strong></td>
@@ -714,7 +749,8 @@ def render_html_report(
         spectrum_caption = (
             f"Simulated drawdown across {tier_count} rainfall tiers for {primary_id} starting at "
             f"{init_frac * 100:g}% initial storage with {cons_frac * 100:g}% emergency conservation. "
-            "Asterisks mark days inside the uncalibrated modeled window."
+            f"{_input_sentence(metrics)} "
+            "Asterisks mark days inside the uncalibrated modeled window; day 0 means at or below the band at the start."
         )
     else:
         spectrum_caption = f"Not computed for this report. {unavailable_note}"
@@ -1748,9 +1784,9 @@ def build_fallback_pdf(
         y_r = y_spec - 38 - (idx * 20)
         bg = (0.96, 0.97, 0.99) if idx % 2 == 0 else (1.0, 1.0, 1.0)
         doc.rect(p2, 36, y_r, 540, 20, fill=bg)
-        d1 = f"Day {r['day_stage1_40']}" if r.get("day_stage1_40") else "--"
-        d2 = f"Day {r['day_stage2_30']}" if r.get("day_stage2_30") else "--"
-        d3 = f"Day {r['day_stage3_20']}" if r.get("day_stage3_20") else "--"
+        # Day 0 is a crossing at the start, not an absent value.
+        d1, d2, d3 = ("--" if r.get(key) is None else "Day 0 (start)" if r[key] == 0 else f"Day {r[key]}"
+                      for key in ("day_stage1_40", "day_stage2_30", "day_stage3_20"))
         stat = "Above 20%" if r.get("survived_critical_20pct") else "At/below 20%"
         stat_col = (0.1, 0.55, 0.35) if r.get("survived_critical_20pct") else (0.75, 0.25, 0.2)
 
@@ -1766,6 +1802,10 @@ def build_fallback_pdf(
 
     # Sections 2-4 flow downward and continue onto extra pages instead of being cut off.
     flow = VectorFlow(doc, p2, y_spec - 38 - (len(spec_rows[:4]) * 20) - 16 if spec_rows else y_spec - 74, run_id)
+    if spec_rows:
+        flow.paragraph(_input_sentence(metrics) + " Day 0 means at or below the band at the start.",
+                       size=6.8, color=(0.35, 0.4, 0.48))
+        flow.gap(6)
 
     flow.heading("SHORTLISTED CANDIDATE SCENARIOS (Accepted for Planning Analysis)")
     scenario_columns = [

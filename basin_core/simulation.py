@@ -17,7 +17,10 @@ if TYPE_CHECKING:
     from basin_core.workspace import Workspace
 
 MODEL_VERSION = RESERVOIR_ASSUMPTIONS["model_version"]
-THRESHOLD_VERSION = "inclusive-daily-endpoints-with-day-zero-1"
+# Version 2: storage bands are inclusive like crossing days, tier labels are relative to the
+# input rainfall instead of "Selected scenario", and status text no longer says
+# "Survived"/"Breached". Runs saved under version 1 are refused rather than reinterpreted.
+THRESHOLD_VERSION = "inclusive-daily-endpoints-with-day-zero-2"
 
 
 def content_hash(value: object) -> str:
@@ -72,9 +75,10 @@ def resolve_scenario(workspace: Workspace, scenario_id: str = "", year: int | No
         matches = [s for s in workspace.scenarios if int(s.provenance["source_start"][:4]) == year]
         if not matches:
             years = sorted({s.provenance["source_start"][:4] for s in workspace.scenarios})
+            manifest = workspace.source.manifest
             raise ValueError(
                 f"No scenario: No historical drought events found for year {year}. "
-                "The bundled NOAA record covers 1991–2025. "
+                f"The bundled NOAA record covers {str(manifest['start'])[:4]}–{str(manifest['end'])[:4]}. "
                 f"Available start years: {', '.join(years)}. "
                 "Choose an existing scenario or generate a suitable window explicitly."
             )
@@ -85,6 +89,56 @@ def resolve_scenario(workspace: Workspace, scenario_id: str = "", year: int | No
     if revision is not None and (type(revision) is not int or revision != scenario.revision):
         raise ValueError("Scenario revision changed; inspect the current revision before running")
     return scenario
+
+
+def describe_input_rainfall(scenario: Scenario, baseline_kind: str = "scenario_revision",
+                            revision: int | None = None) -> dict:
+    """State what the 100% tier of an experiment is, for every presentation surface.
+
+    ``observed_fraction`` is the input as a single multiple of the observed window. It is
+    None when no single multiple exists (station-specific retention or a CSV replacement).
+    Nothing here is stored in a saved run, so the description never changes run identity.
+    """
+    p = scenario.provenance
+    window = f"{p['source_start']} to {p['source_end']}"
+    if baseline_kind == "observed_window":
+        return {"baseline_kind": baseline_kind, "scenario_id": scenario.id, "revision": None,
+                "window": window, "observed_fraction": 1.0,
+                "summary": f"unmodified NOAA observations for {window}",
+                "hundred_percent_meaning": "100% is the unmodified observed window."}
+    if baseline_kind != "scenario_revision":
+        raise ValueError("Choose observed_window or scenario_revision as the baseline")
+    revision = scenario.revision if revision is None else revision
+    retention = {str(k): float(v) for k, v in p["retention_by_station"].items()}
+    values = list(retention.values())
+    if values and all(v == values[0] for v in values):
+        fraction: float | None = values[0]
+        steps = [f"constructed at {round(values[0] * 100, 1):g}% of observed rainfall"]
+    else:
+        fraction = None
+        steps = ["constructed with station-specific retention ("
+                 + ", ".join(f"{k} {round(v * 100, 1):g}%" for k, v in retention.items()) + ")"]
+    for event in scenario.history:
+        if event.get("revision", 0) > revision:
+            break
+        if event["action"] == "scale":
+            if fraction is not None:
+                fraction *= float(event["factor"])
+            steps.append(f"revision {event['revision']} scaled rainfall by {float(event['factor']):g}")
+        elif event["action"] == "replace":
+            fraction = None
+            steps.append(f"revision {event['revision']} replaced rainfall from a CSV")
+    return {"baseline_kind": baseline_kind, "scenario_id": scenario.id, "revision": revision,
+            "window": window, "observed_fraction": fraction,
+            "summary": f"scenario {scenario.id} revision {revision}, {'; '.join(steps)} (source window {window})",
+            "hundred_percent_meaning": (f"100% is scenario {scenario.id} revision {revision} rainfall, including its "
+                                        "construction and edits; it is not the unmodified historical record.")}
+
+
+def observed_percent(tier_multiplier: float, input_rainfall: dict) -> float | None:
+    """A tier as a percentage of the observed window, when that is a single number."""
+    fraction = input_rainfall.get("observed_fraction")
+    return None if fraction is None else round(float(tier_multiplier) * fraction * 100, 1)
 
 
 def evidence_context(workspace: Workspace, scenario: Scenario) -> dict:

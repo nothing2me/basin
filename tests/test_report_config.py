@@ -143,8 +143,9 @@ def test_rainfall_tiers_reach_the_spectrum_table(approved):
     assert "100%, 50%" in html
     assert html.count("<td>50.0%</td>") == 1
     assert "<td>80.0%</td>" not in html
-    assert "50% (-50% Rain)" in html
-    assert "50% (+50% Rain)" not in html
+    # Relative to the input rainfall, with the reduction stated as a reduction.
+    assert "50% of input rainfall (50% reduction)" in html
+    assert "Rain)" not in html and "Historical" not in html.split("rainfall tiers for", 1)[-1][:400]
 
     text = vector_text(build_fallback_pdf(approved, accepted, config=config))
     assert "100%, 50%" in text

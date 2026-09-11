@@ -128,142 +128,41 @@ def comparison_panel(w, save):
             st.info("Use at least one positive weight and an eligible candidate.")
 
 def fallback_query_route(w, prompt: str) -> str:
+    """Deterministic routing to tools, shared with the assistant.
+
+    One router means one interpretation of percentages, years, scenario IDs, stations,
+    groups and weights; this copy previously diverged and substituted defaults silently.
+    """
+    from basin_core.assistant import semantic_query_route
     try:
-        return _fallback_query_route(w, prompt)
+        return semantic_query_route(w, prompt)
     except (ValueError, KeyError, TypeError) as error:
         return "⚠️ **Analysis Boundary**: Please clarify the requested analysis: " + str(error)
 
 
-def _fallback_query_route(w, prompt: str) -> str:
-    """Deterministic routing to tools when Ollama is offline or as fallback."""
-    import re
-    from basin_core.assistant import render_tool_result, TOOL_LIST_HELP
-    from basin_core.tools import (
-        describe_scenario,
-        compare_scenarios,
-        explain_ranking,
-        check_concurrence,
-        run_sensitivity,
-        summarize_evidence,
-        describe_cluster,
-        check_export_readiness,
-        get_data_provenance,
-    )
+DIRECT_TOOLS_NEEDING_INPUT = frozenset({"query_rainfall", "find_scenarios_by_year", "run_sensitivity",
+                                        "test_reservoir_infrastructure", "run_stress_spectrum"})
 
-    p = prompt.lower().strip()
-    # Adversarial & Non-Predictive Advisory Guardrails
-    if any(q in p for q in ["when will water run out", "when will the reservoir run out", "will water run out", "exact date of breach", "forecast reservoir levels", "what date will"]):
-        return (
-            "⚠️ **Analysis Boundary (Non-Predictive Advisory)**: BASIN does not generate calendar-date forecasts "
-            "or operational water-supply predictions. The bundled reservoir experiment is an illustrative, "
-            "uncalibrated mass-balance sensitivity model using historical rainfall proxies, not a delivery forecast."
-        )
 
-    if any(q in p for q in ["should council", "should the city", "declare stage", "mandate stage", "should we declare"]):
-        return (
-            "⚠️ **Analysis Boundary (Policy Governance)**: BASIN is an analytical rainfall scenario workbench, "
-            "not a regulatory decision authority. Official drought stages are declared exclusively by municipal and regional "
-            "authorities pursuant to the City of Corpus Christi Drought Contingency Plan."
-        )
+def direct_tool_arguments(w, tool_name: str):
+    """Arguments for the input-free Direct Tool Runner, and a description of what was chosen.
 
-    id_matches = re.findall(r"\b[bB]-\d+\b", prompt)
-    for s in w.scenarios:
-        if s.id.lower() in p and s.id not in id_matches:
-            id_matches.append(s.id)
-
-    default_id = id_matches[0] if id_matches else (w.selected[0] if w.selected else w.scenarios[0].id)
-
-    spectrum_request = any(k in p for k in ["spectrum", "multi-tier", "tiers", "tipping point", "sweep"])
-    reservoir_request = any(k in p for k in ["survive", "infrastructure", "reservoir", "drawdown", "capacity", "storage", "restriction"])
-    if spectrum_request or reservoir_request:
-        from basin_core.tools import run_stress_spectrum, test_reservoir_infrastructure
-        year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
-        arguments = {"scenario_id": default_id if id_matches else "", "year": int(year_match.group(1)) if year_match else None}
-        percentage_matches = list(re.finditer(r"[+-]?\d+(?:\.\d+)?\s*%", p))
-        for match in percentage_matches:
-            after = p[match.end():match.end()+24].strip()
-            before = p[max(0,match.start()-28):match.start()].strip()
-            value = float(match.group().replace("%", ""))
-            if re.match(r"(?:conservation|mandate|cut|demand reduction)", after) or re.search(r"(?:conservation|demand reduction)(?: of| at| to)?$", before):
-                key = "conservation_pct"
-            elif re.match(r"(?:initial|starting) storage", after) or re.search(r"(?:initial|starting) storage(?: of| at| to)?$", before):
-                key = "initial_storage_pct"
-            elif not spectrum_request and re.match(r"(?:lower|less|reduction|drier)", after):
-                key = "rainfall_reduction_pct"
-            else:
-                raise ValueError("Label each percentage explicitly: initial storage, conservation, or lower rainfall. Use the simulation form for custom tiers.")
-            if key in arguments:
-                raise ValueError("Multiple values supplied for " + key + "; choose one")
-            arguments[key] = value
-        if "observed window" in p or "original observations" in p:
-            arguments["baseline_kind"] = "observed_window"
-        if "no pipeline" in p or "pipeline unavailable" in p:
-            arguments["pipeline_active"] = False
-        name = "run_stress_spectrum" if spectrum_request else "test_reservoir_infrastructure"
-        result = (run_stress_spectrum if spectrum_request else test_reservoir_infrastructure)(w, **arguments)
-        return render_tool_result(name, result)
-
-    # 2. Find scenarios by year
-    year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
-    if year_match and (not id_matches or any(k in p for k in ["scenarios", "find", "list", "show", "search", "events", "years"])):
-        from basin_core.tools import find_scenarios_by_year
-        year = int(year_match.group(1))
-        res = find_scenarios_by_year(w, year=year)
-        return render_tool_result("find_scenarios_by_year", res)
-    elif any(k in p for k in ["recent", "modern", "years", "from 20", "from 19"]):
-        from basin_core.tools import find_scenarios_by_year
-        year = int(year_match.group(1)) if year_match else 2011
-        res = find_scenarios_by_year(w, year=year)
-        return render_tool_result("find_scenarios_by_year", res)
-
-    if any(k in p for k in ["readiness", "export ready", "can i export", "blocker"]):
-        res = check_export_readiness(w)
-        return render_tool_result("check_export_readiness", res)
-
-    if any(k in p for k in ["compare", "vs", "versus", "difference"]):
-        if len(id_matches) >= 2:
-            id1, id2 = id_matches[0], id_matches[1]
-        elif len(w.selected) >= 2:
-            id1, id2 = w.selected[0], w.selected[1]
-        else:
-            id1, id2 = w.scenarios[0].id, w.scenarios[1].id
-        id3 = id_matches[2] if len(id_matches) >= 3 else ""
-        res = compare_scenarios(w, id1, id2, id3)
-        return render_tool_result("compare_scenarios", res)
-
-    if any(k in p for k in ["stress", "concurrence", "simultaneous"]):
-        res = check_concurrence(w, default_id)
-        return render_tool_result("check_concurrence", res)
-
-    if any(k in p for k in ["rank", "score", "why did", "position"]):
-        res = explain_ranking(w, default_id)
-        return render_tool_result("explain_ranking", res)
-
-    if any(k in p for k in ["sensitivity", "weight", "what if", "priority"]):
-        res = run_sensitivity(w)
-        return render_tool_result("run_sensitivity", res)
-
-    if any(k in p for k in ["evidence", "conflict", "source", "disagreement", "citation"]):
-        res = summarize_evidence(w, default_id)
-        return render_tool_result("summarize_evidence", res)
-
-    if any(k in p for k in ["cluster", "profile", "group"]):
-        cid = 0
-        digit_match = re.search(r"group\s*(\d+)|cluster\s*(\d+)", p)
-        if digit_match:
-            cid = int(digit_match.group(1) or digit_match.group(2))
-        res = describe_cluster(w, cid)
-        return render_tool_result("describe_cluster", res)
-
-    if any(k in p for k in ["provenance", "noaa", "data source", "station", "manifest", "data come from", "where does this data"]):
-        res = get_data_provenance(w)
-        return render_tool_result("get_data_provenance", res)
-
-    if any(k in p for k in ["scenario", "tell me about", "profile", "deficit"]) or id_matches:
-        res = describe_scenario(w, default_id)
-        return render_tool_result("describe_scenario", res)
-
-    return f"**BASIN Analyst Assistant**\n\nNo exact tool matched your query. All answers must be grounded in verified tools:\n\n{TOOL_LIST_HELP}"
+    Returns None for tools whose meaning depends on a user-chosen station, dates, year,
+    weights or experiment settings: those are never filled with invented values.
+    """
+    if tool_name in DIRECT_TOOLS_NEEDING_INPUT:
+        return None
+    sid = w.selected[0] if w.selected else w.scenarios[0].id
+    if tool_name in ("describe_scenario", "explain_ranking", "check_concurrence", "summarize_evidence"):
+        return {"scenario_id": sid}, f" for {sid} (first shortlisted scenario)"
+    if tool_name == "compare_scenarios":
+        id1 = w.selected[0] if w.selected else w.scenarios[0].id
+        id2 = w.selected[1] if len(w.selected) > 1 else (w.scenarios[1].id if len(w.scenarios) > 1 else id1)
+        return {"scenario_id_1": id1, "scenario_id_2": id2}, f" for {id1} and {id2} (first two shortlisted scenarios)"
+    if tool_name == "describe_cluster":
+        group = min(s.cluster for s in w.scenarios)
+        return {"cluster_id": group}, f" for group {group} (lowest group number)"
+    return {}, ""
 
 
 def assistant_panel(w, source=None, names=None):
@@ -364,7 +263,7 @@ def assistant_panel(w, source=None, names=None):
             from basin_core.agronomics import calculate_crop_water_deficit
             sc = w.get(sid)
             c_res = calculate_crop_water_deficit(sc.series)
-            direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in/acre** |\n"
+            direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
             st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
             st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
             st.rerun()
@@ -424,24 +323,15 @@ def assistant_panel(w, source=None, names=None):
             tool_name = st.selectbox("Select Tool", list(TOOL_REGISTRY.keys()), key="direct_tool_select")
             if st.button("Execute Tool", key="direct_tool_run", type="primary"):
                 try:
-                    sid = w.selected[0] if w.selected else w.scenarios[0].id
-                    if tool_name in ("describe_scenario", "explain_ranking", "check_concurrence", "summarize_evidence"):
-                        args = {"scenario_id": sid}
-                    elif tool_name == "compare_scenarios":
-                        id1 = w.selected[0] if w.selected else w.scenarios[0].id
-                        id2 = w.selected[1] if len(w.selected) > 1 else (w.scenarios[1].id if len(w.scenarios) > 1 else id1)
-                        args = {"scenario_id_1": id1, "scenario_id_2": id2}
-                    elif tool_name == "describe_cluster":
-                        args = {"cluster_id": 0}
-                    elif tool_name == "query_rainfall":
-                        stn = w.source.manifest["stations"][0]["id"]
-                        args = {"station_id": stn, "start_date": "2011-01-01", "end_date": "2011-12-31"}
+                    prepared = direct_tool_arguments(w, tool_name)
+                    if prepared is None:
+                        st.info(f"{tool_name} needs explicit inputs. Ask in the chat, naming the station and dates, year, weight values or scenario and settings.")
                     else:
-                        args = {}
-                    tool_out = run_tool_directly(w, tool_name, args)
-                    st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}"})
-                    st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
-                    st.rerun()
+                        args, described = prepared
+                        tool_out = run_tool_directly(w, tool_name, args)
+                        st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}{described}"})
+                        st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
+                        st.rerun()
                 except Exception as ex:
                     st.error(f"Error running {tool_name}: {ex}")
 

@@ -40,7 +40,8 @@ BENCHMARK_SUITE = [
     {"q": "What was the observed rainfall for station USW00012924 in 2011?", "expected_tool": "query_rainfall"},
     {"q": "Query rainfall for station USW00012921 between 2000-01-01 and 2000-12-31", "expected_tool": "query_rainfall"},
     {"q": "What was the rainfall recorded at USW00012912 in 1996?", "expected_tool": "query_rainfall"},
-    {"q": "Show daily rainfall observations for station USW00012924", "expected_tool": "query_rainfall"},
+    # No dates: the router must ask instead of assuming 2011.
+    {"q": "Show daily rainfall observations for station USW00012924", "expected_tool": "clarification"},
 
     # 5. check_concurrence (4)
     {"q": "Check station stress concurrence for scenario B-001", "expected_tool": "check_concurrence", "target_id": "B-001"},
@@ -49,10 +50,11 @@ BENCHMARK_SUITE = [
     {"q": "Station drought stress analysis for B-001", "expected_tool": "check_concurrence", "target_id": "B-001"},
 
     # 6. run_sensitivity (4)
-    {"q": "Run sensitivity test on ranking weights", "expected_tool": "run_sensitivity"},
+    # No weight or value: previewing an unchanged weight set is not an answer.
+    {"q": "Run sensitivity test on ranking weights", "expected_tool": "clarification"},
     {"q": "What if I doubled the duration weight?", "expected_tool": "run_sensitivity"},
     {"q": "What if duration was half the weight?", "expected_tool": "run_sensitivity"},
-    {"q": "Sensitivity test: how do weight changes impact ranks?", "expected_tool": "run_sensitivity"},
+    {"q": "Sensitivity test: how do weight changes impact ranks?", "expected_tool": "clarification"},
 
     # 7. summarize_evidence (4)
     {"q": "What evidence supports scenario B-001?", "expected_tool": "summarize_evidence", "target_id": "B-001"},
@@ -61,7 +63,8 @@ BENCHMARK_SUITE = [
     {"q": "Summarize review notes and evidence for B-001", "expected_tool": "summarize_evidence", "target_id": "B-001"},
 
     # 8. describe_cluster (3)
-    {"q": "What defines drought group 0?", "expected_tool": "describe_cluster"},
+    # Groups are numbered from 1; group 0 does not exist and must not be replaced by group 1.
+    {"q": "What defines drought group 0?", "expected_tool": "clarification"},
     {"q": "Describe profile group 1", "expected_tool": "describe_cluster"},
     {"q": "Characteristics of cluster 2", "expected_tool": "describe_cluster"},
 
@@ -131,6 +134,8 @@ def run_benchmark():
                 success = "read-only" in reply or "decision-support" in reply or "Query Processing Error" not in reply
             elif expected == "conversational_domain":
                 success = len(reply.strip()) > 30 and "Query Processing Error" not in reply
+            elif expected == "clarification":
+                success = ("Please clarify" in reply or "Analysis Boundary" in reply) and "Query Processing Error" not in reply
             else:
                 # Expected deterministic tool result signature
                 tool_signatures = {
