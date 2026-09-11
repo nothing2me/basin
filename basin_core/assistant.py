@@ -277,39 +277,41 @@ Scores: {score_min} – {score_max} (mean {score_mean})
 > Source: BASIN workspace · Snapshot `{_snapshot}…`
 > ⚠️ Historical source dates indicate which observed physical weather sequence was resampled.""",
 
-    "test_reservoir_infrastructure": """**Reservoir Infrastructure Stress Test: Scenario {scenario_id}** ({source_start} to {source_end})
-Stress adjustment: **{rainfall_reduction_pct}% lower rainfall** · Duration: **{duration_days} days**
+    "test_reservoir_infrastructure": """**Reservoir Infrastructure Stress Test: Scenario {scenario_id} revision {scenario_revision}** ({source_start} to {source_end})
+Rainfall input (100%): {input_summary}. {input_meaning}
+Rainfall used: **{retention_text}% of that input** ({rainfall_reduction_pct:g}% lower){observed_text} · Duration: **{duration_days} days**
 
 | Storage Metric | Combined Pool | Water Volume |
 |---|---|---|
-| Initial storage | {initial_pct}% | {initial_acft:,.0f} ac-ft |
+| Initial storage | {initial_pct:g}% | {initial_acft:,.0f} ac-ft |
 | Final storage | {final_pct}% | {final_acft:,.0f} ac-ft |
 | Lowest point reached | {min_pct}% | {min_acft:,.0f} ac-ft |
 
-**Threshold breaches during scenario:**
-- Stage 1 (40%): {band1_text}
-- Stage 2 (30%): {band2_text}
-- Stage 3 (20% Critical): {band3_text}
-- Emergency (15%): {band4_text}
+**First day at or below each assumed storage band:**
+- 40% band: {band1_text}
+- 30% band: {band2_text}
+- 20% band: {band3_text}
+- 15% band: {band4_text}
 
-**Infrastructure assessment:**
+**Result for this window:**
 {assessment_text}
 
-> Source: BASIN reservoir experiment · Snapshot `{_snapshot}…`
-> ⚠️ Illustrative two-pool simulation (Lake Corpus Christi + Choke Canyon). Not an official forecast or regulatory restriction date.""",
+> Source: BASIN reservoir experiment `{simulation_id}` · Snapshot `{_snapshot}…`
+> ⚠️ Illustrative two-pool simulation (Lake Corpus Christi + Choke Canyon). Bands are experiment assumptions, not adopted restriction stages. Not an official forecast or regulatory restriction date.""",
 
-    "run_stress_spectrum": """**Reservoir Stress Spectrum: Scenario {scenario_id}** ({source_start} to {source_end})
-Duration: **{duration_days} days** · Initial storage: **{initial_pct}%** · Conservation: **{conservation_pct}%**
+    "run_stress_spectrum": """**Reservoir Stress Spectrum: Scenario {scenario_id} revision {scenario_revision}** ({source_start} to {source_end})
+Duration: **{duration_days} days** · Initial storage: **{initial_pct:g}%** · Conservation: **{conservation_pct:g}%**
+Rainfall input (100% tier): {input_summary}. {input_meaning} Each tier multiplies that input.
 
-| Rainfall Tier | Retention | Min Storage | Stage 1 (40%) | Stage 2 (30%) | Critical (20%) | Emergency (15%) | Infrastructure Survival |
+| Rainfall tier | ≈ % of observed | Lowest storage | 40% band | 30% band | 20% band | 15% band | 20% band in window |
 |---|---|---|---|---|---|---|---|
 {spectrum_table}
 
-**Tipping Point Analysis:**
+**Evaluated tier outcomes:**
 {tipping_point_text}
 
-> Source: BASIN multi-tier stress spectrum · Snapshot `{_snapshot}…`
-> ⚠️ Illustrative two-pool simulation across climate stress tiers. Not an official regulatory declaration.""",
+> Source: BASIN multi-tier stress spectrum `{simulation_id}` · Snapshot `{_snapshot}…`
+> ⚠️ Illustrative two-pool simulation across rainfall multipliers. Band days are the first day at or below each assumed band; day 0 means at or below at the start. Not an official regulatory declaration.""",
 }
 
 
@@ -480,59 +482,92 @@ def _render_find_scenarios_by_year(data: dict) -> str:
                         f"{s['source_start']} to {s['source_end']} |")
         table = header + "\n" + "\n".join(rows)
     else:
-        table = f"No scenarios in the current candidate pool originated in year {data['year']}."
+        years = ", ".join(str(y) for y in data.get("available_start_years", [])) or "none"
+        table = (f"No scenarios in the current candidate pool have a source window starting in {data['year']}. "
+                 f"No other year was substituted. Start years present: {years}."
+                 + (f" The bundled record covers {data['record_period']}." if data.get("record_period") else ""))
     data = dict(data)
     data["scenario_table"] = table
     return TEMPLATES["find_scenarios_by_year"].format_map(data)
 
 
-def _render_test_reservoir_infrastructure(data: dict) -> str:
-    data = dict(data)
-    data["band1_text"] = f"Day {data['day_band1_40pct']}" if data["day_band1_40pct"] is not None else "Not reached ✓"
-    data["band2_text"] = f"Day {data['day_band2_30pct']}" if data["day_band2_30pct"] is not None else "Not reached ✓"
-    data["band3_text"] = f"Day {data['day_band3_20pct']}" if data["day_band3_20pct"] is not None else "Not reached ✓"
-    data["band4_text"] = f"Day {data['day_band4_15pct']}" if data["day_band4_15pct"] is not None else "Not reached ✓"
+def _input_rainfall_text(data: dict) -> tuple[str, str]:
+    """What the 100% rainfall input was, stated by every reservoir answer."""
+    info = data.get("input_rainfall") or {}
+    return (info.get("summary", "not recorded for this result"),
+            info.get("hundred_percent_meaning", "The meaning of 100% was not recorded for this result."))
 
+
+def _render_test_reservoir_infrastructure(data: dict) -> str:
+    from basin_core.analysis import threshold_day_label
+    data = dict(data)
+    data["input_summary"], data["input_meaning"] = _input_rainfall_text(data)
+    observed = data.get("observed_pct")
+    data["observed_text"] = (f" ≈ {observed:g}% of observed rainfall" if observed is not None
+                             else " · not a single multiple of the observations")
+    data["retention_text"] = f"{data.get('retention_pct', 100 - data['rainfall_reduction_pct']):g}"
+    for number, key in ((1, "day_band1_40pct"), (2, "day_band2_30pct"), (3, "day_band3_20pct"), (4, "day_band4_15pct")):
+        data[f"band{number}_text"] = threshold_day_label(data[key])
+    day_20 = data["day_band3_20pct"]
     if data["survived_critical_20pct"]:
         data["assessment_text"] = (
-            f"✅ **System survives critical threshold**: Combined storage remained above 20% throughout "
-            f"the {data['duration_days']}-day scenario, bottoming at **{data['min_pct']}%** ({data['min_acft']:,.0f} ac-ft)."
+            f"Combined storage stayed above the assumed 20% band for all {data['duration_days']} days of this window, "
+            f"with a lowest value of **{data['min_pct']}%** ({data['min_acft']:,.0f} ac-ft). "
+            "This describes these assumed inputs only."
+        )
+    elif day_20 == 0:
+        data["assessment_text"] = (
+            f"Combined storage was already at or below the assumed 20% band at the start (day 0); "
+            f"its lowest value was **{data['min_pct']}%** ({data['min_acft']:,.0f} ac-ft)."
         )
     else:
         data["assessment_text"] = (
-            f"⚠️ **Severe infrastructure deficit**: Combined storage dropped to **{data['min_pct']}%** "
-            f"({data['min_acft']:,.0f} ac-ft), breaching the 20% critical threshold on **Day {data['day_band3_20pct']}**."
+            f"Combined storage reached the assumed 20% band on **day {day_20}** and fell to "
+            f"**{data['min_pct']}%** ({data['min_acft']:,.0f} ac-ft)."
         )
     return TEMPLATES["test_reservoir_infrastructure"].format_map(data)
 
 
 def _render_run_stress_spectrum(data: dict) -> str:
+    from basin_core.analysis import threshold_day_label
+    from basin_core.simulation import observed_percent
     data = dict(data)
+    data["input_summary"], data["input_meaning"] = _input_rainfall_text(data)
+    info = data.get("input_rainfall") or {}
+    table = data.get("summary_table", [])
     rows = []
-    for r in data.get("summary_table", []):
-        d1 = f"Day {r['day_stage1_40']}" if r["day_stage1_40"] else "Not reached ✓"
-        d2 = f"Day {r['day_stage2_30']}" if r["day_stage2_30"] else "Not reached ✓"
-        d3 = f"Day {r['day_stage3_20']}" if r["day_stage3_20"] else "Not reached ✓"
-        d4 = f"Day {r['day_emergency_15']}" if r["day_emergency_15"] else "Not reached ✓"
-        rows.append(
-            f"| {r['tier_label']} | {r['retention_pct']}% | {r['min_pct']}% ({r['min_acft']:,.0f} ac-ft) | {d1} | {d2} | {d3} | {d4} | {r['status']} |"
-        )
+    for r in table:
+        observed = observed_percent(r["tier_multiplier"], info) if info else None
+        observed_text = f"{observed:g}%" if observed is not None else "n/a"
+        days = " | ".join(threshold_day_label(r[key]) for key in
+                          ("day_stage1_40", "day_stage2_30", "day_stage3_20", "day_emergency_15"))
+        rows.append(f"| {r['tier_label']} | {observed_text} | {r['min_pct']}% ({r['min_acft']:,.0f} ac-ft) | {days} | {r['status']} |")
     data["spectrum_table"] = "\n".join(rows)
 
-    st = data.get("summary_table", [])
-    safe_tiers = [r for r in st if r["survived_critical_20pct"]]
-    breached_tiers = [r for r in st if not r["survived_critical_20pct"]]
-    if safe_tiers and breached_tiers:
-        highest_fail = breached_tiers[0]
-        lowest_pass = safe_tiers[-1]
+    stayed = [r for r in table if r["survived_critical_20pct"]]
+    reached = [r for r in table if not r["survived_critical_20pct"]]
+    if not table:
+        data["tipping_point_text"] = "No rainfall tiers were computed."
+    elif stayed and reached:
+        lowest_stayed = min(stayed, key=lambda r: r["retention_pct"])
+        highest_reached = max(reached, key=lambda r: r["retention_pct"])
         data["tipping_point_text"] = (
-            f"The critical breaking point occurs between **{lowest_pass['retention_pct']}% rainfall** ({lowest_pass['status']}) "
-            f"and **{highest_fail['retention_pct']}% rainfall** (critical 20% breached on Day {highest_fail['day_stage3_20']})."
+            f"Storage stayed above the assumed 20% band down to **{lowest_stayed['retention_pct']:g}% of input rainfall** "
+            f"and reached it at **{highest_reached['retention_pct']:g}%** ({threshold_day_label(highest_reached['day_stage3_20'])}). "
+            "Only these tested tiers are compared."
         )
-    elif not breached_tiers:
-        data["tipping_point_text"] = "✅ **System resilient across all evaluated tiers**: Storage remains above 20% critical reserve even under catastrophic 40% rainfall."
+    elif not reached:
+        lowest = min(table, key=lambda r: r["retention_pct"])
+        data["tipping_point_text"] = (
+            f"No tested tier reached the assumed 20% band within this {data['duration_days']}-day window, "
+            f"down to {lowest['retention_pct']:g}% of input rainfall."
+        )
     else:
-        data["tipping_point_text"] = f"⚠️ **System vulnerable across all tiers**: Even at 100% historical baseline, critical 20% threshold is breached on Day {breached_tiers[0]['day_stage3_20']}."
+        highest = max(reached, key=lambda r: r["retention_pct"])
+        data["tipping_point_text"] = (
+            f"Every tested tier reached the assumed 20% band within this window; the {highest['retention_pct']:g}% tier "
+            f"(the highest tested) did so at {threshold_day_label(highest['day_stage3_20'])}."
+        )
 
     return TEMPLATES["run_stress_spectrum"].format_map(data)
 
@@ -696,11 +731,11 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "describe_cluster",
-            "description": "Describe an unsupervised drought profile cluster/group (0, 1, 2, or 3) and its centroid characteristics.",
+            "description": "Describe one unsupervised drought profile group, by the group number shown in the app (groups are numbered from 1), and its centroid characteristics.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "cluster_id": {"type": "integer", "description": "Cluster group index (0, 1, 2, or 3)"}
+                    "cluster_id": {"type": "integer", "description": "Group number as shown in the app, starting at 1"}
                 },
                 "required": ["cluster_id"]
             }
@@ -732,13 +767,13 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "find_scenarios_by_year",
-            "description": "Find candidate drought scenarios that occurred in a specific calendar year (e.g. 2011, 2000, 1996, 2018).",
+            "description": "Find candidate drought scenarios whose historical source window starts in a specific calendar year (e.g. 2011, 2000, 1996, 2018).",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "year": {
                         "type": "integer",
-                        "description": "The 4-digit calendar year (e.g. 2011, 2000, 1996)"
+                        "description": "The 4-digit source start year requested by the user; never assume one"
                     }
                 },
                 "required": ["year"]
@@ -755,23 +790,23 @@ TOOL_SCHEMAS = [
                 "properties": {
                     "scenario_id": {
                         "type": "string",
-                        "description": "Specific scenario ID (optional, e.g. 'B-016')"
+                        "description": "Exact scenario ID named by the user, e.g. 'B-016'"
                     },
                     "year": {
                         "type": "integer",
-                        "description": "Calendar year of historical drought to test (e.g. 2011 or 2000)"
+                        "description": "Optional check that the scenario's source window starts in this year"
                     },
                     "rainfall_reduction_pct": {
                         "type": "number",
-                        "description": "Percentage reduction in rainfall to stress test (e.g. 20.0 for 20% lower rainfall)"
+                        "description": "Rainfall reduction relative to the selected scenario revision, in percentage points (e.g. 20 for 20% lower)"
                     },
                     "initial_storage_pct": {
                         "type": "number",
-                        "description": "Initial combined storage as a fraction (e.g. 0.48 for 48%)"
+                        "description": "Initial combined storage in percentage points (e.g. 48 for 48%); never a fraction"
                     },
                     "conservation_pct": {
                         "type": "number",
-                        "description": "Mandatory conservation demand reduction percentage"
+                        "description": "Demand reduction in percentage points (e.g. 15 for 15%)"
                     }
                 }
             }
@@ -781,25 +816,25 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "run_stress_spectrum",
-            "description": "Run a multi-tier stress spectrum sweep across 4 rainfall retention tiers (100%, 80%, 60%, 40%) simultaneously on a drought scenario to identify critical tipping points and calculate days-to-breach countdowns.",
+            "description": "Run an illustrative storage sweep at 100%, 80%, 60% and 40% of the selected scenario revision's rainfall and report the first day each assumed storage band is reached.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "scenario_id": {
                         "type": "string",
-                        "description": "Specific scenario ID (optional, e.g. 'B-016')"
+                        "description": "Exact scenario ID named by the user, e.g. 'B-016'"
                     },
                     "year": {
                         "type": "integer",
-                        "description": "Calendar year of historical drought (default: 2011)"
+                        "description": "Optional check that the scenario's source window starts in this year"
                     },
                     "initial_storage_pct": {
                         "type": "number",
-                        "description": "Initial combined storage as a fraction (default: 0.48 for 48%)"
+                        "description": "Initial combined storage in percentage points (e.g. 48 for 48%); never a fraction"
                     },
                     "conservation_pct": {
                         "type": "number",
-                        "description": "Mandatory conservation demand reduction percentage (e.g. 15.0 for 15%)"
+                        "description": "Demand reduction in percentage points (e.g. 15 for 15%)"
                     }
                 }
             }
@@ -817,6 +852,8 @@ def validate_tool_args(workspace, name, args):
     schema = {**schema, "additionalProperties": False}
     if list(Draft202012Validator(schema).iter_errors(args)):
         raise ValueError("Invalid or missing tool arguments; specify the requested fields explicitly.")
+    manifest = getattr(getattr(workspace, "source", None), "manifest", None) or {}
+    first_year, last_year = int(str(manifest.get("start", "1991"))[:4]), int(str(manifest.get("end", "2025"))[:4])
     for key, value in args.items():
         if isinstance(value, (float, int)) and (isinstance(value, bool) or not math.isfinite(value)):
             raise ValueError("Numeric arguments must be finite numbers.")
@@ -824,18 +861,58 @@ def validate_tool_args(workspace, name, args):
             workspace.get(value)
         if key in {"severity", "duration", "concurrence", "season", "rainfall_reduction_pct"} and not 0 <= value <= 100:
             raise ValueError("Percentage/weight outside 0–100.")
-        if key == "initial_storage_pct" and not 0.05 <= value <= 1:
-            raise ValueError("Initial storage must be a fraction from 0.05 to 1.")
+        # Tools read every storage and conservation value as percentage points. A value
+        # from 0 to 1 could be a fraction (0.48 meaning 48%), so it is refused, not guessed.
+        if key == "initial_storage_pct" and not (value == 0 or 1 < value <= 100):
+            raise ValueError("Initial storage must be percentage points greater than 1 up to 100, or zero; fractional inputs such as 0.48 are ambiguous.")
         if key == "conservation_pct" and not (value == 0 or 1 < value <= 50):
             raise ValueError("Conservation must be explicit percentage points greater than 1 up to 50, or zero; fractional inputs are ambiguous.")
-        if key == "year" and not 1991 <= value <= 2025:
-            raise ValueError("Year is outside the bundled observation period.")
+        if key == "year" and not first_year <= value <= last_year:
+            raise ValueError(f"Year is outside the bundled observation period ({first_year}–{last_year}).")
     if name in {"test_reservoir_infrastructure", "run_stress_spectrum"}:
         if not args.get("scenario_id"):
             raise ValueError("Specify an exact scenario_id for this illustrative experiment.")
-        if "year" in args and not workspace.get(args["scenario_id"]).provenance["source_start"].startswith(str(args["year"])):
+        if "year" in args and int(workspace.get(args["scenario_id"]).provenance["source_start"][:4]) != args["year"]:
             raise ValueError("Scenario and requested year disagree.")
     return dict(args)
+
+
+_DEFAULT_TIER_PERCENTS = {100.0, 80.0, 60.0, 40.0}
+
+
+def parse_experiment_arguments(prompt: str, spectrum_request: bool) -> dict:
+    """Read explicitly labelled experiment settings from a question.
+
+    Every percentage must say what it is. An unlabelled or repeated value raises
+    ValueError so the caller asks for clarification instead of guessing its meaning.
+    Listing the standard 100/80/60/40% tiers in a spectrum request is not a setting.
+    """
+    p = prompt.lower()
+    arguments: dict[str, Any] = {}
+    unlabelled: list[float] = []
+    for match in re.finditer(r"[+-]?\d+(?:\.\d+)?\s*%", p):
+        after = p[match.end():match.end() + 24].strip()
+        before = p[max(0, match.start() - 28):match.start()].strip()
+        value = float(match.group().replace("%", "").strip())
+        if re.match(r"(?:conservation|mandate|cut|demand reduction)", after) or re.search(r"(?:conservation|demand reduction)(?: of| at| to)?$", before):
+            key = "conservation_pct"
+        elif re.match(r"(?:(?:initial|starting) )?storage", after) or re.search(r"(?:initial|starting) storage(?: of| at| to)?$", before):
+            key = "initial_storage_pct"
+        elif not spectrum_request and re.match(r"(?:lower|less|reduction|drier)", after):
+            key = "rainfall_reduction_pct"
+        else:
+            unlabelled.append(value)
+            continue
+        if key in arguments:
+            raise ValueError("Multiple values supplied for " + key + "; choose one")
+        arguments[key] = value
+    if unlabelled and not (spectrum_request and "tier" in p and set(unlabelled) <= _DEFAULT_TIER_PERCENTS):
+        raise ValueError("Label each percentage explicitly: initial storage, conservation, or lower rainfall. Use the simulation form for custom tiers.")
+    if "observed window" in p or "original observations" in p:
+        arguments["baseline_kind"] = "observed_window"
+    if "no pipeline" in p or "pipeline unavailable" in p:
+        arguments["pipeline_active"] = False
+    return arguments
 
 
 def semantic_query_route(workspace, prompt: str) -> str:
@@ -885,100 +962,58 @@ def semantic_query_route(workspace, prompt: str) -> str:
             "authorities pursuant to the City of Corpus Christi Drought Contingency Plan."
         )
 
-    # 1. Extract Scenario IDs
-    id_matches = re.findall(r"\b[bB]-\d+\b", prompt)
+    # 1. Scenario IDs named in the question. Scenario-specific answers require one; the
+    # first shortlisted or generated scenario is never substituted for a missing ID.
+    id_matches: list[str] = []
+    for found in re.findall(r"\b[bB]-\d+\b", prompt):
+        if found.upper() not in id_matches:
+            id_matches.append(found.upper())
     for s in getattr(workspace, "scenarios", []):
         if s.id.lower() in p and s.id not in id_matches:
             id_matches.append(s.id)
+    shortlist_text = ", ".join(list(getattr(workspace, "selected", []))[:8]) or "none"
 
-    default_id = id_matches[0] if id_matches else (
-        workspace.selected[0] if getattr(workspace, "selected", None) else (
-            workspace.scenarios[0].id if getattr(workspace, "scenarios", None) else "B-001"
-        )
-    )
+    def clarify(message: str) -> str:
+        return f"⚠️ **Please clarify**: {message}"
 
-    # 2. Extract Year
+    def need_ids(count: int, action: str) -> str:
+        wanted = "a scenario ID" if count == 1 else f"{count} scenario IDs"
+        return clarify(f"name {wanted} to {action}. Current shortlist: {shortlist_text}.")
+
+    # 2. Year, only when written
     year_match = re.search(r"\b(19\d\d|20\d\d)\b", p)
     year = int(year_match.group(1)) if year_match else None
 
-    # 3. Extract Percentages
-    conservation_pct = 0.0
-    cons_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:conservation|mandate|cut|demand)", p)
-    if cons_match:
-        conservation_pct = float(cons_match.group(1))
-    elif any(k in p for k in ["conservation", "mandate", "cut"]):
-        gen_pct = re.search(r"(\d+(?:\.\d+)?)\s*%", p)
-        if gen_pct:
-            conservation_pct = float(gen_pct.group(1))
-
-    rainfall_reduction_pct = 0.0
-    red_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:lower|less|reduction|drier|dry|deficit)", p)
-    if red_match:
-        rainfall_reduction_pct = float(red_match.group(1))
-
-    initial_storage_pct = 48.0
-    store_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:initial|starting|storage|capacity|pool)", p)
-    if store_match:
-        val = float(store_match.group(1))
-        initial_storage_pct = val
-
-    # 4. Extract Station
-    station_id = None
-    if any(k in p for k in ["corpus", "crp", "12924"]):
-        station_id = "USW00012924"
-    elif any(k in p for k in ["victoria", "vct", "12912"]):
-        station_id = "USW00012912"
-    elif any(k in p for k in ["san antonio", "sat", "12921"]):
-        station_id = "USW00012921"
-    else:
-        stations = getattr(workspace, "source", None)
-        manifest_stations = workspace.source.manifest.get("stations", []) if (stations and hasattr(workspace.source, "manifest")) else []
-        for stn in manifest_stations:
-            if stn.get("id", "").lower() in p or stn.get("name", "").lower() in p:
-                station_id = stn["id"]
+    # 3. Station, only when named
+    manifest = getattr(getattr(workspace, "source", None), "manifest", None) or {}
+    manifest_stations = manifest.get("stations", [])
+    known_stations = [stn["id"] for stn in manifest_stations]
+    station_id = next((stn["id"] for stn in manifest_stations
+                       if stn.get("id", "").lower() in p or (stn.get("name") and stn["name"].lower() in p)), None)
+    if station_id is None:
+        for candidate, pattern in (("USW00012924", r"\bcorpus\b|\bcrp\b|12924"),
+                                   ("USW00012912", r"\bvictoria\b|\bvct\b|12912"),
+                                   ("USW00012921", r"\bsan antonio\b|\bsat\b|12921")):
+            if candidate in known_stations and re.search(pattern, p):
+                station_id = candidate
                 break
-        if not station_id and manifest_stations:
-            station_id = manifest_stations[0]["id"]
-        elif not station_id:
-            station_id = "USW00012924"
 
-    # 5. Extract Dates for rainfall queries
+    # 4. Dates, only when written
     date_matches = re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", p)
-    if len(date_matches) >= 2:
-        start_date, end_date = date_matches[0], date_matches[1]
-    elif len(date_matches) == 1:
-        start_date = date_matches[0]
-        end_date = f"{int(start_date[:4])}-12-31"
-    elif year is not None:
-        start_date = f"{year}-01-01"
-        end_date = f"{year}-12-31"
-    else:
-        start_date = "2011-01-01"
-        end_date = "2011-12-31"
 
     try:
-        # Route 1: Multi-tier stress spectrum sweep
-        if any(k in p for k in ["spectrum", "stress spectrum", "multi-tier", "tiers", "tipping point", "sweep", "countdown", "days to breach", "days-to-breach"]):
-            res = run_stress_spectrum(
-                workspace,
-                scenario_id=default_id if id_matches else "",
-                year=year,
-                initial_storage_pct=initial_storage_pct,
-                conservation_pct=conservation_pct,
-            )
-            return render_tool_result("run_stress_spectrum", res)
+        spectrum_request = any(k in p for k in ["spectrum", "stress spectrum", "multi-tier", "tiers", "tipping point", "sweep", "countdown", "days to breach", "days-to-breach"])
+        reservoir_request = any(k in p for k in ["survive", "survival", "infrastructure", "reservoir", "drawdown", "capacity", "storage", "restriction", "lake corpus christi", "choke canyon"])
 
-        # Route 2: Reservoir infrastructure survival check
-        if any(k in p for k in ["survive", "survival", "infrastructure", "reservoir", "drawdown", "capacity", "storage", "restriction", "lake corpus christi", "choke canyon"]):
-            res = test_reservoir_infrastructure(
-                workspace,
-                scenario_id=default_id if id_matches else "",
-                year=year,
-                rainfall_reduction_pct=rainfall_reduction_pct,
-                initial_storage_pct=initial_storage_pct,
-                conservation_pct=conservation_pct,
-            )
-            return render_tool_result("test_reservoir_infrastructure", res)
+        # Routes 1-2: illustrative storage experiments with explicitly labelled settings
+        if spectrum_request or reservoir_request:
+            if len(id_matches) > 1:
+                return clarify("name one scenario ID for this experiment; several were given: " + ", ".join(id_matches) + ".")
+            arguments = parse_experiment_arguments(p, spectrum_request)
+            arguments.update(scenario_id=id_matches[0] if id_matches else "", year=year)
+            if spectrum_request:
+                return render_tool_result("run_stress_spectrum", run_stress_spectrum(workspace, **arguments))
+            return render_tool_result("test_reservoir_infrastructure", test_reservoir_infrastructure(workspace, **arguments))
 
         # Route 3: Query station point rainfall
         if (
@@ -986,12 +1021,26 @@ def semantic_query_route(workspace, prompt: str) -> str:
             or ("station" in p and any(k in p for k in ["rain", "precipitation", "observations", "records", "daily", "recorded"]))
             or (any(k in p for k in ["usw000", "12924", "12912", "12921"]) and any(k in p for k in ["rain", "precipitation", "recorded", "observations"]))
         ):
+            if station_id is None:
+                return clarify("name a station (" + ", ".join(known_stations) + ") and a date range or year.")
+            if len(date_matches) >= 2:
+                start_date, end_date = date_matches[0], date_matches[1]
+            elif len(date_matches) == 1:
+                start_date = end_date = date_matches[0]
+            elif year is not None:
+                start_date, end_date = f"{year}-01-01", f"{year}-12-31"
+            else:
+                return clarify(f"give a date range (YYYY-MM-DD to YYYY-MM-DD) or a year for {station_id}; no period is assumed.")
             res = query_rainfall(workspace, station_id=station_id, start_date=start_date, end_date=end_date)
             return render_tool_result("query_rainfall", res)
 
         # Route 4: Find scenarios by year
-        if (year is not None and (not id_matches or any(k in p for k in ["scenarios", "find", "list", "show", "search", "events", "years"]))) or any(k in p for k in ["recent", "modern", "years", "from 20", "from 19"]):
-            res = find_scenarios_by_year(workspace, year=year if year is not None else 2011)
+        year_words = any(k in p for k in ["recent", "modern", "years", "from 20", "from 19"])
+        if (year is not None and (not id_matches or any(k in p for k in ["scenarios", "find", "list", "show", "search", "events", "years"]))) or year_words:
+            if year is None:
+                years = sorted({s.provenance["source_start"][:4] for s in workspace.scenarios})
+                return clarify("give a four-digit source start year; none is assumed. Start years in this workspace: " + ", ".join(years) + ".")
+            res = find_scenarios_by_year(workspace, year=year)
             return render_tool_result("find_scenarios_by_year", res)
 
         # Route 5: Export readiness check
@@ -1000,50 +1049,57 @@ def semantic_query_route(workspace, prompt: str) -> str:
             return render_tool_result("check_export_readiness", res)
 
         # Route 6: Compare scenarios
-        if any(k in p for k in ["compare", "vs", "versus", "difference"]):
-            if len(id_matches) >= 2:
-                id1, id2 = id_matches[0], id_matches[1]
-            elif len(workspace.selected) >= 2:
-                id1, id2 = workspace.selected[0], workspace.selected[1]
-            else:
-                id1 = workspace.scenarios[0].id if workspace.scenarios else "B-001"
-                id2 = workspace.scenarios[1].id if len(workspace.scenarios) > 1 else id1
-            id3 = id_matches[2] if len(id_matches) >= 3 else ""
-            res = compare_scenarios(workspace, id1, id2, id3)
+        if any(k in p for k in ["compare", "versus", "difference"]) or re.search(r"\bvs\b", p):
+            if len(id_matches) < 2:
+                return need_ids(2, "compare")
+            res = compare_scenarios(workspace, id_matches[0], id_matches[1], id_matches[2] if len(id_matches) >= 3 else "")
             return render_tool_result("compare_scenarios", res)
 
         # Route 7: Station stress concurrence
         if any(k in p for k in ["stress", "concurrence", "simultaneous", "station stress", "concurrence in", "concurrent"]):
-            res = check_concurrence(workspace, default_id)
+            if not id_matches:
+                return need_ids(1, "analyse station stress")
+            res = check_concurrence(workspace, id_matches[0])
             return render_tool_result("check_concurrence", res)
 
-        # Route 8: Run sensitivity test
+        # Route 8: Run sensitivity test with explicitly requested weights
         if any(k in p for k in ["sensitivity", "what if", "doubled the", "half the weight"]) or ("weight" in p and any(k in p for k in ["change", "impact", "sensitivity", "double", "half", "test", "ranking weights"])):
-            dur_val = 25
-            if "double" in p and "duration" in p:
-                dur_val = 50
-            elif "half" in p and "duration" in p:
-                dur_val = 12
-            res = run_sensitivity(workspace, duration=dur_val)
+            changes: dict[str, float] = {}
+            for weight_name in ("severity", "duration", "concurrence", "season"):
+                explicit = re.search(rf"\b{weight_name}\b(?:\s+weight)?\s*(?:to|=|of|at|is|was)\s*(\d+(?:\.\d+)?)\b", p)
+                if explicit:
+                    changes[weight_name] = float(explicit.group(1))
+                elif re.search(rf"\b{weight_name}\b", p) and re.search(r"\bdoubl", p):
+                    changes[weight_name] = workspace.weights[weight_name] * 2
+                elif re.search(rf"\b{weight_name}\b", p) and re.search(r"\bhal(?:f|ve)", p):
+                    changes[weight_name] = workspace.weights[weight_name] / 2
+            if not changes:
+                return clarify("say which weight to change and to what value, for example 'what if the duration weight is 40?'. "
+                               "Current weights: " + ", ".join(f"{k} {v:g}" for k, v in workspace.weights.items()) + ".")
+            res = run_sensitivity(workspace, **changes)
             return render_tool_result("run_sensitivity", res)
 
         # Route 9: Explain ranking / score
         if any(k in p for k in ["rank", "score", "why did", "position", "scoring"]):
-            res = explain_ranking(workspace, default_id)
+            if not id_matches:
+                return need_ids(1, "explain its ranking")
+            res = explain_ranking(workspace, id_matches[0])
             return render_tool_result("explain_ranking", res)
 
-        # Route 10: Summarize evidence / citations / conflicts
-        if any(k in p for k in ["evidence", "conflict", "source", "disagreement", "citation", "citations", "notes on", "note", "justification"]):
-            res = summarize_evidence(workspace, default_id)
+        # Route 10: Summarize evidence / citations / conflicts. "source" alone is provenance.
+        if any(k in p for k in ["evidence", "conflict", "disagreement", "citation", "citations", "notes on", "note", "justification"]) or ("source" in p and id_matches):
+            if not id_matches:
+                return need_ids(1, "summarise its evidence")
+            res = summarize_evidence(workspace, id_matches[0])
             return render_tool_result("summarize_evidence", res)
 
-        # Route 11: Describe drought cluster / profile
-        if any(k in p for k in ["cluster", "profile", "group", "kmeans", "centroid"]):
-            cid = 0
-            digit_match = re.search(r"group\s*(\d+)|cluster\s*(\d+)", p)
-            if digit_match:
-                cid = int(digit_match.group(1) or digit_match.group(2))
-            res = describe_cluster(workspace, cid)
+        # Route 11: Describe drought cluster / profile, only for a named group number
+        group_match = re.search(r"(?:group|cluster)\s*(\d+)", p)
+        if group_match or (not id_matches and any(k in p for k in ["cluster", "profile", "group", "kmeans", "centroid"])):
+            if not group_match:
+                groups = sorted({s.cluster for s in workspace.scenarios})
+                return clarify("name a drought profile group number. Groups in this workspace: " + ", ".join(str(g) for g in groups) + ".")
+            res = describe_cluster(workspace, int(group_match.group(1)))
             return render_tool_result("describe_cluster", res)
 
         # Route 12: Data provenance & NOAA metadata
@@ -1051,9 +1107,11 @@ def semantic_query_route(workspace, prompt: str) -> str:
             res = get_data_provenance(workspace)
             return render_tool_result("get_data_provenance", res)
 
-        # Route 13: Describe scenario (default if scenario ID mentioned or general request)
-        if any(k in p for k in ["scenario", "tell me about", "deficit", "describe"]) or id_matches:
-            res = describe_scenario(workspace, default_id)
+        # Route 13: Describe scenario
+        if any(k in p for k in ["scenario", "tell me about", "deficit", "describe", "profile"]) or id_matches:
+            if not id_matches:
+                return need_ids(1, "describe")
+            res = describe_scenario(workspace, id_matches[0])
             return render_tool_result("describe_scenario", res)
 
         return (

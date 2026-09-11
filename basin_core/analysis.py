@@ -231,13 +231,15 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
         combined = float(storage.sum())
         pct = combined / caps.sum() * 100
 
+        # Bands are inclusive, like threshold_crossing_day: storage exactly at 20% is in the
+        # 20% band. Only exact equality is affected; storage arithmetic is unchanged.
         band = 0
         if len(cfg.stage_bands_pct) >= 4:
             b40, b30, b20, b15 = cfg.stage_bands_pct[:4]
-            band = 4 if pct < b15 * 100 else 3 if pct < b20 * 100 else 2 if pct < b30 * 100 else 1 if pct < b40 * 100 else 0
+            band = 4 if pct <= b15 * 100 else 3 if pct <= b20 * 100 else 2 if pct <= b30 * 100 else 1 if pct <= b40 * 100 else 0
         else:
             for b_idx, b_thresh in enumerate(sorted(cfg.stage_bands_pct, reverse=True)):
-                if pct < b_thresh * 100:
+                if pct <= b_thresh * 100:
                     band = b_idx + 1
 
         rec = {
@@ -282,6 +284,28 @@ def threshold_text(day: int | None) -> str:
     return "Not reached within modeled period" if day is None else "Already at/below at start (day 0)" if day == 0 else f"Day {day} (end of day)"
 
 
+def threshold_day_label(day: int | None) -> str:
+    """Compact crossing label shared by tables. Day 0 is a crossing, not a missing value."""
+    if day is None:
+        return "Not reached in window"
+    return "Day 0 (at/below at start)" if day == 0 else f"Day {day}"
+
+
+def rainfall_tier_label(multiplier: float) -> str:
+    """Name a tier relative to the rainfall it multiplies.
+
+    The input may already be a constructed or edited scenario, so a 100% tier is never
+    called historical or a baseline here; each presentation states what the input is.
+    """
+    pct = round(float(multiplier) * 100, 1)
+    text = f"{pct:g}% of input rainfall"
+    if pct < 100:
+        return f"{text} ({round(100 - pct, 1):g}% reduction)"
+    if pct > 100:
+        return f"{text} ({round(pct - 100, 1):g}% increase)"
+    return text
+
+
 def simulate_stress_spectrum(series: pd.DataFrame,
                              tiers: tuple[float, ...] = (1.0, 0.8, 0.6, 0.4),
                              initial_pct: float = 0.48,
@@ -297,13 +321,6 @@ def simulate_stress_spectrum(series: pd.DataFrame,
     cfg = config if config is not None else REGION_N_PRESET
     tier_results = {}
     summary_rows = []
-
-    tier_labels = {
-        1.0: "Selected scenario (100%)",
-        0.8: "20% additional rainfall reduction",
-        0.6: "40% additional rainfall reduction",
-        0.4: "60% additional rainfall reduction",
-    }
 
     for mult in tiers:
         m = float(mult)
@@ -328,11 +345,9 @@ def simulate_stress_spectrum(series: pd.DataFrame,
         day_b4 = threshold_crossing_day(sim_df, initial_pct, cfg.stage_bands_pct[3] * 100 if len(cfg.stage_bands_pct) >= 4 else 15.0)
         survived = bool(initial_pct * 100 > critical_thresh and unrounded_min > critical_thresh)
 
-        label = tier_labels.get(round(m, 2), f"{int(round(m * 100))}% ({(int(round(m * 100)) - 100):+d}% Rain)")
-
         row = {
             "tier_multiplier": m,
-            "tier_label": label,
+            "tier_label": rainfall_tier_label(m),
             "retention_pct": round(m * 100, 1),
             "reduction_pct": round((1.0 - m) * 100, 1),
             "min_pct": min_pct,
@@ -344,7 +359,8 @@ def simulate_stress_spectrum(series: pd.DataFrame,
             "day_stage3_20": day_b3,
             "day_emergency_15": day_b4,
             "survived_critical_20pct": survived,
-            "status": "✅ Survived" if survived else "❌ Breached (Stage 3)",
+            "status": (f"Above {critical_thresh:g}% throughout window" if survived
+                       else f"At or below {critical_thresh:g}% in window"),
         }
         summary_rows.append(row)
         tier_results[m] = {

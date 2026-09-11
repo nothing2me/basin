@@ -170,34 +170,30 @@ def stage_trigger_milestone_figure(
     """Render a horizontal milestone timeline across stress tiers or single scenario drawdown."""
     fig = go.Figure()
 
+    from basin_core.analysis import rainfall_tier_label
+
     bands = [b * 100.0 if b <= 1.0 else b for b in stage_bands_pct]
     b1, b2, b3, b4 = bands[0], bands[1], bands[2], bands[3]
+    # Inclusive like the crossing days: storage exactly at 40% is already in the 40% band.
     stages_meta = [
-        {"name": f"At least {b1:g}%", "color": "#059669"},
-        {"name": f"{b2:g}% to below {b1:g}%", "color": "#d97706"},
-        {"name": f"{b3:g}% to below {b2:g}%", "color": "#ea580c"},
-        {"name": f"{b4:g}% to below {b3:g}%", "color": "#dc2626"},
-        {"name": f"Below {b4:g}%", "color": "#7f1d1d"},
+        {"name": f"Above {b1:g}%", "color": "#059669"},
+        {"name": f"Above {b2:g}% to {b1:g}%", "color": "#d97706"},
+        {"name": f"Above {b3:g}% to {b2:g}%", "color": "#ea580c"},
+        {"name": f"Above {b4:g}% to {b3:g}%", "color": "#dc2626"},
+        {"name": f"At or below {b4:g}%", "color": "#7f1d1d"},
     ]
 
     added_to_legend = set()
     tier_keys = sorted(list(spec["tier_results"].keys()))
 
-    tier_display_names = {
-        1.0: "Selected scenario",
-        0.8: "20% further reduction",
-        0.6: "40% further reduction",
-        0.4: "60% further reduction",
-    }
-
     def get_stage_idx(pct):
-        if pct >= b1:
+        if pct > b1:
             return 0
-        elif pct >= b2:
+        elif pct > b2:
             return 1
-        elif pct >= b3:
+        elif pct > b3:
             return 2
-        elif pct >= b4:
+        elif pct > b4:
             return 3
         else:
             return 4
@@ -205,7 +201,8 @@ def stage_trigger_milestone_figure(
     for m in tier_keys:
         res = spec["tier_results"][m]
         sim_df = res["df"]
-        tier_label = "Scenario Timeline" if len(tier_keys) == 1 else tier_display_names.get(m, f"{int(m*100)}% Rain")
+        tier_label = ("Scenario Timeline" if len(tier_keys) == 1
+                      else (res.get("metrics") or {}).get("tier_label") or rainfall_tier_label(m))
         total_days = int(sim_df["day"].max())
 
         segments = []

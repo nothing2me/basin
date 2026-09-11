@@ -14,7 +14,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 
-from basin_core.analysis import comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMPTIONS, simulate_reservoir_drawdown, simulate_stress_spectrum
+from basin_core.analysis import (comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMPTIONS, rainfall_tier_label,
+                                 simulate_reservoir_drawdown, simulate_stress_spectrum, threshold_crossing_day,
+                                 threshold_day_label)
+from basin_core.simulation import describe_input_rainfall, observed_percent
 from basin_core.water_system import WaterSource, WaterSystemConfig, REGION_N_PRESET, SMALL_MUNI_PRESET, RURAL_FARM_PRESET, SYSTEM_PRESETS
 from basin_core.summary import scenario_summary, reservoir_summary
 from basin_core.review_preferences import (DATA_SOURCES, GOALS, GUIDANCE, GUIDED_TAB_NOTES,
@@ -463,14 +466,12 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
 
 def stress_spectrum_figure(spec: dict) -> go.Figure:
     fig = go.Figure()
-    tier_styles = {
-        1.0: {"name": "Selected scenario (100%)", "color": "#0d9488", "width": 2.5, "dash": "solid"},
-        0.8: {"name": "20% additional rainfall reduction", "color": "#d97706", "width": 2.2, "dash": "solid"},
-        0.6: {"name": "40% additional rainfall reduction", "color": "#ea580c", "width": 2.2, "dash": "solid"},
-        0.4: {"name": "60% additional rainfall reduction", "color": "#dc2626", "width": 2.2, "dash": "solid"},
-    }
+    tier_colors = {1.0: ("#0d9488", 2.5), 0.8: ("#d97706", 2.2), 0.6: ("#ea580c", 2.2), 0.4: ("#dc2626", 2.2)}
     for m, res in spec["tier_results"].items():
-        style = tier_styles.get(m, {"name": f"{int(m*100)}% Rain", "color": "#64748b", "width": 2.0, "dash": "solid"})
+        color, width = tier_colors.get(m, ("#64748b", 2.0))
+        # Same label as the tables: relative to the input rainfall, never "historical".
+        name = (res.get("metrics") or {}).get("tier_label") or rainfall_tier_label(m)
+        style = {"name": name, "color": color, "width": width, "dash": "solid"}
         sim_df = res["df"]
         fig.add_trace(go.Scatter(
             x=sim_df["day"],
@@ -1504,7 +1505,10 @@ elif page == "Review":
                             s_name = col_sn.text_input(f"Source {s_idx+1} Name", value=f"Storage Pool {s_idx+1}", key=f"cust_src_name_{w.id}_{s_idx}")
                             s_cap = col_scap.number_input(f"Capacity (ac-ft)", min_value=1.0, value=8000.0 if s_idx == 0 else 4000.0, step=100.0, key=f"cust_src_cap_{w.id}_{s_idx}")
                             src_list.append(WaterSource.scaled_for_capacity(s_name, float(s_cap)))
-                        chosen_sys = WaterSystemConfig(name=cust_name, sources=tuple(src_list), demand_acft_day=float(cust_demand))
+                        # No separate no-pipeline demand is collected for a custom system. Leaving the
+                        # dataclass default would silently switch to the regional 554 ac-ft/day.
+                        chosen_sys = WaterSystemConfig(name=cust_name, sources=tuple(src_list), demand_acft_day=float(cust_demand),
+                                                       demand_no_pipeline_acft_day=None)
                     else:
                         chosen_sys = SYSTEM_PRESETS[sys_choice]
 
@@ -1531,6 +1535,8 @@ elif page == "Review":
                     init_pct = 0.48 if "48%" in init_choice else (0.60 if "60%" in init_choice else 0.35)
                     conserve_choice = c_conserve.select_slider("Assumed demand reduction", options=[0, 10, 20, 30], value=0, format_func=lambda v: f"{v}%", label_visibility="visible", key="review_conservation")
                     pipeline_active = st.checkbox("Assume pipeline supply available", value=True, key="review_pipeline_active")
+                    if chosen_sys.demand_no_pipeline_acft_day is None:
+                        st.caption("This system has no separate no-pipeline demand, so this setting does not change its simulated demand.")
 
                     # Preserve the report integration contract through the optional Review UI.
                     st.session_state["experiment_config"] = ExperimentConfig(
@@ -1554,6 +1560,7 @@ elif page == "Review":
                         st.plotly_chart(accessible_chart(stage_trigger_milestone_figure(spec, chosen_sys.stage_bands_pct)), width="stretch", config={"displayModeBar": False})
 
                         # Describe only the tested window and threshold crossings.
+                        input_rainfall = describe_input_rainfall(s, "scenario_revision", s.revision)
                         passed = [r for r in spec["summary_table"] if r["day_stage3_20"] is None]
                         failed = [r for r in spec["summary_table"] if r["day_stage3_20"] is not None]
                         crit_pct = chosen_sys.stage_bands_pct[2] * 100 if len(chosen_sys.stage_bands_pct) >= 3 else 20.0
@@ -1561,29 +1568,32 @@ elif page == "Review":
                             lowest_pass = min(passed, key=lambda x: x["retention_pct"])
                             highest_fail = max(failed, key=lambda x: x["retention_pct"])
                             st.warning(
-                                f"During this {len(s.series)}-day experiment, storage stays above {crit_pct:.0f}% with **{lowest_pass['retention_pct']:.0f}% of the selected scenario rainfall**, "
-                                f"and reaches the assumed {crit_pct:.0f}% band with **{highest_fail['retention_pct']:.0f}%** on Day {highest_fail['day_stage3_20']}. Only these tested reductions are compared."
+                                f"During this {len(s.series)}-day experiment, storage stays above {crit_pct:.0f}% with **{lowest_pass['retention_pct']:g}% of the selected scenario rainfall**, "
+                                f"and reaches the assumed {crit_pct:.0f}% band with **{highest_fail['retention_pct']:g}%** ({threshold_day_label(highest_fail['day_stage3_20'])}). Only these tested reductions are compared."
                             )
                         elif not failed:
                             st.success(f"Storage stays above the assumed {crit_pct:.0f}% band throughout this {len(s.series)}-day window for all tested rainfall inputs.")
                         else:
-                            st.warning(f"All tested inputs reach the assumed {crit_pct:.0f}% band within this window. The selected scenario reaches it on Day {failed[0]['day_stage3_20']}.")
+                            highest_fail = max(failed, key=lambda x: x["retention_pct"])
+                            st.warning(f"All tested inputs reach the assumed {crit_pct:.0f}% band within this window. The {highest_fail['retention_pct']:g}% input reaches it at {threshold_day_label(highest_fail['day_stage3_20'])}.")
 
                         countdown_df = pd.DataFrame([
                             {
                                 "Rainfall input": r["tier_label"],
-                                "% of selected scenario": f"{r['retention_pct']:.0f}%",
+                                "% of selected scenario": f"{r['retention_pct']:g}%",
+                                "≈ % of observed": (f"{observed_percent(r['tier_multiplier'], input_rainfall):g}%"
+                                                    if input_rainfall["observed_fraction"] is not None else "n/a"),
                                 "Lowest Storage": f"{r['min_pct']:.1f}% ({r['min_acft']:,.0f} ac-ft)",
                                 "Final Storage": f"{r['final_pct']:.1f}%",
-                                "At or below 40%": f"Day {r['day_stage1_40']}" if r["day_stage1_40"] else "Not reached in window",
-                                "At or below 30%": f"Day {r['day_stage2_30']}" if r["day_stage2_30"] else "Not reached in window",
-                                "At or below 20%": f"Day {r['day_stage3_20']}" if r["day_stage3_20"] else "Not reached in window",
+                                "At or below 40%": threshold_day_label(r["day_stage1_40"]),
+                                "At or below 30%": threshold_day_label(r["day_stage2_30"]),
+                                "At or below 20%": threshold_day_label(r["day_stage3_20"]),
                                 "Critical band": "Not reached in window" if r["day_stage3_20"] is None else "Reached in window",
                             }
                             for r in spec["summary_table"]
                         ])
                         st.dataframe(countdown_df, hide_index=True, width="stretch")
-                        st.caption("100% means the selected scenario, including any existing reductions and edits. Other inputs reduce that rainfall again; they do not reconstruct the original historical observations.")
+                        st.caption(f"100% means the selected scenario: {input_rainfall['summary']}. Other inputs reduce that rainfall again; they do not reconstruct the original historical observations. Day 0 means storage was already at or below that band at the start.")
                     else:
                         sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active, config=chosen_sys)
 
@@ -1591,15 +1601,19 @@ elif page == "Review":
                             st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms, config=chosen_sys)), width="stretch", config={"displayModeBar": False})
                             st.plotly_chart(accessible_chart(stage_trigger_milestone_figure({"tier_results": {1.0: {"df": sim_df}}}, chosen_sys.stage_bands_pct)), width="stretch", config={"displayModeBar": False})
 
-                        s1 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < (chosen_sys.stage_bands_pct[0]*100 if len(chosen_sys.stage_bands_pct) >= 1 else 40)), None)
-                        s2 = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < (chosen_sys.stage_bands_pct[1]*100 if len(chosen_sys.stage_bands_pct) >= 2 else 30)), None)
+                        # Same inclusive rule as the spectrum, tools and PDF, including day 0.
+                        bands = chosen_sys.stage_bands_pct
+                        band_1 = (bands[0] if len(bands) >= 1 else 0.40) * 100
+                        band_2 = (bands[1] if len(bands) >= 2 else 0.30) * 100
+                        s1 = threshold_crossing_day(sim_df, init_pct, band_1)
+                        s2 = threshold_crossing_day(sim_df, init_pct, band_2)
                         term = sim_df.iloc[-1]
                         m1, m2, m3, m4 = st.columns(4)
                         m1.metric("Storage at window end", f"{term['combined_pct']:.1f}%")
                         m1.caption(f"{term['combined_acft']:,.0f} ac-ft combined")
                         m2.metric("Lowest combined storage", f"{sim_df['combined_pct'].min():.1f}%")
-                        m3.metric("Below Stage 1 (conditional)", f"Day {s1}" if s1 else "No crossing")
-                        m4.metric("Below Stage 2 (conditional)", f"Day {s2}" if s2 else "No crossing")
+                        m3.metric(f"At or below {band_1:g}% (conditional)", threshold_day_label(s1))
+                        m4.metric(f"At or below {band_2:g}% (conditional)", threshold_day_label(s2))
                         st.info("📢 **Operational Takeaway**: " + reservoir_summary(sim_df, chosen_sys.name))
                         st.caption(f"Results cover this {len(s.series)}-day window only. Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings are retained for this workspace during the session; opening another workspace resets them.")
 
@@ -1618,7 +1632,7 @@ elif page == "Review":
                     a1.metric("Scenario Rainfall", f"{crop_def['total_rain_in']:.2f} in")
                     a2.metric("Reference ET (ETo)", f"{crop_def['total_eto_in']:.2f} in")
                     a3.metric("Crop ET (ETc)", f"{crop_def['total_etc_in']:.2f} in")
-                    a4.metric("Net Irrigation Deficit", f"{crop_def['irrigation_gap_in']:.2f} in/acre")
+                    a4.metric("Net Irrigation Deficit", f"{crop_def['irrigation_gap_in']:.2f} in", help="A depth of water: inches over the field, i.e. acre-inches per acre.")
                 else:
                     a1.metric("Scenario Rainfall", f"{crop_def['total_rain_mm']:.1f} mm")
                     a2.metric("Reference ET (ETo)", f"{crop_def['total_eto_in']*25.4:.1f} mm")
@@ -1671,7 +1685,7 @@ elif page == "Review":
                          f"versus **{reference_total/25.4:.2f} in ({reference_total:.1f} mm)** in the reference: **{abs(difference)/25.4:.2f} in ({abs(difference):.1f} mm) {'less' if difference >= 0 else 'more'} rainfall**.")
             else:
                 st.write(f"Over these {len(s.series)} days, **{names[station]}** receives **{actual_total:.1f} mm ({actual_total/25.4:.2f} in)** in the scenario "
-                         f"versus **{reference_total:.1f} mm ({reference_total/25.4:.2f} in)** in the reference: **{abs(difference):.1f} mm ({abs(difference):.1f} in) {'less' if difference >= 0 else 'more'} rainfall**.")
+                         f"versus **{reference_total:.1f} mm ({reference_total/25.4:.2f} in)** in the reference: **{abs(difference):.1f} mm ({abs(difference)/25.4:.2f} in) {'less' if difference >= 0 else 'more'} rainfall**.")
             st.caption("The dashed reference uses this station's 1991–2020 monthly mean daily rainfall. The scenario line includes your current edits.")
             if mode == "30-day deficit":
                 st.caption("Above zero means less rainfall than the reference over the preceding 30 days; below zero means more. The first 29 days have no complete window.")

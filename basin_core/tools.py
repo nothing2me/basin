@@ -7,11 +7,14 @@ that the assistant's template layer renders into human-readable responses.
 from __future__ import annotations
 
 import calendar
+import datetime
+import math
+import re
 
 import numpy as np
 import pandas as pd
 
-from basin_core.analysis import vector
+from basin_core.analysis import RESERVOIR_ASSUMPTIONS, vector
 from basin_core.workspace import Workspace
 
 
@@ -137,6 +140,15 @@ def query_rainfall(workspace: Workspace, station_id: str,
     station_ids = [s["id"] for s in workspace.source.manifest["stations"]]
     if station_id not in station_ids:
         raise ValueError(f"Unknown station: {station_id}. Available: {station_ids}")
+    for label, value in (("start_date", start_date), ("end_date", end_date)):
+        if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise ValueError(f"{label} must be an ISO calendar date, YYYY-MM-DD")
+        try:
+            datetime.date.fromisoformat(value)
+        except ValueError:
+            raise ValueError(f"{label} {value} is not a real calendar date") from None
+    if start_date > end_date:
+        raise ValueError(f"start_date {start_date} is after end_date {end_date}")
     daily = workspace.source.select([station_id])
     subset = daily.loc[start_date:end_date]
     if subset.empty:
@@ -215,14 +227,15 @@ def run_sensitivity(workspace: Workspace, severity: int = -1,
     change the ranking'.  Pass only the weights to change; others keep their
     current value.  Each weight is an integer 0-100."""
     new_weights = dict(workspace.weights)
-    if severity >= 0:
-        new_weights["severity"] = severity
-    if duration >= 0:
-        new_weights["duration"] = duration
-    if concurrence >= 0:
-        new_weights["concurrence"] = concurrence
-    if season >= 0:
-        new_weights["season"] = season
+    requested = {"severity": severity, "duration": duration, "concurrence": concurrence, "season": season}
+    for name, value in requested.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise ValueError(f"The {name} weight must be a number from 0 to 100")
+        if value == -1:  # parameter default: keep the current weight
+            continue
+        if not 0 <= value <= 100:
+            raise ValueError(f"The {name} weight must be from 0 to 100; {value:g} was requested")
+        new_weights[name] = value
     if sum(new_weights.values()) <= 0:
         raise ValueError("At least one weight must be positive")
     result = workspace.compare_weights(new_weights)
@@ -296,14 +309,13 @@ def describe_cluster(workspace: Workspace, cluster_id: int) -> dict:
     which scenarios belong to it.  Use when the user asks about a drought
     profile, group, cluster or 'what makes these scenarios similar'."""
     clusters = sorted({s.cluster for s in workspace.scenarios})
+    if type(cluster_id) is not int:
+        raise ValueError("The drought profile group must be a whole number")
+    # Groups are numbered from 1. Another group is never substituted for a missing one.
     if cluster_id not in clusters:
-        if (cluster_id + 1) in clusters:
-            cluster_id = cluster_id + 1
-        elif clusters:
-            cluster_id = clusters[0]
+        raise ValueError(f"No drought profile group {cluster_id}. Groups in this workspace: "
+                         + ", ".join(str(c) for c in clusters))
     members = [s for s in workspace.scenarios if s.cluster == cluster_id]
-    if not members:
-        raise ValueError(f"No scenarios in cluster {cluster_id}. Available: {clusters}")
     name = getattr(members[0], "cluster_name", f"Group {cluster_id}")
     feat = np.array([vector(s) for s in members])
     centroid = feat.mean(axis=0)
@@ -403,13 +415,16 @@ def get_data_provenance(workspace: Workspace) -> dict:
 # Tool 11 — Find scenarios by historical year
 # ---------------------------------------------------------------------------
 
-def find_scenarios_by_year(workspace: Workspace, year: int = 2011) -> dict:
-    """Find rainfall scenarios in the workspace that originate from a specific
-    historical observation year (e.g. 2011, 2000, 2022). Use when the user asks
-    about scenarios from a certain year or wants recent vs older candidates."""
-    matched = [s for s in workspace.scenarios if s.provenance.get("source_start", "").startswith(str(year))]
+def find_scenarios_by_year(workspace: Workspace, year: int) -> dict:
+    """Find rainfall scenarios whose historical source window starts in a given
+    calendar year (e.g. 2011, 2000, 2022). A window starting late in one year can
+    extend into the next; matching uses the start year only.  No year is assumed."""
+    if type(year) is not int or not 1000 <= year <= 9999:
+        raise ValueError("Year must be a four-digit calendar year, for example 2011")
+    start_years = sorted({int(s.provenance["source_start"][:4]) for s in workspace.scenarios})
+    matched = [s for s in workspace.scenarios if int(s.provenance["source_start"][:4]) == year]
     results = []
-    for s in sorted(matched, key=lambda x: -x.score):
+    for s in sorted(matched, key=lambda x: (-x.score, x.id)):
         f = s.features
         results.append({
             "id": s.id,
@@ -429,6 +444,8 @@ def find_scenarios_by_year(workspace: Workspace, year: int = 2011) -> dict:
         "total_matches": len(results),
         "total_candidates": len(workspace.scenarios),
         "scenarios": results[:8],
+        "available_start_years": start_years,
+        "record_period": f"{workspace.source.manifest['start']} to {workspace.source.manifest['end']}",
         "_snapshot": workspace.source.manifest["sha256"][:12],
     }
 
@@ -446,7 +463,8 @@ def test_reservoir_infrastructure(workspace: Workspace, scenario_id: str = "",
                                   pipeline_active: bool = True,
                                   revision: int | None = None) -> dict:
     """Save an illustrative experiment. All public percentages use 0 to 100."""
-    from basin_core.simulation import SimulationSettings, percent_fraction, resolve_scenario, spectrum_view
+    from basin_core.simulation import (SimulationSettings, describe_input_rainfall, observed_percent,
+                                       percent_fraction, resolve_scenario, spectrum_view)
     scenario = resolve_scenario(workspace, scenario_id, year, revision)
     reduction = percent_fraction(rainfall_reduction_pct, "Rainfall reduction")
     settings = SimulationSettings.from_percent(initial_storage_percent=initial_storage_pct,
@@ -457,13 +475,16 @@ def test_reservoir_infrastructure(workspace: Workspace, scenario_id: str = "",
     spec = spectrum_view(run)
     row = spec["summary_table"][0]
     sim = next(iter(spec["tier_results"].values()))["df"]
+    input_rainfall = describe_input_rainfall(scenario, baseline_kind, scenario.revision)
     return {
         "simulation_id": run["id"], "baseline_kind": baseline_kind,
         "scenario_id": scenario.id, "scenario_revision": scenario.revision,
         "source_start": scenario.provenance["source_start"], "source_end": scenario.provenance["source_end"],
         "duration_days": spec["duration_days"], "rainfall_reduction_pct": rainfall_reduction_pct,
+        "retention_pct": row["retention_pct"], "input_rainfall": input_rainfall,
+        "observed_pct": observed_percent(row["tier_multiplier"], input_rainfall),
         "initial_pct": spec["initial_pct"], "conservation_pct": spec["conservation_pct"],
-        "initial_acft": settings.initial_storage_fraction * 919900,
+        "initial_acft": settings.initial_storage_fraction * RESERVOIR_ASSUMPTIONS["total_capacity_acft"],
         **{key: row[key] for key in ("final_pct", "final_acft", "min_pct", "min_acft", "survived_critical_20pct")},
         "day_band1_40pct": row["day_stage1_40"], "day_band2_30pct": row["day_stage2_30"],
         "day_band3_20pct": row["day_stage3_20"], "day_band4_15pct": row["day_emergency_15"],
@@ -479,13 +500,14 @@ def run_stress_spectrum(workspace: Workspace, scenario_id: str = "", year: int |
                         baseline_kind: str = "scenario_revision", pipeline_active: bool = True,
                         revision: int | None = None) -> dict:
     """Save four additional rainfall stress tiers; public percentages are 0 to 100."""
-    from basin_core.simulation import SimulationSettings, resolve_scenario, spectrum_view
+    from basin_core.simulation import SimulationSettings, describe_input_rainfall, resolve_scenario, spectrum_view
     scenario = resolve_scenario(workspace, scenario_id, year, revision)
     settings = SimulationSettings.from_percent(initial_storage_percent=initial_storage_pct,
         conservation_percent=conservation_pct, baseline_kind=baseline_kind, pipeline_active=pipeline_active)
     run = workspace.run_simulation(scenario.id, settings)
     spec = spectrum_view(run)
     return {**spec, "simulation_id": run["id"], "baseline_kind": baseline_kind,
+            "input_rainfall": describe_input_rainfall(scenario, baseline_kind, scenario.revision),
             "scenario_id": scenario.id, "scenario_revision": scenario.revision,
             "source_start": scenario.provenance["source_start"], "source_end": scenario.provenance["source_end"],
             "tiers": spec["summary_table"], "_snapshot": workspace.source.manifest["sha256"][:12]}

@@ -205,7 +205,7 @@ def test_all_templates_render_and_have_disclaimers(workspace):
         ("check_concurrence", check_concurrence(workspace, sid)),
         ("run_sensitivity", run_sensitivity(workspace, duration=90)),
         ("summarize_evidence", summarize_evidence(workspace, sid)),
-        ("describe_cluster", describe_cluster(workspace, 0)),
+        ("describe_cluster", describe_cluster(workspace, min(s.cluster for s in workspace.scenarios))),
         ("check_export_readiness", check_export_readiness(workspace)),
         ("get_data_provenance", get_data_provenance(workspace)),
         ("find_scenarios_by_year", find_scenarios_by_year(workspace, 2011)),
@@ -222,14 +222,20 @@ def test_semantic_query_route(workspace):
     r1 = semantic_query_route(workspace, "Is this ready to export?")
     assert "Export readiness" in r1
 
+    # Without IDs or values the router asks; it no longer answers for the first shortlisted
+    # scenarios or previews an unchanged weight set.
+    first, second = workspace.selected[:2]
     r2 = semantic_query_route(workspace, "Compare scenarios")
-    assert "Scenario comparison" in r2
+    assert "Please clarify" in r2 and "Scenario comparison" not in r2
+    assert "Scenario comparison" in semantic_query_route(workspace, f"Compare scenarios {first} and {second}")
 
     r3 = semantic_query_route(workspace, "What is the station stress?")
-    assert "Station stress analysis" in r3
+    assert "Please clarify" in r3 and "Station stress analysis" not in r3
+    assert "Station stress analysis" in semantic_query_route(workspace, f"What is the station stress in {first}?")
 
     r4 = semantic_query_route(workspace, "Sensitivity of weights")
-    assert "Sensitivity test" in r4
+    assert "Please clarify" in r4 and "Sensitivity test" not in r4
+    assert "Sensitivity test" in semantic_query_route(workspace, "Sensitivity of the duration weight to 40")
 
     r5 = semantic_query_route(workspace, "Where does this data come from?")
     assert "NOAA NCEI GHCN-Daily" in r5

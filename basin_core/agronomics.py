@@ -162,7 +162,7 @@ def calculate_crop_water_deficit(
     takeaway = (
         f"For **{crop_name}** (Kc = {kc:.2f}), scenario rainfall covers only "
         f"**{total_rain_in:.2f} in** of the estimated **{total_etc_in:.2f} in** total crop water demand, "
-        f"creating an irrigation deficit of **{total_deficit_in:.2f} in/acre ({total_deficit_mm:.1f} mm)** — {severity}."
+        f"creating an irrigation deficit of **{total_deficit_in:.2f} in of depth, i.e. acre-inches per acre ({total_deficit_mm:.1f} mm)** — {severity}."
     )
 
     return {
