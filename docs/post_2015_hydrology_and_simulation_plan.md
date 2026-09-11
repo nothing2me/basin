@@ -1,7 +1,9 @@
-# Post-2015 Corpus Christi Hydrology & Advanced Visual Simulation Architecture
+# Post-2015 Corpus Christi context and storage-experiment proposal
 
-**Authoritative Research, Regulatory Fact-Base, and Implementation Blueprint for BASIN**  
+**Exploratory research and implementation proposal for BASIN**
 *Date: September 2026 | Baseline Repository: `basin-latest`*
+
+> **Status and boundary.** This document mixes dated public context with proposed modeling assumptions. It is not part of BASIN's verified evidence registry and is not an authoritative regulatory fact base. The application must present the 75,000 ac-ft inactive-storage value, sector shares, curtailment schedule, 7.8% context marker, pipeline cases and simplified pass-through formula as configurable assumptions. Primary sources verified during integration include the City's [April 24 water-supply memo](https://www.corpuschristitx.gov/media/btvn01mr/20260424_memo_water-supply-update.pdf), [August 25 pass-through announcement](https://www.corpuschristitx.gov/news/posts/tceq-approves-request-to-pause-reservoir-pass-through-requirements/), [March 25, 2025 pipeline release](https://www.corpuschristitx.gov/news/posts/city-council-approves-critical-infrastructure-upgrades-for-mary-rhodes-pipeline/), and [water-supply dashboard](https://www.corpuschristitx.gov/department-directory/corpus-christi-water/water-supply-dashboard/). Other claims below require source-by-source review before public use.
 
 ---
 
@@ -9,13 +11,13 @@
 
 The City of Corpus Christi and the 11-county Coastal Bend Regional Water Planning Area (**Region N**) face a severe hydrologic and institutional disconnect:
 1. **The 2015 Planning Void:** The primary regulatory water planning instrument for Region N—the **Corpus Christi Water Supply Model (CCWSM)**, developed using the Texas Water Availability Modeling (WAM) framework—**stops its hydrologic calibration at 2015**. In January 2024, the Texas Water Development Board (TWDB) granted Region N a formal **hydrologic variance** allowing the 2026 Regional Water Plan to evaluate surface water supplies using this pre-2015 dataset and an assumed 75,000 acre-foot "safe yield" reserve, explicitly because **there was insufficient state and regional funding to extend the model through current conditions**.
-2. **The Unmodeled 2020–2026 Drought Reality:** Because official planning was frozen at 2015, the model treats the 2007–2013 drought as the baseline "Drought of Record" (DOR). In reality, the region endured an **exceptional drought from 2020 to 2026** that was longer, drier, and hotter. By **mid-April 2026**, combined storage of the two western reservoirs (**Choke Canyon Reservoir** and **Lake Corpus Christi**) dropped to an unprecedented **7.7% of conservation capacity (~70,800 ac-ft)**, breaching the 75,000 ac-ft inactive reserve. Corpus Christi was trapped under **Stage 3 Critical Drought Restrictions for nearly 20 consecutive months** (mid-December 2024 to August 2026).
+2. **Recent drought context:** The bundled BASIN observation snapshot extends through 2025, while the planning-model history discussed here may use a different cutoff. The City's April 24, 2026 memo reports that on April 16 Lake Corpus Christi was at 8.8%, Choke Canyon at 7.5%, and combined storage at **7.8%**. The memo does not establish that 75,000 ac-ft is a physical intake-failure threshold.
 3. **Financial, Political, and Regulatory Fallouts:**
    - On **May 20, 2026**, S&P Global Ratings revised Corpus Christi's debt rating outlook to **Negative**, citing depleted water reserves and delayed infrastructure execution.
    - Texas Governor Greg Abbott publicly raised the prospect of a **state takeover** of the city's water governance.
    - On **August 19, 2026**, Texas 2036 published a landmark evaluation (*The State Water Plan & The Coastal Bend Water Crisis* by Jeremy Mazur) revealing that across 25 years and five planning cycles, **neither the state water plan nor Region N plans projected any municipal water shortage in the 2020s**.
 4. **The Industrial Baseload Reality:** Heavy industrial buildouts in San Patricio and Nueces counties (Gulf Coast Growth Ventures / Exxon-SABIC, Cheniere LNG, Steel Dynamics) consume **over 50% of the regional potable water supply**. The City established the **Drought Surcharge Exemption Fee (DSEF)**, allowing industrial facilities to pay alternative compliance fees to fund long-term water supplies rather than curtail cooling water, while residential households faced strict sprinkler bans and steep surcharges ($4–$8/kGal).
-5. **The Need for BASIN Visual Simulation:** BASIN fills this institutional void. By enabling transparent, community-driven "what-if" simulations combining recent post-2015 climate data, custom user-uploaded gauge records, and configurable infrastructure shocks (pipeline bottlenecks, evaporation spikes, Stage 1–4 curtailments, dead storage limits), BASIN empowers regional planners and local stakeholders to model dire, strict hydrologic conditions with mathematical rigor and zero proprietary black-box dependencies.
+5. **Role of the BASIN experiment:** BASIN can compare transparent, user-selected rainfall and infrastructure assumptions. Its mass-balance experiment is uncalibrated and does not replace the City's supply model, establish operational feasibility, or predict restriction dates.
 
 ---
 
@@ -34,26 +36,25 @@ The City of Corpus Christi Drought Contingency Plan (DCP) indexes mandatory cons
 | **Stage 1 (Mild)** | **< 40%** | **> 50%** | Lawn irrigation limited to 1 day/week based on trash collection schedule. |
 | **Stage 2 (Moderate)** | **< 30%** | **> 40%** | Lawn irrigation restricted to 1 day every 2 weeks; commercial car washes restricted; voluntary 10% reductions. |
 | **Stage 3 (Critical)** | **< 20%** | **> 30%** | **Total ban on automated lawn irrigation and sprinklers**. Drip irrigation and hand watering only within narrow time windows; pool filling banned. |
-| **Stage 4 (Emergency)** | **< 10%** (or physical delivery failure) | City Council action | **Level 1 Water Emergency**. Complete ban on non-essential water; mandatory 25%+ curtailments; residential/commercial surcharges ($4.00/kGal over baseline, $8.00/kGal over secondary tier). |
+| **Level 1 Water Emergency** | The City's current dashboard describes a 180-day supply-versus-demand condition, not a fixed 10% trigger. | See the current adopted plan. | BASIN's 10% line is an illustrative marker and must not be labeled as adopted policy. |
 
 ### 2.2. The 2024–2026 Drought Timeline & Mid-April 2026 Low
 - **Mid-December 2024:** Western reservoir combined storage dipped below 20%, officially triggering **Stage 3 Critical Drought Restrictions**.
-- **Mid-April 2026 (Historic Low):** Combined storage reached an all-time low of **7.7% (~70,800 ac-ft)**. This was lower than the 75,000 ac-ft safe-yield inactive pool reserved for worst-case drought scenarios.
+- **April 16, 2026:** The City's April 24 memo reports **7.8% combined storage** (Lake Corpus Christi 8.8%; Choke Canyon 7.5%). BASIN uses 7.8% only as a context marker.
 - **May 20, 2026:** S&P Global Ratings placed Corpus Christi's debt on Negative outlook.
 - **August 4, 2026:** Heavy tropical moisture in the Nueces and Frio river basins lifted storage above 30%, easing restrictions to **Stage 2**.
 - **August 27, 2026:** Continued runoff lifted storage above 40%, easing restrictions to **Stage 1** (1-day/week watering).
-- **September 10, 2026 Status (Extreme Asymmetry):**
-  - **Lake Corpus Christi:** **87.1% full** (~223,000 ac-ft)
+- **September 9, 2026 status shown on the City's Stage 1 page:**
+  - **Lake Corpus Christi:** **87.2% full**
   - **Choke Canyon Reservoir:** **22.9% full** (~151,900 ac-ft)
-  - **Combined Storage:** **47.6% full** (~374,900 ac-ft)
-  - *Hydrologic Insight:* Lake Corpus Christi catches downstream Nueces runoff rapidly due to smaller capacity and responsive catchment, whereas Choke Canyon (on the Frio/Atascosa sub-basin) experiences severe upstream interception from thousands of private stock ponds, brush cover, and Carrizo-Wilcox aquifer recharge.
+  - **Combined Storage:** **40.8% full**
+  - The causal explanation for the different reservoir responses requires hydrologic evidence and is not inferred by BASIN.
 
 ### 2.3. The Mary Rhodes Pipeline (MRP) — Regional Lifeline
 To offset western reservoir vulnerability, Corpus Christi imports water from eastern river basins:
 - **Lake Texana (Phase 1):** Firm "take-or-pay" contract for **31,440 acre-feet per year** (LNRA), plus supplemental interruptible water (4,500 to 11,000 ac-ft/yr).
 - **Colorado River / Garwood Rights (Phase 2):** High-priority senior agricultural water rights of **35,000 acre-feet per year** pumped from the Colorado River into Lake Texana.
-- **March 2025 Pump Expansion:** Upgraded pipeline transmission capacity from ~45 MGD to **70–72 MGD (~221 ac-ft/day)**.
-- **Drought Impact:** During the 2024–2026 crisis, the Mary Rhodes Pipeline delivered **~70% of the entire region's daily drinking and industrial water**, preventing complete Day Zero dry-pipe collapse.
+- **March 2025 Pump Expansion:** The City's March 25 release reports operation at **72–79 MGD**. BASIN stores 72 MGD as context metadata; the current experiment does not directly convert that value into inflow.
 
 ### 2.4. Seawater Desalination vs. Brackish Groundwater Reality
 - **Seawater Desalination Deadlock (September 1, 2026):**
@@ -68,14 +69,11 @@ To offset western reservoir vulnerability, Corpus Christi imports water from eas
     - Phase 4: 6.7 MGD (March 2028)
   - Draws from the **Western Well Field** in the Gulf Coast Aquifer via a dedicated raw-water pipeline directly to ONSWTP (bypassing the Nueces River to avoid bed and evaporation losses).
 
-### 2.5. Environmental Inflows: TCEQ Emergency Order of September 9, 2026
+### 2.5. Environmental inflow context
 The reservoir system is legally bound by the **2001 Agreed Order** to release freshwater to Nueces Bay:
 - **2001 Agreed Order Baseline:** Mandates monthly pass-through releases when combined storage is $> 30\%$, scaling up to 138,000 ac-ft/yr when storage is $\ge 70\%$. Below 30%, pass-through is suspended.
-- **TCEQ Emergency Order (September 9, 2026):**
-  - TCEQ commissioners unanimously affirmed an emergency order **raising the pass-through suspension threshold from 30% to 50% combined storage**.
-  - Effective for **120 days through December 23, 2026**.
-  - Contains an **automatic 60-day extension** through late February 2027 if combined storage remains $\le 50\%$ on December 23.
-  - Allows the City, Nueces River Authority, and Three Rivers to impound 100% of inflows, saving an estimated **2.4 billion gallons** (~7,360 ac-ft) in municipal storage.
+- **Emergency order reported by the City on August 25, 2026:** The TCEQ Executive Director approved a temporary pause in pass-through requirements at or below 50% combined storage, effective for 120 days through December 23 with a stated 60-day extension condition. The City's release said Commission consideration was scheduled for September 9; this document does not independently establish the outcome of that later meeting.
+- BASIN's daily `35% of modeled inflow, capped at 100 ac-ft/day` formula is an illustrative placeholder. It does not reproduce the monthly targets in the 2001 Agreed Order or quantify water retained under the emergency order.
 
 ### 2.6. Evaporation Science: TWDB On-Lake Buoys vs. Terrestrial Pan Evaporation
 - TWDB deployed **NexSens CB-650 floating meteorological buoys** on Choke Canyon Reservoir to collect real-time water surface temperature, wind speed, solar radiation, and humidity.
@@ -134,12 +132,12 @@ On August 19, 2026, policy think-tank Texas 2036 published a foundational assess
 | Hydrologic Dimension | Previous Codebase Baseline | Newly Discovered Official Reality | Integration into BASIN Simulation |
 |---|---|---|---|
 | **Model Horizon** | Frozen at **2015** (`docs/methodology.md`). | **2020–2026 Drought of Record** occurred; TWDB hydrologic variance granted due to budget shortfall. | Benchmark against true modern drought; document 2020–2026 conditions in scenarios. |
-| **Drought Severity Depth** | Minimum band was 15% (`stage_bands_pct = (0.4, 0.3, 0.2, 0.15)`). | System hit **7.7% in mid-April 2026**; Stage 3 endured for **20 continuous months**. | Add explicit **Stage 4 (10% Emergency)** and **Physical Dead Storage (75,000 ac-ft reserve)**. |
+| **Drought Severity Depth** | Minimum band was 15% (`stage_bands_pct = (0.4, 0.3, 0.2, 0.15)`). | City memo reports **7.8% combined storage on April 16, 2026**. | Add an illustrative 10% band and assumed 75,000 ac-ft inactive-storage floor; neither is an adopted trigger or proven physical limit. |
 | **Credit & Governance** | Unmentioned. | S&P debt outlook downgraded to **Negative (May 20, 2026)**; Gov. Abbott threatened state takeover. | Provide risk-boundary analytics for municipal debt and governance thresholds. |
 | **State Planning Critique** | Not documented. | **Texas 2036 Report (Aug 19, 2026)** by Jeremy Mazur exposed 25-year forecasting failure. | Integrate Texas 2036 recommendations (stress-testing beyond DOR, tracking execution milestones). |
-| **Mary Rhodes Pipeline** | Fixed toggle (370 vs 554 ac-ft/day). | March 2025 upgrade reached **70–72 MGD (~221 ac-ft/day)**; carried 70% of municipal/industrial load. | Parameterize pipeline throughput: 0 MGD (outage), 45 MGD (legacy), 72 MGD (modern). |
+| **Mary Rhodes Pipeline** | Fixed toggle (370 vs 554 ac-ft/day). | City reported **72–79 MGD** operation in March 2025. | Keep 72 MGD as context metadata; the implemented toggle still compares the configured 370 versus 554 ac-ft/day demand cases. |
 | **Industrial vs Municipal Demand** | Lumped uniform demand. | Heavy industry consumes **>50% of supply**; Drought Surcharge Exemption Fee protects industrial cooling. | Split demand into Tier 1 (Municipal Essential), Tier 2 (Industrial Contracted), Tier 3 (Outdoor Irrigation). |
-| **Estuary Environmental Inflows** | Fixed uncalibrated inflow coefficient. | 2001 Agreed Order and **TCEQ Sept 9, 2026 Emergency Order (50% threshold)** govern releases. | Add Estuary Pass-Through toggle: deducts monthly inflow targets when $>50\%$; captures 100% when $\le 50\%$. |
+| **Estuary Environmental Inflows** | Fixed uncalibrated inflow coefficient. | City's August 25 release reports the temporary 50% condition. | Add a clearly labeled placeholder pass-through formula; do not present it as reproduction of the order. |
 | **Desalination Reality** | Assumed future baseline. | Council voted 5–3 against contract on Sept 1, 2026; 21.3 MGD Brackish RO plant at ONSWTP is real near-term hedge (2027–2028). | Model zero seawater desal through 2029; add optional phased brackish groundwater toggle. |
 | **Evaporative Scaling** | Step function (June–Sept vs Oct–May). | Dynamic power-law surface area shrinkage ($\text{Area} \propto S^{0.65}$) and TWDB buoy data. | Implement power-law EAC scaling and 12-month smooth pan evaporation curve. |
 | **Day Zero & Fair Water Policy** | Unmodeled. | National media dubbed Corpus Christi "first city in America to run out of water"; City pushback (Level 1 = 180-day lead time, MRP = 70% supply); Fair Water Charter Amendment on Nov 3, 2026 ballot (Aug 11 Council 6–2 vote) to abolish DSEF. | Add Day Zero indicator, dead storage cutoff, and Fair Water policy simulation (industrial curtailment vs status-quo exemption). |
@@ -191,14 +189,14 @@ When simulating reservoir drawdown under extreme drought, the mathematical model
    +-------------------------------------------------------------------------------+
    |                             Dire Crisis Detectors                             |
    |   - Stage 1 (40%), Stage 2 (30%), Stage 3 (20%), Stage 4 (10%) Threshold Days |
-   |   - Physical Dead Storage Breach (TWDB 75k ac-ft Reserve)                     |
-   |   - Day Zero (Active Storage == 0 ac-ft / Unmet Demand > 0)                   |
+   |   - Assumed inactive-storage floor (preset: 75,000 ac-ft)                     |
+   |   - Modeled active-storage exhaustion / unmet demand                          |
    |   - Runaway Acceleration Factor (Days lost under Pipeline Outage)             |
    +-------------------------------------------------------------------------------+
 ```
 
-### 4.1. Solution to Dire Problem 1: Day Zero & Physical Dead Storage Protection
-- **Physical Reality:** Below 10% combined capacity (~91,900 ac-ft) or the 75,000 ac-ft TWDB reserve, treatment plant gravity head fails, sedimentation blocks intakes, and pumps cavitate.
+### 4.1. Assumed inactive-storage floor and unmet demand
+- **Model assumption:** The optional preset treats 75,000 ac-ft as inactive storage. No reviewed source in this integration establishes that value as the point where gravity head, sediment or pumps cause delivery failure.
 - **Model Implementation:**
   ```python
   DEAD_STORAGE_THRESHOLD_ACFT = 75000.0  # TWDB Region N Variance Reserve
@@ -206,10 +204,10 @@ When simulating reservoir drawdown under extreme drought, the mathematical model
   deliverable_water = min(active_storage, requested_demand)
   unmet_demand = requested_demand - deliverable_water
   ```
-- **Automated Handling:** When storage enters the 75k ac-ft reserve, the simulation flags an immediate **"Day Zero: Intake Gravity Failure"** alert, ceases treating dead storage as consumable water, and tracks cumulative unmet acre-feet.
+- **Automated handling:** When modeled storage reaches the assumed inactive floor, the experiment stops withdrawals and tracks unmet acre-feet. The UI describes this as a modeled active-storage limit.
 
 ### 4.2. Solution to Dire Problem 2: Multi-Sector Hierarchical Curtailment
-- **Physical Reality:** In a crisis, cutting outdoor lawn watering is painless, but cutting refinery cooling water halts fuel production.
+- **Model assumption:** The preset divides demand into domestic, industrial and outdoor categories and applies a hypothetical priority schedule. The shares and reductions are not observed deliveries or adopted allocations.
 - **Model Implementation:**
   ```python
   # Split base demand (370 ac-ft/day net of pipeline)
@@ -218,33 +216,32 @@ When simulating reservoir drawdown under extreme drought, the mathematical model
   demand_outdoor = 35.0     # Outdoor lawn / aesthetic (10%)
 
   # Dynamic Stage Rules:
-  if storage_pct < 10.0:    # Stage 4 Emergency
+  if storage_pct <= 10.0:   # Illustrative band 4
       curtailed_outdoor = 0.0
       curtailed_industrial = demand_industrial * 0.70  # 30% cut
       curtailed_domestic = demand_domestic * 0.80      # 20% cut
-  elif storage_pct < 20.0:  # Stage 3 Critical
+  elif storage_pct <= 20.0: # Illustrative band 3
       curtailed_outdoor = 0.0                          # 100% ban
       curtailed_industrial = demand_industrial         # Protected by DSEF
       curtailed_domestic = demand_domestic * 0.90      # Voluntary savings
-  elif storage_pct < 30.0:  # Stage 2 Moderate
+  elif storage_pct <= 30.0: # Illustrative band 2
       curtailed_outdoor = demand_outdoor * 0.50        # 1 day every 2 weeks
       curtailed_industrial = demand_industrial
       curtailed_domestic = demand_domestic
-  elif storage_pct < 40.0:  # Stage 1 Mild
+  elif storage_pct <= 40.0: # Illustrative band 1
       curtailed_outdoor = demand_outdoor * 0.85        # 1 day per week
       curtailed_industrial = demand_industrial
       curtailed_domestic = demand_domestic
   ```
-- **Automated Handling:** Works automatically with any user input. Displays sector-by-sector delivery breakdown and proves the exact survival delay achieved by each curtailment level.
+- **Automated handling:** Displays modeled delivery by category under the preset schedule. It does not prove an operational outcome.
 
 ### 4.3. Solution to Dire Problem 3: Mary Rhodes Pipeline Outage Shock
-- **Physical Reality:** If the 72 MGD pipeline breaks or Colorado River senior rights are curtailed, western reservoirs must supply an extra **221 ac-ft/day**.
+- **Model assumption:** Pipeline availability selects between configured total-demand cases of 370 and 554 ac-ft/day. The 72 MGD field is context metadata and is not the arithmetic basis of that difference.
 - **Model Implementation:**
   ```python
-  pipeline_delivery_acft = 221.0 if pipeline_active else 0.0
-  net_western_demand = max(0.0, total_regional_demand - pipeline_delivery_acft)
+  requested_demand = 370.0 if pipeline_active else 554.0
   ```
-- **Automated Handling:** Compares the active pipeline run against an instantaneous "Pipeline Outage" counterfactual run. Generates the **"Pipeline Vulnerability Metric"**: the exact number of days sooner the region enters Stage 3, Stage 4, and Day Zero if the pipeline fails.
+- **Automated handling:** Compares the two configured demand cases and reports differences in reaching illustrative bands. It does not simulate pipeline hydraulics, outage probability or actual deliveries.
 
 ### 4.4. Solution to Dire Problem 4: Dynamic Surface-Area Evaporation (EAC Scaling)
 - **Physical Reality:** Fixed evaporation rates over-penalize near-empty reservoirs. As lakes contract, surface area drops.
@@ -276,7 +273,7 @@ When simulating reservoir drawdown under extreme drought, the mathematical model
      - Choke Canyon Reservoir: 663,400 ac-ft
      - Total: 919,739 ac-ft (or 919,460 ac-ft)
    - Add `dead_storage_acft = 75000.0` (TWDB 2024 Hydrologic Variance Reserve).
-   - Add `stage_bands_pct = (0.40, 0.30, 0.20, 0.10)` including Stage 4 Emergency at 10%.
+   - Add `stage_bands_pct = (0.40, 0.30, 0.20, 0.10)` with an illustrative fourth band at 10%.
    - Add Mary Rhodes Pipeline delivery parameters: 72 MGD (221 ac-ft/day) modern, 45 MGD legacy.
    - Add Brackish Groundwater RO parameter: 21.3 MGD (phased 2027–2028).
 2. **Simulation Logic Hardening (`basin_core/analysis.py`):**
@@ -287,8 +284,8 @@ When simulating reservoir drawdown under extreme drought, the mathematical model
 3. **Interactive Visual UI (`app.py`):**
    - Multi-tier drawdown trajectory chart:
      - Storage curve with Stage 1 (40%), Stage 2 (30%), Stage 3 (20%), Stage 4 (10%), and Dead Storage (75k ac-ft / 8.2%) guide lines.
-     - Record low marker: Mid-April 2026 (7.7% historic mark).
+     - Context marker: 7.8%, matching the City's reported April 16, 2026 combined value.
      - Day Zero alert badge when active storage breaches zero.
    - Sector delivery breakdown stacked bar chart: Domestic vs. Industrial vs. Outdoor served vs. curtailed.
-   - Pipeline Outage Counterfactual: Overlay showing the drawdown curve if the Mary Rhodes Pipeline suffers a shock, reporting the exact number of days lost to Stage 3 and Day Zero.
-   - Estuary Inflow Retention card: Showing acre-feet conserved under the TCEQ September 2026 50% emergency order.
+   - Pipeline availability comparison: compare the configured 370 and 554 ac-ft/day demand cases and report illustrative-band timing differences.
+   - Estuary pass-through card: show the placeholder formula and modeled volume separately from the dated regulatory context.

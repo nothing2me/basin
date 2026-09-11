@@ -162,11 +162,17 @@ def test_multi_sector_hierarchical_curtailment():
     assert sim1.iloc[0]["curtailed_domestic_acft"] == 0.0
     assert sim1.iloc[0]["curtailed_industrial_acft"] == 0.0
 
-    # Test at 15% (Stage 3: outdoor 100% cut, domestic 10% cut)
+    # Equality belongs to the 15% band under the shared inclusive rule.
     sim3 = simulate_reservoir_drawdown(series.iloc[:1], initial_pct=0.15, config=cfg)
     assert sim3.iloc[0]["curtailed_outdoor_acft"] == pytest.approx(10.0, abs=1e-3)
-    assert sim3.iloc[0]["curtailed_domestic_acft"] == pytest.approx(4.0, abs=1e-3)
-    assert sim3.iloc[0]["curtailed_industrial_acft"] == 0.0  # protected
+    assert sim3.iloc[0]["curtailed_domestic_acft"] == pytest.approx(8.0, abs=1e-3)
+    assert sim3.iloc[0]["curtailed_industrial_acft"] == pytest.approx(15.0, abs=1e-3)
+
+    # Just above 15% uses the next band: outdoor 100% cut, domestic 10% cut.
+    sim3_above = simulate_reservoir_drawdown(series.iloc[:1], initial_pct=0.151, config=cfg)
+    assert sim3_above.iloc[0]["curtailed_outdoor_acft"] == pytest.approx(10.0, abs=1e-3)
+    assert sim3_above.iloc[0]["curtailed_domestic_acft"] == pytest.approx(4.0, abs=1e-3)
+    assert sim3_above.iloc[0]["curtailed_industrial_acft"] == 0.0
 
     # Test at 8% (Stage 4: outdoor 100% cut, domestic 20% cut, industrial 30% cut)
     sim4 = simulate_reservoir_drawdown(series.iloc[:1], initial_pct=0.08, config=cfg)
@@ -233,4 +239,23 @@ def test_extreme_custom_stress_inputs():
     assert (sim_deluge["spill_acft"] > 0).any()
     assert (sim_deluge["combined_acft"] <= 50000.0).all()
     np.testing.assert_allclose(sim_deluge.balance_error_acft, 0.0, atol=1e-8)
+
+
+@pytest.mark.parametrize("changes", [
+    {"dead_storage_acft": 10001.0},
+    {"stage_curtailment_active": "yes"},
+    {"estuary_order_active": 1},
+    {"stage_curtailment_active": True, "stage_bands_pct": (0.4, 0.3, 0.2)},
+    {"estuary_pass_through_fraction": 1.1},
+    {"estuary_pass_through_cap_acft_day": -1.0},
+    {"context_storage_marker_pct": 1.1},
+])
+def test_extended_water_system_settings_fail_closed(changes):
+    values = {
+        "name": "Validation test",
+        "sources": (WaterSource("Pool", 10000.0),),
+        **changes,
+    }
+    with pytest.raises(ValueError):
+        WaterSystemConfig(**values).validate()
 

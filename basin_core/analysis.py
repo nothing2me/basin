@@ -179,7 +179,10 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
         if getattr(cfg, "estuary_order_active", False):
             thresh = getattr(cfg, "estuary_threshold_pct", 0.50)
             if total_cap > 0 and (beginning / total_cap) > thresh:
-                estuary_pass_through = min(inflow * 0.35, 100.0)
+                estuary_pass_through = min(
+                    inflow * getattr(cfg, "estuary_pass_through_fraction", 0.0),
+                    getattr(cfg, "estuary_pass_through_cap_acft_day", 0.0),
+                )
                 inflow -= estuary_pass_through
 
         smooth_active = use_smooth_evap or getattr(cfg, "use_smooth_evap", False)
@@ -212,20 +215,21 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
 
         # Dynamic hierarchical stage curtailment
         if getattr(cfg, "stage_curtailment_active", False):
-            current_pct = (beginning / total_cap * 100.0) if total_cap > 0 else 0.0
-            if current_pct < 10.0:  # Stage 4 Emergency
+            current_fraction = beginning / total_cap if total_cap > 0 else 0.0
+            band_1, band_2, band_3, band_4 = cfg.stage_bands_pct[:4]
+            if current_fraction <= band_4:
                 dom_req = dom_base * 0.80
                 ind_req = ind_base * 0.70
                 out_req = 0.0
-            elif current_pct < 20.0:  # Stage 3 Critical
+            elif current_fraction <= band_3:
                 dom_req = dom_base * 0.90
                 ind_req = ind_base
                 out_req = 0.0
-            elif current_pct < 30.0:  # Stage 2 Moderate
+            elif current_fraction <= band_2:
                 dom_req = dom_base
                 ind_req = ind_base
                 out_req = out_base * 0.50
-            elif current_pct < 40.0:  # Stage 1 Mild
+            elif current_fraction <= band_1:
                 dom_req = dom_base
                 ind_req = ind_base
                 out_req = out_base * 0.85
@@ -302,7 +306,8 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
                     band = b_idx + 1
 
         bal_err = combined - (beginning + inflow - actual_evap - served - spill)
-        assert abs(bal_err) < 1e-6, f"Mass balance error on day {step+1}: {bal_err}"
+        if abs(bal_err) >= 1e-6:
+            raise ArithmeticError(f"Mass balance error on day {step + 1}: {bal_err}")
 
         rec = {
             "day": step + 1, "date": str(date.date()),
