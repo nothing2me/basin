@@ -27,8 +27,9 @@ The executable identity is recorded, not accepted: it was not launched or frozen
 | Actual browser offline workflow | **NOT RUN** | Requires the user to control connectivity on the presentation laptop. The Python socket-blocked smoke test is separate evidence. |
 | Development-browser tailored Review | **PASS** | Chromium at 1280×720 and 375×812, Dark/Light, all four focus profiles, skipped setup, Show all, Change focus, save/reopen, keyboard focus and tutorial targeting. See `review_acceptance_handoff.md`. |
 | Embedded Qwen on presentation laptop | **NOT RUN** | No weights were downloaded and no network setting was changed. Record model hash, runtime readiness, load time, answer timing, cancellation and failure recovery when authorized on the device. |
-| PDF/ZIP actual downloads and visual inspection | **NOT RUN** | Automated renderer, consent and replay tests are recorded elsewhere; they do not prove browser/native download behavior or final-page readability on the device. |
-| Private sentinel off/on/revoked through actual downloads | **NOT RUN** | Use harmless `PRIVATE-DEMO-123`; inspect extracted ZIP and PDF for absence/presence/absence. |
+| Development-browser PDF/ZIP generation, replay and visual inspection | **PASS** | A six-scenario disposable run produced `verified: true`; independent replay verified six scenarios and 300 audit records with `implementation_matches_current: true`. The three-page vector PDF was rendered to PNG and inspected page by page with no clipping, overlap or unreadable section. |
+| Development-browser private sentinel off/on/revoked | **PASS after correction** | `PRIVATE-DEMO-123` was absent with consent off, present in the ZIP and PDF with consent on, then absent from both after revocation and rebuild. The revoked PDF disclosed that provider notes were omitted. This exposed and corrected a PDF omission of consented workspace-level provider notes; focused PDF/consent tests passed. |
+| Actual browser/native download destination | **NOT RUN** | The browser showed all download controls and the app wrote local artifacts, but the buttons were not used to download through the presentation browser/native shell. Repeat on the actual device and inspect its download location. |
 | Projector and 125% zoom | **NOT RUN** | Requires presentation display equipment. |
 | Screen-reader acceptance | **NOT RUN** | Not covered by the development browser pass. |
 | Intended-user uncoached exercise | **NOT RUN** | Record participant role, task, confusion, completion and resulting wording changes; do not infer domain approval. |
@@ -44,3 +45,10 @@ The executable identity is recorded, not accepted: it was not launched or frozen
 5. Test the native model only after its runtime/license/provenance gates are ready and the user authorizes any weights download.
 6. Test projector/zoom/keyboard, then run the uncoached intended-user exercise.
 7. Confirm organizer requirements and rehearse the final, evidence-safe script.
+
+## Development acceptance artifact hashes
+
+These disposable outputs contain no real private information. The final state has consent revoked:
+
+- ZIP SHA-256: `f334f1d25ee633310f5f94c8c3b30a4fd199f1448b4172c1b826ff8fb6f0c9a7`
+- PDF SHA-256: `b47494733d705689da3c0d1416f360a6d6c3f242af871faa2b5359d48b431c9d`

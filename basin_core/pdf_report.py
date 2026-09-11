@@ -842,6 +842,21 @@ def render_html_report(
         </tr>
         """
 
+    provider_note = str(getattr(workspace, "notes", "") or "").strip()
+    if include_notes and provider_note:
+        provider_notes_html = (
+            '<div class="section-title">Provider Notes</div>'
+            f'<div class="evidence-entry"><div class="evidence-body">{escape(provider_note)}</div></div>'
+        )
+    elif provider_note:
+        provider_notes_html = (
+            '<div class="section-title">Provider Notes</div>'
+            '<p style="font-size: 7.5pt; color: #64748b;">Provider notes recorded '
+            '(omitted: export privacy setting excludes private notes).</p>'
+        )
+    else:
+        provider_notes_html = ""
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1214,6 +1229,8 @@ def render_html_report(
             {scenario_html_rows if scenario_html_rows else '<tr><td colspan="6" style="text-align: center; color: #64748b;">No accepted scenarios.</td></tr>'}
         </tbody>
     </table>
+
+    {provider_notes_html}
 
     <div class="section-title">Evidence and Assumptions</div>
     {evidence_html}
@@ -1844,6 +1861,21 @@ def build_fallback_pdf(
             (f"{feat.get('concurrence', 0.0):.2f}", "/F1"),
             (note, "/F1"),
         ], index)
+
+    provider_note = (
+        str(getattr(workspace_or_title, "notes", "") or "").strip()
+        if not isinstance(workspace_or_title, str) else ""
+    )
+    if provider_note:
+        flow.gap(10)
+        flow.heading("PROVIDER NOTES", size=8.5)
+        if include_notes:
+            flow.paragraph(provider_note, size=6.8)
+        else:
+            flow.paragraph(
+                "Provider notes recorded (omitted: export privacy setting excludes private notes).",
+                size=6.8, color=(0.45, 0.5, 0.55),
+            )
 
     # Section 3: Evidence, assumptions and recorded disagreements
     flow.gap(14)

@@ -43,3 +43,9 @@ No production code, dependencies, configuration or model/data artifacts were cha
 - Legacy percentage wording, custom-observation source descriptions, catchment/area calibration, document ingestion and native release gates remain open.
 - Actual presentation-laptop offline/native/download/PDF/projector checks, intended-user review, organizer format and final team rehearsal remain external tasks.
 - The app footer’s `<200 MiB RAM` and broad on-device wording should be reviewed separately as a product-code claim; the historical audit recorded a 270.2 MiB development-browser working set.
+
+## Part C continuation after the documentation commit
+
+Development-browser output acceptance exposed a consent mismatch: workspace-level provider notes entered the ZIP but were omitted from both PDF renderers. `basin_core/pdf_report.py` now renders a Provider Notes section only when the shared note consent is on and otherwise discloses that recorded notes were omitted. `tests/test_cross_output_consent.py` now covers provider notes alongside scenario notes across ZIP, HTML and vector PDF paths.
+
+Focused PDF/consent verification: **39 passed**. After rebasing onto teammate integration `6aed073`, the combined Review/App/UI/PDF/consent selection passed **100 tests in 102.89s**. A real browser rebuild proved `PRIVATE-DEMO-123` present in both consented ZIP/PDF and absent from both after revocation; independent replay passed for six scenarios and 300 audit records. All three PDF pages were rendered and visually inspected. Presentation-device downloads remain open.

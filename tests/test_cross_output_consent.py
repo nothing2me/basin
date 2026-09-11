@@ -17,6 +17,7 @@ from basin_core.exporter import export_bundle
 from basin_core.pdf_report import build_fallback_pdf, render_html_report
 
 NOTE_SENTINEL = "PRIVATE-NOTE-SENTINEL-42"
+PROVIDER_NOTE_SENTINEL = "PRIVATE-PROVIDER-NOTE-SENTINEL-17"
 CUSTOM_RAW = b"date,precipitation\n2024-01-01,1\n2024-01-02,2\n2024-01-04,\n"
 
 
@@ -40,6 +41,7 @@ def attach_custom(w):
 @pytest.fixture
 def approved_with_note_and_custom(workspace):
     attach_custom(workspace)  # invalidates review on its linked scenario, so do this first
+    workspace.notes = PROVIDER_NOTE_SENTINEL
     for identifier in workspace.selected:
         workspace.get(identifier).review(True, NOTE_SENTINEL)
     return workspace
@@ -58,16 +60,22 @@ def test_note_consent_is_honored_the_same_way_in_the_zip_and_both_pdf_paths(appr
     zip_included = export_bundle(w, include_notes=True, include_custom=True)
     assert not zip_contains(zip_excluded, NOTE_SENTINEL.encode())
     assert zip_contains(zip_included, NOTE_SENTINEL.encode())
+    assert not zip_contains(zip_excluded, PROVIDER_NOTE_SENTINEL.encode())
+    assert zip_contains(zip_included, PROVIDER_NOTE_SENTINEL.encode())
 
     html_excluded = render_html_report(w, accepted, include_notes=False)
     html_included = render_html_report(w, accepted, include_notes=True)
     assert NOTE_SENTINEL not in html_excluded
     assert NOTE_SENTINEL in html_included
+    assert PROVIDER_NOTE_SENTINEL not in html_excluded
+    assert PROVIDER_NOTE_SENTINEL in html_included
 
     vector_excluded = build_fallback_pdf(w, accepted, include_notes=False)
     vector_included = build_fallback_pdf(w, accepted, include_notes=True)
     assert NOTE_SENTINEL.encode() not in vector_excluded
     assert NOTE_SENTINEL.encode() in vector_included
+    assert PROVIDER_NOTE_SENTINEL.encode() not in vector_excluded
+    assert PROVIDER_NOTE_SENTINEL.encode() in vector_included
 
 
 def test_custom_raw_bytes_never_reach_the_zip_or_either_pdf_path(approved_with_note_and_custom):
@@ -112,5 +120,8 @@ def test_revoking_note_consent_removes_the_sentinel_from_every_freshly_built_out
     revoked_html = render_html_report(w, accepted, include_notes=False)
     revoked_vector = build_fallback_pdf(w, accepted, include_notes=False)
     assert not zip_contains(revoked_zip, NOTE_SENTINEL.encode())
+    assert not zip_contains(revoked_zip, PROVIDER_NOTE_SENTINEL.encode())
     assert NOTE_SENTINEL not in revoked_html
     assert NOTE_SENTINEL.encode() not in revoked_vector
+    assert PROVIDER_NOTE_SENTINEL not in revoked_html
+    assert PROVIDER_NOTE_SENTINEL.encode() not in revoked_vector
