@@ -215,7 +215,7 @@ def probe_runtime(python: str | None = None, pinned_version: str | None = None,
         except ValueError:
             continue
 
-    if isinstance(payload, dict) and payload.get("ok"):
+    if result.returncode == 0 and isinstance(payload, dict) and payload.get("ok"):
         version = payload.get("version")
         status = RuntimeStatus("ok", version=version, system_info=payload.get("system_info", ""))
         if pinned_version and version != pinned_version:
@@ -337,6 +337,9 @@ def render_report(report: Report) -> str:
 def run_install(repair: bool, wheelhouse_override: Path | None) -> int:
     """Run pip for install/repair. Returns pip's exit code (0 on success)."""
     wheelhouse = select_wheelhouse(override=wheelhouse_override)
+    if wheelhouse_override is not None and wheelhouse is None:
+        print("Explicit offline wheelhouse has no runtime wheel; refusing internet fallback.")
+        return 2
     if wheelhouse is not None:
         print(f"Installing from local wheelhouse (offline): {wheelhouse}")
     else:

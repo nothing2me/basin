@@ -9,6 +9,13 @@ from basin_core.engine import ScenarioParams
 from basin_core.workspace import SESSION_DIR_ENV, Workspace, session_dir
 
 
+def pytest_configure(config):
+    # pytest creates basetemp itself, but not its parent on a fresh worktree.
+    basetemp = config.getoption("basetemp")
+    if basetemp:
+        Path(basetemp).resolve().parent.mkdir(parents=True, exist_ok=True)
+
+
 @pytest.fixture(autouse=True)
 def isolated_sessions(tmp_path_factory, monkeypatch):
     """Point saved-analysis storage at a throwaway directory for every test.

@@ -89,7 +89,7 @@ def test_runtime_does_not_enable_the_llama_cpp_disk_cache():
     """Advisory guard: diskcache 5.6.3 (GHSA-w8v5-vhqr-4h9v) unpickles cache files.
 
     llama-cpp-python only creates a diskcache.Cache through LlamaDiskCache/set_cache. The
-    accepted-risk rationale in docs/native_runtime_handoff.md depends on BASIN never doing so;
+    inactive-code-path rationale in docs/native_runtime_handoff.md depends on BASIN never doing so;
     revisit that note before this assertion is changed.
     """
     source = (ROOT / "basin_core" / "qwen_runtime.py").read_text(encoding="utf-8")
@@ -602,3 +602,16 @@ def test_core_and_model_metadata_work_when_the_native_runtime_cannot_load(tmp_pa
     result = subprocess.run([sys.executable, "-c", program], capture_output=True, text=True,
                             cwd=str(ROOT), env=env, timeout=300)
     assert "core-ok" in result.stdout, result.stderr[-2000:]
+
+
+def test_explicit_empty_offline_wheelhouse_never_runs_pip(tmp_path, monkeypatch):
+    def no_process(*a, **k):
+        raise AssertionError("No pip or network command should run")
+    monkeypatch.setattr(native.subprocess, "run", no_process)
+    assert native.run_install(False, tmp_path) == 2
+
+
+def test_probe_rejects_success_payload_from_crashed_process(monkeypatch):
+    result = subprocess.CompletedProcess([], 1, stdout='{"ok": true, "version": "0.3.35"}', stderr="")
+    monkeypatch.setattr(native.subprocess, "run", lambda *a, **k: result)
+    assert not native.probe_runtime(pinned_version="0.3.35").usable

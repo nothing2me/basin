@@ -219,8 +219,9 @@ def test_private_notes_stay_opt_in_through_a_mocked_successful_browser_render(ap
         html_path = cmd[-1]
         print_arg = next(a for a in cmd if a.startswith("--print-to-pdf="))
         out_path = print_arg.split("=", 1)[1]
-        # "Render" by writing the actual generated HTML bytes so the consent check is real.
-        Path(out_path).write_bytes(Path(html_path).read_bytes() + b"\n%%padding%%" + b"x" * 2000)
+        # Protocol fixture: retain HTML for consent assertions behind a PDF signature.
+        # This exercises consent forwarding, not actual browser rendering or PDF validity.
+        Path(out_path).write_bytes(b"%PDF-1.4\n" + Path(html_path).read_bytes() + b"\n%%padding%%" + b"x" * 2000)
 
         class _Result:
             returncode = 0
@@ -236,3 +237,15 @@ def test_private_notes_stay_opt_in_through_a_mocked_successful_browser_render(ap
     assert excluded.renderer == "browser" and included.renderer == "browser"
     assert b"PRIVATE-SENTINEL" not in excluded.pdf_bytes
     assert b"PRIVATE-SENTINEL" in included.pdf_bytes
+
+
+def test_non_pdf_browser_output_is_not_offered_as_success(approved, monkeypatch):
+    monkeypatch.setattr(pdf_report, "find_browser_executable", lambda: "fake-browser")
+    def fake_run(cmd, **kwargs):
+        target = next(a.split("=", 1)[1] for a in cmd if a.startswith("--print-to-pdf="))
+        Path(target).write_bytes(b"not a PDF" * 200)
+        return subprocess.CompletedProcess(cmd, 0, stderr=b"")
+    monkeypatch.setattr(pdf_report.subprocess, "run", fake_run)
+    outcome = render_with_status(approved, approved.exportable())
+    assert outcome.degraded and outcome.renderer == "vector_fallback"
+    assert outcome.pdf_bytes.startswith(b"%PDF-")

@@ -2077,7 +2077,9 @@ elif page == "Exports":
                                 width="stretch"
                             )
                             if preview_state.get("degraded"):
-                                st.caption(f"⚠️ {preview_state.get('detail', '')}")
+                                st.warning(f"⚠️ {preview_state.get('detail', '')}")
+                            else:
+                                st.caption(f"PDF renderer: {preview_state.get('detail', 'unknown')}")
                     with col_prev_c:
                         st.download_button(
                             "📄 Download Brief (.md)",

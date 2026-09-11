@@ -1999,6 +1999,8 @@ def _render_pdf_with_status(
             if not pdf_file.exists() or pdf_file.stat().st_size <= 1000:
                 raise RuntimeError("browser did not produce a usable PDF file")
             pdf_bytes = pdf_file.read_bytes()
+            if not pdf_bytes.startswith(b"%PDF-"):
+                raise RuntimeError("browser output is not a PDF document")
         return RenderOutcome(
             pdf_bytes=pdf_bytes,
             renderer="browser",
@@ -2013,8 +2015,8 @@ def _render_pdf_with_status(
             degraded=True,
             detail=(
                 f"The browser renderer ({Path(browser_bin).name}) failed ({error}); "
-                "BASIN's built-in report renderer was used instead. Content is complete; "
-                "only the rendering path differs from the usual one."
+                "BASIN's built-in report renderer was used instead. "
+                "Review the downloaded report; layout and supported characters can differ."
             ),
         )
 
@@ -2030,8 +2032,8 @@ def generate_pdf_report_with_status(
 ) -> RenderOutcome:
     """Generate the PDF report and report which renderer actually produced it.
 
-    Always attempts the system-browser HTML renderer first, then BASIN's own vector
-    renderer if a browser is unavailable or fails. Both paths render the full report; the
+    On Windows, uses the built-in vector renderer. Elsewhere, attempts the browser
+    HTML renderer first and falls back if a browser is unavailable or fails. Both paths render the full report; the
     returned outcome tells the caller which one actually ran, so a degraded fallback is
     never presented to the user as an unqualified success. Writing to ``output_path`` is
     not swallowed: a file-write failure raises and no packet may be reported as saved.

@@ -206,7 +206,7 @@ def assistant_panel(w, source=None, names=None):
             sub_text = "Real local Qwen2.5-3B LLM · Grounded in verified hydrologic tools"
         elif status == "model_missing":
             badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">⚪ Offline Mode: Instant Direct Tools Active</div>'
-            sub_text = "100% offline · Instant direct tools · Run scripts/fetch_model.py to enable local AI"
+            sub_text = "Offline direct tools · Local AI needs both the native runtime (Setup BASIN.cmd --ai-runtime) and verified model weights (scripts/fetch_model.py)"
         elif status == "loading":
             badge_html = '<div class="basin-assistant-badge" style="color:#E69F00">🟡 Loading Qwen2.5-3B runtime...</div>'
             sub_text = "Initializing local llama.cpp background worker..."

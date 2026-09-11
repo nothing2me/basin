@@ -302,8 +302,8 @@ the cache." It is required by `llama-cpp-python` and imported with it (`llama_ca
 Wheel inspection shows a `diskcache.Cache` is created only by `LlamaDiskCache`, which the
 bundled server uses or a caller can pass to `Llama.set_cache()`. BASIN's
 `basin_core/qwen_runtime.py` does neither; a new test guards that assumption. Exploitation
-would also need local write access to a cache directory BASIN never creates. **Accepted
-residual, not fixed** (no fixed release exists). Revisit if BASIN ever enables a llama.cpp
+would also need local write access to a cache directory BASIN never creates. **Residual advisory, not fixed** (no fixed release exists). This is a code-path
+assessment, not a named human's risk acceptance. Revisit if BASIN ever enables a llama.cpp
 prompt cache, and re-scan before the showcase.
 
 Exclusions and limits:

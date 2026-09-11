@@ -1,5 +1,13 @@
 # BASIN current handoff
 
+## Tasks 1–3 integration (September 11 UTC)
+
+Combined 568271e (native runtime), 1d80285 (numerical meaning), and 105d715 (PDF outcomes/consent) on 0b3d903. Integration fixes and evidence are in docs/tasks_1_3_integration_review.md. TEST_RESULT_PENDING. Snapshot, smoke (5acf2b4ebdfe), explicit replay (`implementation_matches_current: true`), source package, install consistency and revised routing benchmark (50/50, including four clarification expectations) passed.
+
+Legacy version-1 simulation results must be rerun and re-reviewed before export; sessions are not deleted or silently migrated. Windows still deliberately uses the vector PDF renderer, now disclosed beside both downloads. Native runtime and model weights remain optional separate components; no live weights or clean-laptop installation was exercised in this integration pass. Diskcache advisory is unresolved with an inactive-code-path rationale, not named-human acceptance.
+
+Next: Task 4 UI acceptance, Task 5 status reconciliation and Task 6 physical laptop/user/rehearsal checks. Preserve the open Region N versus custom-system assistant mismatch, operational wording, legacy report-percent ambiguity, custom-observation source wording, VC++/CPU/offline-bundle prerequisites, and model license/provenance review. Existing P0-C saved simulations are implemented upstream, but device/domain acceptance is not established by that code. Older checkpoints below are historical.
+
 ## September 10 — P0 Baseline, Custom Gauge Lineage, Simulation Consistency & Scientific Claim Audit (P0-A through P0-D Complete)
 
 Completed the 4-phase sequential engineering roadmap in clean worktree `basin-clean` on branch `codex/p0-baseline`, tracking `origin/main` at `a6ef717`:

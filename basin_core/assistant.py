@@ -800,6 +800,10 @@ TOOL_SCHEMAS = [
                         "type": "number",
                         "description": "Rainfall reduction relative to the selected scenario revision, in percentage points (e.g. 20 for 20% lower)"
                     },
+                    "pipeline_active": {
+                        "type": "boolean",
+                        "description": "Whether to assume pipeline supply is available; false means unavailable"
+                    },
                     "initial_storage_pct": {
                         "type": "number",
                         "description": "Initial combined storage in percentage points (e.g. 48 for 48%); never a fraction"
@@ -828,6 +832,10 @@ TOOL_SCHEMAS = [
                         "type": "integer",
                         "description": "Optional check that the scenario's source window starts in this year"
                     },
+                    "pipeline_active": {
+                        "type": "boolean",
+                        "description": "Whether to assume pipeline supply is available; false means unavailable"
+                    },
                     "initial_storage_pct": {
                         "type": "number",
                         "description": "Initial combined storage in percentage points (e.g. 48 for 48%); never a fraction"
@@ -855,7 +863,7 @@ def validate_tool_args(workspace, name, args):
     manifest = getattr(getattr(workspace, "source", None), "manifest", None) or {}
     first_year, last_year = int(str(manifest.get("start", "1991"))[:4]), int(str(manifest.get("end", "2025"))[:4])
     for key, value in args.items():
-        if isinstance(value, (float, int)) and (isinstance(value, bool) or not math.isfinite(value)):
+        if type(value) in (float, int) and not math.isfinite(value):
             raise ValueError("Numeric arguments must be finite numbers.")
         if key.startswith("scenario_id"):
             workspace.get(value)

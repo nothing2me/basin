@@ -387,3 +387,14 @@ def test_custom_system_demand_is_not_replaced_by_the_regional_no_pipeline_defaul
 def test_irrigation_depth_is_not_labelled_per_acre():
     takeaway = calculate_crop_water_deficit(daily([0.0] * 30, start="2011-07-01"))["takeaway"]
     assert "in/acre" not in takeaway and "acre-inches per acre" in takeaway
+
+
+def test_pipeline_boolean_is_valid_but_percentage_boolean_is_not(workspace):
+    from basin_core.assistant import validate_tool_args
+    sid = workspace.selected[0]
+    for enabled in (False, True):
+        args = {"scenario_id": sid, "pipeline_active": enabled}
+        assert validate_tool_args(workspace, "run_stress_spectrum", args) == args
+    with pytest.raises(ValueError):
+        validate_tool_args(workspace, "run_stress_spectrum",
+                           {"scenario_id": sid, "initial_storage_pct": True})
