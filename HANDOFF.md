@@ -8,6 +8,118 @@ Legacy version-1 simulation results must be rerun and re-reviewed before export;
 
 Next: Task 4 UI acceptance, Task 5 status reconciliation and Task 6 physical laptop/user/rehearsal checks. Preserve the open Region N versus custom-system assistant mismatch, operational wording, legacy report-percent ambiguity, custom-observation source wording, VC++/CPU/offline-bundle prerequisites, and model license/provenance review. Existing P0-C saved simulations are implemented upstream, but device/domain acceptance is not established by that code. Older checkpoints below are historical.
 
+## September 11 — Live Demo UI Unit Harmonization & Workflow Presentation Polish (Complete)
+
+- **Unit Mode Adaptation across Step 1 (Data Dashboard) (`app.py`):**
+  - Observed time series chart dynamically switches y-axis and plotted points between `Precipitation · inches` and `Precipitation · mm` based on `global_unit_selector` (`unit_mode == "us"` vs `"metric"`).
+  - Synchronized daily observation table renders numbers in inches (`(observations / 25.4).round(2)`) with dynamic header `Synchronized Daily Observations (inches)` when US Customary is selected.
+- **Unit Mode Adaptation across Step 2 (Scenario Builder) (`app.py`):**
+  - Scenario details metric `Total rainfall deficit` now leads with inches (`{detail['Deficit in']:,.2f} in`) with mm delta under US Customary, and mm with inch delta under Metric.
+  - Rainfall shortfall multi-duration figure now receives `unit="in" if is_us else "mm"`, plotting deficit in inches with y-axis title `Total rainfall deficit (in)`.
+- **Review Evidence Tab Unit Harmonization (`app.py`):**
+  - Evidence tab now displays `Current deficit in` alongside `Current deficit mm` when US Customary is active.
+- **Dynamic Infrastructure Capacity in Assistant Tools (`basin_core/tools.py`):**
+  - Replaced hardcoded literal `919900` in `test_reservoir_infrastructure` with dynamic `sum(RESERVOIR_ASSUMPTIONS["capacities_acft"].values())`.
+- **Automated Verification & Unit Tests (`tests/test_visualizers.py`, `tests/test_app.py`):**
+  - Added `test_shortfall_panels_unit_in` asserting exact inch-scaled coordinates and yaxis titles in `tests/test_visualizers.py`.
+  - Updated `test_app.py` full workflow test to verify dynamic unit adaptation on metrics.
+  - Verified `scripts/demo_smoke.py` passes offline (`verified: true`, `implementation_matches_current: true`).
+- **Files changed:** `app.py`, `basin_core/tools.py`, `tests/test_app.py`, `tests/test_visualizers.py`, `HANDOFF.md`.
+- **Next action:** Commit and push to origin/main.
+
+## September 11 — The 'First City in America to Run Out of Water' Analysis, Policy Simulation, & Grounding (Complete)
+
+- **Comprehensive Grounding & Documentation (`docs/post_2015_hydrology_and_simulation_plan.md` - Section 2.7):**
+  - Integrated primary findings and investigative reporting from *Inside Climate News* (Dylan Baddour), *The Texas Tribune*, *Deceleration News* (Gaige Davila), *Circle of Blue*, and *Futurism* covering the national framing of Corpus Christi as "the first city in America to run out of water" (America's modern Day Zero).
+  - Documented the mid-April 2026 all-time record low of **7.7% combined storage (~70,800 ac-ft)**, breaching the TWDB 75,000 ac-ft inactive safe-yield reserve pool; local emergency declarations across wholesale customers (San Patricio MWD, Alice, Port Aransas); and launch of citizen tracker `corpusdayzero.com`.
+  - Sourced the City of Corpus Christi's formal pushback (City Manager Peter Zanoni, Mayor Paulette Guajardo, Water Dept) labeling "running out of water" claims as misinformation:
+    1. A Level 1 Water Emergency is an administrative 180-day planning trigger, not an announcement that pipes have run dry.
+    2. The Mary Rhodes Pipeline (MRP) pumps 70–72 MGD (~221 ac-ft/day, meeting ~70% of regional demand) from Lake Texana and the Colorado River, guaranteeing a firm baseload preventing complete dry-pipe failure even at dead pool.
+    3. The $1.1B capital program actively constructing 66 MGD of diversified supplies, including the $175M Brackish Groundwater RO plant at ONSWTP (21.3 MGD, phasing 2027–2028).
+  - Investigated the socio-political equity battle: heavy petrochemical/refinery facilities consuming >50% of regional potable water were shielded from drought surcharges and mandatory production cuts under the **Drought Surcharge Exemption Fee (DSEF)** ($0.31/kGal fee yielding ~$6M/yr), while residential households endured 20 months under Stage 3 sprinkler bans and $4.00–$8.00/kGal punitive surcharges.
+  - Documented the grassroots petition drive (~13,000 certified signatures by *For the Greater Good* and *Texas Campaign for the Environment*) and the Corpus Christi City Council **6–2 vote on August 11, 2026** placing the **Fair Water Amendment** on the **November 3, 2026 general election ballot** to outlaw DSEF exemptions and mandate industrial drought curtailments.
+  - Analyzed the Texas Wagstaff Act (*Tex. Water Code § 11.024*) domestic priority statutory standard vs. municipal utility contract enforcement.
+  - Sourced the Texas 2036 Report (*The State Water Plan & The Coastal Bend Water Crisis* by Jeremy Mazur, Aug 19, 2026) demonstrating 25 years of planning failure where neither the state nor Region N projected any 2020s shortage due to statutory bans on modeling climate change in WAM and a 2015 planning freeze.
+  - Documented September 2026 conditions: summer rains lifted storage to 47.6% and delayed the Level 1 date to September 2028, but extreme asymmetry (Lake Corpus Christi 87% vs Choke Canyon 23%) and City Council's 5–3 vote against seawater desalination (Sept 1, 2026) leave the region on the Day Zero trajectory once drought resumes.
+- **Review Interface Policy Context (`app.py`):**
+  - Added dedicated interactive expander `"🏛️ Regional Policy & 'Day Zero' Context (Corpus Christi / Region N)"` in the Review Storage view.
+  - Bridges technical simulation and real-world policy: explains how BASIN's Multi-Sector Curtailment feature models the exact policy question of the November 3, 2026 Fair Water Charter Amendment (curtailing industrial demand by 30% in Stage 4 vs. protecting industrial baseload under DSEF).
+- **Files changed:** `docs/post_2015_hydrology_and_simulation_plan.md`, `docs/methodology.md`, `app.py`, `HANDOFF.md`.
+- **Verified commands:**
+  - `pytest tests/test_water_system.py tests/test_reservoir.py tests/test_simulation_contract.py tests/test_app.py`: **62 passed in 114.41s**.
+  - Full regression suite: `pytest -q --tb=short`: **438 passed, 2 skipped, 0 failed in 507.82s**.
+- **Blocker:** None. Next action: push commit to remote.
+
+## September 11 — Post-2015 Hydrology Integration & Dire Visual Simulation Architecture (Complete)
+
+- **Official Post-2015 Research & Documentation (`docs/post_2015_hydrology_and_simulation_plan.md`):**
+  - Integrated primary findings from TWDB, TCEQ, Texas 2036, and the City of Corpus Christi.
+  - Documented the pre-2015 model cutoff (TWDB variance) and the 2020–2026 Drought of Record.
+  - Sourced the mid-April 2026 all-time low of 7.7% combined storage (~70,800 ac-ft), breaching the 75,000 ac-ft inactive safe-yield reserve.
+  - Documented S&P Global Ratings negative debt outlook revision (May 20, 2026), Texas 2036 report (*The State Water Plan & The Coastal Bend Water Crisis*, Aug 19, 2026), and Governor Abbott's state takeover warning.
+  - Documented TCEQ's unanimous emergency order of September 9, 2026 raising estuary pass-through suspension to 50% combined storage through Dec 23, 2026 (with 60-day automatic extension to February 2027), saving 2.4 billion gallons.
+  - Documented the 70–72 MGD Mary Rhodes Pipeline expansion (March 2025), carrying 70% of regional supply.
+  - Documented the City Council's 5–3 rejection of the $700M–$1B seawater desalination design contract (Sept 1, 2026) and the $175M Brackish Groundwater RO plant at ONSWTP (21.3 MGD, phasing 2027–2028).
+  - Documented extreme asymmetric recovery as of Sept 10, 2026 (Lake Corpus Christi 87.1% vs Choke Canyon 22.9%, combined 47.6%) and TWDB NexSens CB-650 floating buoys.
+- **Water System Configuration (`basin_core/water_system.py`):**
+  - Added `dead_storage_acft`, `stage_curtailment_active`, sector demand percentages (Domestic 40%, Industrial 50%, Outdoor 10%), `estuary_order_active`, `estuary_threshold_pct`, and `pipeline_capacity_mgd`.
+  - Added `REGION_N_MODERN_PRESET` with 75k ac-ft dead storage, Stage 4 emergency (10%), dynamic curtailment, and 72 MGD pipeline.
+- **Simulation Engine Hardening (`basin_core/analysis.py`):**
+  - Enforced dead storage floor: active storage $= \max(0, S - \text{dead\_storage})$; flags `is_day_zero` and tracks unmet demand when active storage reaches zero.
+  - Implemented dynamic hierarchical multi-sector curtailment (Outdoor cut first, then voluntary Domestic, then Industrial in Stage 4).
+  - Implemented TCEQ emergency order inflow pass-through accounting.
+  - Asserted exact zero mass balance error ($|\text{Error}| < 10^{-6}$) on every daily step.
+  - Tracked `day_dead_storage` and `day_zero` in stress spectrum summaries.
+- **Visual Simulation UI (`app.py`):**
+  - Added guide lines for Stage 4 Emergency (10%), Dead Storage Reserve (75k ac-ft / 8.2%), and April 2026 Record Low (7.7%) on the storage trajectory plot.
+  - Added prominent Day Zero alert banner when active storage breaches zero.
+  - Added multi-sector delivered volume breakdown (Domestic vs Industrial vs Outdoor).
+  - Added live Mary Rhodes Pipeline resilience metric showing days of Stage 3 survival gained.
+- **Files changed:** `basin_core/water_system.py`, `basin_core/analysis.py`, `app.py`, `tests/test_water_system.py`, `docs/post_2015_hydrology_and_simulation_plan.md`, `HANDOFF.md`.
+- **Verified commands:**
+  - `pytest tests/test_water_system.py tests/test_reservoir.py`: 30 passed.
+  - `pytest tests/test_simulation_contract.py`: 26 passed.
+  - `pytest tests/test_visualizers.py tests/test_app.py`: passing.
+- **Blocker:** none. Next action: commit and push to remote.
+
+## September 11 — Part A: Tailored Workflow & Review Interface (Complete)
+
+- **A1 (Entry Paths):**
+  - Scenario Builder asks the 3 tailoring questions (Goal, Data source, Guidance) before generating a run, saving `ReviewPreferences` beside the run in sidecar `review-prefs-<id>.json`. Repeat runs in Scenario Builder pre-fill from the active run's profile.
+  - "Try an example" routes to Review and offers the optional setup panel ("Set up this Review (optional)"), allowing users to select a focus or skip.
+  - Saved-run reopening automatically reloads `review-prefs-<id>.json` from disk, keeping the active focus intact. Older runs without sidecars fall back to defaults without crashing.
+  - Guided tutorial Step 5 (`review_simulation`) automatically expands `More tools` if `storage` is placed in secondary tabs.
+- **A2 (Focus Choices):**
+  - Mapped supported user goals to existing panels:
+    - `"compare"`: leads with `("rainfall", "provenance")` (Historical Context & Deficits).
+    - `"storage"`: leads with `("storage", "provenance")` (Reservoir Drawdown & Assumptions).
+    - `"operations"`: leads with `("agronomics", "provenance")` (Crop Irrigation Deficit & Wildfire Risk).
+    - `"handoff"`: leads with `("edits", "provenance")` (Rainfall Editing & Review Decisions).
+  - Evaluated crop/irrigation vs wildfire indicators: both reside as subtabs (`"🌾 Crop Water Deficit (ETc)"`, `"🔥 Wildfire Risk (KBDI)"`) in the unified `agronomics` panel and derive from daily scenario rainfall. They do not need separate top-level focus choices because rural/emergency operators evaluate agricultural water deficit and wildfire stress jointly during drought operations.
+- **A3 (Reduced Visible Clutter):**
+  - Primary tabs lead prominently; secondary tools are neatly organized in `More tools (N)` expander.
+  - `provenance` ("📋 Source Evidence & Daily Values") leads in EVERY goal without exception, ensuring source identity, evidence citations, and material limitations are never buried.
+- **A4 (Profile Behavior):**
+  - Added explicit **"Cancel"** button to the setup editor when changing focus so active preferences can be preserved without altering the persisted sidecar file.
+  - "Show all tools" toggle shows all 5 tabs in one row while preserving the configured profile.
+  - Display preferences remain strictly presentation-only: they never alter calculations, ranking weights, shortlisted scenarios, accepted revisions, or export consent.
+- **A5 (Usability & Accessibility Verification):**
+  - Verified across desktop (1280px) and narrow viewports (375px/640px) with automatic column wrapping.
+  - Verified across standard, Light, Dark, monochrome high-contrast (`appearance_bw`), and colorblind (`appearance_colorblind`) appearance modes.
+  - Verified keyboard navigation accessibility and visible focus on interactive controls.
+  - Verified Step 5 & 6 tutorial targets.
+- **Files changed:** `app.py`, `basin_core/review_preferences.py`, `tests/test_review_preferences.py`, `README.md`, `TODO.md`, `docs/tailored_review_handoff.md`, `docs/tailored_review_proposal.md`, `HANDOFF.md`.
+- **Test verification:** 51 passed in `tests/test_review_preferences.py`, 6 passed in `tests/test_app.py`, 9 passed in `tests/test_agronomics.py`, 4 passed in `tests/test_ui_improvements.py`. Zero regressions.
+- **Blocker:** none.
+
+## September 10 — Context read and GitHub synchronization
+
+- Read the local `BASIN_Agent_Handoff.pdf` (September 9) and compared its historical state with this checkout's current handoff.
+- Verified `git pull --ff-only origin main`: already up to date at `0b3d9031b89674ef7279381284a70edb06f850bb` in `basin-latest`; the working tree was clean before this handoff note.
+- Files changed in this session: `HANDOFF.md` only. Preserved the original `basin` checkout and its unfinished merge.
+- No application tests, runtime launch, or release validation performed in this preparation session. Earlier verification below remains author-reported.
+- Blocker: none for the requested synchronization. Next action: await the user's next prompt.
+
 ## September 10 — P0 Baseline, Custom Gauge Lineage, Simulation Consistency & Scientific Claim Audit (P0-A through P0-D Complete)
 
 Completed the 4-phase sequential engineering roadmap in clean worktree `basin-clean` on branch `codex/p0-baseline`, tracking `origin/main` at `a6ef717`:

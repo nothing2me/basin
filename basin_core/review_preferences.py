@@ -28,6 +28,10 @@ GOALS: dict[str, dict[str, str]] = {
         "label": "Explore an illustrative storage scenario",
         "help": "Put the optional, uncalibrated storage experiment and its assumptions first.",
     },
+    "operations": {
+        "label": "Assess agricultural & wildfire risk",
+        "help": "Put crop irrigation deficits, wildfire stress (KBDI) and evidence first.",
+    },
     "handoff": {
         "label": "Prepare a reviewed handoff",
         "help": "Put review decisions, edits and export readiness first.",
@@ -76,6 +80,7 @@ TAB_LABELS: dict[str, str] = {
 FOCUS_PRIMARY: dict[str, tuple[str, ...]] = {
     "compare": ("rainfall", "provenance"),
     "storage": ("storage", "provenance"),
+    "operations": ("agronomics", "provenance"),
     "handoff": ("edits", "provenance"),
 }
 
@@ -84,12 +89,13 @@ FOCUS_PRIMARY: dict[str, tuple[str, ...]] = {
 SUGGESTED_WEIGHT_PRESET: dict[str, str] = {
     "compare": "Illustrative regional planner",
     "storage": "Illustrative emergency planner",
+    "operations": "Illustrative rural provider",
     "handoff": "Illustrative rural provider",
 }
 
 GUIDED_TAB_NOTES: dict[str, str] = {
     "storage": "Optional experiment. Storage results are illustrative and are excluded from the verified packet.",
-    "agronomics": "Illustrative agronomic indicators derived from the same rainfall record.",
+    "agronomics": "Cross-sector operational impacts: crop irrigation deficit (ETc) and soil-dryness wildfire stress (KBDI).",
     "rainfall": "The rainfall record for this scenario and how it compares with matched historical windows.",
     "edits": "Change rainfall content or swap a shortlist entry. Edits clear an existing acceptance.",
     "provenance": "Where the numbers come from: cited evidence, daily values and revision history.",

@@ -56,7 +56,10 @@ if st.session_state.get("assistant_open", False):
         transition: margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }}
     .st-key-assistant_drawer {{
-        width: {assistant_w}px !important;
+        width: {assistant_w}px;
+        min-width: 360px;
+        max-width: 90vw;
+        resize: horizontal;
     }}
     .st-key-assistant_tab_open {{
         right: {assistant_w}px !important;
@@ -87,8 +90,8 @@ def load_source():
 
 
 
-def local_rainfall_preview():
-    with st.expander("Upload and observe your custom CSV."):
+def local_rainfall_preview(expanded=False):
+    with st.expander("Upload and observe your custom CSV.", expanded=expanded):
         st.caption("One station per file. Preview only: uploads do not change scenarios or the NOAA snapshot. Preview stays in this session until you explicitly save reviewed evidence to an active analysis.")
         st.download_button("Local rainfall template", TEMPLATE, "local-rainfall-template.csv", "text/csv")
         station = st.text_input("Local station name", key="local_station")
@@ -383,6 +386,21 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
     fig.add_hline(y=b20, line_dash="dash", line_color="#dc2626", annotation_text=f"Band 3 ({b20:.0f}%)",
                   annotation_position="top right", row=1, col=2)
 
+    if len(cfg.stage_bands_pct) >= 4:
+        b10 = cfg.stage_bands_pct[3] * 100
+        fig.add_hline(y=b10, line_dash="dot", line_color="#991b1b", annotation_text=f"Stage 4 Emergency ({b10:.0f}%)",
+                      annotation_position="top right", row=1, col=2)
+
+    dead_acft = getattr(cfg, "dead_storage_acft", 0.0)
+    if dead_acft > 0 and cfg.total_capacity_acft > 0:
+        dead_pct = dead_acft / cfg.total_capacity_acft * 100
+        fig.add_hline(y=dead_pct, line_dash="dot", line_color="#450a0a", annotation_text=f"Dead Storage Reserve ({dead_pct:.1f}%)",
+                      annotation_position="bottom right", row=1, col=2)
+
+    if "Region N" in cfg.name or "Corpus Christi" in cfg.name:
+        fig.add_hline(y=7.7, line_dash="dot", line_color="#7f1d1d", annotation_text="April 2026 Record Low (7.7%)",
+                      annotation_position="bottom left", row=1, col=2)
+
     frames = []
     for idx in indices:
         row = sim_df.iloc[idx]
@@ -667,7 +685,8 @@ def personal_notes_panel(w):
             with st.container(key="notes_body_content"):
                 st.caption("Saved locally with this analysis. Included in exports only if you opt in.")
                 p_key = f"provider_{w.id}" if w else "provider_default"
-                note = st.text_area("Provider notes", value=current_val, key=p_key, height=130)
+                cur_h = st.session_state.get("notes_height", 420)
+                note = st.text_area("Provider notes", value=current_val, key=p_key, height=max(130, cur_h - 180))
                 if st.button("Save notes", key=f"btn_save_notes_{w.id if w else 'default'}", width="stretch", type="primary"):
                     st.session_state["personal_notes"] = note
                     if w:
@@ -888,6 +907,15 @@ if w is not None and st.session_state.get("report_workspace_id") != w.id:
     st.session_state["report_workspace_id"] = w.id
 curr_target = TUTORIAL_STEPS[st.session_state.get("tutorial_step", 0)]["target"] if st.session_state.get("tutorial_active") else ""
 
+profile_context = w.id if w else "new-run"
+profile_defaults = review_preferences(w.id) if w else ReviewPreferences()
+if st.session_state.get("run_focus_context") != profile_context:
+    st.session_state["run_focus_context"] = profile_context
+    st.session_state["run_focus_goal"] = profile_defaults.goal
+    st.session_state["run_focus_data"] = profile_defaults.data_source
+    st.session_state["run_focus_guidance"] = profile_defaults.guidance
+    st.session_state["run_focus_skip"] = profile_defaults.dismissed and not profile_defaults.configured
+
 with st.sidebar:
     page = st.radio("View", ["Data", "Workspace", "Review", "Exports"], key="page",
                     index=0, format_func=PAGE_LABELS.get, label_visibility="collapsed")
@@ -1003,7 +1031,57 @@ if w is None and page == "Data":
 
 if page == "Data":
     saved_custom_panel(w)
-    local_rainfall_preview()
+    
+    # 1. Direct Data & Focus Intake (High-density, 0-friction)
+    intake_col1, intake_col2 = st.columns([1.6, 2.4])
+    with intake_col1:
+        st.markdown("**1. Select Data Source**")
+        curr_d = st.session_state.get("run_focus_data", profile_defaults.data_source)
+        d_idx = 1 if curr_d == "own" else 0
+        chosen_data_mode = st.radio(
+            "Data Source",
+            ["🏛️ Regional NOAA Baseline", "📂 Upload Custom CSV"],
+            index=d_idx,
+            horizontal=True,
+            label_visibility="collapsed",
+            key="step1_data_mode_radio"
+        )
+        st.session_state["run_focus_data"] = "own" if "Upload" in chosen_data_mode else "standard"
+
+    with intake_col2:
+        st.markdown("**2. Analysis Focus (Tailors Review)**")
+        goal_labels = {
+            "storage": "🌊 Storage Stress",
+            "operations": "🌾 Agronomics",
+            "handoff": "📋 Regulatory Handoff",
+            "compare": "⚖️ Comparison"
+        }
+        curr_g = st.session_state.get("run_focus_goal", profile_defaults.goal)
+        g_keys = list(goal_labels.keys())
+        g_idx = g_keys.index(curr_g) if curr_g in g_keys else 0
+        if hasattr(st, "segmented_control"):
+            chosen_goal = st.segmented_control(
+                "Analysis Focus",
+                g_keys,
+                default=curr_g if curr_g in g_keys else "storage",
+                format_func=goal_labels.get,
+                label_visibility="collapsed",
+                key="step1_goal_segmented"
+            )
+            if chosen_goal:
+                st.session_state["run_focus_goal"] = chosen_goal
+        else:
+            chosen_goal = st.selectbox(
+                "Analysis Focus",
+                g_keys,
+                index=g_idx,
+                format_func=goal_labels.get,
+                label_visibility="collapsed",
+                key="step1_goal_selectbox"
+            )
+            st.session_state["run_focus_goal"] = chosen_goal
+
+    local_rainfall_preview(expanded=(st.session_state.get("run_focus_data") == "own"))
     with tour_target("data_map"):
         metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
         quality = pd.DataFrame(source.manifest["quality"])
@@ -1045,15 +1123,16 @@ if page == "Data":
             elif interval == "Monthly":
                 groups = observations.resample("MS")
                 observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
-            else:
-                observed = observations
+            is_us = st.session_state.get("unit_mode", "us") == "us"
+            plot_obs = (observed / 25.4).round(2) if is_us else observed
             fig = go.Figure()
-            for station in observed:
-                fig.add_trace(go.Scatter(x=observed.index, y=observed[station], name=names[station], mode="lines", connectgaps=False))
-            fig.update_yaxes(title="Precipitation · mm")
+            for station in plot_obs:
+                fig.add_trace(go.Scatter(x=plot_obs.index, y=plot_obs[station], name=names[station], mode="lines", connectgaps=False))
+            fig.update_yaxes(title="Precipitation · inches" if is_us else "Precipitation · mm")
             st.plotly_chart(chart(fig, 350), width="stretch", config={"displayModeBar": False})
-            st.markdown("**Synchronized Daily Observations**")
-            st.dataframe(observations, width="stretch", height=240)
+            st.markdown(f"**Synchronized Daily Observations ({'inches' if is_us else 'mm'})**")
+            table_obs = (observations / 25.4).round(2) if is_us else observations.round(1)
+            st.dataframe(table_obs, width="stretch", height=240)
     with tab_heatmap:
         st.markdown("**35-Year Monthly Climatological Anomaly Matrix (1991–2025)**")
         st.caption("Displays percentage departure from the 35-year monthly mean baseline for each month. Crimson cells indicate severe drought deficits; teal/emerald cells indicate rainfall surpluses. Exposes historical multi-month drought runs (such as 1996, 2011, and 2022) across the record.")
@@ -1112,12 +1191,58 @@ elif page == "Workspace":
     st.markdown("**Which rainfall scenarios deserve a closer look?**")
     st.caption("Configure generation settings, establish ranking priorities, and examine candidate shortlists.")
 
-    # 1. Scenario Generation & Priority Weights Builder
+    # Review focus is chosen before generation so the resulting run opens with the
+    # relevant measurements and visuals leading. Repeated runs inherit the current
+    # run's profile; the profile remains presentation-only.
+    profile_context = w.id if w else "new-run"
+    profile_defaults = review_preferences(w.id) if w else ReviewPreferences()
+    if st.session_state.get("run_focus_context") != profile_context:
+        st.session_state["run_focus_context"] = profile_context
+        st.session_state["run_focus_goal"] = profile_defaults.goal
+        st.session_state["run_focus_data"] = profile_defaults.data_source
+        st.session_state["run_focus_guidance"] = profile_defaults.guidance
+        st.session_state["run_focus_skip"] = profile_defaults.dismissed and not profile_defaults.configured
+
+    with st.expander("⚙️ Analysis Focus & Settings (Optional)", expanded=False):
+        st.caption("Configures which visuals and tools appear first in Review. Does not change numerical calculations or export consent.")
+        focus_goal_col, focus_data_col, focus_guidance_col = st.columns(3)
+        run_focus_goal = focus_goal_col.selectbox(
+            "What are you trying to do?", list(GOALS),
+            format_func=lambda key: GOALS[key]["label"], key="run_focus_goal",
+            help="BASIN will place the related measurements and visuals first in Review.")
+        run_focus_data = focus_data_col.selectbox(
+            "Which data will you use?", list(DATA_SOURCES),
+            format_func=lambda key: DATA_SOURCES[key]["label"], key="run_focus_data",
+            help="This records your intent. It does not upload, validate, or replace data.")
+        run_focus_guidance = focus_guidance_col.selectbox(
+            "How much guidance do you want?", list(GUIDANCE),
+            format_func=lambda key: GUIDANCE[key]["label"], key="run_focus_guidance",
+            help="Guided explanations add orientation; all scientific limitations remain visible in either mode.")
+        run_focus_skip = st.checkbox(
+            "Skip tailoring and show every Review tool", key="run_focus_skip",
+            help="You can tailor the Review later without losing work.")
+        if run_focus_data == "own":
+            has_custom = any(s.startswith("LOCAL_") for s in names)
+            if has_custom:
+                local_name = next(names[s] for s in names if s.startswith("LOCAL_"))
+                st.success(f"✅ **Custom Gauge Active**: Generating scenarios from uploaded data: **{local_name}**.")
+            else:
+                st.info("📂 **Upload your rainfall CSV here to drive scenarios with your own gauge:**")
+                local_rainfall_preview(expanded=True)
+                st.caption("Tip: You can also explore full NOAA paired-station comparisons in Step 1: Data Dashboard.")
+        elif run_focus_data == "example":
+            col_ex1, col_ex2 = st.columns([2.5, 1.5])
+            col_ex1.caption("⚡ The reproducible example pre-loads 6 diverse drought candidates (Seed 22).")
+            col_ex2.button("🚀 Load Example Run ➔", key="btn_builder_load_example_inline", on_click=start_example, args=(source, names), type="primary", width="stretch")
+        elif run_focus_skip:
+            st.caption("This run will use the full Review layout. You can choose a focus later in Review.")
+
+    # Scenario Generation & Priority Weights Builder
     c_gen, c_weights = st.columns([1, 1])
     with c_gen:
         with tour_target("sidebar_generator"):
             with st.form("generate", border=True):
-                st.markdown("##### 1. Resample Weather Windows")
+                st.markdown("##### Resample Weather Windows")
                 stations = st.multiselect("Stations", list(names), default=list(w.params.stations) if w else list(names), format_func=names.get)
                 durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
                 months = st.multiselect("Starting months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
@@ -1152,6 +1277,14 @@ elif page == "Workspace":
                         st.session_state.pop("inspect_id", None)
                         st.session_state.pop("packet", None)
                         save(new)
+                        run_preferences = ReviewPreferences(
+                            goal=run_focus_goal,
+                            data_source=run_focus_data,
+                            guidance=run_focus_guidance,
+                            configured=not run_focus_skip,
+                            dismissed=True,
+                        )
+                        store_review_preferences(new.id, run_preferences)
                     st.rerun()
                 except (ValueError, OSError) as error:
                     st.error(str(error))
@@ -1159,7 +1292,7 @@ elif page == "Workspace":
     with c_weights:
         with tour_target("sidebar_presets"):
             with st.container(border=True):
-                st.markdown("##### 2. Ranking Priorities & Weights")
+                st.markdown("##### Ranking Priorities & Weights")
                 preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
                 matched = "Custom weights"
                 curr_weights = dict(w.weights) if w else {"severity": 40, "duration": 30, "concurrence": 20, "season": 10}
@@ -1216,7 +1349,11 @@ elif page == "Workspace":
                                       index=detail_ids.index(initial_id), key=f"shortfall_detail_{w.id}")
             detail = view.loc[view["ID"] == focused_id].iloc[0]
             st.caption(f"{detail['Days']:g} days · {detail['Onset']} onset")
-            st.metric("Total rainfall deficit", f"{detail['Deficit mm']:,.1f} mm", delta=f"{detail['Deficit mm']/25.4:,.2f} in", delta_color="off")
+            is_us = st.session_state.get("unit_mode", "us") == "us"
+            if is_us:
+                st.metric("Total rainfall deficit", f"{detail['Deficit in']:,.2f} in", delta=f"{detail['Deficit mm']:,.1f} mm", delta_color="off")
+            else:
+                st.metric("Total rainfall deficit", f"{detail['Deficit mm']:,.1f} mm", delta=f"{detail['Deficit in']:,.2f} in", delta_color="off")
             st.caption(detail["Profile"])
             concurrence = float(detail["Stations stressed together %"])
             concurrence_label = (
@@ -1230,9 +1367,11 @@ elif page == "Workspace":
             st.button("Open scenario review", key=f"shortfall_review_{w.id}",
                       on_click=open_review, args=(focused_id,))
         with plot_area:
+            is_us = st.session_state.get("unit_mode", "us") == "us"
             st.plotly_chart(rainfall_shortfall_figure(
                 view, w.selected, focused_id,
                 colorblind=st.session_state.get("appearance_colorblind", False),
+                unit="in" if is_us else "mm",
             ), width="stretch", config={"displayModeBar": False})
         st.caption("Totals accumulate over the whole scenario. A larger deficit in a longer window does not, by itself, mean greater drought intensity.")
         st.button("Review selected scenarios", key="btn_review_selected_scenarios", on_click=open_review, args=(w.selected[0],), type="primary")
@@ -1311,7 +1450,8 @@ elif page == "Review":
     else:
         prefs = review_preferences(w.id)
 
-        if prefs.needs_setup:
+        is_editing = st.session_state.get(f"review_editing_{w.id}", False)
+        if prefs.needs_setup or is_editing:
             with st.container(border=True):
                 st.markdown("#### Set up this Review (optional)")
                 st.caption("Three questions decide which tools appear first. Every tool stays reachable, "
@@ -1334,15 +1474,31 @@ elif page == "Review":
                                "Existing data is unchanged. Add and review a CSV in Step 1: Data Dashboard when you are ready.")
                 if chosen_data == "example":
                     st.caption("The example run opens from Step 1 or Step 2 using the existing 'Try an example' control.")
-                apply_col, skip_col, _ = st.columns([1, 1, 2])
-                if apply_col.button("Use this focus", key="btn_review_setup_apply", type="primary", width="stretch"):
-                    store_review_preferences(w.id, prefs.replace(
-                        goal=chosen_goal, data_source=chosen_data, guidance=chosen_guidance,
-                        configured=True, dismissed=True))
-                    st.rerun()
-                if skip_col.button("Skip for now", key="btn_review_setup_skip", width="stretch"):
-                    store_review_preferences(w.id, prefs.replace(dismissed=True))
-                    st.rerun()
+                if is_editing:
+                    apply_col, cancel_col, skip_col = st.columns([1, 1, 1])
+                    if apply_col.button("Use this focus", key="btn_review_setup_apply", type="primary", width="stretch"):
+                        st.session_state[f"review_editing_{w.id}"] = False
+                        store_review_preferences(w.id, prefs.replace(
+                            goal=chosen_goal, data_source=chosen_data, guidance=chosen_guidance,
+                            configured=True, dismissed=True))
+                        st.rerun()
+                    if cancel_col.button("Cancel", key="btn_review_setup_cancel", width="stretch"):
+                        st.session_state[f"review_editing_{w.id}"] = False
+                        st.rerun()
+                    if skip_col.button("Skip for now", key="btn_review_setup_skip", width="stretch"):
+                        st.session_state[f"review_editing_{w.id}"] = False
+                        store_review_preferences(w.id, prefs.replace(configured=False, dismissed=True))
+                        st.rerun()
+                else:
+                    apply_col, skip_col, _ = st.columns([1, 1, 2])
+                    if apply_col.button("Use this focus", key="btn_review_setup_apply", type="primary", width="stretch"):
+                        store_review_preferences(w.id, prefs.replace(
+                            goal=chosen_goal, data_source=chosen_data, guidance=chosen_guidance,
+                            configured=True, dismissed=True))
+                        st.rerun()
+                    if skip_col.button("Skip for now", key="btn_review_setup_skip", width="stretch"):
+                        store_review_preferences(w.id, prefs.replace(dismissed=True))
+                        st.rerun()
         else:
             focus_text, focus_toggle, focus_change = st.columns([3, 1, 1])
             focus_text.caption("**Review focus:** " + prefs.summary())
@@ -1353,10 +1509,10 @@ elif page == "Review":
                 prefs = prefs.replace(show_all_tools=show_all_tools)
                 store_review_preferences(w.id, prefs)
             if focus_change.button("Change focus", key=f"btn_review_change_focus_{w.id}", width="stretch"):
+                st.session_state[f"review_editing_{w.id}"] = True
                 st.session_state["review_setup_goal"] = prefs.goal
                 st.session_state["review_setup_data"] = prefs.data_source
                 st.session_state["review_setup_guidance"] = prefs.guidance
-                store_review_preferences(w.id, prefs.replace(configured=False, dismissed=False))
                 st.rerun()
             if prefs.configured and prefs.data_source == "own":
                 st.caption("Your focus records an intent to use your own rainfall data. Nothing has been uploaded or "
@@ -1464,7 +1620,8 @@ elif page == "Review":
         primary_keys, secondary_keys = prefs.tab_layout()
         panes = dict(zip(primary_keys, st.tabs([TAB_LABELS[key] for key in primary_keys])))
         if secondary_keys:
-            with st.expander(f"More tools ({len(secondary_keys)})", expanded=False):
+            expand_secondary = bool(curr_target == "review_simulation" and "storage" in secondary_keys)
+            with st.expander(f"More tools ({len(secondary_keys)})", expanded=expand_secondary):
                 st.caption("Everything outside your current focus. Nothing here is disabled, and your work is unchanged.")
                 panes.update(zip(secondary_keys, st.tabs([TAB_LABELS[key] for key in secondary_keys])))
         if prefs.guided and prefs.configured:
@@ -1589,6 +1746,7 @@ elif page == "Review":
                                 "At or below 30%": threshold_day_label(r["day_stage2_30"]),
                                 "At or below 20%": threshold_day_label(r["day_stage3_20"]),
                                 "Critical band": "Not reached in window" if r["day_stage3_20"] is None else "Reached in window",
+                                "Dead Storage / Day Zero": f"Day {r['day_zero']}" if r.get("day_zero") else ("Day " + str(r['day_dead_storage']) if r.get("day_dead_storage") else "Not reached"),
                             }
                             for r in spec["summary_table"]
                         ])
@@ -1600,6 +1758,16 @@ elif page == "Review":
                         with tour_target("review_simulation"):
                             st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms, config=chosen_sys)), width="stretch", config={"displayModeBar": False})
                             st.plotly_chart(accessible_chart(stage_trigger_milestone_figure({"tier_results": {1.0: {"df": sim_df}}}, chosen_sys.stage_bands_pct)), width="stretch", config={"displayModeBar": False})
+
+                        # Dire Condition & Day Zero Warning
+                        if sim_df["is_day_zero"].any():
+                            day_zero_val = int(sim_df.loc[sim_df["is_day_zero"], "day"].iloc[0])
+                            st.error(
+                                f"🚨 **Day Zero Failure**: Reservoir storage entered the inactive dead storage reserve on **Day {day_zero_val}**. "
+                                f"Intake pumps cavitate and raw water deliveries cease. Cumulative unserved demand reached **{sim_df['unmet_demand_acft'].sum():,.0f} ac-ft**."
+                            )
+                        elif sim_df["combined_pct"].min() <= 7.7 and ("Region N" in chosen_sys.name or "Corpus Christi" in chosen_sys.name):
+                            st.warning(f"⚠️ **Historic Record Low Exceeded**: Storage dropped to **{sim_df['combined_pct'].min():.1f}%**, falling below the mid-April 2026 all-time low of 7.7% and the TWDB 75,000 ac-ft inactive reserve.")
 
                         # Same inclusive rule as the spectrum, tools and PDF, including day 0.
                         bands = chosen_sys.stage_bands_pct
@@ -1614,8 +1782,42 @@ elif page == "Review":
                         m2.metric("Lowest combined storage", f"{sim_df['combined_pct'].min():.1f}%")
                         m3.metric(f"At or below {band_1:g}% (conditional)", threshold_day_label(s1))
                         m4.metric(f"At or below {band_2:g}% (conditional)", threshold_day_label(s2))
+
+                        # Multi-Sector Delivery Breakdown
+                        if "served_domestic_acft" in sim_df.columns and sim_df["served_demand_acft"].sum() > 0:
+                            st.markdown("##### 👥 Multi-Sector Water Delivery")
+                            sec1, sec2, sec3 = st.columns(3)
+                            sec1.metric("Domestic Baseload", f"{sim_df['served_domestic_acft'].sum():,.0f} ac-ft")
+                            sec2.metric("Industrial Contracted", f"{sim_df['served_industrial_acft'].sum():,.0f} ac-ft")
+                            sec3.metric("Outdoor / Irrigation", f"{sim_df['served_outdoor_acft'].sum():,.0f} ac-ft")
+
+                        # Pipeline Outage Resilience Counterfactual
+                        if pipeline_active and getattr(chosen_sys, "pipeline_capacity_mgd", 0) > 0 and chosen_sys.demand_no_pipeline_acft_day is not None:
+                            sim_no_pipe = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=False, config=chosen_sys)
+                            crit_pct = chosen_sys.stage_bands_pct[2] * 100 if len(chosen_sys.stage_bands_pct) >= 3 else 20.0
+                            s_crit_with = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < crit_pct), None)
+                            s_crit_without = next((r["day"] for _, r in sim_no_pipe.iterrows() if r["combined_pct"] < crit_pct), None)
+                            if s_crit_with and s_crit_without and s_crit_with > s_crit_without:
+                                st.info(f"🛡️ **Pipeline Resilience Metric**: The Mary Rhodes Pipeline ({chosen_sys.pipeline_capacity_mgd:.0f} MGD) extends the Stage 3 survival runway by **{s_crit_with - s_crit_without} days** compared to a total pipeline outage.")
+                            elif s_crit_without and not s_crit_with:
+                                st.info(f"🛡️ **Pipeline Resilience Metric**: The Mary Rhodes Pipeline ({chosen_sys.pipeline_capacity_mgd:.0f} MGD) completely prevents Stage 3 breach in this window (which breaches on Day {s_crit_without} under a pipeline outage).")
+
+                        # TCEQ Emergency Inflow Status
+                        if getattr(chosen_sys, "estuary_order_active", False) and sim_df["estuary_pass_through_acft"].sum() == 0:
+                            st.caption(f"🌿 **TCEQ 2026 Emergency Inflow Order Active**: Estuary pass-through suspended while storage ≤ {getattr(chosen_sys, 'estuary_threshold_pct', 0.50)*100:.0f}%, retaining 100% of inflow in municipal storage.")
+
                         st.info("📢 **Operational Takeaway**: " + reservoir_summary(sim_df, chosen_sys.name))
                         st.caption(f"Results cover this {len(s.series)}-day window only. Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings are retained for this workspace during the session; opening another workspace resets them.")
+
+                        with st.expander("🏛️ Regional Policy & 'Day Zero' Context (Corpus Christi / Region N)", expanded=False):
+                            st.markdown(
+                                """
+                                **The 'First City in America to Run Out of Water' Narrative vs. Operational Realities:**
+                                - **National Coverage vs. City Rebuttal**: Throughout early-to-mid 2026, national reports (*Texas Tribune*, *Inside Climate News*, *Circle of Blue*, *Futurism*, *Deceleration News*) highlighted projections that Corpus Christi could become America's first modern "Day Zero" metropolis when combined storage plummeted to an all-time low of **7.7% in mid-April 2026**. The City pushed back, clarifying that a **Level 1 Water Emergency** is an administrative 180-day planning trigger, and that the **Mary Rhodes Pipeline** (70–72 MGD) guarantees a firm regional baseload (~70% of demand) preventing complete dry-pipe failure even if reservoirs hit dead pool.
+                                - **The Fair Water Charter Amendment (Nov 3, 2026 Ballot)**: On August 11, 2026, City Council voted 6–2 to place a charter amendment on the ballot (prompted by ~13,000 citizen signatures) to eliminate the **Drought Surcharge Exemption Fee (DSEF)**. Under DSEF, industrial plants consuming >50% of regional potable water paid $0.31/kGal to bypass drought surcharges, while residents faced 20 months of Stage 3 sprinkler bans and $4–$8/kGal surcharges.
+                                - **Simulating Policy Choices in BASIN**: The Multi-Sector Water Delivery metrics above reflect these dynamics. When combined storage breaches Stage 4 (10%), BASIN models the Fair Water policy mandate by curtailing industrial demand by 30% and outdoor use by 100%, protecting essential domestic baseload and extending reservoir lifespan.
+                                """
+                            )
 
         with tab_agro:
             st.caption("Cross-sector operational impacts calculated from daily scenario rainfall. Illustrative decision-support estimates based on Texas ET Network and Texas A&M Forest Service guidelines; not regulatory declarations or official crop/burn directives.")
@@ -1777,10 +1979,15 @@ elif page == "Review":
                         except (ValueError, TypeError) as error:
                             st.error(str(error))
             with evidence_tab:
-                st.dataframe(pd.DataFrame({"Station": list(s.provenance["retention_by_station"]),
-                                           "Scenario rainfall (fraction of observed)": list(s.provenance["retention_by_station"].values()),
-                                           "Current deficit mm": [f["station_deficits_mm"][i] for i in s.provenance["retention_by_station"]]}),
-                             hide_index=True, width="stretch")
+                is_us = st.session_state.get("unit_mode", "us") == "us"
+                ev_data = {
+                    "Station": list(s.provenance["retention_by_station"]),
+                    "Scenario rainfall (fraction of observed)": list(s.provenance["retention_by_station"].values()),
+                    "Current deficit mm": [f["station_deficits_mm"][i] for i in s.provenance["retention_by_station"]],
+                }
+                if is_us:
+                    ev_data["Current deficit in"] = [round(f["station_deficits_mm"][i] / 25.4, 2) for i in s.provenance["retention_by_station"]]
+                st.dataframe(pd.DataFrame(ev_data), hide_index=True, width="stretch")
                 evidence_panel(w, s, save)
                 st.json({"source": s.provenance, "features": f, "score_contributions": s.components, "snapshot_sha256": source.manifest["sha256"]})
             with history_tab:

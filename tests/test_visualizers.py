@@ -72,6 +72,18 @@ def test_shortfall_panels_preserve_scenario_values_and_selection(workspace):
     assert len({tuple(axis.range) for axis in yaxes}) == 1
 
 
+def test_shortfall_panels_unit_in(workspace):
+    view = make_view(workspace)
+    fig_in = rainfall_shortfall_figure(view, workspace.selected, workspace.selected[0], unit="in")
+    candidates = [t for t in fig_in.data if t.legendgroup.startswith("profile-")]
+    plotted = {d[0]: (x, y, d[6]) for t in candidates for x, y, d in zip(t.x, t.y, t.customdata)}
+    for _, row in view.iterrows():
+        assert plotted[row.ID][1:] == (row["Deficit in"], row.Days)
+    yaxes = [fig_in.layout[k] for k in fig_in.layout if k.startswith("yaxis")]
+    titles = [axis.title.text for axis in yaxes if getattr(axis, "title", None) and getattr(axis.title, "text", None)]
+    assert "Total rainfall deficit (in)" in titles
+
+
 def test_shortfall_offsets_are_stable_and_maxima_are_per_duration(workspace):
     view = make_view(workspace)
     # Equal deficits must remain separately selectable. A later duration can have

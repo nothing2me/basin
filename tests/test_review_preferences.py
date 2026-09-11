@@ -142,6 +142,9 @@ def app(tmp_path, monkeypatch):
     at.sidebar.radio[0].set_value("Workspace").run()
     next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
     at.sidebar.radio[0].set_value("Review").run()
+    # Newly created runs are tailored before generation. Re-open the editor so the
+    # tests below can exercise every Review-side setup path as well.
+    next(b for b in at.button if b.label == "Change focus").click().run()
     assert not at.exception
     return at
 
@@ -173,6 +176,43 @@ def workspace_state(at):
         "experiment_config": (at.session_state["experiment_config"]
                               if "experiment_config" in at.session_state else None),
     }
+
+
+def test_pre_run_answers_configure_the_new_review(isolated_sessions):
+    """The run inherits the profile chosen before scenario generation."""
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=90).run()
+    at.sidebar.radio[0].set_value("Workspace").run()
+
+    at.selectbox(key="run_focus_goal").set_value("storage")
+    at.selectbox(key="run_focus_data").set_value("own")
+    at.selectbox(key="run_focus_guidance").set_value("technical")
+    next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
+    assert not at.exception
+
+    workspace_id = at.session_state.workspace.id
+    prefs = at.session_state["review_prefs"][1]
+    assert (prefs.goal, prefs.data_source, prefs.guidance) == ("storage", "own", "technical")
+    assert prefs.configured is True and prefs.dismissed is True
+    assert load_preferences(workspace_id, isolated_sessions) == prefs
+
+    at.sidebar.radio[0].set_value("Review").run()
+    assert not at.exception
+    assert not any("Set up this Review" in m.value for m in at.markdown)
+    expected = [TAB_LABELS[key] for key in TAB_KEYS if key in FOCUS_PRIMARY["storage"]]
+    assert top_level_tab_labels(at)[:len(expected)] == expected
+    assert "Nothing has been uploaded or validated by that choice" in rendered_text(at)
+
+
+def test_pre_run_setup_can_be_skipped():
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=90).run()
+    at.sidebar.radio[0].set_value("Workspace").run()
+    at.checkbox(key="run_focus_skip").set_value(True)
+    next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
+    at.sidebar.radio[0].set_value("Review").run()
+    assert not at.exception
+    assert set(top_level_tab_labels(at)) == TAB_LABEL_VALUES
+    assert more_tools_expander(at) is None
+    assert at.session_state["review_prefs"][1].configured is False
 
 
 def test_setup_is_offered_and_can_be_skipped(app):
@@ -293,7 +333,9 @@ def test_guidance_only_adds_notes_and_never_removes_disclosures(app):
 def test_an_older_saved_run_opens_without_a_preferences_file(app, isolated_sessions):
     """The upgrade path: a run that predates this feature must not error."""
     workspace_id = app.session_state.workspace.id
-    assert not preferences_path(workspace_id, isolated_sessions).exists()
+    preferences_path(workspace_id, isolated_sessions).unlink()
+    del app.session_state["review_prefs"]
+    app.run()
     assert not app.exception
     assert set(top_level_tab_labels(app)) == TAB_LABEL_VALUES
 
@@ -322,3 +364,56 @@ def test_change_focus_opens_with_saved_choices(app):
     assert app.radio(key="review_setup_goal").value == "storage"
     assert app.radio(key="review_setup_data").value == "own"
     assert app.radio(key="review_setup_guidance").value == "technical"
+
+
+def test_cancelling_changes_restores_active_focus(app):
+    app.radio(key="review_setup_goal").set_value("storage").run()
+    next(b for b in app.button if b.label == "Use this focus").click().run()
+    assert app.session_state["review_prefs"][1].goal == "storage"
+
+    next(b for b in app.button if b.label == "Change focus").click().run()
+    app.radio(key="review_setup_goal").set_value("operations").run()
+    next(b for b in app.button if b.label == "Cancel").click().run()
+    assert not app.exception
+
+    # Preserved previous focus ("storage"), and setup editor is closed
+    prefs = app.session_state["review_prefs"][1]
+    assert prefs.goal == "storage"
+    assert prefs.configured is True
+    assert not any("Set up this Review" in m.value for m in app.markdown)
+
+
+def test_operations_goal_leads_with_agronomics_and_provenance(app):
+    app.radio(key="review_setup_goal").set_value("operations").run()
+    next(b for b in app.button if b.label == "Use this focus").click().run()
+    assert not app.exception
+
+    prefs = app.session_state["review_prefs"][1]
+    assert prefs.goal == "operations"
+    primary, secondary = prefs.tab_layout()
+    assert primary == ("agronomics", "provenance")
+    assert set(secondary) == {"storage", "rainfall", "edits"}
+    assert prefs.suggested_preset() == "Illustrative rural provider"
+
+
+def test_tutorial_step5_auto_expands_storage_in_more_tools():
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=90).run()
+    at.sidebar.radio[0].set_value("Workspace").run()
+    at.selectbox(key="run_focus_goal").set_value("compare")
+    next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
+    at.sidebar.radio[0].set_value("Review").run()
+    assert not at.exception
+
+    # With compare goal, storage is under More tools and collapsed
+    expander = more_tools_expander(at)
+    assert expander is not None
+    assert expander.proto.expanded is False
+
+    # When tutorial step 5 targets review_simulation
+    at.session_state["tutorial_active"] = True
+    at.session_state["tutorial_step"] = 4  # 0-indexed step 5
+    at.run()
+    assert not at.exception
+    expander = more_tools_expander(at)
+    assert expander is not None
+    assert expander.proto.expanded is True
