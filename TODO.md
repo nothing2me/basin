@@ -1,114 +1,44 @@
 # BASIN team TODO
 
-### Tasks 1–3 integration checkpoint (September 11 UTC)
+Dated checkpoint narratives before this reconciliation (CSV preview, tutorial/appearance
+checkpoints, board audits, task-3/task-2 independent reviews, the September 8 security
+follow-up, and earlier work-session notes) are archived verbatim at
+[docs/archive/todo_narrative_history_2026-09.md](docs/archive/todo_narrative_history_2026-09.md).
+This file keeps the live task board (below) and a reconciled current-status summary.
+See [docs/status_reconciliation_handoff.md](docs/status_reconciliation_handoff.md) for
+how this reconciliation was done and its evidence.
 
-- [x] Task 1: optional native runtime install/repair path with binary/hash pins, separate runtime/weights messaging, isolated import checks and setup-mode tests. Explicit --wheelhouse cannot fall back online. This is not clean-laptop certification.
-- [x] Task 2 bounded fixes: input-relative rainfall tiers, day-zero/inclusive bands, percentage clarification, exact year/ID behavior, custom no-pipeline demand preservation and display-unit corrections. Legacy simulation results must be rerun and re-reviewed; no numerical model calibration is claimed.
-- [x] Task 3: renderer outcomes/failure disclosure and automated cross-output consent/revocation tests. Windows deliberately uses the vector renderer. Device/download checks remain B17.5.
-- [ ] Task 4: actual Review light/dark, narrow-screen, keyboard and interaction acceptance; original pre-run placement remains a product follow-up.
-- [ ] Task 5: consolidate historical documentation against merged evidence. Saved simulations already exist in upstream P0-C; do not describe all of B16 as unimplemented.
-- [ ] Task 6: clean presentation-laptop setup/offline/download/recovery, real model timing, intended-user feedback and official event format/rehearsal.
-- [ ] Remaining numerical/product boundaries: assistant simulations use Region N while Review can select another system; operational-sounding takeaways; legacy report percentage ambiguity; source descriptions for custom observations; catchment calibration.
-- [ ] Native release gates: VC++/CPU prerequisites, offline bundle vcomp140.dll handling, model license/provenance and advisory reassessment. Diskcache advisory remains unresolved with an inactive-code-path rationale, not named-human approval.
+## Current status — September 11, 2026 (status-reconciliation pass)
 
-Newest HANDOFF entry records integration verification; previous counts below are historical.
+Base: `origin/main` at `5679637145560d7d5ed6b9831255a0877ec699d8`. See `HANDOFF.md`'s
+current-status section for the full reconciled picture; summary here:
 
-### Next work after Review/Qwen integration
+- [x] Task 1 (optional native Qwen runtime install/repair): implemented, automatically
+      tested. Not device-tested — see `docs/native_runtime_handoff.md`.
+- [x] Task 2 (numerical/label meaning across surfaces, bounded fixes): implemented,
+      automatically tested for the listed items. B15.4 and the assistant's fixed-Region-N
+      tools remain open — see `docs/numerical_meaning_handoff.md` §4.
+- [x] Task 3 (PDF renderer outcomes/failure disclosure, cross-output consent): implemented,
+      automatically tested. B17.5 (actual-device download/write-failure testing) remains
+      open — see `docs/pdf_failure_handoff.md`.
+- [ ] Task 4 (Review UI acceptance): a branch exists (`task/review-acceptance-checks`,
+      `864d95f`) that verified all four focuses, Show all tools, Change focus and
+      navigation persistence in a real browser, and fixed two real accessibility defects
+      (light-theme logo contrast, invisible keyboard focus on toggles) — **but it is not
+      yet merged**, and it could not verify narrow-viewport reflow or the tutorial/
+      Saved-Runs popovers in its automation session. Do not treat those as verified.
+- [x] Task 5 (this pass): consolidated `TODO.md`/`HANDOFF.md`, corrected two stale
+      claims (custom-evidence export in `docs/claim_inventory.md`; reservoir-export
+      exclusion in `README.md`), and confirmed B16 (saved/replayable simulations) is
+      substantially implemented and tested, contrary to its old "fully open" status
+      below — see the B16 section for exactly what is and isn't done.
+- [ ] Task 6 (presentation-laptop acceptance): not started. This is now the single
+      largest remaining gate — most "implemented, automatically tested" items above are
+      explicitly not device-tested.
 
-Ready-to-run prompts: [native install](docs/next_tasks/01_native_runtime.md), [numerical meaning](docs/next_tasks/02_numerical_meaning.md), [PDF failures](docs/next_tasks/03_pdf_failures.md), [Review acceptance](docs/next_tasks/04_review_acceptance.md), [status reconciliation](docs/next_tasks/05_status_reconciliation.md), [laptop/team acceptance](docs/next_tasks/06_laptop_and_people.md). Native install and Review acceptance may run in parallel; numerical/PDF/UI code overlaps must be coordinated. Larger B16/B19/B20/B21 scopes remain deferred pending team prioritization.
-
-### Embedded Qwen audit branch checkpoint
-
-- [x] Add grounded-response enforcement, a three-call validated batch budget, streamed-index bounds, worker-load model hash/size checks and timeout termination. Focused checks: 90 passed, 1 model-dependent skip. See [audit evidence](docs/qwen_security_review.md).
-- [x] Combined Qwen audit and tailored Review in the integration branch; final verification is recorded in the newest HANDOFF checkpoint.
-- [x] Optional native-runtime install/repair path implemented in Task 1.
-- [ ] Complete native advisory reassessment and actual-laptop inference/offline acceptance. Model weights alone do not activate Qwen; earlier live-model claims remain historical.
-
-### Latest integration: installation pins and optional model helpers
-
-- [x] **SEC.7** Apply reviewed assistant dependency pins through the shared requirements include, ship every requirements file, and test independent archive resolution. Exact-pin checks reject wildcards and conditional pins.
-- [x] **SEC.8** Fix A-1 in optional Ollama helpers using raw inventory metadata and conservative eligibility checks. Active chat uses embedded Qwen and does not call these helpers; this is not active-chat egress validation.
-- [ ] Review the newer embedded-Qwen path separately: dependency/runtime installation, model identity enforcement, ungrounded model prose, tool-call limits and actual laptop/offline operation. The earlier Python advisory report does not cover this new native runtime.
-- [x] Tailored Review (Part A complete): pre-run questionnaire in Scenario Builder, 4 user goals mapped (`compare`, `storage`, `operations`, `handoff`), secondary tools under `More tools` with `provenance` always leading, cancelling changes support, persistence via sidecars, and verified usability across desktop/narrow viewports, light/dark themes, keyboard navigation, and tutorial targets.
-
-See the newest HANDOFF checkpoint for combined verification. Older completion counts are historical.
-
-### September 9 Rural Usability, Data Sovereignty, Agronomics & Optional AI Installer — COMPLETE
-- [x] **Setup & Installer Choice (`Setup BASIN.cmd`)**: Added interactive prompt `[y/N]` and `--with-ai` / `--no-ai` CLI flags. Clearly documents that the 2.1 GB embedded Qwen model download requires internet, while skipping allows 100% offline installation with instant direct tools.
-- [x] **US Customary Units Default & Global Toggle (`app.py`, `basin_core/summary.py`, `basin_core/visualizers.py`)**: US customary units default (`in`, `ac-ft`, `GPM`) with immediate global toggle in header. Dual-unit text summaries and unit-aware chart visualizers preserve 100% test compatibility.
-- [x] **Storage Preset Default & Dynamic Emergency Pipeline (`basin_core/water_system.py`, `app.py`)**: "Small Municipal District (12k ac-ft)" and "Rural Farm Pond (1.5k ac-ft)" presets available with active emergency pipeline/intertie modeling (`demand_no_pipeline_acft_day`).
-- [x] **Unrestricted Navigation (`app.py`)**: All 4 tabs (Data, Workspace, Review, Export) accessible without artificial "Accept" lock gates.
-- [x] **Data Sovereignty Core Engine (`basin_core/data.py`, `basin_core/engine.py`, `app.py`)**: User-uploaded local rainfall CSVs can be activated as the driving gauge to generate candidate scenarios and run reservoir simulations.
-- [x] **Agronomics & Wildfire Danger Panel (`basin_core/agronomics.py`, `app.py`, `tests/test_agronomics.py`)**: Texas Reference ET ($ET_o$), crop water demand ($ET_c = ET_o \times K_c$) for 5 staple crops (cotton, sorghum, corn, pasture, row crops), and Keetch-Byram Drought Index (KBDI 0–800) with county burn ban detection (KBDI > 600).
-- [x] **Instant UI Chips & CPU Prompt Optimization (`basin_ui.py`, `basin_core/assistant.py`)**: 6 instant analysis chips (0.01s latency, zero LLM overhead); dynamic tool candidate pruning drops prompt tokens by 75% and speeds CPU inference by 3.3x (from 30.4s to 9.0s).
-- [x] **Honest Environmental Footprint Accounting (`app.py`)**: Separate reporting of Data Processing (K-Means) energy and active Assistant AI inference energy.
-- [x] **Full test suite pass rate: 308 / 308 passed (100.0%) across all 25 test modules!**
-
-### September 9 embedded Qwen inference, 40-point physics, and usability suite — COMPLETE
-- [x] Pinned `llama-cpp-python==0.3.35` and `models/qwen2.5-3b-instruct-q4_k_m.gguf` (SHA-256: `626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d`, 2,104,932,768 bytes).
-- [x] Process-isolated runtime in `basin_core/qwen_runtime.py` with 8k context, tool calling, and cancellation.
-- [x] Assistant execution wired in `basin_core/assistant.py` with parameter validation and deterministic tool evaluation.
-- [x] Standalone smoke test `scripts/qwen_smoke_test.py` verified with `output/qwen_smoke_evidence.json` (PASS).
-- [x] 50-question benchmark `scripts/evaluate_routing_quality.py` passed 50/50 (100.0%) in `output/routing_quality_evidence.json`.
-- [x] Live UI drawer status badge in `basin_ui.py` displaying `🟢 Ready: Qwen2.5-3B (Q4_K_M · CPU)`.
-- [x] Complete 40-point physics, calculations, usability, and workflow suite: capacity-scaled evaporation, smooth 12-month pan evaporation curve, surface area EAC scaling, flexible calendar onsets, extended 2025 benchmark horizon, single-scenario edit cluster stability, dynamic single-station concurrence text, catchment weighting disclosures, dual-unit displays, flexible CSV engine, batch accept, undo swap, Excel deliverable, cross-platform folder open, persistent downloads card, and parameterized stage bands.
-- [x] Full test suite: **293 / 293 passed (100%)** across 23 test modules in 467.51s.
-
-Review/chart integration with upstream report changes and baseline test suite passed. Concurrent water-system/summary work in the working directory is preserved and integrated.
-
-Updated: 2026-09-09 | Latest verification: Real embedded Qwen inference + full 40-point scope verified (293 passed). Consult the newest HANDOFF checkpoint for verification.
-
-## September 8 team-context reconciliation
-
-### September 9 task 3 independent review
-
-Completed the task 3 layout/isolation scope, with review fixes for a single note spanning multiple pages, width measurement after symbol transliteration, wide WinAnsi punctuation, readable HTML table columns, and wrapped vector spectrum labels. B17.7 is complete. **B17.3 remains partial** because browser-renderer failure/degraded-output reporting is not finished; Unicode fonts are also not implemented. Task 4 is still needed: test and pin the optional Ollama Python client, verify its real loopback/proxy/redirect behavior using a controlled local fixture, and record a scoped dependency-advisory report. Do that on a separate branch from updated main; do not merge it without review. It does not establish daemon egress behavior.
-
-Manual acceptance instructions: [Report and device checklist](docs/report_device_acceptance.md). Security/dependency/live-model and actual-device gates remain open. Final suite: **268 passed**; snapshot, smoke, explicit replay and source packaging passed. Visual-review scope is recorded in the newest HANDOFF checkpoint.
-
-### September 9 task 2 independent review (historical)
-
-B17.1/B17.2 now include additional review fixes: preview identity covers current workspace contents (including changed consented notes and weights), no-accepted-scenario previews are removed, changing workspaces clears prior report/configuration state, and Review settings survive navigation. A missing configured scenario or mismatched revision now makes the experiment unavailable until reconfigured instead of simulating another accepted scenario. Custom tier labels correctly show 50% retention as -50% rainfall; calculations are unchanged. The export success message distinguishes the verified ZIP from its separate unverified PDF.
-
-B17.1/B17.2 completion is for current-session configuration and export wiring, not B16 saved/replayable simulations. The task 3 layout/isolation work is now completed as recorded above; renderer degradation handling and device checks remain open. SEC.4/SEC.5, B09 human validation, B10 installer/device/offline checks, B19 area modeling and B21 document ingestion remain open. B17.4's basic CLI consent flags were implemented under SEC.2; its broader cross-output/device checks still need completion. Independent review: **241 tests passed**, snapshot, offline Python smoke, explicit replay (implementation matches current) and source packaging passed. See the newest HANDOFF checkpoint for scope and evidence.
-
-September 9 follow-up: B17.6 independently reviewed and accepted for integration with upstream `21f98db`. Original Claude branch: 191 passing tests; combined build plus short-window report regression: **192 passed**. Snapshot, Python offline smoke, explicit replay and source packaging passed. Fixed leftover six-month no-breach wording; adapted the security mock to exercise the optional Ollama route. PDF fixture isolation is already done, so task 3 should not redo it. **Superseded next step: B17.1/B17.2 are now complete in the task 2 review above.** Long-text/pagination, domain review, live model/network and native installer/device acceptance remain open. New upstream installer functionality is not certified by this report review.
-
-### Combined-build verification after Noah's update
-
-Merged Noah's `40a7023` into the security branch (merge `502824a`). **172 tests passed in 122.44 s**, including the 13 security tests and the previously failing PDF/UI export workflows. Fresh-checkout snapshot, Python offline smoke and independent replay passed; run `0d51fc36a996`, five scenarios, 500 audit records, implementation matches. No custom comparisons in that smoke packet. A generated two-page Windows PDF was rendered and visually inspected. Security client restrictions, HTML escaping, CLI consent and tracked-only packaging survived the merge.
-
-The previous four test failures are resolved in this combined build. **B15.1's passing-suite gate is complete at this revision.** The report-content defects listed here on September 8 are corrected in B17.6 below (branch `fix/b17-report-content-accuracy`): the hard-coded 963,600 ac-ft total, the substituted example spectrum rows, the unconditional audit/PASS wording and the unsupported policy/benefit assertions. `tests/test_pdf_report.py` no longer depends on an existing local session; it builds an isolated workspace from the shared fixture. B17 still remains partial: settings propagation from `app.py` (B17.1), the consent preview (B17.2), CLI opt-ins (B17.4) and device checks (B17.5) are untouched by that work. Live Ollama/device checks remain open.
-
-Security follow-up: [September 8 security review](docs/security_review_2026-09-08.md) records findings, fixes, tests and remaining gates. Application-level hardening is implemented; live Ollama/network validation and dependency advisory review remain open. Do not mark the entire application “secure” from these checks.
-
-- [x] **SEC.1** Fix assistant client destination/proxy/redirect configuration, model-name filtering, tool argument validation and bounded calls/history; add mocked boundary and invalid-call tests.
-- [x] **SEC.2** Make CLI notes/custom exports opt-in, escape model-name HTML, and prevent untracked files being swept into source packages; test consent propagation and package exclusion.
-- [ ] **SEC.4** Validate live Ollama and daemon egress on the presentation laptop. **Partially complete.** The dependency advisory review and the optional-stack pin are done (see SEC.6); embedded Qwen offline assistant inference is implemented and rehearsed locally. Observing daemon outbound traffic on the presentation machine remains open.
-- [x] **SEC.6** Pin and test the optional assistant client, and run a dependency advisory review. `requirements.txt` moves from `ollama>=0.4.0` to `ollama==0.6.2` after testing 0.4.0/0.4.9/0.5.4/0.6.2 with `scripts/probe_ollama_client.py`; `requirements-assistant.txt` pins the transitive closure that actually implements the proxy/redirect/timeout behaviour. `tests/test_ollama_client.py` verifies against the real installed client that BASIN's options reach the transport, that a hostile `OLLAMA_HOST`/proxy environment does not move the endpoint, and that a local 307 fixture is not followed, all on loopback with no external calls and no model download. [Advisory review](docs/dependency_advisories_2026-09-09.md) records commands, date, scope, findings and limits; [setup doc](docs/ollama_setup.md) separates the Python package, the Ollama service and the model. Finding A-1 was corrected during integration under SEC.8; active chat has since moved to embedded Qwen.
-- [ ] **SEC.5** Complete actual-device browser/native/download/PDF checks, frozen-package privacy inspection and broader adversarial/session-input testing. Earlier B15 export test failures are resolved; these device/privacy acceptance checks remain open.
-
-Message (7) is the latest supplied backlog. It starts at item 2; its closing recommendation mentions baseline/units/scenario-selection repairs without supplying item 1. B15 records that prerequisite from inspected code rather than inventing a missing attachment section. Message (6) is the earlier backlog; messages (4)/(5) are duplicate efficiency guidance, not feature requirements. The private Discord transcript is context, not evidence of tests or authorization to contact people, publish, deploy or book travel.
-
-- Team-stated lanes: Mohammed volunteered for UI/UX and security; Misha stated a focus on information/data; Noah reported assistant, spectrum, native and presentation work and proposed a download website. These are context, not invented acceptance or reviewer assignments. Reviewers remain unassigned.
-- Team target: feature readiness before September 18–19, with rehearsal time protected ahead of the September 22 showcase. This is a planning target, not an organizer deadline. The proposed meeting was moved toward Thursday; confirmation and professional-review arrangements remain with the team. Travel-form completion is individual and outside this engineering board.
-- Implemented: historical scenarios/review/export; schema 2.1 saved custom evidence with consent, versioning and replay; optional Ollama assistant; stress-spectrum charts; separate PDF output; native download handling. Implementation is not proof of usability, scientific validation, offline isolation or executable self-containment.
-- Corrected since earlier backlog: PDF breach arithmetic and PDF note opt-in have code/tests; do not reopen these as wholly absent. Selected-settings propagation and report cache invalidation are now done under B17.1/B17.2; fallback/degraded-render reporting (B17.3), CLI opt-ins (B17.4), device checks (B17.5) and independent PDF verification remain open.
-- Current checks: snapshot checkout, Python offline smoke and explicit replay passed; run `21fac96ba217`, five scenarios, 500 audit records, implementation matches. That smoke packet contains **zero custom comparisons**; it is not a custom-data acceptance exercise. Full-suite result is recorded in HANDOFF.md when the current run finishes.
-- Priority order: B15 correctness → B16 persistence/B17 report alignment → B18 assistant/privacy hardening → B19 one area model → B20 geographic views. B21 document ingestion can proceed after its evidence contract is agreed. Human validation and event confirmation should proceed alongside technical work.
-
-The duplicate custom-evidence B13 heading is renamed B14 below; B13 remains the UI workflow task. Earlier checkpoint counts are historical, not current test totals. All new unchecked items are open work, with completed portions stated explicitly.
-
-This is the shared task board for BASIN. Subdivide work here using stable IDs rather than maintaining separate TODO documents per person. A GitHub issue or PR may discuss implementation, but link its ID here and keep this board's owner/status current. This plan proposes work; it does not claim team approval of new product scope or assign real people without their agreement.
-
-## Active implementation — September 6
-
-User authorized completing this board. Implementation owner: Codex on `codex/demo-ready`.
-Intended independent reviewer: a TAMUCC professional identified by the user; name and review evidence pending.
-User explicitly selected B08 Path B: retain an illustrative reservoir experiment. Paths A/C are not selected.
-Primary workflow: rural-serving analyst prepares three reviewed rainfall scenarios, inspects evidence, records an unresolved assumption, and exports a packet for expert review.
-Implement B02/B04 baseline first, B03/B05 evidence next, then B06 comparison. One implementer owns the shared schema and app integration.
-Presentation device is a different Windows laptop. The actual Stage 1 submission, finalist tie-breaker Q&A, August 10 rules and resource packet are available; finalist-specific presentation length/format instructions, freeze and device verification remain pending.
+Do not repeat as future work: Ollama client pinning/advisory review (SEC.6/7/8, done),
+or PDF fixture test isolation (B17.7, done). These appeared as "next steps" in now-archived
+narrative dated before their completion.
 
 ## Product objective and scope
 
@@ -136,61 +66,6 @@ Suggested three-person lanes:
 
 Any teammate may claim another lane's work after coordinating. Existing team ownership takes precedence. Communication tasks below are for the team; this board does not authorize an agent to send outreach or submissions.
 
-## CSV preview checkpoint — 2026-09-06
-
-The custom single-station CSV preview is implemented and verified with 97 integrated tests. See README for setup and docs/local_upload_and_research_plan.md for the next slices. This preview does not persist uploads or connect them to scenario generation; those tasks remain open. The user authorized publication of this checkpoint. Existing evidence and comparison work from main is retained.
-
-## Tutorial layout checkpoint — 2026-09-06 (published in `83d593d`, review pending)
-
-B11 usability fix: a single guide now appears at the top of the main area, with grouped navigation and explicit target locations. Real Streamlit containers outline the actual widgets; the disconnected HTML strips and decorative arrows were removed. Sidebar instructions no longer displace the controls. The export step explains the review gate, and manual navigation offers a return to the current step.
-
-Implementation: `app.py`; regression coverage: `tests/test_app.py`. Local browser inspection covers the guide and target layout. Teammate review is still pending; this does not complete B11's pitch, video or event-format tasks. Refresh BASIN and restart the tutorial to review.
-
-## Appearance checkpoint — 2026-09-06 (published in `83d593d`, review pending)
-
-B11 usability: coordinated native Light/Dark/System themes; refreshed spacing, typography, metric cards and first-run invitation. Help & tutorial moved directly below navigation; Settings now holds Appearance. The theme choice is browser-local and does not modify scenarios. Package builder includes `basin_theme.py`. Workflow/tutorial/upload regression checks passed (22 tests); browser visual review and teammate acceptance remain distinct. No P0 scientific or presentation-validation tasks are closed by this visual update.
-
-## Documentation reconciliation — 2026-09-06 (local)
-
-Claim inventory for B11.1/B11.3 against `83d593d`, working tree clean and `origin/main` at the same commit. The board below now separates implemented-and-verified work, work awaiting human review, partial work, untouched work, and paths recorded as not selected. No application code, dependency, scientific claim or product scope changed in this pass.
-
-A follow-up sweep on the same day added `docs/observation_sheet.md` (B09.3), corrected superseded checkpoint wording in `docs/build_validation.md`, fixed broken file references in `docs/presentation_plan.md` (`rainfall.csv` to `daily_rainfall.csv`, `fetch_snapshot.py` to `scripts/fetch_noaa.py`), and added a reconciliation notice at the top of that plan listing the capabilities it advertises that the build does not have. All relative links and backticked paths in `README.md`, `TODO.md`, `HANDOFF.md`, `docs/*.md` and `research/*.md` were checked; the only unresolved names are files that exist inside an exported packet or a built kit rather than in the repository.
-
-Checks re-run during this pass (Windows 11, CPython 3.12.14, repository `.venv`):
-
-- `python -m pytest -q --basetemp=tmp/pytest-doc-reconcile`: **97 passed** in 60.3 s.
-- `python scripts/check_snapshot_checkout.py`: verified; a fresh clone reproduces snapshot SHA-256 `672c23f8…78a0` under the `eol=lf` attribute.
-- `python scripts/demo_smoke.py`: verified, network-blocked rehearsal.
-- `python scripts/replay_bundle.py output/BASIN-rehearsal.zip`: verified; run `5cf371d39eb2`, 5 accepted scenarios, 500 audit records replayed, `implementation_matches_current: true`.
-- `python scripts/evaluate_selection.py`: 9 configurations (seeds 7/22/91 across three profiles), silhouettes 0.246–0.416, written to `output/selection-evaluation.json`.
-
-Documentation changed in this pass (branch `docs/reconcile-status-2026-09-06`; no application code, dependency, scientific claim or product scope touched):
-
-- `TODO.md`: at that 2026-09-06 checkpoint, board statuses B01, B02, B03, B04, B05, B06, B07, B08, B10 and B11 were updated and 61 subtask boxes were checked with qualifiers where a claim was partial. B08 Paths A and C were annotated as not selected; B08.2, B06.7, B07.1, B07.8, B09.1, B10.4, B11.6 and B11.9 were left unchecked with the reason recorded. The 2026-09-07 audit below supersedes that count and those current-status statements.
-- `HANDOFF.md`: rewritten as the current checkpoint with today's verification separated from recorded history, files changed, five next actions, and blockers.
-- `README.md`: browser network isolation no longer said to be described in `docs/build_validation.md`, which records no such run; now points at `scripts/browser_rehearsal.mjs`.
-- `docs/build_validation.md`: new section recording the checks actually run today; two earlier sections no longer claim to be local and unpushed, and the superseded upload checkpoint says so.
-- `docs/demo_runbook.md`: one line distinguishing the rendered simulation film from the missing B11.9 backup recording.
-- `docs/presentation_plan.md`: dated reconciliation notice listing the removed stressor features, the excluded `BASIN.exe`, absent GIS overlays, the overstated WAM/sign-off claim and the format conflict; `rainfall.csv` corrected to `daily_rainfall.csv`, `fetch_snapshot.py` to `scripts/fetch_noaa.py`, and the untested WAM/HEC-ResSim interoperability claim marked. The pitch narrative itself is untouched and belongs to B11.4.
-- `docs/observation_sheet.md`: new, closing B09.3.
-
-These are automated internal-consistency and regression checks on one machine. They are not practitioner validation, teammate review, presentation-device verification or scientific approval, and they close none of those gates. Earlier figures in `docs/build_validation.md` remain recorded historical results from their own runs.
-
-## Board audit checkpoint - 2026-09-07
-
-Audited the checked items against the working source, `origin/main` at `f78d692`, current documentation and the supplied official competition PDFs. The current source passed **105 tests** in 91.23 seconds. Fresh-checkout snapshot verification reproduced SHA-256 `672c23f8...78a0`; the network-blocked demo smoke and independent bundle replay both passed with 5 scenarios and 500 audit records. These checks support the existing implementation/integrity boxes but do not establish practitioner approval, presentation-device readiness or user benefit.
-
-Current root-board count after correction, branch reconciliation, B06.7 verification and presentation reconciliation: **65 checked and 46 unchecked subtasks**. The unchecked count includes Path A/C reservoir alternatives that are explicitly not selected; use the major-task status table and dependency notes to determine active work.
-
-Corrections made by this audit:
-
-- Stage 1 answers and the finalist tie-breaker response are no longer missing; they are recorded in `docs/submission_record.md`. The August 10 rules and resource packet confirm the September 22 event and judging categories, but do not state the finalist presentation length or detailed demonstration format.
-- The native wrapper is no longer excluded. `BASIN.exe` is tracked at `origin/main` and matches the working copy; the current README and build scripts support it. Reproducible build-only dependencies and clean presentation-device execution are still open, so B10.2 is reopened.
-- The earlier claim inventory and obsolete presentation plan were replaced by `docs/claim_inventory.md` and a current three-person, format-flexible `docs/presentation_plan.md`. Unsupported stressors, GIS overlays, engineering sign-off and verified direct-model-import claims are now explicit exclusions rather than scripted demonstration steps.
-- The local `main` pointer was reconciled to `origin/main` at `f78d692` without discarding working changes. The superseded local commit remains recoverable at `codex/pre-reconcile-20260907`; unrelated logo-reference work and generated artifacts remain intact.
-- The current default is a readable neutral light theme with a dark option and distinct colored charts. B13 no longer describes the application as having a completely black/white theme.
-- The upload parser, README, and `.streamlit/config.toml` are aligned to a 10 MB CSV upload limit (`maxUploadSize = 10`).
-
 ## Shared board
 
 | ID | Task | Priority | Suggested lead | Owner / reviewer | Status | Dependencies |
@@ -210,37 +85,6 @@ Corrections made by this audit:
 | B13 | Streamline the analyst workflow | P0 | C | Unclaimed / Unclaimed | In review | B01 objective; validate through B09 and B10 |
 
 Status meanings used after the 2026-09-06 reconciliation: `In review` means the described work is implemented and covered by automated checks but still needs the named human review in its acceptance criteria; `In progress` means part of the task is verified and part is untouched; a checked box records verified work, not approval. P0 means required to resolve before presenting the affected capability. P1 means valuable feature work after scope confirmation. Fixes within B04 can proceed without waiting for a new evidence schema; split the PRs accordingly.
-
-## First parallel work session
-
-- **All:** complete B01.1-B01.4 together and put actual names into the shared board.
-- **A:** inventory source assumptions for B07 and draft B03's example record without changing persisted schemas.
-- **B:** run B02 and record failures; investigate B04's existing replay checks.
-- **C:** prepare B09's user exercise and B11's claim inventory; sketch B05/B06 without competing edits to `app.py`.
-- **End of session:** agree on one small feature slice, one shared data contract, and the next integration checkpoint.
-
-## Immediate work session - analyst utility and clarity
-
-The 2026-09-07 teammate discussion agreed on the problem: the interface presents too much at once, labels need to be clearer, and the product's practical purpose and demonstration value need to be obvious. The next milestone is a first-time user selecting and justifying three rainfall scenarios and exporting a reviewable packet in under three minutes without verbal coaching or a misleading interpretation. This is a working target to validate in B09, not a completed usability claim or an official event time limit.
-
-Complete this sequence before starting another speculative visualization or model input:
-
-1. **Team decisions:** complete B01.1, B01.2, B01.5 and B01.7. Claim the UI/workflow, data/method review, and demo/release lanes.
-2. **Unassisted baseline:** run B09's task once with the teammate least familiar with the current interface. Record time, assistance, misunderstood terms, unnecessary content and interpretation errors in `docs/observation_sheet.md`.
-3. **Workflow refactor:** complete B13 around the four existing stages: Check data -> Build scenarios -> Review choices -> Share results.
-4. **Practitioner validation:** have the TAMUCC professional review station suitability, scenario interpretation and the exported packet under B07/B09. Do not record professional approval without their actual feedback.
-5. **Current demonstration:** complete B11.4 and rewrite the stale pitch around the implemented evidence-to-packet workflow. Treat the illustrative reservoir experiment as secondary.
-6. **Presentation device:** complete B10.3-B10.5 and B10.8 on the different Windows presentation laptop, using its actual display resolution and the projector.
-7. **Retest and freeze:** convert observations into owned fixes under B09.7, repeat the important tasks, then complete B12.
-
-Suggested 90-minute library planning agenda:
-
-- **15 minutes:** agree on the primary user, first decision, purpose statement, success measure and freeze target.
-- **15 minutes:** watch an unassisted novice attempt the current workflow; do not teach during the attempt.
-- **20 minutes:** identify every unclear label, unnecessary default chart/control and avoidable scroll in the guided path.
-- **20 minutes:** sketch one main question and action for each of the four stages, including the decision summary card.
-- **10 minutes:** explicitly retain, make secondary or defer proposed features.
-- **10 minutes:** claim owners and independent reviewers, define the next integration checkpoint, and schedule the practitioner and presentation-device sessions.
 
 ## B01 - Confirm scope and claim work
 
@@ -263,16 +107,16 @@ Acceptance: one recorded scope decision, named owners/reviewers, agreed first fe
 
 Owner: Unclaimed | Reviewer: Unclaimed | Files: requirements.txt, tests/, data/, launch/setup scripts, CI
 
-Status 2026-09-07: current working source passed 105 tests, snapshot checkout, offline smoke and bundle replay. Line-ending stability is owned by `.gitattributes` plus `scripts/check_snapshot_checkout.py`; failure behaviour is covered by `tests/test_failures.py`; `.github/workflows/tests.yml` repeats the fresh-checkout path. Clean-environment wheel installation remains the recorded 2026-09-06 result rather than a new run. Local `main` now equals `origin/main` at `f78d692`; the prior equivalent branding commit is preserved at `codex/pre-reconcile-20260907`, and unrelated working changes/artifacts remain intact. A named reviewer and presentation-device check remain open.
+Status 2026-09-11: current source (see Current status above) passes the full suite (565 passed, 2 skipped as of the last integration). Line-ending stability is owned by `.gitattributes` plus `scripts/check_snapshot_checkout.py`; failure behaviour is covered by `tests/test_failures.py`; `.github/workflows/tests.yml` repeats the fresh-checkout path. Clean-environment wheel installation remains a recorded historical result rather than a rerun this pass. A named reviewer and presentation-device check remain open.
 
 - [x] **B02.1** Record commit, Python version, OS, clean/dirty state, and exact install commands in existing build-validation documentation. Refresh this record at the freeze (B12.5).
-- [x] **B02.2** Create an isolated Python 3.12 environment and install pinned requirements; record actual installation failures rather than silently substituting versions. Recorded historical result; not re-run in the 2026-09-06 reconciliation.
+- [x] **B02.2** Create an isolated Python 3.12 environment and install pinned requirements; record actual installation failures rather than silently substituting versions. Recorded historical result; not re-run in this pass.
 - [x] **B02.3** Run `python -m pytest -q` from that environment and classify failures by owning module.
 - [x] **B02.4** Run `python scripts/demo_smoke.py` and `python scripts/replay_bundle.py output/BASIN-rehearsal.zip`; record current results separately from prior build claims.
 - [x] **B02.5** Make observation bytes stable on a fresh Windows checkout. The present clone needed a local line-ending correction; implement a repository-owned solution, such as a narrowly scoped Git attribute, and prove the manifest hash survives a new checkout. Never change the manifest merely to accept corrupted data.
 - [x] **B02.6** Exercise malformed snapshot, failed save, invalid replacement, and unavailable session behavior; ensure useful errors and no false success messages.
 - [x] **B02.7** Turn reproducible failures into assigned subtasks/PRs. Verify the fresh-clone path in CI where practical.
-- [x] **B02.8** Reconciled local `main` to `origin/main` at `f78d692` with a mixed reset after confirming the local/remote branding trees matched. Preserved the old commit at `codex/pre-reconcile-20260907`; unrelated logo-reference work and generated artifacts remain in place. The already completed 105-test run exercised the same working source, and post-reset source diffs are limited to documentation and the preserved media work.
+- [x] **B02.8** Local `main` tracks `origin/main`; no divergence to reconcile as of this pass.
 
 Acceptance: installation and baseline checks pass on a clean environment, original CSV checksum matches, and any remaining failures have an explicit disposition before the demo.
 
@@ -310,7 +154,7 @@ Status 2026-09-06: `basin_core/exporter.py` declares CHECKS/EXCLUDED, recomputes
 - [x] **B04.7** Identify the actual implementation version in export metadata; define compatibility for old bundles rather than assuming every run labeled 0.1.0 uses identical code.
 - [x] **B04.8** After B03 agreement, include evidence references, assumptions, unresolved conflicts and permitted notes in the packet. Keep public rationale separate from private free text.
 - [x] **B04.9** Add meaningful negative tests for mismatched summaries/dates/approvals and missing audit entries. Recompute file hashes in some fixtures to prove semantic checks do more than reject stale hashes. Do not describe unsigned bundles as protection from coordinated tampering.
-- [ ] **B04.10** Outstanding; needs a named human. Have the reviewer independently replay a packet containing an edit, replacement, rejection and changed weights; manually inspect its readable brief.
+- [ ] **B04.10** Outstanding; needs a named human. Have the reviewer independently replay a packet containing an edit, replacement, rejection and changed weights; manually inspect its readable brief. Now also covers saved simulations (B16) and PDF renderer outcomes (B17), both merged since this subtask was written.
 
 Acceptance: verification rejects internally inconsistent packets within its declared scope; current approved revisions and audit history survive export; private annotations stay excluded by default.
 
@@ -367,7 +211,7 @@ Acceptance: methodology agrees with code, material assumptions are explicit, and
 
 Owner: Unclaimed | Reviewer: Unclaimed | Files: basin_core/analysis.py, exporter.py, app.py, tests/, methodology/runbook
 
-Status 2026-09-07: Path B is the selected path. Paths A and C are recorded as not selected and their subtasks stay unchecked deliberately. The two-pool experiment tracks inflow, evaporation, served demand, unmet demand and spill; `tests/test_reservoir.py` asserts daily conservation across wet, dry, empty and full states plus invalid settings and rainfall. Assumptions are surfaced through `RESERVOIR_ASSUMPTIONS`, and the experiment is excluded from packets and every verification claim. `docs/presentation_plan.md` now keeps it out of the compact route and answers reservoir questions with the illustrative boundary. B08.B5 still needs a human reviewer.
+Status 2026-09-11: Path B is the selected path; Paths A and C remain not selected. The reservoir/water-system model has grown substantially since the original two-pool experiment (Region N modern preset, dead storage floor, multi-sector curtailment, TCEQ pass-through accounting — see `basin_core/water_system.py`, `basin_core/analysis.py`), all still covered by `tests/test_reservoir.py`/`tests/test_water_system.py` conservation tests. Saved/reviewed simulations are now versioned and included in export under their own declared scope (see B16). Assumptions remain surfaced and the experiment remains outside rainfall-packet verification proper (its own separate, declared simulation scope). B08.B5 still needs a human reviewer.
 
 - [x] **B08.1** Audit all reservoir, restriction-stage, WAM, streamflow-translation and engineering-sign-off statements against their sources and B01's scope decision.
 - [ ] **B08.2** Corrected in code and text (`0be1933`; the rainfall-method evidence record and the handoff brief both state that retention is not streamflow scaling), but the domain review half has not happened. Remove or correct unsupported instructions that rainfall retention can directly scale naturalized streamflow. Distinguish modeling applications and approval requirements; obtain domain review for engineering guidance.
@@ -383,7 +227,7 @@ Path B - retain as an illustrative experiment:
 - [x] **B08.B1** Correct mass balance, including surplus inflow, depleted storage, capacity limits and explicit spill/unmet-demand accounting as appropriate to the chosen model.
 - [x] **B08.B2** Prove conservation with deterministic wet/dry/empty/full examples and invalid-input tests; current nonnegative-storage tests are insufficient.
 - [x] **B08.B3** Surface every material assumption, define thresholds and scope, and make clear that simulated threshold timing is conditional, not a forecast or official restriction date.
-- [x] **B08.B4** Persist/version simulation settings and results and integrate review/export verification, or explicitly exclude the experiment from the evidence packet and its verification claim.
+- [x] **B08.B4** Persist/version simulation settings and results and integrate review/export verification, or explicitly exclude the experiment from the evidence packet and its verification claim. **Done** — see B16.
 - [ ] **B08.B5** Outstanding; needs a named human. Obtain reviewer agreement that the presentation does not imply calibrated system performance.
 
 Path C - not selected (2026-09-06). These subtasks stay unchecked because the path was not taken:
@@ -409,6 +253,7 @@ Status 2026-09-06: the task definition (item 3 of `docs/validation_notes.md`) an
 - [ ] **B09.8** Run the current task once with the teammate least familiar with BASIN before the workflow refactor. Capture the unassisted baseline and distinguish novice feedback from practitioner validation.
 - [ ] **B09.9** Ask the TAMUCC professional to review station/catchment assumptions, scenario interpretation, the unresolved-assumption step and the exported packet. Record what they actually reviewed, requested changes and remaining uncertainty.
 - [ ] **B09.10** After B13, repeat the same task without coaching. Record whether the participant can finish within the team's three-minute target and explain what BASIN produced, what it did not establish, and what the recipient should do next.
+- [ ] **B09.11** Audit benchmark protocol, authorship, participant qualifications, task equivalence, timings and independent reproduction before claiming 30x-50x user benefit. Team-reported numbers and matching hashes are not proof of professional certification or representative time savings.
 
 Acceptance: report distinguishes discovery from actual product use, demonstrates what the participant could do, and states limitations. If no external session occurs, label internal rehearsal honestly.
 
@@ -416,7 +261,7 @@ Acceptance: report distinguishes discovery from actual product use, demonstrates
 
 Owner: Unclaimed | Reviewer: Unclaimed | Files: scripts/, setup/start scripts, requirements.txt, CI, docs/build_validation.md
 
-Status 2026-09-07: the browser launcher remains the fallback path and the rebuilt native `BASIN.exe` is also supported. The tracked executable matches `origin/main`; `scripts/build_exe.py` and `scripts/launcher.py` describe the native build/launch path. PyInstaller and pywebview build versions are not pinned in `requirements.txt`, and no clean native rebuild or actual presentation-device run is recorded. Python-level offline rehearsal, wheel-only app installation and source-package content checks remain recorded. Browser/native network isolation, projector, launcher recovery and final-device footprint checks are open.
+Status 2026-09-11: the browser launcher remains the fallback path and the rebuilt native `BASIN.exe` is also supported. An optional native Qwen runtime install/repair path now exists separately from the executable (Task 1; `docs/native_runtime_handoff.md`), itself not device-tested. PyInstaller/pywebview versions are pinned (`requirements-build.txt`); no clean native rebuild or actual presentation-device run is recorded. Python-level offline rehearsal, wheel-only app installation and source-package content checks remain recorded from earlier passes, not re-run here. Browser/native network isolation, projector, launcher recovery, native egress observation and final-device footprint checks are all open and are Task 6's scope.
 
 - [x] **B10.1** Record the supported Windows paths: rebuilt `BASIN.exe` for the native WebView2 window and `Start BASIN.cmd`/browser as the fallback. Both require the Python 3.12 application environment; the native path also requires WebView2.
 - [x] **B10.2** Recorded exact PyInstaller (6.21.0), pyinstaller-hooks-contrib (2026.6), and pywebview (6.2.1) versions in `requirements-build.txt` for reproducible compilation of `BASIN.exe` via `scripts/build_exe.py`. Branded windowed executable matches `origin/main`; final presentation laptop execution check remains with B10.3.
@@ -426,6 +271,7 @@ Status 2026-09-07: the browser launcher remains the fallback path and the rebuil
 - [x] **B10.6** Recorded in `docs/build_validation.md` for the 2026-09-06 source package; repeat against the frozen kit under B12.5. Inspect package contents for private notes, sessions, credentials, source correspondence and generated artifacts. The currently tracked empty Streamlit onboarding file is not a secret, but packaging must not blindly include future credential contents.
 - [x] **B10.7** Labels and limits are stated in `docs/methodology.md` (completion-time resident memory, no peak claim, illustrative 15-65 W energy range, unquantified water impact, network counters explicitly not instrumented). Re-measure on the presentation device with B10.3. Record wall/CPU time and memory with accurate labels; distinguish measured values, illustrative energy estimates, and unquantified water impact. Do not describe hardcoded network counters as instrumentation.
 - [ ] **B10.8** Keep a versioned release copy and backup on the team's chosen media; test projector readability, the guided path at the presentation laptop's actual resolution, and download locations. Do not claim tablet/LAN support for the loopback-only configuration.
+- [ ] **B10.9** Actual-laptop offline rehearsal must include the optional native Qwen runtime, PDF rendering (both renderer paths' disclosure), native downloads and fallback behavior, in addition to the existing rainfall workflow. This is Task 6's primary scope.
 
 Acceptance: another teammate can install/start the supported build and complete the chosen demo workflow offline on the presentation machine, with accurate prerequisite and footprint claims.
 
@@ -433,17 +279,18 @@ Acceptance: another teammate can install/start the supported build and complete 
 
 Owner: Unclaimed | Reviewer: Unclaimed | Files: README.md, docs/methodology.md, validation_notes.md, build_validation.md, demo_runbook.md, ai_use_log.md
 
-Status 2026-09-07: `docs/claim_inventory.md` now covers the current app, submission record, upload comparison, packet/brief, native executable, privacy, reservoir and competition claims with evidence boundaries. `docs/presentation_plan.md` is rewritten for the actual three-person roster and implemented evidence-to-packet workflow, with a compact three-minute team target plus optional expansion modules. Removed stressors, absent GIS overlays, direct WAM/HEC import, engineering sign-off and calibrated reservoir claims are excluded. The August 10 organizer PDFs confirm judging criteria and the September 22 event, but not presentation length or detailed format; B11.7-B11.9 remain open.
+Status 2026-09-11: `docs/claim_inventory.md` covers the current app, submission record, upload comparison, packet/brief, native executable, privacy, reservoir/simulation, native runtime, PDF renderer, tailored Review, and competition claims with evidence boundaries; it was corrected this pass (a stale "custom evidence excluded from export" row) and extended with a new section for the three most recently merged task areas. `docs/presentation_plan.md` is written for the actual three-person roster and implemented evidence-to-packet workflow. The August 10 organizer PDFs confirm judging criteria and the September 22 event, but not presentation length or detailed format; B11.6-B11.9, B11.11 and B11.12 remain open.
 
-- [x] **B11.1** `docs/claim_inventory.md` inventories claims across README, tutorial/workflow, generated brief and verification scope, methodology, `docs/submission_record.md`, upload comparison, executable/deployment documentation, privacy, reservoir experiment and pitch. Each claim is classified as implemented, internally verified, locally observed, pending human review or excluded.
+- [x] **B11.1** `docs/claim_inventory.md` inventories claims across README, tutorial/workflow, generated brief and verification scope, methodology, `docs/submission_record.md`, upload comparison, executable/deployment documentation, privacy, reservoir experiment, native runtime, PDF renderer and tailored Review, and pitch. Each claim is classified as implemented, internally verified, locally observed, pending human review or excluded.
 - [x] **B11.2** Record the accepted design corrections in existing methodology. Do not reintroduce outdated draft formulas merely to match the attached document.
 - [x] **B11.3** Update installation instructions and reported tests to the verified release; remove the fresh-checkout claim that an environment is already installed.
 - [x] **B11.4** Rewrote `docs/presentation_plan.md` around rainfall evidence -> transparent scenario shortlist -> selection explanation -> challenged assumption -> reviewable hydrologist packet. The judging-criteria map separates demonstrated evidence from proposed benefits, and the illustrative reservoir experiment is excluded from the compact route.
 - [x] **B11.5** A walk-through exists in `docs/demo_runbook.md`; its length depends on the unresolved B11.7 format question. Prepare a concise walk-through: source/assumption -> scenario comparison -> human challenge/edit -> approved packet -> recipient's next action.
 - [ ] **B11.6** `docs/ai_use_log.md` and `docs/third_party_materials.md` exist; no team review of them is recorded. Review AI-use disclosure and third-party attribution; record actual team review rather than claiming approval from the existence of an AI log.
 - [ ] **B11.7** Verify presentation length, submission format and event logistics against the latest organizer communication. Do not treat the repo's three-minute demo suggestion as an official limit.
-- [ ] **B11.8** Rehearse questions on proxy stations, reference periods, probabilities, model limitations, privacy and why clustering adds value. Every teammate explains the complete workflow.
+- [ ] **B11.8** Rehearse questions on proxy stations, reference periods, probabilities, model limitations, privacy and why clustering adds value. Every teammate explains the complete workflow, including the newer native-runtime/PDF-renderer/tailored-Review pieces.
 - [ ] **B11.9** `media/BASIN_Simulation_Demonstration.mp4` is a rendered simulation film and is not this recording. Record the backup video from the exact accepted demo release and prepare final pitch materials after the workflow is stable.
+- [ ] **B11.10 through B11.12** — see "Remaining reconciliation and acceptance" below; not repeated here to avoid duplicate numbering.
 
 Acceptance: all visible claims agree with implementation and evidence; a timed rehearsal and backup exist; deferred features are clearly described as deferred.
 
@@ -451,7 +298,7 @@ Acceptance: all visible claims agree with implementation and evidence; a timed r
 
 Owner: Unclaimed | Reviewer: All teammates | Files: release documentation and handoff
 
-Status 2026-09-06: unchanged and still blocked. No freeze, acceptance, commit, push or submission is authorized by this board.
+Status: unchanged and still blocked. No freeze, acceptance, commit, push or submission is authorized by this board.
 
 - [ ] **B12.1** Resolve every P0 item and explicitly accept/defer each P1 item. Do not mark an excluded feature implemented.
 - [ ] **B12.2** Review all team changes and run the established pytest, offline rehearsal and replay checks on the final source revision.
@@ -467,14 +314,14 @@ Acceptance: the team agrees the frozen build is demonstrable as delivered, with 
 
 Owner: Unclaimed | Reviewer: Unclaimed | Files: `app.py`, `basin_ui/`, tutorial and relevant UI tests
 
-Status 2026-09-07: in review. The four-stage plain language workflow (1. Check data -> 2. Build scenarios -> 3. Review choices -> 4. Share results) is implemented in `app.py` and covered by 110 automated tests (`tests/test_app.py`, `tests/test_failures.py`). Compact decision summary card surfaces lead scenario ID, selection reason, evidence count, material limitations, and next action. Specialist labels replaced with plain language throughout. Compact viewport layout with expanders for secondary details and diagnostics. Coordinated accessible light/dark themes in `basin_theme.py`. B13.9 remains open pending unassisted novice and practitioner observation sessions under B09.
+Status 2026-09-11: the four-stage plain language workflow (1. Check data -> 2. Build scenarios -> 3. Review choices -> 4. Share results) is implemented in `app.py` and covered by automated `tests/test_app.py`/`tests/test_failures.py` regressions. A tailored Review focus panel now sits on top of this workflow (see B13's own extension in the Current-status section and the tailored-Review rows in `docs/claim_inventory.md`); its light/dark and keyboard-focus behavior was verified in a real browser on an unmerged branch, but narrow-viewport and tutorial-target behavior were not independently confirmed this pass. B13.9 remains open pending unassisted novice and practitioner observation sessions under B09.
 
 - [x] **B13.1** Use the existing persistent navigation and order the user-facing stages as **1. Check data**, **2. Build scenarios**, **3. Review choices**, and **4. Share results**. Keep navigation visible; do not introduce a hamburger menu.
 - [x] **B13.2** Give each stage one clear question and one primary action. Limit the initial view to the information needed for that decision; move audit detail, large tables, score decomposition and diagnostics into clearly named detail sections.
 - [x] **B13.3** Add a compact decision summary showing the selected scenario, why it ranked, evidence used, material limitation or unresolved assumption, and the next recipient action.
 - [x] **B13.4** Replace or explain specialist labels. At minimum review: **Rainfall retained %** -> **Scenario rainfall (% of observed)**, **Candidates** -> **Scenarios to test**, **Shortlist** -> **Scenarios to review**, **Concurrence** -> **Stations stressed at the same time**, **Historical percentile** -> **How unusual compared with history**, and **Score contributions** -> **Why this scenario ranked here**. Verify each replacement remains scientifically accurate in context.
-- [x] **B13.5** Make the guided demo fit one viewport per stage at the actual presentation resolution. Reduce avoidable whitespace and vertical stacking while allowing detailed evidence and tables to scroll when needed; do not claim zero scrolling across every device and workflow.
-- [x] **B13.6** Keep controls, selector values, focus indicators, legends and chart series readable in both supported themes. Test selected/unselected, enabled/disabled and hover/focus states rather than checking only static screenshots.
+- [x] **B13.5** Make the guided demo fit one viewport per stage at the actual presentation resolution. Reduce avoidable whitespace and vertical stacking while allowing detailed evidence and tables to scroll when needed; do not claim zero scrolling across every device and workflow. **Narrow-viewport reflow specifically remains unverified in a real browser** — see Task 4 status above.
+- [x] **B13.6** Keep controls, selector values, focus indicators, legends and chart series readable in both supported themes. Test selected/unselected, enabled/disabled and hover/focus states rather than checking only static screenshots. Verified for the base workflow; the tailored-Review focus panel's light-theme/keyboard-focus fixes are on the unmerged Task 4 branch.
 - [x] **B13.7** Preserve the full traceability path through the simplified interface: source and applicability -> scenario construction/comparison -> human challenge/edit -> approval -> export and replay.
 - [x] **B13.8** Add focused regression coverage for navigation, plain-language labels, decision summary contents and retained review/export behavior. Avoid screenshot-only assertions for usability claims.
 - [ ] **B13.9** Review the result at the presentation resolution with a novice and practitioner under B09. Convert observed failures into owned follow-ups before marking this task done.
@@ -505,11 +352,6 @@ Acceptance: a first-time participant can identify the next action at each stage,
 
 Original private attachments remain outside the repository. This board records actionable work without reproducing correspondence or personal information.
 
-## Part B upload-comparison checkpoint — 2026-09-06
-
-Historical first slice: descriptive uploaded-versus-NOAA comparison began as preview only. Superseded by B14: saved evidence, versioned scenario links and consented packet replay are implemented. Seasonal baseline validation, independent real-sample review and custom-data-driven area simulations remain open. See docs/local_upload_and_research_plan.md for the implementation history.
-
-
 ## B14 — Reviewed custom rainfall evidence integration (formerly duplicate B13)
 
 Status: In review. Implementer: Codex; independent reviewer unassigned. Scope: persisted supporting evidence for existing scenarios, not numerical new-station generation or geographic simulation.
@@ -525,36 +367,38 @@ Status: In review. Implementer: Codex; independent reviewer unassigned. Scope: p
 - [x] Negative tests for malformed/tampered records, false comparison totals, invalid links/version chains and save failure.
 - [ ] Independent teammate exercise using their own consented sample and exported packet.
 
-Verification: 125 full-suite tests passed; 45 custom/integrity checks passed after final verifier scope updates; final integrated UI test passed; independent CLI replay passed for a synthetic custom-data packet. Updated README, methodology, verification contract and upload plan explain schema 2.1 and backward compatibility. User authorized publication of this integration. Existing P0 practitioner and presentation-device gates remain open.
+Verification: 125+ full-suite tests passed at time of implementation (current full suite is larger — see HANDOFF); 45 custom/integrity checks passed after final verifier scope updates; final integrated UI test passed; independent CLI replay passed for a synthetic custom-data packet. `docs/claim_inventory.md`'s custom-evidence-export row was corrected this pass to match this status (it previously and incorrectly said uploads were excluded from the ZIP). Existing P0 practitioner and presentation-device gates remain open.
 
 ## B15 — Repair numerical meaning and current regressions (P0)
 
-Owner / independent reviewer: Unclaimed. Added prerequisite from message (7)'s closing sequence and source inspection; this is not a reconstruction of its missing item 1.
+Owner / independent reviewer: Unclaimed. Status 2026-09-11: B15.1 done. B15.2 done. B15.3 done for the listed inputs, with named remainders. B15.4 still open. See `docs/numerical_meaning_handoff.md` for the full per-item evidence table (20 rows) this status summarizes.
 
-- [x] **B15.1** Restore a passing current suite. The four September 8 PDF/UI export failures were resolved in earlier integrations. See the newest HANDOFF checkpoint for the current suite result; this does not complete the numerical/domain tasks below.
-- [ ] **B15.2** Define the spectrum's reference correctly. `run_stress_spectrum` passes `scenario.series`; `simulate_stress_spectrum` multiplies that already-constructed series and labels 1.0 “100% Historical Baseline.” Use original observations for a true historical baseline or label it as the selected scenario. Trace compounded multipliers and revisions consistently across UI, assistant and PDF.
-- [ ] **B15.3** Audit fractions versus percentages, rainfall mm versus volume, ac-ft/day versus MGD, threshold equality and scenario-year selection across all surfaces. Tools currently clamp ambiguous percentages and select the first scenario if a requested year has no matches. Return explicit validation/clarification instead of silently substituting another interpretation.
-- [ ] **B15.4** Replace unsupported “catastrophic,” “survived,” and operational threshold interpretations with descriptions appropriate to an illustrative experiment. Test no-breach and partial-breach cases without claiming predicted restrictions.
+- [x] **B15.1** Restore a passing current suite. The four September 8 PDF/UI export failures were resolved in earlier integrations. See `HANDOFF.md` for the current suite result; this does not complete the numerical/domain tasks below.
+- [x] **B15.2** Done for tools, assistant, app Review table and both PDF paths. Tier labels state "N% of input rainfall" with the observed-equivalent percentage shown separately when it resolves to one number; "100% historical baseline" no longer appears for a constructed scenario. `tests/test_numerical_meaning.py` covers this with hand-calculable fixtures.
+- [ ] **B15.3** Done for the listed inputs (absent-year/scenario/station/date clarification instead of silent defaults, day-0/threshold-inclusive wording, labelled-percentage parsing, ac-ft/day vs. mm/day unit correctness — see the handoff's 20-row table). **Remaining, not done:** legacy fractional PDF arguments (unused by any product path, so left alone) keep an inconsistent 1.0-vs-1.5-percent reading; conservation input ranges differ by surface (app 0-30%, model-facing validation 0 or >1-50, direct tool 0-100) without a stated reason.
+- [ ] **B15.4** Replace unsupported "catastrophic," "survived," and operational threshold interpretations with descriptions appropriate to an illustrative experiment, in the surfaces the B15.2/B15.3 pass did not touch: `basin_core/summary.reservoir_summary` (app "Operational Takeaway": "Stage 2 restrictions," "voluntary conservation," "emergency curtailments") and the PDF's "Conservation Benefit"/"Dominant loss driver" cards and "Depletion ~N months (Toy Model)" wording. Test no-breach and partial-breach cases without claiming predicted restrictions.
 
 ## B16 — Save and reproduce illustrative simulations (message 7 item 2)
 
-Owner / reviewer: Unclaimed. Open; rainfall/custom-evidence replay does not cover this experiment.
+Owner / reviewer: Unclaimed. **Status 2026-09-11: implemented and automatically tested, not device- or human-reviewed.** This was carried forward as fully open through several checkpoints even after P0-C (2026-09-10) implemented it; that was a documentation gap, not a reflection of the code. Do not describe this task as unimplemented going forward — check the specific subtask below for what's actually missing (a named human review, not the underlying mechanism).
 
-- [ ] **B16.1** Version settings: initial storage, conservation, pipeline, rainfall tiers, model identity and units.
-- [ ] **B16.2** Link exact scenario revisions and evidence versions; restore inputs/results and mark results stale after changes.
-- [ ] **B16.3** Define a separate simulation export and independent recomputation contract with negative tests. Label verified rainfall evidence separately from internally reproducible illustrative calculations.
+- [x] **B16.1** Version settings: initial storage, conservation, pipeline, rainfall tiers, model identity and units. `basin_core.simulation.SimulationSettings` + `create_run`/`content_hash` in `basin_core/simulation.py`.
+- [x] **B16.2** Link exact scenario revisions and evidence versions; restore inputs/results and mark results stale after changes. `Workspace.active_simulation`/`review_simulation`/`is_current`/`validate_run` in `basin_core/workspace.py` and `basin_core/simulation.py`; evidence changes trigger `_invalidate_evidence`. Negative tests: `test_settings_and_input_changes_require_new_review`, `test_replay_detects_changed_results_even_with_rehashed_record`, `test_evidence_change_invalidates_approvals` in `tests/test_simulation_contract.py`.
+- [x] **B16.3** Define a separate simulation export and independent recomputation contract with negative tests. Label verified rainfall evidence separately from internally reproducible illustrative calculations. Schema 2.2's `verification_scope()` explicitly lists "saved simulation baselines, settings, trajectories and inclusive threshold replay" and "current simulation review and evidence context" as checked, and separately excludes "physical model calibration, forecasts and official policy interpretation." The exported brief's simulation section states inclusive-threshold semantics and that these are not official restriction stages. `tests/test_simulation_contract.py` (16 tests) covers save/reopen/export/replay end to end.
+
+Still open for all three: no named human has reviewed the simulation contract, a replayed simulation-containing packet, or whether the presentation implies calibrated performance (this is also B08.B5).
 
 ## B17 — Align PDF, privacy and download behavior (message 7 item 3, P0)
 
-Owner / reviewer: Unclaimed; B17.6 implemented by Claude on `fix/b17-report-content-accuracy` and reviewed/merged; B17.1/B17.2 implemented by Claude on `feat/b17-report-experiment-config`, reviewer unassigned. Dynamic breach arithmetic and `include_notes=False` already exist; remaining integration is open.
+Owner / reviewer: Unclaimed; B17.6 implemented by Claude on `fix/b17-report-content-accuracy` and reviewed/merged; B17.1/B17.2 implemented on `feat/b17-report-experiment-config`; B17.3/B17.4/B17.7 implemented on `task/pdf-report-failure-handling` (`105d715`, merged). Status 2026-09-11: all of B17 except the actual-device download check (B17.5) is implemented and automatically tested. See `docs/pdf_failure_handoff.md` for full evidence.
 
-- [x] **B17.1** Pass the actual selected scenario, storage, conservation, pipeline and tiers to PDF generation. One frozen `ExperimentConfig` (`basin_core/pdf_report.py`) is built from the Review controls, stored in session state and threaded through the preview, `render_html_report` and `build_fallback_pdf`; `compute_report_metrics` now forwards `pipeline_active` and `tiers` to both simulators. The configured scenario becomes the report's primary scenario, and a configured scenario that is not in the accepted set is stated in the report rather than silently swapped. Defaults are the simulator's own (48% storage, 0% conservation, pipeline available, tiers 100/80/60/40) and are labelled as defaults, replacing the old unexplained 0.48/0.15 pair. **Not covered:** saved-session persistence of settings (B16), and the Review controls still only appear in the Reservoir-simulation view, so a report can carry defaults simply because that view was never opened.
-- [x] **B17.2** Preview included scenarios, assumptions, data and consent; state that the separately generated PDF is outside ZIP verification unless a new contract covers it. The Exports page shows the configuration as a table, the preview expander repeats it inline, and both report paths print it. Generated previews and built packets are now keyed to a `report_state_token` over the workspace, accepted scenarios and revisions, both consent flags and the configuration, and stale bytes are dropped from session state rather than merely hidden. The export card no longer carries a blanket "cryptographically verified" badge over the PDF. **Not covered:** a new verification contract for the PDF; it remains outside the bundle's.
-- [x] **B17.3** Renderer choice and browser failure/degraded fallback are explicit through RenderOutcome; layout/encoding disclosures remain in place. The Windows vector-only choice is disclosed. Actual-device PDF checks remain B17.5.
-- [x] **B17.7** Stop the test suite reading real user sessions. `tests/test_pdf_report.py` was already isolated by B17.6, but `app.py` globbed the live `local/` directory for its Saved Runs list, so every AppTest-based test read the developer's private analyses. `basin_core.workspace.session_dir()` now resolves through `BASIN_SESSION_DIR`, `Workspace.save` and the app's Saved Runs list both use it, and an autouse `conftest.py` fixture points it at a throwaway directory for every test.
-- [x] **B17.4** Automated ZIP/HTML/vector-PDF consent checks, including revocation/rebuild and private sentinels, implemented and tested. CLI opt-ins remain intact; physical-device download checks remain B17.5.
-- [ ] **B17.5** Test browser/native downloads, destination paths, write failures and recovery on the actual laptop. Native download-handling code exists; that is not a completed device test.
-- [x] **B17.6** Correct report content in `basin_core/pdf_report.py` across both the HTML and Windows vector paths. Capacity and band volumes are now read from `RESERVOIR_ASSUMPTIONS` rather than restated (919,900 ac-ft, bands 367,960 / 275,970 / 183,980 / 137,985); the vector path renders an explicit unavailable state instead of substituting example rows, an invented run ID, snapshot digest or KPI figures; the audit stamp and footers state that SHA-256 verification covers the companion bundle and not the PDF; the fabricated ordinance citation, survey capacities and MGD benefit figures are removed, with the model's assumption and the research packet's TWDB values shown as distinct, labelled statements. Regression coverage in `tests/test_pdf_report.py` pins the model-derived capacity and bands to the simulator's own output, the unavailable states, and the verification wording. **Not covered:** the browser HTML-to-PDF route is unreachable on Windows (`generate_pdf_report` calls the vector builder directly when `sys.platform == "win32"`), so it was rendered manually with Edge for inspection rather than through the product path; no reviewer has read either document.
+- [x] **B17.1** Pass the actual selected scenario, storage, conservation, pipeline and tiers to PDF generation. One frozen `ExperimentConfig` (`basin_core/pdf_report.py`) is built from the Review controls, stored in session state and threaded through the preview, `render_html_report` and `build_fallback_pdf`; `compute_report_metrics` now forwards `pipeline_active` and `tiers` to both simulators. The configured scenario becomes the report's primary scenario, and a configured scenario that is not in the accepted set is stated in the report rather than silently swapped. Defaults are the simulator's own (48% storage, 0% conservation, pipeline available, tiers 100/80/60/40) and are labelled as defaults. **Not covered:** saved-session persistence of settings — done separately under B16.
+- [x] **B17.2** Preview included scenarios, assumptions, data and consent; state that the separately generated PDF is outside ZIP verification unless a new contract covers it. The Exports page shows the configuration as a table, the preview expander repeats it inline, and both report paths print it. Generated previews and built packets are keyed to a `report_state_token` over the workspace, accepted scenarios and revisions, both consent flags and the configuration; stale bytes are dropped from session state. The export card no longer carries a blanket "cryptographically verified" badge over the PDF.
+- [x] **B17.3** Renderer choice and browser failure/degraded fallback are explicit through `RenderOutcome` (`basin_core/pdf_report.py`): the caller learns whether the browser renderer or BASIN's vector fallback actually produced the bytes, and a degraded fallback is disclosed with a reason rather than silently swapped in. Layout/encoding disclosures (wrapping, WinAnsi glyph counts, pagination) from the earlier layout pass remain in place. Windows deliberately never attempts the browser path — a disclosed product choice recorded in `docs/pdf_failure_handoff.md`, not a bug, and not changed by this task. Actual-device PDF/download checks remain B17.5.
+- [x] **B17.4** Automated ZIP/HTML/vector-PDF consent checks, including revocation-then-rebuild and private sentinel text, are implemented and tested (`tests/test_cross_output_consent.py`, `tests/test_pdf_render_failure.py`). CLI opt-ins (`scripts/hydrologist_harness.py`) remain intact and separately tested. Physical-device download checks remain B17.5.
+- [ ] **B17.5** Test browser/native downloads, destination paths, write failures and recovery on the actual laptop. Native download-handling code exists; that is not a completed device test. This is Task 6 scope.
+- [x] **B17.6** Correct report content in `basin_core/pdf_report.py` across both the HTML and Windows vector paths. Capacity and band volumes are read from `RESERVOIR_ASSUMPTIONS` rather than restated; the vector path renders an explicit unavailable state instead of substituting example rows; the audit stamp and footers state that SHA-256 verification covers the companion bundle and not the PDF; fabricated ordinance/survey/benefit figures are removed. Regression coverage in `tests/test_pdf_report.py` pins model-derived capacity/bands, unavailable states and verification wording.
+- [x] **B17.7** Stop the test suite reading real user sessions. `basin_core.workspace.session_dir()` resolves through `BASIN_SESSION_DIR`; `Workspace.save` and the app's Saved Runs list both use it, and an autouse `conftest.py` fixture points it at a throwaway directory for every test.
 
 ## B18 — Harden optional assistant (message 7 item 4, P0)
 
@@ -562,13 +406,13 @@ Owner / reviewer: Unclaimed. Ollama routing and deterministic tools exist. Their
 
 - [x] **B18.1** Replace model connectivity entirely with the embedded intent engine and show its active status. No daemon, model discovery, or model selection remains; regression checks exercise chat and Quick Queries with network connections blocked.
 - [ ] **B18.2** Verify missing/stopped/no-model/slow-model behavior while keeping core workflows usable.
-- [ ] **B18.3** Validate argument names, types, ranges, dates and IDs. Remove silent malformed-year fallback to 2011 and implicit scenario substitution; expose interpreted inputs and units.
+- [ ] **B18.3** Done for argument names/types/ranges/dates/IDs across the paths listed in `docs/numerical_meaning_handoff.md` §1 (rows 5, 6, 9-17, 19): silent malformed-year fallback to 2011 and implicit scenario substitution are gone; interpreted inputs and units are exposed. **Remaining, not done:** the assistant's reservoir tools (`run_stress_spectrum`, `test_reservoir_infrastructure`) always use the Region N system even when Review has configured a different one (small-municipal, farm-pond or custom), so a chat answer can describe a different system than what's on screen. Proposed fix: carry the selected `WaterSystemConfig` identity into saved runs and tools.
 - [ ] **B18.4** Test ambiguous/unsupported questions and misleading supplied text; ensure final answers match tool data and retain limitations. Evaluate routing as well as arithmetic.
 - [ ] **B18.5** Add read-only explanations of saved custom comparisons, suitability, missingness and uncertainty using the existing evidence contract.
 
 ## B19 — One custom-data-driven area model (message 7 item 5)
 
-Owner / domain reviewer: Unclaimed. Proposed expansion; B14 stores supporting evidence and does not complete this task.
+Owner / domain reviewer: Unclaimed. Proposed expansion; B14 stores supporting evidence and does not complete this task. Nothing in the Tasks 1-4 work touches this either.
 
 - [ ] **B19.1** Team selects one area, boundary and modeling question; reviewer agrees appropriate observation sources and representativeness.
 - [ ] **B19.2** Define inputs, units, equations, baseline, period, assumptions and missing/unsuitable-data behavior before connecting reviewed datasets to numerical inputs.
@@ -576,7 +420,7 @@ Owner / domain reviewer: Unclaimed. Proposed expansion; B14 stores supporting ev
 
 ## B20 — Geographic views (message 7 item 6)
 
-UI lead volunteered in team context: Mohammed. Independent reviewer: Unclaimed. Numerical map claims depend on B19; visual prototypes may proceed earlier with explicit placeholder labels.
+UI lead volunteered in team context: Mohammed. Independent reviewer: Unclaimed. Numerical map claims depend on B19; visual prototypes may proceed earlier with explicit placeholder labels. Not touched by Tasks 1-4.
 
 - [ ] **B20.1** Area boundary, station map and relevant reservoir/infrastructure layers with documented sources and reuse terms.
 - [ ] **B20.2** Baseline/scenario views and timeline linked to saved simulation results; distinguish measured, assumed, simulated and unavailable information.
@@ -584,7 +428,7 @@ UI lead volunteered in team context: Mohammed. Independent reviewer: Unclaimed. 
 
 ## B21 — Reviewed document ingestion (message 7 item 7)
 
-Owner / reviewer: Unclaimed. Separate from generating a PDF report; not implemented by PDF export.
+Owner / reviewer: Unclaimed. Separate from generating a PDF report; not implemented by PDF export. Not touched by Tasks 1-4.
 
 - [ ] **B21.1** Define supported types/limits and private storage with exact source identity; handle scanned, malformed and unsupported documents explicitly.
 - [ ] **B21.2** Extract text with page references; require human inspection/correction before promoting extracted statements to model inputs.
@@ -593,9 +437,8 @@ Owner / reviewer: Unclaimed. Separate from generating a PDF report; not implemen
 ## Remaining reconciliation and acceptance (message 7 item 8)
 
 - [x] **B11.10** Incorporate messages (4)–(7) and team context, remove duplicate B13 heading, and correct current custom-evidence/assistant status on this board. No private transcript copied into Git.
-- [ ] **B11.11** Complete cross-document reconciliation of README, claim inventory, methodology, upload plan and presentation against current implementation. “No LLM required for core workflows” remains accurate; distinguish it from “no LLM exists.” Separate wrapper executable from its Python/WebView2/Ollama prerequisites.
-- [ ] **B09.11** Audit benchmark protocol, authorship, participant qualifications, task equivalence, timings and independent reproduction before claiming 30×–50× user benefit. Team-reported numbers and matching hashes are not proof of professional certification or representative time savings.
-- [ ] **B10.9** Actual-laptop offline rehearsal must now include optional Ollama, PDF rendering, native downloads and fallback behavior in addition to the existing rainfall workflow.
+- [ ] **B11.11** Complete cross-document reconciliation of README, claim inventory, methodology, upload plan and presentation against current implementation. This pass corrected two stale claims (see Current status above) but did not do a full line-by-line pass of every document; treat this as partially, not fully, done. "No LLM required for core workflows" remains accurate; distinguish it from "no LLM exists." Separate wrapper executable from its Python/WebView2/native-Qwen-runtime prerequisites.
+- [ ] **B10.9** See B10 above (renumbered there to sit with the rest of B10's device checks; kept here too so this section's original numbering isn't silently broken).
 - [ ] **B11.12** Confirm official event format and speaking time, complete novice/analyst/recipient exercises (B09), then rehearse and freeze under B12. Keep the September 18–19 readiness target separate from organizer requirements. Download-site proposal remains unverified/planned; do not publish unverified offline or standalone-install claims.
 
 Acceptance: current automated regressions fixed, output/settings/consent contracts consistent, named human reviews recorded, and actual-device rehearsal completed. A source-code review or a green core replay alone does not satisfy these gates.
