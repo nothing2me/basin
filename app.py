@@ -1809,13 +1809,15 @@ elif page == "Review":
                         st.info("📢 **Operational Takeaway**: " + reservoir_summary(sim_df, chosen_sys.name))
                         st.caption(f"Results cover this {len(s.series)}-day window only. Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings are retained for this workspace during the session; opening another workspace resets them.")
 
-                        with st.expander("🏛️ Regional Policy & 'Day Zero' Context (Corpus Christi / Region N)", expanded=False):
+                        with st.expander("🏛️ Dated regional context (Corpus Christi / Region N)", expanded=False):
                             st.markdown(
                                 """
-                                **The 'First City in America to Run Out of Water' Narrative vs. Operational Realities:**
-                                - **National Coverage vs. City Rebuttal**: Throughout early-to-mid 2026, national reports (*Texas Tribune*, *Inside Climate News*, *Circle of Blue*, *Futurism*, *Deceleration News*) highlighted projections that Corpus Christi could become America's first modern "Day Zero" metropolis when combined storage plummeted to an all-time low of **7.7% in mid-April 2026**. The City pushed back, clarifying that a **Level 1 Water Emergency** is an administrative 180-day planning trigger, and that the **Mary Rhodes Pipeline** (70–72 MGD) guarantees a firm regional baseload (~70% of demand) preventing complete dry-pipe failure even if reservoirs hit dead pool.
-                                - **The Fair Water Charter Amendment (Nov 3, 2026 Ballot)**: On August 11, 2026, City Council voted 6–2 to place a charter amendment on the ballot (prompted by ~13,000 citizen signatures) to eliminate the **Drought Surcharge Exemption Fee (DSEF)**. Under DSEF, industrial plants consuming >50% of regional potable water paid $0.31/kGal to bypass drought surcharges, while residents faced 20 months of Stage 3 sprinkler bans and $4–$8/kGal surcharges.
-                                - **Simulating Policy Choices in BASIN**: The Multi-Sector Water Delivery metrics above reflect these dynamics. When combined storage breaches Stage 4 (10%), BASIN models the Fair Water policy mandate by curtailing industrial demand by 30% and outdoor use by 100%, protecting essential domestic baseload and extending reservoir lifespan.
+                                This panel supplies context for the configured experiment; it is not a live policy or operating-status feed.
+
+                                - The City's [April 24, 2026 water-supply memo](https://www.corpuschristitx.gov/media/btvn01mr/20260424_memo_water-supply-update.pdf) reported **7.8% combined storage on April 16, 2026**. BASIN's 7.8% line is a dated reference marker, not a forecast or physical failure threshold.
+                                - The City's [water-supply dashboard](https://www.corpuschristitx.gov/department-directory/corpus-christi-water/water-supply-dashboard/) describes Level 1 in terms of a projected 180-day supply-versus-demand condition. BASIN's 10% line is only an illustrative band.
+                                - The City reported [72–79 MGD operation](https://www.corpuschristitx.gov/news/posts/city-council-approves-critical-infrastructure-upgrades-for-mary-rhodes-pipeline/) for the Mary Rhodes Pipeline in March 2025. The experiment's pipeline toggle compares the two configured demand cases shown above; it does not reproduce pipeline hydraulics or guarantee delivery.
+                                - Sector shares and storage-dependent curtailments are configurable modeling assumptions. They do not implement a ballot measure, adopted drought plan, customer contract, or regulatory order.
                                 """
                             )
 
