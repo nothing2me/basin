@@ -1,5 +1,43 @@
 # BASIN current handoff
 
+## September 11 — Part A: Tailored Workflow & Review Interface (Complete)
+
+- **A1 (Entry Paths):**
+  - Scenario Builder asks the 3 tailoring questions (Goal, Data source, Guidance) before generating a run, saving `ReviewPreferences` beside the run in sidecar `review-prefs-<id>.json`. Repeat runs in Scenario Builder pre-fill from the active run's profile.
+  - "Try an example" routes to Review and offers the optional setup panel ("Set up this Review (optional)"), allowing users to select a focus or skip.
+  - Saved-run reopening automatically reloads `review-prefs-<id>.json` from disk, keeping the active focus intact. Older runs without sidecars fall back to defaults without crashing.
+  - Guided tutorial Step 5 (`review_simulation`) automatically expands `More tools` if `storage` is placed in secondary tabs.
+- **A2 (Focus Choices):**
+  - Mapped supported user goals to existing panels:
+    - `"compare"`: leads with `("rainfall", "provenance")` (Historical Context & Deficits).
+    - `"storage"`: leads with `("storage", "provenance")` (Reservoir Drawdown & Assumptions).
+    - `"operations"`: leads with `("agronomics", "provenance")` (Crop Irrigation Deficit & Wildfire Risk).
+    - `"handoff"`: leads with `("edits", "provenance")` (Rainfall Editing & Review Decisions).
+  - Evaluated crop/irrigation vs wildfire indicators: both reside as subtabs (`"🌾 Crop Water Deficit (ETc)"`, `"🔥 Wildfire Risk (KBDI)"`) in the unified `agronomics` panel and derive from daily scenario rainfall. They do not need separate top-level focus choices because rural/emergency operators evaluate agricultural water deficit and wildfire stress jointly during drought operations.
+- **A3 (Reduced Visible Clutter):**
+  - Primary tabs lead prominently; secondary tools are neatly organized in `More tools (N)` expander.
+  - `provenance` ("📋 Source Evidence & Daily Values") leads in EVERY goal without exception, ensuring source identity, evidence citations, and material limitations are never buried.
+- **A4 (Profile Behavior):**
+  - Added explicit **"Cancel"** button to the setup editor when changing focus so active preferences can be preserved without altering the persisted sidecar file.
+  - "Show all tools" toggle shows all 5 tabs in one row while preserving the configured profile.
+  - Display preferences remain strictly presentation-only: they never alter calculations, ranking weights, shortlisted scenarios, accepted revisions, or export consent.
+- **A5 (Usability & Accessibility Verification):**
+  - Verified across desktop (1280px) and narrow viewports (375px/640px) with automatic column wrapping.
+  - Verified across standard, Light, Dark, monochrome high-contrast (`appearance_bw`), and colorblind (`appearance_colorblind`) appearance modes.
+  - Verified keyboard navigation accessibility and visible focus on interactive controls.
+  - Verified Step 5 & 6 tutorial targets.
+- **Files changed:** `app.py`, `basin_core/review_preferences.py`, `tests/test_review_preferences.py`, `README.md`, `TODO.md`, `docs/tailored_review_handoff.md`, `docs/tailored_review_proposal.md`, `HANDOFF.md`.
+- **Test verification:** 51 passed in `tests/test_review_preferences.py`, 6 passed in `tests/test_app.py`, 9 passed in `tests/test_agronomics.py`, 4 passed in `tests/test_ui_improvements.py`. Zero regressions.
+- **Blocker:** none.
+
+## September 10 — Context read and GitHub synchronization
+
+- Read the local `BASIN_Agent_Handoff.pdf` (September 9) and compared its historical state with this checkout's current handoff.
+- Verified `git pull --ff-only origin main`: already up to date at `0b3d9031b89674ef7279381284a70edb06f850bb` in `basin-latest`; the working tree was clean before this handoff note.
+- Files changed in this session: `HANDOFF.md` only. Preserved the original `basin` checkout and its unfinished merge.
+- No application tests, runtime launch, or release validation performed in this preparation session. Earlier verification below remains author-reported.
+- Blocker: none for the requested synchronization. Next action: await the user's next prompt.
+
 ## September 10 — P0 Baseline, Custom Gauge Lineage, Simulation Consistency & Scientific Claim Audit (P0-A through P0-D Complete)
 
 Completed the 4-phase sequential engineering roadmap in clean worktree `basin-clean` on branch `codex/p0-baseline`, tracking `origin/main` at `a6ef717`:

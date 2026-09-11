@@ -1,6 +1,6 @@
 # Tailored Review proposal
 
-Status: first increment implemented at the top of Review. The original pre-run placement remains open. See docs/tailored_review_handoff.md and the newest HANDOFF integration checkpoint. The scope below remains the product proposal; it is not a claim that every acceptance check is complete.
+Status: the pre-run questionnaire and focused Review layout are implemented. New runs capture the three display choices in Scenario Builder; repeat runs inherit the current profile, and older runs retain the Review-side fallback. See docs/tailored_review_handoff.md and the newest HANDOFF checkpoint. Light/narrow-screen/keyboard and intended-user acceptance remain open.
 
 ## Short setup, with a skip option
 

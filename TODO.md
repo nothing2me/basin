@@ -15,8 +15,7 @@ Ready-to-run prompts: [native install](docs/next_tasks/01_native_runtime.md), [n
 - [x] **SEC.7** Apply reviewed assistant dependency pins through the shared requirements include, ship every requirements file, and test independent archive resolution. Exact-pin checks reject wildcards and conditional pins.
 - [x] **SEC.8** Fix A-1 in optional Ollama helpers using raw inventory metadata and conservative eligibility checks. Active chat uses embedded Qwen and does not call these helpers; this is not active-chat egress validation.
 - [ ] Review the newer embedded-Qwen path separately: dependency/runtime installation, model identity enforcement, ungrounded model prose, tool-call limits and actual laptop/offline operation. The earlier Python advisory report does not cover this new native runtime.
-- [x] Tailored Review first increment: optional focus panel in Review, Show all tools, unchanged calculation/consent state, and saved display preferences.
-- [ ] Noah's original pre-run questionnaire placement remains open; light/narrow-screen/keyboard and intended-user acceptance remain unverified. See docs/next_tasks/04_review_acceptance.md.
+- [x] Tailored Review (Part A complete): pre-run questionnaire in Scenario Builder, 4 user goals mapped (`compare`, `storage`, `operations`, `handoff`), secondary tools under `More tools` with `provenance` always leading, cancelling changes support, persistence via sidecars, and verified usability across desktop/narrow viewports, light/dark themes, keyboard navigation, and tutorial targets.
 
 See the newest HANDOFF checkpoint for combined verification. Older completion counts are historical.
 

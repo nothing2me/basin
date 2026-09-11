@@ -1111,12 +1111,49 @@ elif page == "Workspace":
     st.markdown("**Which rainfall scenarios deserve a closer look?**")
     st.caption("Configure generation settings, establish ranking priorities, and examine candidate shortlists.")
 
-    # 1. Scenario Generation & Priority Weights Builder
+    # Review focus is chosen before generation so the resulting run opens with the
+    # relevant measurements and visuals leading. Repeated runs inherit the current
+    # run's profile; the profile remains presentation-only.
+    profile_context = w.id if w else "new-run"
+    profile_defaults = review_preferences(w.id) if w else ReviewPreferences()
+    if st.session_state.get("run_focus_context") != profile_context:
+        st.session_state["run_focus_context"] = profile_context
+        st.session_state["run_focus_goal"] = profile_defaults.goal
+        st.session_state["run_focus_data"] = profile_defaults.data_source
+        st.session_state["run_focus_guidance"] = profile_defaults.guidance
+        st.session_state["run_focus_skip"] = profile_defaults.dismissed and not profile_defaults.configured
+
+    with st.container(border=True):
+        st.markdown("##### 1. Tailor this run")
+        st.caption("These choices only organize Review. They do not change rainfall, calculations, ranking weights, "
+                   "review decisions, or export consent.")
+        focus_goal_col, focus_data_col, focus_guidance_col = st.columns(3)
+        run_focus_goal = focus_goal_col.selectbox(
+            "What are you trying to do?", list(GOALS),
+            format_func=lambda key: GOALS[key]["label"], key="run_focus_goal",
+            help="BASIN will place the related measurements and visuals first in Review.")
+        run_focus_data = focus_data_col.selectbox(
+            "Which data will you use?", list(DATA_SOURCES),
+            format_func=lambda key: DATA_SOURCES[key]["label"], key="run_focus_data",
+            help="This records your intent. It does not upload, validate, or replace data.")
+        run_focus_guidance = focus_guidance_col.selectbox(
+            "How much guidance do you want?", list(GUIDANCE),
+            format_func=lambda key: GUIDANCE[key]["label"], key="run_focus_guidance",
+            help="Guided explanations add orientation; all scientific limitations remain visible in either mode.")
+        run_focus_skip = st.checkbox(
+            "Skip tailoring and show every Review tool", key="run_focus_skip",
+            help="You can tailor the Review later without losing work.")
+        if run_focus_data == "own":
+            st.caption("Add and review a CSV in Step 1. Selecting this option does not upload or validate a file.")
+        if run_focus_skip:
+            st.caption("This run will use the full Review layout. You can choose a focus later in Review.")
+
+    # 2. Scenario Generation & Priority Weights Builder
     c_gen, c_weights = st.columns([1, 1])
     with c_gen:
         with tour_target("sidebar_generator"):
             with st.form("generate", border=True):
-                st.markdown("##### 1. Resample Weather Windows")
+                st.markdown("##### 2. Resample Weather Windows")
                 stations = st.multiselect("Stations", list(names), default=list(w.params.stations) if w else list(names), format_func=names.get)
                 durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
                 months = st.multiselect("Starting months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
@@ -1151,6 +1188,14 @@ elif page == "Workspace":
                         st.session_state.pop("inspect_id", None)
                         st.session_state.pop("packet", None)
                         save(new)
+                        run_preferences = ReviewPreferences(
+                            goal=run_focus_goal,
+                            data_source=run_focus_data,
+                            guidance=run_focus_guidance,
+                            configured=not run_focus_skip,
+                            dismissed=True,
+                        )
+                        store_review_preferences(new.id, run_preferences)
                     st.rerun()
                 except (ValueError, OSError) as error:
                     st.error(str(error))
@@ -1158,7 +1203,7 @@ elif page == "Workspace":
     with c_weights:
         with tour_target("sidebar_presets"):
             with st.container(border=True):
-                st.markdown("##### 2. Ranking Priorities & Weights")
+                st.markdown("##### 3. Ranking Priorities & Weights")
                 preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
                 matched = "Custom weights"
                 curr_weights = dict(w.weights) if w else {"severity": 40, "duration": 30, "concurrence": 20, "season": 10}
@@ -1310,7 +1355,8 @@ elif page == "Review":
     else:
         prefs = review_preferences(w.id)
 
-        if prefs.needs_setup:
+        is_editing = st.session_state.get(f"review_editing_{w.id}", False)
+        if prefs.needs_setup or is_editing:
             with st.container(border=True):
                 st.markdown("#### Set up this Review (optional)")
                 st.caption("Three questions decide which tools appear first. Every tool stays reachable, "
@@ -1333,15 +1379,31 @@ elif page == "Review":
                                "Existing data is unchanged. Add and review a CSV in Step 1: Data Dashboard when you are ready.")
                 if chosen_data == "example":
                     st.caption("The example run opens from Step 1 or Step 2 using the existing 'Try an example' control.")
-                apply_col, skip_col, _ = st.columns([1, 1, 2])
-                if apply_col.button("Use this focus", key="btn_review_setup_apply", type="primary", width="stretch"):
-                    store_review_preferences(w.id, prefs.replace(
-                        goal=chosen_goal, data_source=chosen_data, guidance=chosen_guidance,
-                        configured=True, dismissed=True))
-                    st.rerun()
-                if skip_col.button("Skip for now", key="btn_review_setup_skip", width="stretch"):
-                    store_review_preferences(w.id, prefs.replace(dismissed=True))
-                    st.rerun()
+                if is_editing:
+                    apply_col, cancel_col, skip_col = st.columns([1, 1, 1])
+                    if apply_col.button("Use this focus", key="btn_review_setup_apply", type="primary", width="stretch"):
+                        st.session_state[f"review_editing_{w.id}"] = False
+                        store_review_preferences(w.id, prefs.replace(
+                            goal=chosen_goal, data_source=chosen_data, guidance=chosen_guidance,
+                            configured=True, dismissed=True))
+                        st.rerun()
+                    if cancel_col.button("Cancel", key="btn_review_setup_cancel", width="stretch"):
+                        st.session_state[f"review_editing_{w.id}"] = False
+                        st.rerun()
+                    if skip_col.button("Skip for now", key="btn_review_setup_skip", width="stretch"):
+                        st.session_state[f"review_editing_{w.id}"] = False
+                        store_review_preferences(w.id, prefs.replace(configured=False, dismissed=True))
+                        st.rerun()
+                else:
+                    apply_col, skip_col, _ = st.columns([1, 1, 2])
+                    if apply_col.button("Use this focus", key="btn_review_setup_apply", type="primary", width="stretch"):
+                        store_review_preferences(w.id, prefs.replace(
+                            goal=chosen_goal, data_source=chosen_data, guidance=chosen_guidance,
+                            configured=True, dismissed=True))
+                        st.rerun()
+                    if skip_col.button("Skip for now", key="btn_review_setup_skip", width="stretch"):
+                        store_review_preferences(w.id, prefs.replace(dismissed=True))
+                        st.rerun()
         else:
             focus_text, focus_toggle, focus_change = st.columns([3, 1, 1])
             focus_text.caption("**Review focus:** " + prefs.summary())
@@ -1352,10 +1414,10 @@ elif page == "Review":
                 prefs = prefs.replace(show_all_tools=show_all_tools)
                 store_review_preferences(w.id, prefs)
             if focus_change.button("Change focus", key=f"btn_review_change_focus_{w.id}", width="stretch"):
+                st.session_state[f"review_editing_{w.id}"] = True
                 st.session_state["review_setup_goal"] = prefs.goal
                 st.session_state["review_setup_data"] = prefs.data_source
                 st.session_state["review_setup_guidance"] = prefs.guidance
-                store_review_preferences(w.id, prefs.replace(configured=False, dismissed=False))
                 st.rerun()
             if prefs.configured and prefs.data_source == "own":
                 st.caption("Your focus records an intent to use your own rainfall data. Nothing has been uploaded or "
@@ -1463,7 +1525,8 @@ elif page == "Review":
         primary_keys, secondary_keys = prefs.tab_layout()
         panes = dict(zip(primary_keys, st.tabs([TAB_LABELS[key] for key in primary_keys])))
         if secondary_keys:
-            with st.expander(f"More tools ({len(secondary_keys)})", expanded=False):
+            expand_secondary = bool(curr_target == "review_simulation" and "storage" in secondary_keys)
+            with st.expander(f"More tools ({len(secondary_keys)})", expanded=expand_secondary):
                 st.caption("Everything outside your current focus. Nothing here is disabled, and your work is unchanged.")
                 panes.update(zip(secondary_keys, st.tabs([TAB_LABELS[key] for key in secondary_keys])))
         if prefs.guided and prefs.configured:
