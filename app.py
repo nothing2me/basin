@@ -1795,11 +1795,11 @@ elif page == "Review":
                         if pipeline_active and getattr(chosen_sys, "pipeline_capacity_mgd", 0) > 0 and chosen_sys.demand_no_pipeline_acft_day is not None:
                             sim_no_pipe = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=False, config=chosen_sys)
                             crit_pct = chosen_sys.stage_bands_pct[2] * 100 if len(chosen_sys.stage_bands_pct) >= 3 else 20.0
-                            s_crit_with = next((r["day"] for _, r in sim_df.iterrows() if r["combined_pct"] < crit_pct), None)
-                            s_crit_without = next((r["day"] for _, r in sim_no_pipe.iterrows() if r["combined_pct"] < crit_pct), None)
-                            if s_crit_with and s_crit_without and s_crit_with > s_crit_without:
+                            s_crit_with = threshold_crossing_day(sim_df, init_pct, crit_pct)
+                            s_crit_without = threshold_crossing_day(sim_no_pipe, init_pct, crit_pct)
+                            if s_crit_with is not None and s_crit_without is not None and s_crit_with > s_crit_without:
                                 st.info(f"🛡️ **Pipeline Resilience Metric**: The Mary Rhodes Pipeline ({chosen_sys.pipeline_capacity_mgd:.0f} MGD) extends the Stage 3 survival runway by **{s_crit_with - s_crit_without} days** compared to a total pipeline outage.")
-                            elif s_crit_without and not s_crit_with:
+                            elif s_crit_without is not None and s_crit_with is None:
                                 st.info(f"🛡️ **Pipeline Resilience Metric**: The Mary Rhodes Pipeline ({chosen_sys.pipeline_capacity_mgd:.0f} MGD) completely prevents Stage 3 breach in this window (which breaches on Day {s_crit_without} under a pipeline outage).")
 
                         # TCEQ Emergency Inflow Status

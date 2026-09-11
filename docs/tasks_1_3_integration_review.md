@@ -28,3 +28,12 @@ The diskcache advisory remains listed for <=5.6.3 with no patched release: https
 Version-1 saved simulation results are not silently migrated: rerun and re-review the experiment before exporting under the new threshold contract. Do not delete sessions to bypass validation.
 
 Continue Task 4 (actual UI acceptance), Task 5 (current-status reconciliation), and Task 6 (presentation laptop/offline/user/rehearsal acceptance). Keep these follow-ups visible: Region N assistant simulations versus selectable Review systems; operational-sounding takeaways; legacy report argument percentage ambiguity; custom-observation source wording; VC++/CPU requirements and offline vcomp140.dll; model license/provenance. Storage timing remains illustrative and needs a separate calibration/domain decision for operational use.
+
+
+## Upstream follow-up before push
+
+Origin advanced through 5d83fcd while verification was running. Merged the six upstream commits, preserving the newer Review intake, hydrology/sector delivery and unit displays. Resolved capacity selection using the sum of the configured regional capacities. Retained inclusive/day-zero threshold calculations rather than restoring the old truthiness checks, including the new pipeline comparison. These integration checks are not independent scientific certification of the newly merged hydrology assumptions.
+
+The initial full run finished after 9:10:39 wall time with 550 passed, two skips and one AppTest 90-second timeout in Show all tools. No root cause for that timeout is asserted. After upstream integration, the focused Review/numerical/water-system suite passed 92 tests in 81.06s without raising the timeout. The final full-suite result is recorded in HANDOFF.md and supersedes that preliminary failure. Final snapshot/smoke/replay were rerun because the upstream simulator changed.
+
+Final combined verification: **565 passed, 2 skipped in 572.43s**, with explicit skips for genuine native wheels and Qwen model weights. Final smoke run a57f4a988ade and explicit replay passed with implementation_matches_current true. No full-suite failures remain.
