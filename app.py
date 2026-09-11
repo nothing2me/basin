@@ -25,7 +25,7 @@ from basin_theme import apply_design, appearance_picker, custom_appearance, acce
 from basin_core.data import CachedSource, ROOT
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle, generate_brief, summary_record, rainfall_rows
-from basin_core.pdf_report import ExperimentConfig, generate_pdf_report, report_state_token
+from basin_core.pdf_report import ExperimentConfig, generate_pdf_report_with_status, report_state_token
 from basin_core.workspace import Workspace, session_dir
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
@@ -1874,7 +1874,8 @@ elif page == "Exports":
                         brief_text = generate_brief(w, w.exportable())
                         brief_path = out_dir / f"Hydrologist_Handoff_Brief_{w.id}.md"
                         brief_path.write_text(brief_text, encoding="utf-8")
-                        pdf_bytes = generate_pdf_report(w, w.exportable(), include_notes=share, config=experiment_config)
+                        render_outcome = generate_pdf_report_with_status(w, w.exportable(), include_notes=share, config=experiment_config)
+                        pdf_bytes = render_outcome.pdf_bytes
                         pdf_path = out_dir / f"BASIN-Executive-Brief-{w.id}.pdf"
                         pdf_path.write_bytes(pdf_bytes)
 
@@ -1898,6 +1899,9 @@ elif page == "Exports":
                         st.session_state.packet = {
                             "data": payload,
                             "pdf_bytes": pdf_bytes,
+                            "pdf_renderer": render_outcome.renderer,
+                            "pdf_degraded": render_outcome.degraded,
+                            "pdf_render_detail": render_outcome.detail,
                             "brief_text": brief_text,
                             "xlsx_bytes": xlsx_bytes,
                             "saved_pdf": str(pdf_path.name),
@@ -1973,6 +1977,10 @@ elif page == "Exports":
                         type="primary",
                         width="stretch"
                     )
+                    if packet.get("pdf_degraded"):
+                        st.warning(f"⚠️ **PDF renderer fallback:** {packet.get('pdf_render_detail', '')}")
+                    else:
+                        st.caption(f"PDF renderer: {packet.get('pdf_render_detail', 'unknown')}")
 
                 st.markdown("**Companion Deliverables & Replay Package:**")
                 col_dl1, col_dl2 = st.columns(2)
@@ -2037,9 +2045,12 @@ elif page == "Exports":
                             preview_state = None
                         if preview_state is None:
                             if st.button("📕 Prep PDF Preview", key=f"btn_prep_pdf_prev_{w.id}", width="stretch"):
+                                preview_outcome = generate_pdf_report_with_status(w, accepted_preview, include_notes=share, config=experiment_config)
                                 st.session_state["preview_pdf"] = {
                                     "token": preview_token,
-                                    "bytes": generate_pdf_report(w, accepted_preview, include_notes=share, config=experiment_config),
+                                    "bytes": preview_outcome.pdf_bytes,
+                                    "degraded": preview_outcome.degraded,
+                                    "detail": preview_outcome.detail,
                                 }
                                 st.rerun()
                         else:
@@ -2051,6 +2062,8 @@ elif page == "Exports":
                                 key=f"dl_pdf_preview_{w.id}",
                                 width="stretch"
                             )
+                            if preview_state.get("degraded"):
+                                st.caption(f"⚠️ {preview_state.get('detail', '')}")
                     with col_prev_c:
                         st.download_button(
                             "📄 Download Brief (.md)",
