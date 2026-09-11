@@ -1,17 +1,21 @@
 # BASIN Finalist Showcase Presentation Plan
 
-Updated: September 8, 2026 | Product baseline: BASIN 0.2.0 (`BASIN.exe` Native Desktop Edition)
+Updated: September 11, 2026 | Product baseline: BASIN 0.2.0 (`BASIN.exe` Native Desktop Edition)
 
-## Confirmed Event Context
+## Confirmed Event Context & Rules (Zoho Coordinator Briefing)
 
-- **Event:** From the Ground Up 2026 AI Hackathon Finalist Showcase
-- **Location:** Pleasanton, California
-- **Date:** September 22, 2026
-- **Expected Travel Day:** September 21, subject to organizer instructions
+- **Event:** Zoho "From the Ground Up" AI Hackathon — Finalist Showcase (Pleasanton, CA)
+- **Location:** Zoho Pleasanton Headquarters, Pleasanton, California
+- **Date:** Tuesday, September 22, 2026
+- **Travel Window:** Monday, September 21 (Hyatt House Pleasanton)
 - **Team:** Noah Wilborn, Mohammed Asad Khan, and Misha Stegall
-- **Judging Themes:** Impact, Feasibility, Community Centeredness, Innovation, and Clarity
+- **Session Duration:** **Strict 60-Minute Maximum** (Recommended: **45 Min Presentation + 15 Min Q&A**; hard cutoff at 60:00)
+- **Day-Of Surprise Requirement:** Delivered at **7:00 AM on Sept 22**; master deck due at **9:00 AM sharp** (see [Day-Of Surprise Rapid Response Guide](day_of_surprise_rapid_response_guide.md)).
+- **Mandatory Social Media:** 3 posts due by **end of day September 18** (see [Social Media Assets & Schedule](social_media_assets_and_schedule.md)).
+- **Master 25-Slide Deck & Script:** See [Finalist Showcase Master Deck](finalist_showcase_master_deck.md).
+- **Judging Themes:** Impact, Feasibility, Community Centeredness, Innovation, and Clarity.
 
-The three-minute demonstration below is the team's compact, high-impact presentation route, followed by modular expansion sections for longer slots and judging Q&A.
+The plan below details the authoritative 60-minute presentation structure, speaker lanes, live demo, and judge defense.
 
 ---
 
@@ -130,12 +134,15 @@ To definitively prove usefulness, we conducted an empirical benchmark: an indepe
 
 ---
 
-## Final Preparation Checklist (September 21–22)
+## Final Preparation Checklist (September 11–22)
 
 - [x] Compile and verify native `BASIN.exe` with custom brand icon (23.87 MB).
-- [x] Verify all 128 automated tests pass via pytest (`128 passed in 119s`).
+- [x] Verify full regression test suite: **438 passed, 2 skipped, 0 failed in 507s**.
 - [x] Complete the 1-Click Multi-Tier Stress Spectrum and Tipping Point visualization.
 - [x] Conduct and document the unassisted A/B hydrologist benchmark comparison.
-- [x] Rehearse 3-minute compact script across the three speaking lanes.
-- [ ] Test on the actual presentation laptop with Wi-Fi disabled and external projector connected.
+- [x] Structure 60-minute master presentation deck and speaking script ([`finalist_showcase_master_deck.md`](finalist_showcase_master_deck.md)).
+- [x] Prepare 3-post social media campaign due September 18 ([`social_media_assets_and_schedule.md`](social_media_assets_and_schedule.md)).
+- [x] Establish 7:00 AM – 9:00 AM surprise rapid-response playbook ([`day_of_surprise_rapid_response_guide.md`](day_of_surprise_rapid_response_guide.md)).
+- [ ] Connect with assigned Zoho AI mentor (`slow@zohocorp.com` / `sandy.s@zohocorp.com`) for mock pitch rehearsal.
+- [ ] Test on the actual presentation laptop with Wi-Fi disabled and external 1080p projector connected during AV test window.
 - [ ] Keep backup video (`media/`) and offline USB copy ready.

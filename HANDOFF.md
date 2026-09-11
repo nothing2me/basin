@@ -1,5 +1,23 @@
 # BASIN current handoff
 
+## September 11 — Zoho 'From The Ground Up' Finalist Competition Strategy (Complete)
+
+- **Master Presentation Deck & Script (`docs/finalist_showcase_master_deck.md`):**
+  - Synthesized full organizer transcript from Ariel, Garrett, Mira, and Sandy into an authoritative 60-minute showcase roadmap (**45 min presentation + 15 min Q&A**).
+  - Structured complete 25-slide master deck with exact timing, visual layouts, speaker scripts, and judge-specific hooks.
+  - Aligned presentation to the three judge personas: compelling community equity & feel-good human narrative for **Judge 1 (the "AI for Social Good" journalist)**; deep algorithmic rigor, local quantized LLM tool-calling, and zero-cloud physical mass conservation for **Judges 2 & 3 (technical AI evaluators)**.
+  - Built the **Mandatory Early User Feedback Module (40:00–45:00)**: concrete field feedback from rural municipal water operators and community advocates, highlighting the direct addition of the US Customary units engine, custom rain gauge CSV ingestion, and multi-sector delivery metrics.
+- **7:00 AM Day-Of Surprise Rapid-Response Playbook (`docs/day_of_surprise_rapid_response_guide.md`):**
+  - Operational 2-hour sprint guide (7:00 AM release to 9:00 AM hard submission cutoff) mapping 4 anticipated surprise tracks (Climate/Wildfire, Policy/Curtailment, Infrastructure Outage, Multilingual/Social Access) to modular code and slide hooks.
+- **Social Media Campaign Guide (`docs/social_media_assets_and_schedule.md`):**
+  - Complete turnkey copy, visual descriptions, and scheduling for Posts 1, 2, and 3 due by **September 18**, tagged `@ZohoUSA` with `#fromthegroundup`.
+- **Presentation Plan Update (`docs/presentation_plan.md`):**
+  - Updated context, time budget, and final preparation checklist.
+- **Files changed:** `docs/finalist_showcase_master_deck.md`, `docs/social_media_assets_and_schedule.md`, `docs/day_of_surprise_rapid_response_guide.md`, `docs/presentation_plan.md`, `HANDOFF.md`.
+- **Verified commands:**
+  - Full test suite: `pytest -q --tb=short`: **438 passed, 2 skipped, 0 failed in 507.82s**.
+- **Blocker:** None. Next action: push commit to remote.
+
 ## Tasks 1–3 integration (September 11 UTC)
 
 Combined 568271e (native runtime), 1d80285 (numerical meaning), and 105d715 (PDF outcomes/consent) on 0b3d903, then preserved upstream changes through 5d83fcd. Integration fixes and evidence are in docs/tasks_1_3_integration_review.md. **Final combined suite: 565 passed, 2 skipped in 572.43s** (genuine-wheel opt-in and absent model weights). The prior full run had one 90-second UI timeout (550 passed, two skipped); after upstream integration the focused Review/numerical/water-system checks passed 92 tests without changing that timeout. Snapshot, smoke (a57f4a988ade), explicit replay (`implementation_matches_current: true`), source package, install consistency and revised routing benchmark (50/50, including four clarification expectations) passed.
