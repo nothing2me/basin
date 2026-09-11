@@ -82,7 +82,7 @@ h3{font-size:1.6rem!important;font-weight:650!important}
     font-weight:500!important;
     color:color-mix(in srgb,currentColor 45%,transparent)!important;
 }
-.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:4px 0;margin:0 auto}
+.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:4px 8px;margin:0 auto;background:#20292E;border-radius:8px;box-sizing:border-box}
 .basin-top-logo{height:46px;width:auto;max-width:260px;object-fit:contain;display:block}
 .st-key-notes_slide_drawer{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:min(620px,92vw)!important;z-index:99990!important;transition:left .35s cubic-bezier(0.16, 1, 0.3, 1)!important;pointer-events:none!important}
 .st-key-notes_slide_drawer *{pointer-events:auto!important}
@@ -120,6 +120,7 @@ body.basin-theme-bw .basin-top-logo{filter:none!important}
 [data-tag]{background:#356273!important;color:#fff!important}
 [data-tag] *{color:#fff!important}
 button:focus-visible,a:focus-visible{outline:2px solid currentColor!important;outline-offset:3px}
+[data-testid="stCheckbox"]:has(input:focus-visible),[data-testid="stRadio"]:has(input:focus-visible){outline:2px solid currentColor!important;outline-offset:3px;border-radius:6px}
 .st-key-welcome{padding:30px 34px;border:1px solid color-mix(in srgb,currentColor 24%,transparent);border-radius:18px;background:color-mix(in srgb,currentColor 3%,transparent);margin:6px 0 16px}
 .welcome-title{font-size:2rem!important;line-height:1.25!important;margin:8px 0 14px!important;font-weight:650!important}
 .welcome-copy{max-width:610px;line-height:1.6;opacity:.8;font-size:1rem}
