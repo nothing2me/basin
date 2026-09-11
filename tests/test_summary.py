@@ -43,7 +43,8 @@ def test_reservoir_summary_breached():
     text = reservoir_summary(df, "Test Lake", critical_pct=20.0)
     assert "Test Lake" in text
     assert "Day 3" in text
-    assert "emergency band" in text
+    assert "illustrative" in text
+    assert "no operational action" in text.lower()
 
 
 def test_reservoir_summary_safe():
@@ -52,4 +53,10 @@ def test_reservoir_summary_safe():
         "combined_pct": [80.0, 78.0, 76.0],
     })
     text = reservoir_summary(df, "Farm Pond")
-    assert "remains above Stage 1" in text
+    assert "above all illustrative bands" in text
+
+
+def test_reservoir_summary_reports_day_zero():
+    df = pd.DataFrame({"day": [1], "combined_pct": [18.0]})
+    text = reservoir_summary(df, initial_pct=.20)
+    assert "Day 0" in text

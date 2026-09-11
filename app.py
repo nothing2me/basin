@@ -388,17 +388,19 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
 
     if len(cfg.stage_bands_pct) >= 4:
         b10 = cfg.stage_bands_pct[3] * 100
-        fig.add_hline(y=b10, line_dash="dot", line_color="#991b1b", annotation_text=f"Stage 4 Emergency ({b10:.0f}%)",
+        fig.add_hline(y=b10, line_dash="dot", line_color="#991b1b", annotation_text=f"Illustrative band 4 ({b10:.0f}%)",
                       annotation_position="top right", row=1, col=2)
 
     dead_acft = getattr(cfg, "dead_storage_acft", 0.0)
     if dead_acft > 0 and cfg.total_capacity_acft > 0:
         dead_pct = dead_acft / cfg.total_capacity_acft * 100
-        fig.add_hline(y=dead_pct, line_dash="dot", line_color="#450a0a", annotation_text=f"Dead Storage Reserve ({dead_pct:.1f}%)",
+        fig.add_hline(y=dead_pct, line_dash="dot", line_color="#450a0a", annotation_text=f"Assumed inactive storage ({dead_pct:.1f}%)",
                       annotation_position="bottom right", row=1, col=2)
 
-    if "Region N" in cfg.name or "Corpus Christi" in cfg.name:
-        fig.add_hline(y=7.7, line_dash="dot", line_color="#7f1d1d", annotation_text="April 2026 Record Low (7.7%)",
+    marker = getattr(cfg, "context_storage_marker_pct", None)
+    if marker is not None:
+        marker_pct = marker * 100
+        fig.add_hline(y=marker_pct, line_dash="dot", line_color="#7f1d1d", annotation_text=f"Configured reference marker ({marker_pct:g}%)",
                       annotation_position="bottom left", row=1, col=2)
 
     frames = []
@@ -1746,7 +1748,11 @@ elif page == "Review":
                                 "At or below 30%": threshold_day_label(r["day_stage2_30"]),
                                 "At or below 20%": threshold_day_label(r["day_stage3_20"]),
                                 "Critical band": "Not reached in window" if r["day_stage3_20"] is None else "Reached in window",
-                                "Dead Storage / Day Zero": f"Day {r['day_zero']}" if r.get("day_zero") else ("Day " + str(r['day_dead_storage']) if r.get("day_dead_storage") else "Not reached"),
+                                "Active-storage / inactive-storage marker": (
+                                    f"Day {r['day_zero']}" if r.get("day_zero") is not None
+                                    else f"Day {r['day_dead_storage']}" if r.get("day_dead_storage") is not None
+                                    else "Not reached"
+                                ),
                             }
                             for r in spec["summary_table"]
                         ])
@@ -1759,15 +1765,18 @@ elif page == "Review":
                             st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms, config=chosen_sys)), width="stretch", config={"displayModeBar": False})
                             st.plotly_chart(accessible_chart(stage_trigger_milestone_figure({"tier_results": {1.0: {"df": sim_df}}}, chosen_sys.stage_bands_pct)), width="stretch", config={"displayModeBar": False})
 
-                        # Dire Condition & Day Zero Warning
+                        # Active-storage exhaustion in the configured experiment.
                         if sim_df["is_day_zero"].any():
                             day_zero_val = int(sim_df.loc[sim_df["is_day_zero"], "day"].iloc[0])
                             st.error(
-                                f"🚨 **Day Zero Failure**: Reservoir storage entered the inactive dead storage reserve on **Day {day_zero_val}**. "
-                                f"Intake pumps cavitate and raw water deliveries cease. Cumulative unserved demand reached **{sim_df['unmet_demand_acft'].sum():,.0f} ac-ft**."
+                                f"**Modeled active-storage limit reached on Day {day_zero_val}.** The configured inactive-storage "
+                                f"assumption prevents further withdrawals; cumulative unmet modeled demand is "
+                                f"**{sim_df['unmet_demand_acft'].sum():,.0f} ac-ft** in this window."
                             )
-                        elif sim_df["combined_pct"].min() <= 7.7 and ("Region N" in chosen_sys.name or "Corpus Christi" in chosen_sys.name):
-                            st.warning(f"⚠️ **Historic Record Low Exceeded**: Storage dropped to **{sim_df['combined_pct'].min():.1f}%**, falling below the mid-April 2026 all-time low of 7.7% and the TWDB 75,000 ac-ft inactive reserve.")
+                        elif (chosen_sys.context_storage_marker_pct is not None
+                              and sim_df["combined_pct"].min() <= chosen_sys.context_storage_marker_pct * 100):
+                            marker_pct = chosen_sys.context_storage_marker_pct * 100
+                            st.warning(f"Modeled storage falls below the preset's configured {marker_pct:g}% comparison marker, reaching **{sim_df['combined_pct'].min():.1f}%**. The marker is context, not a calibrated limit.")
 
                         # Same inclusive rule as the spectrum, tools and PDF, including day 0.
                         bands = chosen_sys.stage_bands_pct
@@ -1787,9 +1796,10 @@ elif page == "Review":
                         if "served_domestic_acft" in sim_df.columns and sim_df["served_demand_acft"].sum() > 0:
                             st.markdown("##### 👥 Multi-Sector Water Delivery")
                             sec1, sec2, sec3 = st.columns(3)
-                            sec1.metric("Domestic Baseload", f"{sim_df['served_domestic_acft'].sum():,.0f} ac-ft")
-                            sec2.metric("Industrial Contracted", f"{sim_df['served_industrial_acft'].sum():,.0f} ac-ft")
-                            sec3.metric("Outdoor / Irrigation", f"{sim_df['served_outdoor_acft'].sum():,.0f} ac-ft")
+                            sec1.metric("Domestic category", f"{sim_df['served_domestic_acft'].sum():,.0f} ac-ft")
+                            sec2.metric("Industrial category", f"{sim_df['served_industrial_acft'].sum():,.0f} ac-ft")
+                            sec3.metric("Outdoor category", f"{sim_df['served_outdoor_acft'].sum():,.0f} ac-ft")
+                            st.caption("Category shares and curtailments are preset assumptions, not observed deliveries or adopted allocations.")
 
                         # Pipeline Outage Resilience Counterfactual
                         if pipeline_active and getattr(chosen_sys, "pipeline_capacity_mgd", 0) > 0 and chosen_sys.demand_no_pipeline_acft_day is not None:
@@ -1798,15 +1808,17 @@ elif page == "Review":
                             s_crit_with = threshold_crossing_day(sim_df, init_pct, crit_pct)
                             s_crit_without = threshold_crossing_day(sim_no_pipe, init_pct, crit_pct)
                             if s_crit_with is not None and s_crit_without is not None and s_crit_with > s_crit_without:
-                                st.info(f"🛡️ **Pipeline Resilience Metric**: The Mary Rhodes Pipeline ({chosen_sys.pipeline_capacity_mgd:.0f} MGD) extends the Stage 3 survival runway by **{s_crit_with - s_crit_without} days** compared to a total pipeline outage.")
+                                st.info(f"The configured pipeline-available demand case delays reaching the illustrative {crit_pct:.0f}% band by **{s_crit_with - s_crit_without} days** versus the pipeline-unavailable demand case.")
                             elif s_crit_without is not None and s_crit_with is None:
-                                st.info(f"🛡️ **Pipeline Resilience Metric**: The Mary Rhodes Pipeline ({chosen_sys.pipeline_capacity_mgd:.0f} MGD) completely prevents Stage 3 breach in this window (which breaches on Day {s_crit_without} under a pipeline outage).")
+                                st.info(f"The pipeline-available demand case stays above the illustrative {crit_pct:.0f}% band in this window; the pipeline-unavailable case reaches it on Day {s_crit_without}.")
 
                         # TCEQ Emergency Inflow Status
                         if getattr(chosen_sys, "estuary_order_active", False) and sim_df["estuary_pass_through_acft"].sum() == 0:
-                            st.caption(f"🌿 **TCEQ 2026 Emergency Inflow Order Active**: Estuary pass-through suspended while storage ≤ {getattr(chosen_sys, 'estuary_threshold_pct', 0.50)*100:.0f}%, retaining 100% of inflow in municipal storage.")
+                            st.caption(f"Configured estuary pass-through assumption: {chosen_sys.estuary_pass_through_fraction:.0%} of modeled inflow, capped at {chosen_sys.estuary_pass_through_cap_acft_day:g} ac-ft/day, is passed through above {chosen_sys.estuary_threshold_pct:.0%} storage; none is passed through at or below it. This is a preset input, not a live regulatory-status determination.")
 
-                        st.info("📢 **Operational Takeaway**: " + reservoir_summary(sim_df, chosen_sys.name))
+                        st.info("📢 **Modeled storage result**: " + reservoir_summary(
+                            sim_df, chosen_sys.name, stage_bands_pct=chosen_sys.stage_bands_pct,
+                            initial_pct=init_pct))
                         st.caption(f"Results cover this {len(s.series)}-day window only. Capacity and operational parameters are illustrative assumptions. Threshold timing is conditional on these settings; it is not an official restriction date. Experiment settings are retained for this workspace during the session; opening another workspace resets them.")
 
                         with st.expander("🏛️ Dated regional context (Corpus Christi / Region N)", expanded=False):

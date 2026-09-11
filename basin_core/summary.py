@@ -61,8 +61,9 @@ def scenario_summary(features: dict, station_names: dict[str, str] | None = None
 
 def reservoir_summary(sim_df: pd.DataFrame, system_name: str = "the regional system",
                       critical_pct: float | None = None,
-                      stage_bands_pct: tuple[float, ...] | None = None) -> str:
-    """Generate a 1-2 sentence plain-language operational takeaway from simulation drawdown."""
+                      stage_bands_pct: tuple[float, ...] | None = None,
+                      initial_pct: float | None = None) -> str:
+    """Describe modeled storage relative to illustrative bands without policy inference."""
     if sim_df is None or sim_df.empty:
         return "No simulation data available."
 
@@ -75,27 +76,33 @@ def reservoir_summary(sim_df: pd.DataFrame, system_name: str = "the regional sys
     min_pct = float(sim_df["combined_pct"].min())
     days = len(sim_df)
 
-    b40 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= s1_pct), None)
-    b30 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= s2_pct), None)
-    b20 = next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= crit_val), None)
+    def first_at_or_below(threshold: float) -> int | None:
+        if initial_pct is not None and initial_pct * 100 <= threshold:
+            return 0
+        return next((int(r["day"]) for _, r in sim_df.iterrows() if r["combined_pct"] <= threshold), None)
+
+    b40 = first_at_or_below(s1_pct)
+    b30 = first_at_or_below(s2_pct)
+    b20 = first_at_or_below(crit_val)
 
     if b20 is not None:
         return (
-            f"Under these assumed inputs for **{system_name}**, combined storage breaches the critical **{crit_val:.0f}% emergency band on Day {b20}** "
-            f"and reaches a low of **{min_pct:.1f}%**, signaling potential emergency curtailments."
+            f"Under these assumed inputs for **{system_name}**, combined storage first reaches the illustrative "
+            f"**{crit_val:.0f}% band on Day {b20}** and reaches a low of **{min_pct:.1f}%**. "
+            "The experiment assigns no operational action to that band."
         )
     elif b30 is not None:
         return (
-            f"Storage drops into Stage 2 restrictions (**{s2_pct:.0f}% band**) on **Day {b30}**, but stays above critical emergency levels, "
-            f"bottoming out at **{min_pct:.1f}%** and ending at **{final_pct:.1f}%** after {days} days."
+            f"Storage first reaches the illustrative **{s2_pct:.0f}% band on Day {b30}**, stays above the "
+            f"{crit_val:.0f}% band, reaches a low of **{min_pct:.1f}%**, and ends at **{final_pct:.1f}%** after {days} days."
         )
     elif b40 is not None:
         return (
-            f"Storage enters voluntary conservation (**Stage 1 / {s1_pct:.0f}% band**) on **Day {b40}**, bottoming out at **{min_pct:.1f}%** "
-            f"and finishing the scenario at **{final_pct:.1f}%**."
+            f"Storage first reaches the illustrative **{s1_pct:.0f}% band on Day {b40}**, reaches a low of **{min_pct:.1f}%**, "
+            f"and ends at **{final_pct:.1f}%**. No response action is encoded."
         )
     else:
         return (
-            f"Storage remains above Stage 1 restriction thresholds throughout the entire {days}-day window, "
+            f"Storage stays above all illustrative bands throughout the {days}-day window, "
             f"reaching a low of **{min_pct:.1f}%** and ending at **{final_pct:.1f}%**."
         )

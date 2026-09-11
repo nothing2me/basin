@@ -91,7 +91,7 @@ class Workspace:
         run = next((r for r in self.simulation_runs if r["id"] == run_id), None)
         if run is None or not is_current(self, run) or self.active_simulations.get(run["scenario_id"]) != run_id:
             raise ValueError("Simulation changed or is stale; run and inspect the current inputs")
-        if not rationale.strip():
+        if not isinstance(rationale, str) or not rationale.strip():
             raise ValueError("Record a public simulation review rationale")
         validate_run(self, run)
         self.simulation_reviews[run_id] = {"run_id": run_id, "at": utc_now(), "rationale": rationale.strip()}
@@ -101,7 +101,7 @@ class Workspace:
         return content_hash(evidence_context(self, self.get(identifier)))
 
     def accept_reviewed(self, tokens: dict[str, str], note: str) -> None:
-        if not tokens or not note.strip():
+        if not isinstance(tokens, dict) or not tokens or not isinstance(note, str) or not note.strip():
             raise ValueError("Select reviewed revisions and record your rationale")
         for identifier, token in tokens.items():
             if identifier not in self.selected or self.get(identifier).status == "rejected" or token != self.review_token(identifier):

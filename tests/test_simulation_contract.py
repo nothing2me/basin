@@ -138,6 +138,45 @@ def test_replay_detects_changed_results_even_with_rehashed_record(workspace):
         validate_run(workspace, bad)
 
 
+@pytest.mark.parametrize("mutation", ["missing field", "malformed nested", "unknown scenario", "old schema"])
+def test_malformed_simulation_records_fail_with_clear_validation(workspace, mutation):
+    run = deepcopy(workspace.run_simulation(workspace.selected[0], SimulationSettings()))
+    if mutation == "missing field":
+        del run["results"]
+    elif mutation == "malformed nested":
+        run["baseline"] = []
+    elif mutation == "unknown scenario":
+        run["scenario_id"] = "UNKNOWN"
+    else:
+        run["schema_version"] = "0.9"
+    run["id"] = "sim-" + content_hash({k: v for k, v in run.items() if k != "id"})
+    with pytest.raises(ValueError):
+        validate_run(workspace, run)
+
+
+def test_review_methods_reject_non_text_rationales(workspace):
+    run = workspace.run_simulation(workspace.selected[0], SimulationSettings())
+    with pytest.raises(ValueError, match="rationale"):
+        workspace.review_simulation(run["id"], None)
+    with pytest.raises(ValueError, match="rationale"):
+        workspace.accept_reviewed({workspace.selected[0]: workspace.review_token(workspace.selected[0])}, None)
+
+
+@pytest.mark.parametrize("field,value,message", [
+    ("simulation_runs", {}, "list of records"),
+    ("active_simulations", [], "activation and review indexes"),
+    ("simulation_reviews", [], "activation and review indexes"),
+])
+def test_session_rejects_malformed_simulation_indexes(workspace, tmp_path, field, value, message):
+    workspace.run_simulation(workspace.selected[0], SimulationSettings())
+    path = workspace.save(tmp_path)
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    saved[field] = value
+    path.write_text(json.dumps(saved), encoding="utf-8")
+    with pytest.raises(ValueError, match=message):
+        Workspace.load(workspace.source, path)
+
+
 def test_batch_review_is_atomic_and_version_bound(workspace):
     first, second = workspace.selected[:2]
     tokens = {sid: workspace.review_token(sid) for sid in (first, second)}

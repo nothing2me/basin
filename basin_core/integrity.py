@@ -139,19 +139,32 @@ def reconstruct_audit(source, audit, legacy=False, require_export=False):
     if audit["schema_version"] == "2.2":
         from basin_core.simulation import validate_run, is_current, content_hash, evidence_context
         by_id = {s.id: s for s in scenarios}
-        view = SimpleNamespace(source=source, reference=reference, get=lambda i: by_id[i],
+        def get_scenario(identifier):
+            try:
+                return by_id[identifier]
+            except (KeyError, TypeError) as exc:
+                raise ValueError(f"Unknown simulation scenario: {identifier}") from exc
+        view = SimpleNamespace(source=source, reference=reference, get=get_scenario,
                                evidence=audit["evidence"], evidence_refs=audit["evidence_refs"], conflicts=audit["conflicts"])
+        if not isinstance(runs, list) or not all(isinstance(run, dict) for run in runs):
+            raise ValueError("Saved simulations must be a list of records")
+        if any(not isinstance(run.get("id"), str) or not run["id"] for run in runs):
+            raise ValueError("Saved simulation IDs must be nonempty strings")
         by_run = {r["id"]: r for r in runs}
         if len(by_run) != len(runs):
             raise ValueError("Duplicate saved simulation IDs")
         for run in runs:
             validate_run(view, run)
-        active, reviews = audit["active_simulations"], audit["simulation_reviews"]
+        active, reviews = audit.get("active_simulations"), audit.get("simulation_reviews")
+        if not isinstance(active, dict) or not isinstance(reviews, dict):
+            raise ValueError("Simulation activation and review indexes must be records")
         for sid, rid in active.items():
-            if sid not in by_id or rid not in by_run or by_run[rid]["scenario_id"] != sid:
+            if not isinstance(sid, str) or not isinstance(rid, str) or sid not in by_id or rid not in by_run or by_run[rid]["scenario_id"] != sid:
                 raise ValueError("Active simulation identity mismatch")
         for rid, review in reviews.items():
-            if rid not in by_run or review["run_id"] != rid or not isinstance(review["rationale"], str) or not review["rationale"].strip() or not review["at"]:
+            if (not isinstance(review, dict) or rid not in by_run or review.get("run_id") != rid
+                    or not isinstance(review.get("rationale"), str) or not review["rationale"].strip()
+                    or not isinstance(review.get("at"), str) or not review["at"].strip()):
                 raise ValueError("Invalid simulation review")
         if require_export:
             for sid in selected:

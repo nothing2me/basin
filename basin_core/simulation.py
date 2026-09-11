@@ -209,7 +209,26 @@ def settings_from_run(run: dict) -> SimulationSettings:
 
 def validate_run(workspace: Workspace, run: dict) -> None:
     from basin_core.integrity import compare_values
-    if run["id"] != "sim-" + content_hash({k: v for k, v in run.items() if k != "id"}):
+    required = {"id", "schema_version", "model_version", "threshold_version", "snapshot_sha256",
+                "scenario_id", "scenario_revision", "scenario_sha256", "evidence_context", "settings",
+                "assumptions", "baseline", "results"}
+    if not isinstance(run, dict) or not required <= set(run):
+        raise ValueError("Saved simulation is missing required fields")
+    nested = {
+        "settings": {"baseline_kind", "initial_storage_fraction", "conservation_fraction", "pipeline_active", "retention_fractions"},
+        "baseline": {"dates", "stations", "units", "values", "sha256"},
+        "evidence_context": {"scenario_id", "revision", "series_sha256", "evidence_refs", "evidence", "conflicts"},
+        "results": {"summary_table", "trajectories", "conservation_comparison", "no_conservation_trajectories"},
+    }
+    if any(not isinstance(run[name], dict) or not fields <= set(run[name]) for name, fields in nested.items()):
+        raise ValueError("Saved simulation has malformed settings, evidence, baseline, or results")
+    if not isinstance(run["assumptions"], dict):
+        raise ValueError("Saved simulation assumptions must be a record")
+    try:
+        expected_id = "sim-" + content_hash({k: v for k, v in run.items() if k != "id"})
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("Saved simulation is not valid finite JSON content") from exc
+    if run["id"] != expected_id:
         raise ValueError("Saved simulation content hash mismatch")
     if (run["schema_version"], run["model_version"], run["threshold_version"]) != ("1.0", MODEL_VERSION, THRESHOLD_VERSION):
         raise ValueError("Unsupported simulation version; do not reinterpret older results")
@@ -234,7 +253,10 @@ def validate_run(workspace: Workspace, run: dict) -> None:
 
 
 def is_current(workspace: Workspace, run: dict) -> bool:
-    return run["evidence_context"] == evidence_context(workspace, workspace.get(run["scenario_id"]))
+    try:
+        return run["evidence_context"] == evidence_context(workspace, workspace.get(run["scenario_id"]))
+    except (KeyError, TypeError, ValueError):
+        return False
 
 
 def spectrum_view(run: dict) -> dict:
