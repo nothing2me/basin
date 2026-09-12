@@ -68,8 +68,10 @@ def build_package(root=ROOT, target=None, wheels=False):
             indent=2))
     with zipfile.ZipFile(target) as archive:
         assert archive.testzip() is None
+        names = archive.namelist()
         assert not any("/local/" in n or "/.env" in n or "/.venv/" in n or "credentials.toml" in n
-                       for n in archive.namelist())
+                       or n.endswith(".gguf") or n.endswith(".bin") or "__pycache__" in n
+                       for n in names)
     return target
 
 

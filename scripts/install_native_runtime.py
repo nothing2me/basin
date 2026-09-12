@@ -82,9 +82,31 @@ def pinned_runtime_version(requirements: Path = NATIVE_REQUIREMENTS) -> str | No
     return match.group(1) if match else None
 
 
+def check_vc_runtime_dlls() -> dict[str, bool]:
+    """Check if required Microsoft Visual C++ and OpenMP runtime DLLs exist on Windows."""
+    found = {"msvcp140.dll": False, "vcomp140.dll": False}
+    if sys.platform != "win32":
+        return {k: True for k in found}
+    sys_root = os.environ.get("SystemRoot", r"C:\Windows")
+    search_dirs = [Path(sys_root) / "System32", Path(sys_root) / "SysWOW64"]
+    path_dirs = [Path(p) for p in os.environ.get("PATH", "").split(os.path.pathsep) if p]
+    search_dirs.extend(path_dirs[:20])
+    for dll_name in found:
+        for directory in search_dirs:
+            try:
+                candidate = directory / dll_name
+                if candidate.is_file():
+                    found[dll_name] = True
+                    break
+            except (OSError, PermissionError):
+                continue
+    return found
+
+
 def unsupported_reason(sys_platform: str | None = None, machine: str | None = None,
                        pointer_bits: int | None = None, version: tuple[int, int] | None = None,
-                       implementation: str | None = None, in_venv: bool | None = None) -> str | None:
+                       implementation: str | None = None, in_venv: bool | None = None,
+                       has_avx2: bool | None = None) -> str | None:
     """Why this interpreter is not the supported install target, or None when it is."""
     sys_platform = sys.platform if sys_platform is None else sys_platform
     machine = platform.machine() if machine is None else machine
@@ -105,6 +127,9 @@ def unsupported_reason(sys_platform: str | None = None, machine: str | None = No
     if not in_venv:
         return ("this is not a virtual environment. Run it with BASIN's own interpreter, "
                 ".venv\\Scripts\\python.exe, so nothing is installed into a system Python.")
+    if has_avx2 is False:
+        return ("the CPU lacks AVX2 instruction set support; the pinned llama-cpp-python "
+                "wheel requires AVX2/FMA/F16C. Leave the runtime uninstalled; BASIN keeps using its direct tools.")
     return None
 
 
@@ -183,6 +208,13 @@ def _crash_hint(code: int) -> tuple[str, str]:
                 "probably lacks one of them. No reviewed alternative wheel exists. Leave the "
                 "runtime uninstalled; BASIN keeps using its direct tools.")
     if code in (_STATUS_DLL_NOT_FOUND, _STATUS_ENTRYPOINT_NOT_FOUND):
+        vc_dlls = check_vc_runtime_dlls()
+        if not vc_dlls.get("vcomp140.dll") and not vc_dlls.get("msvcp140.dll"):
+            return ("MSVCP140.DLL and VCOMP140.DLL could not be loaded", VC_REDIST_HINT)
+        if not vc_dlls.get("vcomp140.dll"):
+            return ("VCOMP140.DLL (OpenMP runtime) could not be loaded", VC_REDIST_HINT)
+        if not vc_dlls.get("msvcp140.dll"):
+            return ("MSVCP140.DLL could not be loaded", VC_REDIST_HINT)
         return ("a DLL the native library needs could not be loaded", VC_REDIST_HINT)
     if code == _STATUS_ACCESS_VIOLATION:
         return ("the native library crashed while loading (access violation)",
@@ -230,9 +262,18 @@ def probe_runtime(python: str | None = None, pinned_version: str | None = None,
         if error_type == "ModuleNotFoundError" and "llama_cpp" in error:
             return RuntimeStatus("absent", detail="llama-cpp-python is not installed in this environment",
                                  hint="Install it with: \"Setup BASIN.cmd\" --ai-runtime")
-        hint = VC_REDIST_HINT if (error_type in ("OSError", "FileNotFoundError")
-                                  or "DLL" in error or "Could not find module" in error) else (
-            "Run \"Setup BASIN.cmd\" --repair-ai and keep this output for troubleshooting.")
+        if error_type in ("OSError", "FileNotFoundError") or "DLL" in error or "Could not find module" in error:
+            vc_dlls = check_vc_runtime_dlls()
+            if not vc_dlls.get("vcomp140.dll") and not vc_dlls.get("msvcp140.dll"):
+                hint = "MSVCP140.DLL and VCOMP140.DLL are missing from the system. " + VC_REDIST_HINT
+            elif not vc_dlls.get("vcomp140.dll"):
+                hint = "VCOMP140.DLL (OpenMP runtime) is missing from the system. " + VC_REDIST_HINT
+            elif not vc_dlls.get("msvcp140.dll"):
+                hint = "MSVCP140.DLL is missing from the system. " + VC_REDIST_HINT
+            else:
+                hint = VC_REDIST_HINT
+        else:
+            hint = "Run \"Setup BASIN.cmd\" --repair-ai and keep this output for troubleshooting."
         return RuntimeStatus("import_error", detail=f"{error_type}: {error}", hint=hint)
 
     detail, hint = _crash_hint(result.returncode & 0xFFFFFFFF)

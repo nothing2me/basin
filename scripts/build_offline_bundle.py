@@ -42,12 +42,15 @@ def copy_runtime():
     for vcdll in base_python.glob("vcruntime*.dll"):
         shutil.copy2(vcdll, RUNTIME_DIR / vcdll.name)
 
-    # Copy msvcp140.dll if available
+    # Copy msvcp140.dll and vcomp140.dll (OpenMP runtime for native AI) if available
     sys32 = Path(os.environ.get("SystemRoot", "C:\\Windows")) / "System32"
-    msvcp = sys32 / "msvcp140.dll"
-    if msvcp.exists():
-        shutil.copy2(msvcp, RUNTIME_DIR / "msvcp140.dll")
-        log("Copied msvcp140.dll from System32 into runtime.")
+    for dll_name in ("msvcp140.dll", "vcomp140.dll"):
+        dll_path = sys32 / dll_name
+        if dll_path.exists():
+            shutil.copy2(dll_path, RUNTIME_DIR / dll_name)
+            log(f"Copied {dll_name} from System32 into runtime.")
+        else:
+            log(f"Optional {dll_name} not found in System32.")
 
     # 2. Copy DLLs folder
     src_dlls = base_python / "DLLs"

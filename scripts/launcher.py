@@ -82,14 +82,15 @@ def find_python(root: Path) -> str:
     return ""
 
 
-def find_free_port(start_port: int = 8501) -> int:
-    port = start_port
-    while port < start_port + 50:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(("127.0.0.1", port)) != 0:
-                return port
-        port += 1
-    return start_port
+def find_free_port(start_port: int = 8501, count: int = 50) -> int:
+    for port in range(start_port, min(start_port + count, 65536)):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+                probe.bind(("127.0.0.1", port))
+            return port
+        except OSError:
+            continue
+    raise RuntimeError(f"No free local port found in range {start_port}-{start_port + count - 1}.")
 
 
 def wait_for_server(url: str, timeout: float = 25.0) -> bool:
@@ -126,7 +127,16 @@ def main():
         show_error(f"app.py not found in:\n{root}", "BASIN — Missing Core Files")
         sys.exit(1)
 
-    port = find_free_port(8501)
+    try:
+        port = find_free_port(8501)
+    except RuntimeError as err:
+        show_error(
+            f"{err}\n\n"
+            "Please close older BASIN or Streamlit processes occupying local ports.",
+            "BASIN — Port Unavailable"
+        )
+        sys.exit(1)
+
     target_url = f"http://127.0.0.1:{port}"
 
     CREATE_NO_WINDOW = 0x08000000

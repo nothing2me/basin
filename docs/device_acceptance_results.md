@@ -22,7 +22,7 @@ The executable identity is recorded, not accepted: it was not launched or frozen
 | Step | Result | Evidence / remaining work |
 |---|---|---|
 | Core no-AI browser startup on development machine | **PASS** | `scripts/start_browser.py --no-browser --port 8504` started the app and selected `8505` because `8504` was occupied. It reported readiness at `http://127.0.0.1:8505/`; the test process was stopped afterward. |
-| Missing-prerequisite behavior | **PARTIAL** | Explicit failure messages exist and automated tests cover port exhaustion. A clean machine with missing Python/Streamlit was not exercised. |
+| Missing-prerequisite behavior | **PASS on dev / PARTIAL clean-laptop** | Deterministic release gates added in `scripts/check_native_release_gates.py` covering CPython 3.12, AVX2 CPU detection via kernel32, MSVCP140/VCOMP140 OpenMP DLL detection, snapshot integrity, and port exhaustion (89 passing tests). See `docs/t6_native_release_hardening.md`. |
 | Actual presentation-laptop install/extract/start/recovery | **NOT RUN** | Requires the named physical device and frozen package. |
 | Actual browser offline workflow | **NOT RUN** | Requires the user to control connectivity on the presentation laptop. The Python socket-blocked smoke test is separate evidence. |
 | Development-browser tailored Review | **PASS** | Chromium at 1280×720 and 375×812, Dark/Light, all four focus profiles, skipped setup, Show all, Change focus, save/reopen, keyboard focus and tutorial targeting. See `review_acceptance_handoff.md`. |
