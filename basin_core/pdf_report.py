@@ -694,7 +694,7 @@ def render_html_report(
             spectrum_html_rows += f"""
             <tr>
                 <td><strong>{escape(r['tier_label'])}</strong></td>
-                <td>{r['retention_pct']}%</td>
+                <td>{r['retention_pct']:.1f}%</td>
                 <td><strong>{r['min_pct']:.1f}%</strong> ({r['min_acft']:,.0f} ac-ft)</td>
                 <td>{d1}</td>
                 <td>{d2}</td>
@@ -739,8 +739,6 @@ def render_html_report(
             f"{cons_frac * 100:g}% emergency conservation, but no run was produced for this report."
         )
 
-    # A compact single line: the print layout is two pages and a full table here pushes the
-    # drought-band section onto a third. The app preview renders the same values as a table.
     described = config.describe_rows()
     config_summary_line = " · ".join(f"{label}: {value}" for label, value in described)
     config_note_html = (
@@ -751,7 +749,7 @@ def render_html_report(
         ""
         if config.selected else
         '<p style="margin-top: 6px; color: #92400e; font-weight: 600;">No experiment was configured in Review. '
-        'The settings above are BASIN\'s documented defaults, not a record of an earlier run.</p>'
+        "The settings above are BASIN's documented defaults, not a record of an earlier run.</p>"
     )
 
     unavailable_banner = (
@@ -824,13 +822,13 @@ def render_html_report(
                           "recorded. That does not establish that none exist.</p>")
 
     scenario_html_rows = ""
+    scenario_inventory_rows = ""
     for s in accepted:
         prov = s.provenance
         feat = getattr(s, "features", {})
         deficit_mm = feat.get("deficit_mm", 0.0)
         concurrence = feat.get("concurrence", 0.0)
 
-        # Privacy gate: omit private review notes unless explicitly opted in
         entry_note = (s.history[-1].get("private_note") or s.history[-1].get("note")) if s.history else None
         if include_notes and entry_note:
             note = entry_note
@@ -856,21 +854,54 @@ def render_html_report(
             <td class="text-sm italic">{escape(note)}</td>
         </tr>
         """
+        scenario_inventory_rows += f"""
+        <tr>
+            <td><strong class="font-mono">{escape(s.id)}</strong> (Rev {s.revision})</td>
+            <td>{escape(str(start_dt))} to {escape(str(end_dt))}</td>
+            <td>{duration_days} days</td>
+            <td><strong>{deficit_mm:,.1f} mm</strong></td>
+            <td>{concurrence:.2f}</td>
+        </tr>
+        """
 
     provider_note = str(getattr(workspace, "notes", "") or "").strip()
     if include_notes and provider_note:
         provider_notes_html = (
-            '<div class="section-title">Provider Notes</div>'
+            '<div class="section-title" style="font-size: 9pt; border-left: none; padding-left: 0;">Provider Notes</div>'
             f'<div class="evidence-entry"><div class="evidence-body">{escape(provider_note)}</div></div>'
         )
     elif provider_note:
         provider_notes_html = (
-            '<div class="section-title">Provider Notes</div>'
+            '<div class="section-title" style="font-size: 9pt; border-left: none; padding-left: 0;">Provider Notes</div>'
             '<p style="font-size: 7.5pt; color: #64748b;">Provider notes recorded '
             '(omitted: export privacy setting excludes private notes).</p>'
         )
     else:
         provider_notes_html = ""
+
+    from basin_core.custom_data import (
+        CUSTOM_CATCHMENT_DISCLAIMER,
+        format_custom_coverage_dates,
+        format_custom_source_label,
+    )
+    custom_uploads = getattr(workspace, "custom_uploads", []) or []
+    custom_provenance_html = ""
+    if custom_uploads:
+        custom_provenance_html += (
+            '<div class="evidence-entry" style="margin-top: 6px; border-left-color: #f59e0b;">'
+            '<div class="evidence-title">Custom Observation Sources (T3 Standardized Provenance)</div>'
+        )
+        for record in custom_uploads:
+            src_lbl = format_custom_source_label(record["station"], record.get("provider"))
+            cov_lbl = format_custom_coverage_dates(record.get("start"), record.get("end"), record.get("valid_days"))
+            custom_provenance_html += (
+                f'<div class="evidence-body"><strong>{escape(record.get("id", "Custom"))}:</strong> '
+                f'{escape(src_lbl)} · {escape(cov_lbl)} · Status: {escape(record.get("comparison", {}).get("status", "uploaded"))}</div>'
+            )
+        custom_provenance_html += (
+            f'<div class="evidence-meta" style="color: #92400e; margin-top: 4px;">{escape(CUSTOM_CATCHMENT_DISCLAIMER)}</div>'
+            '</div>'
+        )
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -897,34 +928,34 @@ def render_html_report(
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         color: #0f172a;
         background: #ffffff;
-        font-size: 9pt;
-        line-height: 1.45;
+        font-size: 8.5pt;
+        line-height: 1.4;
     }}
     .page-container {{
         width: 100%;
     }}
     .page-break {{
         page-break-before: always;
+        break-before: always;
         margin-top: 15px;
     }}
-
     .header-bar {{
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
         border-bottom: 3px solid #087e8b;
-        padding-bottom: 10px;
-        margin-bottom: 14px;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
     }}
     .brand-title {{
-        font-size: 16pt;
+        font-size: 15pt;
         font-weight: 800;
         letter-spacing: -0.5px;
         color: #087e8b;
         line-height: 1.1;
     }}
     .brand-subtitle {{
-        font-size: 8.5pt;
+        font-size: 8pt;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.8px;
@@ -933,7 +964,7 @@ def render_html_report(
     }}
     .meta-box {{
         text-align: right;
-        font-size: 8pt;
+        font-size: 7.5pt;
         color: #64748b;
     }}
     .meta-badge {{
@@ -949,30 +980,34 @@ def render_html_report(
         text-transform: uppercase;
         margin-bottom: 4px;
     }}
-
+    .report-section {{
+        margin-bottom: 14px;
+        break-inside: auto;
+    }}
     .section-title {{
-        font-size: 11pt;
+        font-size: 10.5pt;
         font-weight: 700;
         color: #0f172a;
         border-left: 4px solid #087e8b;
         padding-left: 8px;
-        margin-top: 14px;
-        margin-bottom: 8px;
+        margin-top: 12px;
+        margin-bottom: 6px;
         text-transform: uppercase;
         letter-spacing: 0.4px;
     }}
-
     .kpi-row {{
         display: flex;
         gap: 10px;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
+        break-inside: avoid;
+        page-break-inside: avoid;
     }}
     .kpi-card {{
         flex: 1;
         background: #f8fafc;
         border: 1.5px solid #cbd5e1;
         border-radius: 6px;
-        padding: 9px 10px;
+        padding: 8px 10px;
         text-align: center;
     }}
     .kpi-card.neutral {{
@@ -990,28 +1025,28 @@ def render_html_report(
         letter-spacing: 0.6px;
         color: #475569;
     }}
-    .kpi-card.warning .kpi-label {{ color: #92400e; }}
     .kpi-val {{
-        font-size: 11pt;
+        font-size: 10.5pt;
         font-weight: 700;
         color: #0f172a;
         margin-top: 3px;
         line-height: 1.2;
     }}
     .kpi-sub {{
-        font-size: 8pt;
+        font-size: 7.5pt;
         color: #64748b;
         margin-top: 3px;
         line-height: 1.25;
     }}
-
     .callout {{
         background: #f1f5f9;
         border-left: 4px solid #3b82f6;
-        padding: 10px 14px;
+        padding: 9px 12px;
         border-radius: 0 6px 6px 0;
         font-size: 8.5pt;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
+        break-inside: avoid;
+        page-break-inside: avoid;
     }}
     .callout-title {{
         font-weight: 700;
@@ -1021,12 +1056,14 @@ def render_html_report(
         font-size: 7.5pt;
         letter-spacing: 0.5px;
     }}
-
     table {{
         width: 100%;
         border-collapse: collapse;
         font-size: 8pt;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
+        table-layout: fixed;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
     }}
     th {{
         background: #0f172a;
@@ -1046,12 +1083,17 @@ def render_html_report(
     }}
     tr {{
         page-break-inside: avoid;
+        break-inside: avoid;
+    }}
+    tr:nth-child(even) td {{
+        background: #f8fafc;
     }}
     .evidence-entry {{
         border-left: 3px solid #cbd5e1;
         padding: 4px 0 4px 10px;
         margin-bottom: 8px;
         page-break-inside: avoid;
+        break-inside: avoid;
         overflow-wrap: anywhere;
     }}
     .evidence-title {{
@@ -1068,10 +1110,6 @@ def render_html_report(
         color: #334155;
         margin-top: 2px;
     }}
-    tr:nth-child(even) td {{
-        background: #f8fafc;
-    }}
-
     .badge {{
         display: inline-block;
         padding: 2px 6px;
@@ -1082,9 +1120,8 @@ def render_html_report(
     .badge-success {{ background: #dcfce7; color: #166534; }}
     .badge-info {{ background: #e0f2fe; color: #0369a1; }}
     .badge-neutral {{ background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }}
-
     .seal-box {{
-        margin-top: 15px;
+        margin-top: 12px;
         border: 1px solid #cbd5e1;
         border-radius: 6px;
         padding: 10px 14px;
@@ -1092,6 +1129,8 @@ def render_html_report(
         display: flex;
         justify-content: space-between;
         align-items: center;
+        page-break-inside: avoid;
+        break-inside: avoid;
     }}
     .seal-text {{
         font-size: 7.5pt;
@@ -1109,7 +1148,6 @@ def render_html_report(
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }}
-
     .font-mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }}
     .italic {{ font-style: italic; }}
     .text-sm {{ font-size: 7.5pt; }}
@@ -1130,65 +1168,119 @@ def render_html_report(
         </div>
     </div>
 
-    <!-- Universal Top-of-Page Banner (Page 1) -->
+    <!-- Universal Top Banner -->
     <div style="background: #f8fafc; border: 1.5px solid #94a3b8; border-left: 5px solid #087e8b; border-radius: 4px; padding: 8px 12px; margin-bottom: 12px; font-size: 8.5pt; color: #1e293b; line-height: 1.35;">
         <strong>⚠️ WHAT THIS DOCUMENT IS NOT:</strong>
         <span>NOT a hydrologic drought-of-record analysis · NOT a safe-yield or delivery forecast · NOT validated against actual streamflow or catchment runoff.</span>
     </div>
 
-    <div class="callout">
-        <div class="callout-title">The Bottom Line — Executive Overview</div>
-        <p>This report presents human-reviewed rainfall stress scenarios and an <strong>illustrative reservoir drawdown experiment</strong> across the reservoirs the model represents ({escape(capacity_breakdown)}; combined <strong>{total_capacity:,.0f} ac-ft</strong>). {overview_sentence} <em>This simulation is an exploratory sensitivity tool, not an operational delivery forecast.</em></p>
-        {unavailable_banner}
+    <!-- SECTION 1: EXECUTIVE SUMMARY -->
+    <div class="report-section" id="section-1">
+        <div class="section-title">1. Executive Summary</div>
+        <div class="callout">
+            <div class="callout-title">The Bottom Line — Executive Overview</div>
+            <p>This report presents human-reviewed rainfall stress scenarios and an <strong>illustrative reservoir drawdown experiment</strong> across the reservoirs the model represents ({escape(capacity_breakdown)}; combined <strong>{total_capacity:,.0f} ac-ft</strong>). {overview_sentence} <em>This simulation is an exploratory sensitivity tool, not an operational delivery forecast.</em></p>
+            {unavailable_banner}
+        </div>
+
+        <div class="kpi-row">
+            <div class="kpi-card neutral">
+                <div class="kpi-label">Illustrative Depletion Window (Stage 3)</div>
+                <div class="kpi-val">{depletion_range_val}</div>
+                <div class="kpi-sub">{depletion_range_sub}</div>
+            </div>
+            <div class="kpi-card neutral">
+                <div class="kpi-label">Simulated Tipping Point Tier</div>
+                <div class="kpi-val" style="font-size: 10.5pt; margin-top: 3px;">{escape(tipping_point_tier)}</div>
+                <div class="kpi-sub">{escape(tipping_point_sub)}</div>
+            </div>
+            <div class="kpi-card neutral">
+                <div class="kpi-label">Simulated Mandate Impact</div>
+                <div class="kpi-val">{conservation_val}</div>
+                <div class="kpi-sub">{conservation_sub}</div>
+            </div>
+            <div class="kpi-card neutral">
+                <div class="kpi-label">Modeled Loss Driver</div>
+                <div class="kpi-val" style="font-size: 10.5pt; margin-top: 3px;">{loss_driver_val}</div>
+                <div class="kpi-sub">{loss_driver_sub}</div>
+            </div>
+        </div>
     </div>
 
-    <p style="font-size: 7.5pt; color: #475569; margin: 2px 0 8px 0;"><strong>Experiment configuration:</strong> {escape(config_summary_line)}</p>
-    {config_note_html}
-    {config_default_html}
-
-    <div class="kpi-row">
-        <div class="kpi-card neutral">
-            <div class="kpi-label">Illustrative Depletion Window (Stage 3)</div>
-            <div class="kpi-val">{depletion_range_val}</div>
-            <div class="kpi-sub">{depletion_range_sub}</div>
-        </div>
-        <div class="kpi-card neutral">
-            <div class="kpi-label">Simulated Tipping Point Tier</div>
-            <div class="kpi-val" style="font-size: 10.5pt; margin-top: 3px;">{escape(tipping_point_tier)}</div>
-            <div class="kpi-sub">{escape(tipping_point_sub)}</div>
-        </div>
-        <div class="kpi-card neutral">
-            <div class="kpi-label">Simulated Mandate Impact</div>
-            <div class="kpi-val">{conservation_val}</div>
-            <div class="kpi-sub">{conservation_sub}</div>
-        </div>
-        <div class="kpi-card neutral">
-            <div class="kpi-label">Modeled Loss Driver</div>
-            <div class="kpi-val" style="font-size: 10.5pt; margin-top: 3px;">{loss_driver_val}</div>
-            <div class="kpi-sub">{loss_driver_sub}</div>
-        </div>
+    <!-- SECTION 2: SCENARIO IDENTITY AND RAINFALL INPUT -->
+    <div class="report-section" id="section-2">
+        <div class="section-title">2. Scenario Identity and Rainfall Input</div>
+        <p style="font-size: 8pt; color: #334155; margin-bottom: 6px;">
+            <strong>Primary Scenario Identity:</strong> <strong class="font-mono">{escape(primary_id)}</strong>. {_input_sentence(metrics)}
+        </p>
+        <table style="table-layout: fixed;">
+            <colgroup><col style="width: 16%;"><col style="width: 28%;"><col style="width: 16%;"><col style="width: 20%;"><col style="width: 20%;"></colgroup>
+            <thead>
+                <tr>
+                    <th>Scenario ID</th>
+                    <th>Source Window</th>
+                    <th>Duration</th>
+                    <th>Precip Deficit</th>
+                    <th>Concurrence</th>
+                </tr>
+            </thead>
+            <tbody>
+                {scenario_inventory_rows if scenario_inventory_rows else '<tr><td colspan="5" style="text-align: center; color: #64748b;">No accepted scenarios.</td></tr>'}
+            </tbody>
+        </table>
     </div>
 
-    <div class="section-title">Illustrative Drought Response Reference Framework</div>
-    <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
-        <strong>Illustrative assumption, not adopted policy.</strong> The storage bands below are this experiment's own assumption ({escape(str(system_assumptions["thresholds"]))}). BASIN does not reproduce any adopted drought contingency ordinance, and the response categories listed are generic planning language rather than measures any authority has adopted. Confirm the currently adopted plan and any active declarations with the responsible utility before operational use.
-    </p>
-    <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
-        <strong>Capacity basis.</strong> Band volumes are computed against the selected system's assumed combined capacity of {total_capacity:,.0f} ac-ft ({escape(capacity_breakdown)}). That is the experiment's assumption, not a survey-verified figure. {escape(capacity_comparison)}
-    </p>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 22%;">Illustrative Band</th>
-                <th style="width: 26%;">Combined Storage (model capacity)</th>
-                <th style="width: 32%;">Generic Response Categories</th>
-                <th style="width: 20%;">Intended Effect</th>
-            </tr>
-        </thead>
-        <tbody>
-            {band_html_rows}
-        </tbody>
-    </table>
+    <!-- SECTION 3: REVIEW DECISION AND RATIONALE -->
+    <div class="report-section" id="section-3">
+        <div class="section-title">3. Review Decision and Rationale</div>
+        <div class="section-title" style="font-size: 9pt; border-left: none; padding-left: 0; margin-top: 4px;">Shortlisted Scenario Inventory & Human Review Notes</div>
+        <table style="table-layout: fixed;">
+            <colgroup><col style="width: 10%;"><col style="width: 18%;"><col style="width: 10%;"><col style="width: 12%;"><col style="width: 13%;"><col style="width: 37%;"></colgroup>
+            <thead>
+                <tr>
+                    <th>Scenario ID</th>
+                    <th>Source Window (NOAA GHCN-Daily)</th>
+                    <th>Duration</th>
+                    <th>Precip Deficit</th>
+                    <th>Concurrence</th>
+                    <th>Review Disposition & Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {scenario_html_rows if scenario_html_rows else '<tr><td colspan="6" style="text-align: center; color: #64748b;">No accepted scenarios.</td></tr>'}
+            </tbody>
+        </table>
+        {provider_notes_html}
+    </div>
+
+    <!-- SECTION 4: STORAGE-SYSTEM ASSUMPTIONS -->
+    <div class="report-section" id="section-4">
+        <div class="section-title">4. Storage-System Assumptions</div>
+        <p style="font-size: 7.5pt; color: #475569; margin: 2px 0 6px 0;"><strong>Experiment configuration:</strong> {escape(config_summary_line)}</p>
+        {config_note_html}
+        {config_default_html}
+
+        <div class="section-title" style="font-size: 9pt; border-left: none; padding-left: 0; margin-top: 6px;">Illustrative Drought Response Reference Framework</div>
+        <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
+            <strong>Illustrative assumption, not adopted policy.</strong> The storage bands below are this experiment's own assumption ({escape(str(system_assumptions["thresholds"]))}). BASIN does not reproduce any adopted drought contingency ordinance, and the response categories listed are generic planning language rather than measures any authority has adopted. Confirm the currently adopted plan and any active declarations with the responsible utility before operational use.
+        </p>
+        <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
+            <strong>Capacity basis.</strong> Band volumes are computed against the selected system's assumed combined capacity of {total_capacity:,.0f} ac-ft ({escape(capacity_breakdown)}). That is the experiment's assumption, not a survey-verified figure. {escape(capacity_comparison)}
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 22%;">Illustrative Band</th>
+                    <th style="width: 26%;">Combined Storage (model capacity)</th>
+                    <th style="width: 32%;">Generic Response Categories</th>
+                    <th style="width: 20%;">Intended Effect</th>
+                </tr>
+            </thead>
+            <tbody>
+                {band_html_rows}
+            </tbody>
+        </table>
+    </div>
 
     <div class="page-break"></div>
 
@@ -1202,71 +1294,82 @@ def render_html_report(
         </div>
     </div>
 
-    <!-- Page 2 Equal-Prominence Matrix Callout -->
-    <div style="background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 6px; padding: 9px 12px; margin-bottom: 10px; font-size: 9.5pt; font-weight: 600; color: #92400e; line-height: 1.4;">
-        ⚠️ ILLUSTRATIVE SENSITIVITY EXPERIMENT ONLY — NOT AN OPERATIONAL FORECAST<br>
-        <span style="font-weight: 400; font-size: 8.5pt; color: #78350f;">Drawdown trajectories reflect the selected system's illustrative mass-balance with an uncalibrated inflow proxy ({escape(str(system_assumptions["inflow"]))}) and seasonal evaporation assumptions. They do NOT represent safe yield, actual reservoir levels, or regulatory curtailment dates.</span>
+    <!-- SECTION 5: EXPERIMENT RESULTS -->
+    <div class="report-section" id="section-5">
+        <div class="section-title">5. Experiment Results</div>
+        <div style="background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 6px; padding: 9px 12px; margin-bottom: 10px; font-size: 9.5pt; font-weight: 600; color: #92400e; line-height: 1.4;">
+            ⚠️ ILLUSTRATIVE SENSITIVITY EXPERIMENT ONLY — NOT AN OPERATIONAL FORECAST<br>
+            <span style="font-weight: 400; font-size: 8.5pt; color: #78350f;">Drawdown trajectories reflect the selected system's illustrative mass-balance with an uncalibrated inflow proxy ({escape(str(system_assumptions["inflow"]))}) and seasonal evaporation assumptions. They do NOT represent safe yield, actual reservoir levels, or regulatory curtailment dates.</span>
+        </div>
+
+        <div class="section-title" style="font-size: 9pt; border-left: none; padding-left: 0; margin-top: 4px;">Illustrative Storage Sensitivity Spectrum (Non-Predictive)</div>
+        <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">{escape(spectrum_caption)}</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stress Tier</th>
+                    <th>Retained Rainfall (% of input)</th>
+                    <th>Simulated Min Storage</th>
+                    <th>Band 1 ({band1_pct:g}%)</th>
+                    <th>Band 2 ({band2_pct:g}%)</th>
+                    <th>Band 3 ({critical_pct:g}%)</th>
+                    <th>Simulated Outcome</th>
+                </tr>
+            </thead>
+            <tbody>
+                {spectrum_html_rows if spectrum_html_rows else spectrum_unavailable_row}
+            </tbody>
+        </table>
     </div>
 
-    <div class="section-title">Illustrative Storage Sensitivity Spectrum (Non-Predictive)</div>
-    <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">{escape(spectrum_caption)}</p>
-    <table>
-        <thead>
-            <tr>
-                <th>Stress Tier</th>
-                <th>Retained Rainfall (% of input)</th>
-                <th>Simulated Min Storage</th>
-                <th>Band 1 ({band1_pct:g}%)</th>
-                <th>Band 2 ({band2_pct:g}%)</th>
-                <th>Band 3 ({critical_pct:g}%)</th>
-                <th>Simulated Outcome</th>
-            </tr>
-        </thead>
-        <tbody>
-            {spectrum_html_rows if spectrum_html_rows else spectrum_unavailable_row}
-        </tbody>
-    </table>
+    <!-- SECTION 6: OBSERVATION PROVENANCE -->
+    <div class="report-section" id="section-6">
+        <div class="section-title">6. Observation Provenance</div>
+        <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
+            <strong>Primary Station Proxies:</strong> NOAA GHCN-Daily precipitation, {escape(record_span)} · Stations: {escape(stations)}
+        </p>
+        {custom_provenance_html}
 
-    <div class="section-title">Shortlisted Scenario Inventory & Human Review Notes</div>
-    <table style="table-layout: fixed;">
-        <colgroup><col style="width: 10%;"><col style="width: 18%;"><col style="width: 10%;"><col style="width: 12%;"><col style="width: 13%;"><col style="width: 37%;"></colgroup>
-        <thead>
-            <tr>
-                <th>Scenario ID</th>
-                <th>Source Window (NOAA GHCN-Daily)</th>
-                <th>Duration</th>
-                <th>Precip Deficit</th>
-                <th>Concurrence</th>
-                <th>Review Disposition & Notes</th>
-            </tr>
-        </thead>
-        <tbody>
-            {scenario_html_rows if scenario_html_rows else '<tr><td colspan="6" style="text-align: center; color: #64748b;">No accepted scenarios.</td></tr>'}
-        </tbody>
-    </table>
+        <div class="section-title" style="font-size: 9pt; border-left: none; padding-left: 0; margin-top: 6px;">Evidence and Assumptions</div>
+        {evidence_html}
 
-    {provider_notes_html}
+        <div class="section-title" style="font-size: 9pt; border-left: none; padding-left: 0; margin-top: 6px;">Recorded Disagreements</div>
+        {conflicts_html}
+    </div>
 
-    <div class="section-title">Evidence and Assumptions</div>
-    {evidence_html}
-
-    <div class="section-title">Recorded Disagreements</div>
-    {conflicts_html}
-
-    <div class="section-title">Provenance & Verification Scope</div>
-    <div class="seal-box">
-        <div class="seal-text">
-            <div><strong>Data Source:</strong> NOAA GHCN-Daily precipitation, {escape(record_span)} · Stations: {escape(stations)}</div>
-            <div><strong>Shortlist Weights:</strong> {escape(weights_summary)}</div>
-            <div><strong>What SHA-256 verification covers:</strong> the companion ZIP data bundle (daily_rainfall.csv, shortlist.csv, audit.json, snapshot), when that bundle is replayed. docs/verification_scope.md states the contract.</div>
-            <div><strong>What it does not cover:</strong> <strong>this PDF is outside that contract.</strong> It is generated separately, is not part of the bundle inventory or its hashes, and a successful bundle replay establishes nothing about the figures or wording on these pages. No scientific validation or professional approval is claimed or implied.</div>
-            <div><strong>Modeling Boundary:</strong> Reservoir drawdown is an illustrative planning experiment; point rainfall records are proxies and do not establish basin-wide calibrated inflow.</div>
-            <div><strong>Bundle Replay Command:</strong> <span class="font-mono text-sm">python scripts/replay_bundle.py output/BASIN-{escape(run_id)}.zip</span></div>
+    <!-- SECTION 7: LIMITATIONS -->
+    <div class="report-section" id="section-7">
+        <div class="section-title">7. Limitations</div>
+        <div class="callout" style="border-left-color: #f59e0b; background: #fffbeb;">
+            <div class="callout-title" style="color: #92400e;">⚠️ WHAT THIS DOCUMENT IS NOT / MODELING LIMITATIONS</div>
+            <ul style="margin-left: 18px; font-size: 8pt; color: #78350f; line-height: 1.5;">
+                <li><strong>Not an Operational Forecast:</strong> Drawdown trajectories reflect an illustrative planning experiment under historical rainfall deficit series, not a forecast of future lake levels or safe yield.</li>
+                <li><strong>Not a Drought-of-Record Analysis:</strong> Historical point-rainfall deficit series do not substitute for comprehensive basin-wide hydrologic modeling.</li>
+                <li><strong>Uncalibrated Hydrology:</strong> Inflow proxy ({escape(str(system_assumptions["inflow"]))}) is not calibrated against river gauges or streamflow measurements.</li>
+                <li><strong>Proxy Evaporation:</strong> Uses regional seasonal proxy rates, not pan-calibrated or surface-area-routed evaporation.</li>
+                <li><strong>Generic Planning Categories:</strong> Response categories and threshold storage bands are generic planning concepts, not adopted municipal policy.</li>
+            </ul>
         </div>
-        <div class="seal-stamp">
-            <div>VERIFICATION SCOPE</div>
-            <div style="font-size: 8.5pt; font-weight: 800; line-height: 1.25;">BUNDLE ONLY<br>PDF NOT VERIFIED</div>
-            <div class="font-mono" style="font-size: 6.5pt;">ID: {escape(run_id)}</div>
+    </div>
+
+    <!-- SECTION 8: VERIFICATION AND HASHES -->
+    <div class="report-section" id="section-8">
+        <div class="section-title">8. Verification and Hashes</div>
+        <div class="section-title" style="font-size: 9pt; border-left: none; padding-left: 0; margin-top: 4px;">Provenance & Verification Scope</div>
+        <div class="seal-box">
+            <div class="seal-text">
+                <div><strong>Data Source:</strong> NOAA GHCN-Daily precipitation, {escape(record_span)} · Stations: {escape(stations)}</div>
+                <div><strong>Shortlist Weights:</strong> {escape(weights_summary)}</div>
+                <div><strong>What SHA-256 verification covers:</strong> the companion ZIP data bundle (daily_rainfall.csv, shortlist.csv, audit.json, snapshot), when that bundle is replayed. docs/verification_scope.md states the contract.</div>
+                <div><strong>What it does not cover:</strong> <strong>this PDF is outside that contract.</strong> It is generated separately, is not part of the bundle inventory or its hashes, and a successful bundle replay establishes nothing about the figures or wording on these pages. No scientific validation or professional approval is claimed or implied.</div>
+                <div><strong>Modeling Boundary:</strong> Reservoir drawdown is an illustrative planning experiment; point rainfall records are proxies and do not establish basin-wide calibrated inflow.</div>
+                <div><strong>Bundle Replay Command:</strong> <span class="font-mono text-sm">python scripts/replay_bundle.py output/BASIN-{escape(run_id)}.zip</span></div>
+            </div>
+            <div class="seal-stamp">
+                <div>VERIFICATION SCOPE</div>
+                <div style="font-size: 8.5pt; font-weight: 800; line-height: 1.25;">BUNDLE ONLY<br>PDF NOT VERIFIED</div>
+                <div class="font-mono" style="font-size: 6.5pt;">ID: {escape(run_id)}</div>
+            </div>
         </div>
     </div>
 </div>
@@ -1276,11 +1379,11 @@ def render_html_report(
 """
     return html
 
-
 # Characters that have no WinAnsi glyph but a faithful ASCII rendering.
 _TRANSLITERATIONS = {
     "≤": "<=", "≥": ">=", "≈": "~", "→": "->", "←": "<-", "×": "x", "\u00a0": " ",
     "\u2010": "-", "\u2011": "-", "\u2212": "-", "\u02c6": "^", "\u02dc": "~",
+    "\u26a0": "[!]", "\ufe0f": "",
 }
 
 
@@ -1445,7 +1548,7 @@ class VectorFlow:
     LEFT = 36
     RIGHT = 576
     WIDTH = RIGHT - LEFT
-    BOTTOM = 76
+    BOTTOM = 58
     TOP = 700
 
     def __init__(self, doc: "VectorPDFBuilder", page: list[str], y: float, run_id: str) -> None:
@@ -1453,6 +1556,7 @@ class VectorFlow:
         self.page = page
         self.y = y
         self.run_id = run_id
+        self._columns: list = []
 
     def room_for(self, height: float) -> bool:
         return self.y - height >= self.BOTTOM
@@ -1489,6 +1593,67 @@ class VectorFlow:
                           size=size, color=color)
             self.y -= leading
 
+    def callout_box(self, title: str, lines: list[str], fill=(0.99, 0.98, 0.94), stroke=(0.85, 0.65, 0.15),
+                    title_col=(0.7, 0.4, 0.05), text_col=(0.3, 0.25, 0.1)) -> None:
+        leading = 12.0
+        h = 24.0 + len(lines) * leading
+        self.ensure(h + 8)
+        y_bottom = self.y - h
+        self.doc.rect(self.page, self.LEFT, y_bottom, self.WIDTH, h, fill=fill, stroke=stroke, line_width=1.0)
+        self.doc.text(self.page, self.LEFT + 12, self.y - 14, title, font="/F2", size=8.5, color=title_col)
+        for idx, line in enumerate(lines):
+            self.doc.text(self.page, self.LEFT + 12, self.y - 28 - idx * leading, line, font="/F1", size=7.5, color=text_col)
+        self.y -= h + 8
+
+    def metric_cards(self, cards: list[tuple[str, str, str, tuple[float, float, float]]]) -> None:
+        """Draw 3 metric cards horizontally."""
+        self.ensure(68)
+        card_w = 172.0
+        gap = 12.0
+        h = 60.0
+        y_top = self.y
+        y_bottom = y_top - h
+        for idx, (title, val, sub, val_col) in enumerate(cards[:3]):
+            x = self.LEFT + idx * (card_w + gap)
+            self.doc.rect(self.page, x, y_bottom, card_w, h, fill=(0.96, 0.97, 0.99), stroke=(0.8, 0.85, 0.92))
+            self.doc.text(self.page, x + 10, y_top - 14, title, font="/F2", size=7.5, color=(0.4, 0.45, 0.55))
+            self.doc.text(self.page, x + 10, y_top - 32, val, font="/F2", size=9.5, color=val_col)
+            self.doc.text(self.page, x + 10, y_top - 50, sub[:34], font="/F1", size=6.5, color=(0.45, 0.5, 0.55))
+        self.y -= h + 8
+
+    def findings_box(self, title: str, findings: list[str]) -> None:
+        leading = 12.5
+        h = 24.0 + len(findings) * leading
+        self.ensure(h + 8)
+        y_bottom = self.y - h
+        self.doc.rect(self.page, self.LEFT, y_bottom, self.WIDTH, h, fill=(0.98, 0.99, 1.0), stroke=(0.88, 0.9, 0.94))
+        self.doc.text(self.page, self.LEFT + 12, self.y - 14, title, font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
+        for idx, finding in enumerate(findings):
+            col = (0.3, 0.35, 0.4) if idx == len(findings) - 1 else (0.1, 0.1, 0.1)
+            self.doc.text(self.page, self.LEFT + 12, self.y - 28 - idx * leading, clip_text(finding, 132), font="/F1", size=7.2, color=col)
+        self.y -= h + 8
+
+    def audit_stamp_box(self, title: str, lines: list[tuple[str, str]], run_id: str) -> None:
+        self.ensure(118)
+        audit_top = self.y
+        self.doc.rect(self.page, self.LEFT, audit_top - 112, self.WIDTH, 108, fill=(0.96, 0.97, 0.99), stroke=(0.8, 0.85, 0.92))
+        self.doc.text(self.page, self.LEFT + 12, audit_top - 18, title, font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
+        line_y = audit_top - 33
+        for content, font in lines:
+            for wrapped_line in wrap_text(content, font, 7.0, 424):
+                self.doc.text(self.page, self.LEFT + 12, line_y, wrapped_line, font=font, size=7.0)
+                line_y -= 10
+        self.doc.text(self.page, self.LEFT + 12, line_y - 2, "* This PDF is outside the bundle verification contract. A successful replay establishes nothing", font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
+        self.doc.text(self.page, self.LEFT + 12, line_y - 12, "  about these pages. No scientific validation or professional approval is claimed or implied.", font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
+
+        self.doc.rect(self.page, 480, audit_top - 104, 85, 76, fill=(1.0, 1.0, 1.0), stroke=(0.08, 0.49, 0.55), line_width=1.5)
+        self.doc.text(self.page, 489, audit_top - 42, "VERIFICATION", font="/F2", size=7.0, color=(0.08, 0.49, 0.55))
+        self.doc.text(self.page, 505, audit_top - 52, "SCOPE", font="/F2", size=7.0, color=(0.08, 0.49, 0.55))
+        self.doc.text(self.page, 492, audit_top - 68, "BUNDLE ONLY", font="/F2", size=8.0, color=(0.08, 0.49, 0.55))
+        self.doc.text(self.page, 487, audit_top - 80, "PDF NOT VERIFIED", font="/F2", size=6.5, color=(0.7, 0.4, 0.05))
+        self.doc.text(self.page, 488, audit_top - 94, f"ID: {clip_text(run_id, 13)}", font="/F3", size=6.5, color=(0.3, 0.35, 0.4))
+        self.y = audit_top - 118
+
     def table_header(self, columns) -> None:
         """columns: sequence of (x, label, width)."""
         self.ensure(18 + 24)
@@ -1524,14 +1689,12 @@ class VectorFlow:
             self.doc.rect(self.page, self.LEFT, self.y - height, self.WIDTH, height,
                           fill=(0.96, 0.97, 0.99) if index % 2 == 0 else (1.0, 1.0, 1.0))
             for lines, (x, _, _), (_, font) in zip(wrapped, self._columns, cells):
-                # Repeat completed identifying cells alongside a continued long note.
                 segment = lines[offset:offset + count] if offset < len(lines) else lines[:1]
                 for row_offset, line in enumerate(segment):
                     self.doc.text(self.page, x, self.y - size - 3 - row_offset * leading, line,
                                   font=font, size=size, color=(0.15, 0.18, 0.22))
             self.y -= height
             offset += count
-
 
 
 def build_fallback_pdf(
@@ -1542,23 +1705,15 @@ def build_fallback_pdf(
     include_notes: bool = False,
     config: ExperimentConfig | None = None,
 ) -> bytes:
-    """Publication-grade pure-Python vector PDF generator.
-    
-    Renders the complete BASIN Executive Technical Brief with executive takeaways,
-    multi-tier stress spectrum drawdown tables, approved scenario features,
-    and cryptographic audit signatures. Supports both object and string inputs.
-    """
+    """Publication-grade pure-Python vector PDF generator organized in strict 8-section sequence."""
     doc = VectorPDFBuilder()
 
-    # Determine input mode (Workspace object vs Title string)
     config = resolve_config(config, initial_pct, conservation_pct)
     init_frac = config.initial_pct
     cons_frac = config.conservation_pct
     scenario_note: str | None = None
 
     if isinstance(workspace_or_title, str):
-        # Title/body mode carries no session. Nothing about a run, snapshot or simulation
-        # can be stated here, so every such field reports an explicit unavailable state.
         title = workspace_or_title
         body_text = str(accepted_or_text or "")
         run_id = UNAVAILABLE
@@ -1566,9 +1721,12 @@ def build_fallback_pdf(
         stations = UNAVAILABLE
         snapshot_hash = UNAVAILABLE
         accepted = []
-        init_frac = config.initial_pct
-        cons_frac = config.conservation_pct
         metrics = compute_report_metrics(None, config)
+        primary_scenario = None
+        custom_uploads = []
+        evidence_records = []
+        conflicts = []
+        provider_note = ""
     else:
         workspace = workspace_or_title
         accepted = list(accepted_or_text or [])
@@ -1583,9 +1741,14 @@ def build_fallback_pdf(
         init_frac = config.initial_pct
         cons_frac = config.conservation_pct
         body_text = f"Evaluated {len(accepted)} accepted scenarios under {init_frac * 100:g}% starting storage."
+        custom_uploads = getattr(workspace, "custom_uploads", []) or []
+        evidence_records = list(getattr(workspace, "evidence", []) or [])
+        conflicts = list(getattr(workspace, "conflicts", []) or [])
+        provider_note = str(getattr(workspace, "notes", "") or "").strip()
 
     spectrum_data = metrics.spectrum_data
     system = config.system_config or REGION_N_PRESET
+    system_assumptions = system.describe_assumptions()
     report_bands = tuple((fraction, f"Band {index}") for index, fraction in enumerate(system.stage_bands_pct, 1))
     critical_fraction = system.stage_bands_pct[2] if len(system.stage_bands_pct) >= 3 else 0.20
     band1_pct = (system.stage_bands_pct[0] if len(system.stage_bands_pct) >= 1 else 0.40) * 100
@@ -1655,53 +1818,12 @@ def build_fallback_pdf(
         else f"* Bundle Replay Command: python scripts/replay_bundle.py output/BASIN-{run_id}.zip"
     )
 
-    # ==========================================
-    # PAGE 1: EXECUTIVE BRIEF & FRAMEWORK
-    # ==========================================
-    p1 = doc.add_page()
-
-    # Top Header Banner
-    doc.rect(p1, 36, 715, 540, 48, fill=(0.06, 0.09, 0.16))
-    doc.text(p1, 50, 742, "BASIN EXECUTIVE TECHNICAL BRIEF", font="/F2", size=13.0, color=(1.0, 1.0, 1.0))
-    doc.text(p1, 50, 727, "REGIONAL WATER PLANNING & DROUGHT RESILIENCE MEMORANDUM", font="/F2", size=7.5, color=(0.22, 0.74, 0.89))
-    doc.text(p1, 415, 742, f"RUN ID: {run_id[:14]}", font="/F3", size=8.0, color=(0.85, 0.9, 0.95))
-    doc.text(p1, 415, 727, f"DATE: {created_date} | PROVENANCE: NOAA", font="/F1", size=7.0, color=(0.65, 0.7, 0.75))
-
-    # Warning Box: Non-Predictive Toy Model Disclaimer
-    doc.rect(p1, 36, 642, 540, 60, fill=(0.99, 0.98, 0.94), stroke=(0.85, 0.65, 0.15), line_width=1.0)
-    doc.text(p1, 48, 686, "WARNING: WHAT THIS ARTIFACT IS NOT", font="/F2", size=8.5, color=(0.7, 0.4, 0.05))
-    doc.text(p1, 48, 672, "* NOT a safe-yield, firm-yield, or delivery forecast; uncalibrated toy planning model.", font="/F1", size=7.5, color=(0.3, 0.25, 0.1))
-    doc.text(p1, 48, 660, "* NOT validated against actual streamflow, river routing losses, or surface evaporation.", font="/F1", size=7.5, color=(0.3, 0.25, 0.1))
-    doc.text(p1, 48, 648, "* An illustrative stress experiment based on historical point-rainfall deficit series.", font="/F1", size=7.5, color=(0.3, 0.25, 0.1))
-
-    # Section 1: Executive Overview Bottom Line
-    doc.text(p1, 36, 622, "THE BOTTOM LINE -- EXECUTIVE OVERVIEW", font="/F2", size=10.0, color=(0.06, 0.09, 0.16))
-
-    # 3 Metric Cards
-    doc.rect(p1, 36, 548, 172, 64, fill=(0.96, 0.97, 0.99), stroke=(0.8, 0.85, 0.92))
-    doc.text(p1, 46, 597, "ILLUSTRATIVE DEPLETION", font="/F2", size=7.5, color=(0.4, 0.45, 0.55))
-    doc.text(p1, 46, 578, depletion_range_val, font="/F2", size=9.5, color=(0.08, 0.45, 0.55))
-    doc.text(p1, 46, 558, depletion_range_sub[:34], font="/F1", size=6.5, color=(0.45, 0.5, 0.55))
-
-    doc.rect(p1, 220, 548, 172, 64, fill=(0.96, 0.97, 0.99), stroke=(0.8, 0.85, 0.92))
-    doc.text(p1, 230, 597, "CONSERVATION BENEFIT", font="/F2", size=7.5, color=(0.4, 0.45, 0.55))
-    doc.text(p1, 230, 578, conservation_val, font="/F2", size=9.5, color=(0.1, 0.55, 0.35))
-    doc.text(p1, 230, 558, conservation_sub[:34], font="/F1", size=6.5, color=(0.45, 0.5, 0.55))
-
-    doc.rect(p1, 404, 548, 172, 64, fill=(0.96, 0.97, 0.99), stroke=(0.8, 0.85, 0.92))
-    doc.text(p1, 414, 597, "DOMINANT LOSS DRIVER", font="/F2", size=7.5, color=(0.4, 0.45, 0.55))
-    doc.text(p1, 414, 578, loss_driver_val, font="/F2", size=9.5, color=(0.75, 0.25, 0.2))
-    doc.text(p1, 414, 558, loss_driver_sub[:34], font="/F1", size=6.5, color=(0.45, 0.5, 0.55))
-
-    # Narrative Findings Box
-    doc.rect(p1, 36, 424, 540, 110, fill=(0.98, 0.99, 1.0), stroke=(0.88, 0.9, 0.94))
-    doc.text(p1, 48, 518, "KEY PLANNING FINDINGS & HYDROLOGIC CONTEXT", font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
     if not metrics.available:
         tier_finding = f"- {unavailable_note}"
     else:
         tier_finding = (
             f"- The {critical_pct:g}% band ({band_storage_acft(critical_fraction, system):,.0f} ac-ft of model capacity) is tested across "
-            f"{tier_count} rainfall retention tiers; see page 2."
+            f"{tier_count} rainfall retention tiers."
         )
 
     if not metrics.available:
@@ -1718,8 +1840,7 @@ def build_fallback_pdf(
         mandate_finding = f"- The matched conservation runs did not both reach the {critical_pct:g}% band; no delay is defined."
 
     findings = [
-        f"- Combined storage across the model's reservoirs: {total_capacity:,.0f} ac-ft "
-        f"({capacity_breakdown} ac-ft).",
+        f"- Combined storage across the model's reservoirs: {total_capacity:,.0f} ac-ft ({capacity_breakdown} ac-ft).",
         (f"- Tested under initial storage of {init_frac * 100:g}%, with {cons_frac * 100:g}% emergency demand reduction modeled."
          if metrics.available else
          f"- Requested settings were {init_frac * 100:g}% initial storage and {cons_frac * 100:g}% emergency demand reduction; nothing was simulated."),
@@ -1728,139 +1849,62 @@ def build_fallback_pdf(
         mandate_finding,
         f"- {clip_text(body_text, 110)}",
     ]
-    for offset, finding in enumerate(findings):
-        colour = (0.3, 0.35, 0.4) if offset == len(findings) - 1 else (0.1, 0.1, 0.1)
-        doc.text(p1, 48, 502 - offset * 13, clip_text(finding, 132), font="/F1", size=7.2, color=colour)
 
-    # Drought Contingency Plan Reference Framework
-    doc.text(p1, 36, 400, "ILLUSTRATIVE STORAGE BANDS USED BY THIS EXPERIMENT -- NOT ADOPTED POLICY", font="/F2", size=9.5, color=(0.06, 0.09, 0.16))
-    y_tbl = 382
-    doc.rect(p1, 36, y_tbl - 18, 540, 18, fill=(0.08, 0.49, 0.55))
-    doc.text(p1, 44, y_tbl - 13, "ILLUSTRATIVE BAND", font="/F2", size=7.5, color=(1, 1, 1))
-    doc.text(p1, 150, y_tbl - 13, "COMBINED STORAGE", font="/F2", size=7.5, color=(1, 1, 1))
-    doc.text(p1, 260, y_tbl - 13, "GENERIC RESPONSE CATEGORIES -- NOT ADOPTED BY ANY AUTHORITY", font="/F2", size=7.5, color=(1, 1, 1))
-
-    band_actions = {
-        "Band 1": ("Public awareness notices, voluntary reduction targets, leak audit escalation.",
-                   "Generic planning language; effect on storage is not quantified here."),
-        "Band 2": ("Restrictions on landscape irrigation and non-essential outdoor use.",
-                   "Generic planning language; effect on storage is not quantified here."),
-        "Band 3": ("Emergency curtailment across accounts; drought surcharge pricing.",
-                   "Generic planning language; effect on storage is not quantified here."),
-        "Band 4": ("Supply-emergency protocols prioritizing public health and safety.",
-                   "Last band the model distinguishes before storage exhaustion."),
-    }
-    rows_framework = [
-        (name,
-         f"<= {fraction * 100:.0f}% ({band_storage_acft(fraction, system):,.0f} ac-ft)",
-         band_actions[name][0],
-         band_actions[name][1])
-        for fraction, name in report_bands
-    ]
-
-    for idx, (stg, cap, act1, act2) in enumerate(rows_framework):
-        y_r = y_tbl - 44 - (idx * 28)
-        bg = (0.96, 0.97, 0.99) if idx % 2 == 0 else (1.0, 1.0, 1.0)
-        doc.rect(p1, 36, y_r, 540, 26, fill=bg)
-        doc.text(p1, 44, y_r + 14, stg, font="/F2", size=7.5)
-        doc.text(p1, 150, y_r + 14, cap, font="/F1", size=7.5)
-        doc.text(p1, 260, y_r + 15, act1, font="/F1", size=6.8)
-        doc.text(p1, 260, y_r + 5, act2, font="/F1", size=6.8)
-
-    doc.text(p1, 36, 236, f"Band volumes use the model's assumed combined capacity of {total_capacity:,.0f} ac-ft ({capacity_breakdown} ac-ft).", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
-    if region_n_sources:
-        doc.text(p1, 36, 226, "The project research packet records separate TWDB volumetric survey values for these Region N sources.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
-        doc.text(p1, 36, 216, f"Those values sum to {surveyed_total:,.0f} ac-ft; this report does not claim the model assumptions agree with them.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
-    else:
-        doc.text(p1, 36, 226, "No external capacity survey comparison is configured for this selected system.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
-        doc.text(p1, 36, 216, "Review its user-selected or preset capacity inputs before use.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
-
-    # Experiment configuration actually used for every simulated figure in this report
-    doc.rect(p1, 36, 96, 540, 108, fill=(0.98, 0.99, 1.0), stroke=(0.8, 0.85, 0.92))
-    doc.text(p1, 48, 192, "EXPERIMENT CONFIGURATION USED FOR THIS REPORT", font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
-    for row_index, (label, value) in enumerate(config.describe_rows()):
-        row_y = 178 - row_index * 12
-        doc.text(p1, 48, row_y, clip_text(label, 34), font="/F2", size=7.0, color=(0.35, 0.4, 0.48))
-        doc.text(p1, 210, row_y, clip_text(value, 78), font="/F1", size=7.0)
-
-    if scenario_note:
-        doc.text(p1, 48, 104, clip_text(scenario_note, 130), font="/F1", size=6.8, color=(0.7, 0.4, 0.05))
-    elif not config.selected:
-        doc.text(p1, 48, 104, "No experiment was configured in Review; these are BASIN's documented defaults, not an earlier run.", font="/F1", size=6.8, color=(0.7, 0.4, 0.05))
-
-    # Footers for every page are drawn once the total page count is known.
-
-    # ==========================================
-    # PAGE 2: TECHNICAL APPENDIX & AUDIT
-    # ==========================================
-    p2 = doc.add_page()
+    p1 = doc.add_page()
 
     # Top Header Banner
-    doc.rect(p2, 36, 715, 540, 48, fill=(0.06, 0.09, 0.16))
-    doc.text(p2, 50, 742, "BASIN * TECHNICAL ENGINEERING APPENDIX", font="/F2", size=13.0, color=(1.0, 1.0, 1.0))
-    doc.text(p2, 50, 727, "NUMERICAL SENSITIVITY SPECTRUM & SHORTLIST AUDIT", font="/F2", size=7.5, color=(0.22, 0.74, 0.89))
-    doc.text(p2, 415, 742, f"RUN ID: {run_id[:14]}", font="/F3", size=8.0, color=(0.85, 0.9, 0.95))
-    doc.text(p2, 415, 727, f"ACCEPTED: {len(accepted)} Scenarios", font="/F1", size=7.5, color=(0.65, 0.7, 0.75))
+    doc.rect(p1, 36, 715, 540, 48, fill=(0.06, 0.09, 0.16))
+    doc.text(p1, 50, 742, "BASIN EXECUTIVE TECHNICAL BRIEF", font="/F2", size=13.0, color=(1.0, 1.0, 1.0))
+    doc.text(p1, 50, 727, "REGIONAL WATER PLANNING & DROUGHT RESILIENCE MEMORANDUM", font="/F2", size=7.5, color=(0.22, 0.74, 0.89))
+    doc.text(p1, 415, 742, f"RUN ID: {run_id[:14]}", font="/F3", size=8.0, color=(0.85, 0.9, 0.95))
+    doc.text(p1, 415, 727, f"DATE: {created_date} | PROVENANCE: NOAA", font="/F1", size=7.0, color=(0.65, 0.7, 0.75))
 
-    # Section 1: Multi-Tier Stress Spectrum Drawdown Sensitivity
-    doc.text(p2, 36, 692, "MULTI-TIER STRESS SPECTRUM DRAWDOWN SENSITIVITY (Non-Predictive)", font="/F2", size=9.5, color=(0.06, 0.09, 0.16))
-    y_spec = 672
-    doc.rect(p2, 36, y_spec - 18, 540, 18, fill=(0.08, 0.49, 0.55))
-    doc.text(p2, 42, y_spec - 13, "Stress Tier", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 135, y_spec - 13, "Retained", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 190, y_spec - 13, "Min Storage (% / ac-ft)", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 315, y_spec - 13, f"Band 1 ({band1_pct:g}%)", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 385, y_spec - 13, f"Band 2 ({band2_pct:g}%)", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 455, y_spec - 13, f"Band 3 ({critical_pct:g}%)", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 520, y_spec - 13, "Sim Status", font="/F2", size=7.0, color=(1, 1, 1))
+    flow = VectorFlow(doc, p1, 705, run_id)
 
-    spec_rows = spectrum_data["summary_table"] if spectrum_data and "summary_table" in spectrum_data else []
+    # -------------------------------------------------------------------------
+    # SECTION 1: EXECUTIVE SUMMARY
+    # -------------------------------------------------------------------------
+    flow.callout_box(
+        "WARNING: WHAT THIS ARTIFACT IS NOT",
+        [
+            "* NOT a safe-yield, firm-yield, or delivery forecast; uncalibrated toy planning model.",
+            "* NOT validated against actual streamflow, river routing losses, or surface evaporation.",
+            "* An illustrative stress experiment based on historical point-rainfall deficit series.",
+        ],
+    )
+    flow.heading("1. EXECUTIVE SUMMARY", size=10.0)
+    flow.heading("THE BOTTOM LINE -- EXECUTIVE OVERVIEW", size=8.5)
+    primary_id = getattr(primary_scenario, "id", "None")
+    flow.paragraph(
+        f"This report presents human-reviewed rainfall stress scenarios and an illustrative reservoir drawdown "
+        f"experiment across the reservoirs the model represents ({capacity_breakdown}; combined {total_capacity:,.0f} ac-ft). "
+        f"Derived using primary scenario {primary_id} at {init_frac * 100:.0f}% initial storage, it evaluates whether emergency "
+        f"conservation ({cons_frac * 100:g}%) defers reaching the illustrative {critical_pct:g}% reserve band (Band 3). "
+        f"This simulation is an exploratory sensitivity tool, not an operational delivery forecast.",
+        size=7.0,
+    )
+    cards = [
+        ("ILLUSTRATIVE DEPLETION", depletion_range_val, depletion_range_sub, (0.08, 0.45, 0.55)),
+        ("CONSERVATION BENEFIT", conservation_val, conservation_sub, (0.1, 0.55, 0.35)),
+        ("DOMINANT LOSS DRIVER", loss_driver_val, loss_driver_sub, (0.75, 0.25, 0.2)),
+    ]
+    flow.metric_cards(cards)
+    flow.findings_box("KEY PLANNING FINDINGS & HYDROLOGIC CONTEXT", findings)
 
-    if not spec_rows:
-        # No example or placeholder rows: an empty spectrum is reported as unavailable so a
-        # reader can never mistake illustrative filler for a computed result.
-        doc.rect(p2, 36, y_spec - 58, 540, 40, fill=(0.99, 0.96, 0.92), stroke=(0.85, 0.65, 0.15))
-        doc.text(p2, 42, y_spec - 32, f"{UNAVAILABLE.upper()} -- STRESS SPECTRUM NOT COMPUTED FOR THIS REPORT", font="/F2", size=8.0, color=(0.7, 0.4, 0.05))
-        doc.text(p2, 42, y_spec - 46, clip_text(unavailable_note or "The stress spectrum produced no rows.", 118), font="/F1", size=7.0, color=(0.4, 0.35, 0.2))
-
-    for idx, r in enumerate(spec_rows[:4]):
-        y_r = y_spec - 38 - (idx * 20)
-        bg = (0.96, 0.97, 0.99) if idx % 2 == 0 else (1.0, 1.0, 1.0)
-        doc.rect(p2, 36, y_r, 540, 20, fill=bg)
-        # Day 0 is a crossing at the start, not an absent value.
-        d1, d2, d3 = ("--" if r.get(key) is None else "Day 0 (start)" if r[key] == 0 else f"Day {r[key]}"
-                      for key in ("day_stage1_40", "day_stage2_30", "day_stage3_20"))
-        stat = f"Above {critical_pct:g}%" if r.get("survived_critical_20pct") else f"At/below {critical_pct:g}%"
-        stat_col = (0.1, 0.55, 0.35) if r.get("survived_critical_20pct") else (0.75, 0.25, 0.2)
-
-        label_lines = wrap_text(r["tier_label"].split(" (")[0], "/F2", 6.5, 87, max_lines=2)
-        for line_index, label_line in enumerate(label_lines):
-            doc.text(p2, 42, y_r + 12 - line_index * 8, label_line, font="/F2", size=6.5)
-        doc.text(p2, 135, y_r + 6, f"{r['retention_pct']:g}% retained", font="/F1", size=6.5)
-        doc.text(p2, 190, y_r + 6, f"{r['min_pct']:.1f}% ({r['min_acft']:,.0f} ac-ft)", font="/F2", size=7.0)
-        doc.text(p2, 315, y_r + 6, d1, font="/F1", size=7.0)
-        doc.text(p2, 385, y_r + 6, d2, font="/F1", size=7.0)
-        doc.text(p2, 455, y_r + 6, d3, font="/F2", size=7.0)
-        doc.text(p2, 520, y_r + 6, stat, font="/F2", size=7.0, color=stat_col)
-
-    # Sections 2-4 flow downward and continue onto extra pages instead of being cut off.
-    flow = VectorFlow(doc, p2, y_spec - 38 - (len(spec_rows[:4]) * 20) - 16 if spec_rows else y_spec - 74, run_id)
-    if spec_rows:
-        flow.paragraph(_input_sentence(metrics) + " Day 0 means at or below the band at the start.",
-                       size=6.8, color=(0.35, 0.4, 0.48))
-        flow.gap(6)
-
-    flow.heading("SHORTLISTED CANDIDATE SCENARIOS (Accepted for Planning Analysis)")
+    # -------------------------------------------------------------------------
+    # SECTION 2: SCENARIO IDENTITY AND RAINFALL INPUT
+    # -------------------------------------------------------------------------
+    flow.heading("2. SCENARIO IDENTITY AND RAINFALL INPUT", size=9.5)
+    flow.paragraph(f"Primary Scenario Identity: {primary_id}. {_input_sentence(metrics)}", size=7.0)
+    flow.heading("SHORTLISTED CANDIDATE SCENARIOS (Accepted for Planning Analysis)", size=8.0)
     scenario_columns = [
         (42, "Scenario ID", 70), (115, "Period Range", 100), (220, "Duration", 50),
         (275, "Deficit (mm)", 65), (345, "Concurrence", 60), (410, "Review Disposition & Note", 160),
     ]
     flow.table_header(scenario_columns)
-
     if not accepted:
         flow.gap(4)
-        flow.paragraph("No accepted scenarios were supplied for this report.", size=7.5,
-                       color=(0.45, 0.5, 0.55))
+        flow.paragraph("No accepted scenarios were supplied for this report.", size=7.5, color=(0.45, 0.5, 0.55))
     for index, scenario in enumerate(accepted):
         prov = getattr(scenario, "provenance", {}) or {}
         feat = getattr(scenario, "features", {}) or {}
@@ -1888,12 +1932,16 @@ def build_fallback_pdf(
             (note, "/F1"),
         ], index)
 
-    provider_note = (
-        str(getattr(workspace_or_title, "notes", "") or "").strip()
-        if not isinstance(workspace_or_title, str) else ""
+    # -------------------------------------------------------------------------
+    # SECTION 3: REVIEW DECISION AND RATIONALE
+    # -------------------------------------------------------------------------
+    flow.heading("3. REVIEW DECISION AND RATIONALE", size=9.5)
+    flow.paragraph(
+        "Candidate scenarios were evaluated and accepted by human review. Review notes and dispositions recorded above "
+        "reflect analyst findings regarding historical drought representativeness and local relevance.",
+        size=7.0,
     )
     if provider_note:
-        flow.gap(10)
         flow.heading("PROVIDER NOTES", size=8.5)
         if include_notes:
             flow.paragraph(provider_note, size=6.8)
@@ -1903,81 +1951,155 @@ def build_fallback_pdf(
                 size=6.8, color=(0.45, 0.5, 0.55),
             )
 
-    # Section 3: Evidence, assumptions and recorded disagreements
-    flow.gap(14)
-    flow.heading("EVIDENCE AND ASSUMPTIONS")
-    evidence_records = list(getattr(workspace_or_title, "evidence", []) or []) if not isinstance(workspace_or_title, str) else []
+    # -------------------------------------------------------------------------
+    # SECTION 4: STORAGE-SYSTEM ASSUMPTIONS
+    # -------------------------------------------------------------------------
+    flow.heading("4. STORAGE-SYSTEM ASSUMPTIONS", size=9.5)
+    flow.paragraph(f"Band volumes use the model's assumed combined capacity of {total_capacity:,.0f} ac-ft ({capacity_breakdown} ac-ft).", size=6.8, color=(0.35, 0.4, 0.48))
+    if region_n_sources:
+        flow.paragraph("The project research packet records separate TWDB volumetric survey values for these Region N sources.", size=6.8, color=(0.35, 0.4, 0.48))
+        flow.paragraph(f"Those values sum to {surveyed_total:,.0f} ac-ft; this report does not claim the model assumptions agree with them.", size=6.8, color=(0.35, 0.4, 0.48))
+    else:
+        flow.paragraph("No external capacity survey comparison is configured for this selected system.", size=6.8, color=(0.35, 0.4, 0.48))
+        flow.paragraph("Review its user-selected or preset capacity inputs before use.", size=6.8, color=(0.35, 0.4, 0.48))
+
+    flow.heading("EXPERIMENT CONFIGURATION USED FOR THIS REPORT", size=8.5)
+    for label, value in config.describe_rows():
+        flow.paragraph(f"{label}: {value}", font="/F1", size=7.0)
+    if scenario_note:
+        flow.paragraph(scenario_note, font="/F1", size=6.8, color=(0.7, 0.4, 0.05))
+    elif not config.selected:
+        flow.paragraph("No experiment was configured in Review; these are BASIN's documented defaults, not an earlier run.", font="/F1", size=6.8, color=(0.7, 0.4, 0.05))
+
+    flow.heading("ILLUSTRATIVE STORAGE BANDS USED BY THIS EXPERIMENT -- NOT ADOPTED POLICY", size=8.5)
+    band_actions = {
+        "Band 1": ("Public awareness notices, voluntary reduction targets, leak audit escalation.",
+                   "Generic planning language; effect on storage is not quantified here."),
+        "Band 2": ("Restrictions on landscape irrigation and non-essential outdoor use.",
+                   "Generic planning language; effect on storage is not quantified here."),
+        "Band 3": ("Emergency curtailment across accounts; drought surcharge pricing.",
+                   "Generic planning language; effect on storage is not quantified here."),
+        "Band 4": ("Supply-emergency protocols prioritizing public health and safety.",
+                   "Last band the model distinguishes before storage exhaustion."),
+    }
+    rows_framework = [
+        (name,
+         f"<= {fraction * 100:.0f}% ({band_storage_acft(fraction, system):,.0f} ac-ft)",
+         band_actions[name][0] + " " + band_actions[name][1])
+        for fraction, name in report_bands
+    ]
+    band_columns = [
+        (44, "Illustrative Band", 95),
+        (145, "Combined Storage", 115),
+        (265, "Generic Response Categories -- Not Adopted Policy", 305),
+    ]
+    flow.table_header(band_columns)
+    for idx, (stg, cap, act) in enumerate(rows_framework):
+        flow.table_row([(stg, "/F2"), (cap, "/F1"), (act, "/F1")], idx, size=6.8)
+
+    # -------------------------------------------------------------------------
+    # SECTION 5: EXPERIMENT RESULTS
+    # -------------------------------------------------------------------------
+    flow.heading("5. EXPERIMENT RESULTS", size=9.5)
+    flow.heading("MULTI-TIER STRESS SPECTRUM DRAWDOWN SENSITIVITY (Non-Predictive)", size=8.5)
+    spec_rows = spectrum_data["summary_table"] if spectrum_data and "summary_table" in spectrum_data else []
+    spec_columns = [
+        (42, "Stress Tier", 90),
+        (135, "Retained", 52),
+        (190, "Min Storage (% / ac-ft)", 122),
+        (315, f"Band 1 ({band1_pct:g}%)", 68),
+        (385, f"Band 2 ({band2_pct:g}%)", 68),
+        (455, f"Band 3 ({critical_pct:g}%)", 65),
+        (522, "Sim Status", 52),
+    ]
+    flow.table_header(spec_columns)
+    if not spec_rows:
+        flow.heading(f"{UNAVAILABLE.upper()} -- STRESS SPECTRUM NOT COMPUTED FOR THIS REPORT", size=7.8)
+        flow.paragraph(unavailable_note or "The stress spectrum produced no rows.", size=7.0, color=(0.4, 0.35, 0.2))
+    else:
+        for idx, r in enumerate(spec_rows):
+            d1, d2, d3 = ("--" if r.get(key) is None else "Day 0 (start)" if r[key] == 0 else f"Day {r[key]}"
+                          for key in ("day_stage1_40", "day_stage2_30", "day_stage3_20"))
+            stat = f"Above {critical_pct:g}%" if r.get("survived_critical_20pct") else f"At/below {critical_pct:g}%"
+            tier_lbl = r["tier_label"].split(" (")[0]
+            flow.table_row([
+                (tier_lbl, "/F2"),
+                (f"{r['retention_pct']:g}% retained", "/F1"),
+                (f"{r['min_pct']:.1f}% ({r['min_acft']:,.0f} ac-ft)", "/F2"),
+                (d1, "/F1"),
+                (d2, "/F1"),
+                (d3, "/F2"),
+                (stat, "/F2"),
+            ], idx, size=6.8)
+
+    flow.paragraph(_input_sentence(metrics) + " Day 0 means at or below the band at the start.", size=6.8, color=(0.35, 0.4, 0.48))
+
+    # -------------------------------------------------------------------------
+    # SECTION 6: OBSERVATION PROVENANCE
+    # -------------------------------------------------------------------------
+    from basin_core.custom_data import (
+        CUSTOM_CATCHMENT_DISCLAIMER,
+        format_custom_coverage_dates,
+        format_custom_source_label,
+    )
+    flow.heading("6. OBSERVATION PROVENANCE", size=9.5)
+    flow.paragraph(f"Primary Station Proxies: NOAA GHCN-Daily {stations}.", size=7.0)
+    if custom_uploads:
+        for record in custom_uploads:
+            src_lbl = format_custom_source_label(record["station"], record.get("provider"))
+            cov_lbl = format_custom_coverage_dates(record.get("start"), record.get("end"), record.get("valid_days"))
+            flow.paragraph(f"{record.get('id', 'Custom')}: {src_lbl}; {cov_lbl}; Status: {record.get('comparison', {}).get('status', 'uploaded')}.", size=6.8)
+            flow.paragraph(CUSTOM_CATCHMENT_DISCLAIMER, size=6.8, color=(0.7, 0.4, 0.05))
+
+    flow.heading("EVIDENCE AND ASSUMPTIONS", size=8.5)
     if not evidence_records:
         flow.paragraph("No evidence records are attached to this analysis.", color=(0.45, 0.5, 0.55))
     for record in evidence_records:
-        flow.gap(4)
-        flow.paragraph(f"{record.get('id', 'unidentified')}: {record.get('title', 'Untitled')}",
-                       font="/F2", size=7.2)
-        flow.paragraph(
-            f"{record.get('kind', 'unspecified')} * {record.get('review_status', 'unspecified')} * "
-            f"{record.get('publisher', 'publisher not supplied')}",
-            size=6.8, color=(0.35, 0.4, 0.48),
-        )
-        flow.paragraph(f"Source: {record.get('source_locator', 'not supplied')}; source date: "
-                       f"{record.get('source_date') or 'not supplied'}.", size=6.8, color=(0.35, 0.4, 0.48))
-        flow.paragraph(f"Geography: {record.get('geographic_scope', 'not supplied')}. Units: "
-                       f"{record.get('units') or 'not applicable'}.", size=6.8, color=(0.35, 0.4, 0.48))
+        flow.paragraph(f"{record.get('id', 'unidentified')}: {record.get('title', 'Untitled')}", font="/F2", size=7.2)
+        flow.paragraph(f"{record.get('kind', 'unspecified')} * {record.get('review_status', 'unspecified')} * {record.get('publisher', 'publisher not supplied')}", size=6.8, color=(0.35, 0.4, 0.48))
+        flow.paragraph(f"Source: {record.get('source_locator', 'not supplied')}; source date: {record.get('source_date') or 'not supplied'}.", size=6.8, color=(0.35, 0.4, 0.48))
+        flow.paragraph(f"Geography: {record.get('geographic_scope', 'not supplied')}. Units: {record.get('units') or 'not applicable'}.", size=6.8, color=(0.35, 0.4, 0.48))
         flow.paragraph(record.get("description", ""), size=6.8)
         if include_notes and record.get("private_note"):
             flow.paragraph(f"Private annotation: {record['private_note']}", size=6.8, color=(0.7, 0.4, 0.05))
         elif record.get("private_note"):
-            flow.paragraph("Private annotation recorded (omitted: export privacy setting excludes private notes).",
-                           size=6.8, color=(0.45, 0.5, 0.55))
+            flow.paragraph("Private annotation recorded (omitted: export privacy setting excludes private notes).", size=6.8, color=(0.45, 0.5, 0.55))
 
-    conflicts = list(getattr(workspace_or_title, "conflicts", []) or []) if not isinstance(workspace_or_title, str) else []
-    flow.gap(10)
     flow.heading("RECORDED DISAGREEMENTS", size=8.5)
     if not conflicts:
-        flow.paragraph("No evidence disagreements have been recorded. That does not establish that none exist.",
-                       color=(0.45, 0.5, 0.55))
+        flow.paragraph("No evidence disagreements have been recorded. That does not establish that none exist.", color=(0.45, 0.5, 0.55))
     for conflict in conflicts:
-        flow.gap(3)
-        flow.paragraph(f"{conflict.get('id', 'conflict')} [{conflict.get('status', 'unknown')}]: "
-                       f"{conflict.get('left_id', '?')} vs {conflict.get('right_id', '?')}", font="/F2", size=7.0)
+        flow.paragraph(f"{conflict.get('id', 'conflict')} [{conflict.get('status', 'unknown')}]: {conflict.get('left_id', '?')} vs {conflict.get('right_id', '?')}", font="/F2", size=7.0)
         flow.paragraph(f"Disagreement: {conflict.get('disagreement', '')}", size=6.8)
         flow.paragraph(f"Comparability: {conflict.get('comparability', '')}", size=6.8, color=(0.35, 0.4, 0.48))
-        flow.paragraph(f"Human disposition: {conflict.get('resolution') or 'Unresolved; no disposition recorded.'}",
-                       size=6.8, color=(0.35, 0.4, 0.48))
+        flow.paragraph(f"Human disposition: {conflict.get('resolution') or 'Unresolved; no disposition recorded.'}", size=6.8, color=(0.35, 0.4, 0.48))
         if include_notes and conflict.get("private_note"):
             flow.paragraph(f"Private annotation: {conflict['private_note']}", size=6.8, color=(0.7, 0.4, 0.05))
         elif conflict.get("private_note"):
-            flow.paragraph("Private annotation recorded (omitted: export privacy setting excludes private notes).",
-                           size=6.8, color=(0.45, 0.5, 0.55))
+            flow.paragraph("Private annotation recorded (omitted: export privacy setting excludes private notes).", size=6.8, color=(0.45, 0.5, 0.55))
 
-    # Section 4: Provenance block, kept whole on whichever page it lands
-    flow.gap(14)
-    flow.ensure(118)
-    audit_top = flow.y
-    doc.rect(flow.page, 36, audit_top - 112, 540, 108, fill=(0.96, 0.97, 0.99), stroke=(0.8, 0.85, 0.92))
-    doc.text(flow.page, 48, audit_top - 18, "PROVENANCE AND VERIFICATION SCOPE", font="/F2", size=8.5, color=(0.06, 0.09, 0.16))
+    # -------------------------------------------------------------------------
+    # SECTION 7: LIMITATIONS
+    # -------------------------------------------------------------------------
+    flow.heading("7. LIMITATIONS", size=9.5)
+    flow.heading("MODELING BOUNDARIES AND LIMITATIONS", size=8.5)
+    flow.paragraph("* NOT a safe-yield, firm-yield, or delivery forecast; uncalibrated toy planning model.", size=7.0)
+    flow.paragraph("* NOT a hydrologic drought-of-record analysis; point-rainfall series do not substitute for basin-wide inflow modeling.", size=7.0)
+    flow.paragraph("* NOT validated against actual streamflow, river routing losses, or catchment runoff.", size=7.0)
+    flow.paragraph("* Uses regional seasonal proxy rates rather than reservoir-specific surface pan evaporation.", size=7.0)
+    flow.paragraph("* Response categories and threshold storage bands are generic planning concepts, not adopted municipal policy.", size=7.0)
+
+    # -------------------------------------------------------------------------
+    # SECTION 8: VERIFICATION AND HASHES
+    # -------------------------------------------------------------------------
+    flow.heading("8. VERIFICATION AND HASHES", size=9.5)
     provenance_lines = [
         (f"* Station Proxies: NOAA GHCN-Daily {stations}.", "/F1"),
         (f"* SHA-256 Snapshot Digest: {snapshot_hash} (recorded identity; not verified by this document).", "/F3"),
         ("* Deficit recomputation is checked when the companion ZIP is replayed, not by this PDF.", "/F1"),
         (replay_line, "/F3"),
     ]
-    line_y = audit_top - 33
-    for content, font in provenance_lines:
-        for wrapped_line in wrap_text(content, font, 7.0, 424):
-            doc.text(flow.page, 48, line_y, wrapped_line, font=font, size=7.0)
-            line_y -= 10
-    doc.text(flow.page, 48, line_y - 2, "* This PDF is outside the bundle verification contract. A successful replay establishes nothing",
-             font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
-    doc.text(flow.page, 48, line_y - 12, "  about these pages. No scientific validation or professional approval is claimed or implied.",
-             font="/F1", size=7.0, color=(0.4, 0.45, 0.5))
-
-    doc.rect(flow.page, 480, audit_top - 104, 85, 76, fill=(1.0, 1.0, 1.0), stroke=(0.08, 0.49, 0.55), line_width=1.5)
-    doc.text(flow.page, 489, audit_top - 42, "VERIFICATION", font="/F2", size=7.0, color=(0.08, 0.49, 0.55))
-    doc.text(flow.page, 505, audit_top - 52, "SCOPE", font="/F2", size=7.0, color=(0.08, 0.49, 0.55))
-    doc.text(flow.page, 492, audit_top - 68, "BUNDLE ONLY", font="/F2", size=8.0, color=(0.08, 0.49, 0.55))
-    doc.text(flow.page, 487, audit_top - 80, "PDF NOT VERIFIED", font="/F2", size=6.5, color=(0.7, 0.4, 0.05))
-    doc.text(flow.page, 488, audit_top - 94, f"ID: {clip_text(run_id, 13)}", font="/F3", size=6.5, color=(0.3, 0.35, 0.4))
-    flow.y = audit_top - 118
+    flow.audit_stamp_box("PROVENANCE AND VERIFICATION SCOPE", provenance_lines, run_id)
 
     if doc.unrepresentable:
         flow.gap(6)
@@ -1987,7 +2109,6 @@ def build_fallback_pdf(
             size=6.8, color=(0.7, 0.4, 0.05),
         )
 
-    # Footers last, once the total page count is known.
     total_pages = len(doc.pages)
     for number, page in enumerate(doc.pages, start=1):
         doc.line(page, 36, 50, 576, 50, stroke=(0.8, 0.85, 0.9))
@@ -1998,12 +2119,6 @@ def build_fallback_pdf(
 
     return doc.render()
 
-
-# Browsers cold-starting a new profile can take several seconds, especially on the first
-# launch after boot; 2 seconds (the previous value) was shorter than a real render even on a
-# fast dev machine (~1.3s observed), so any load at all turned a working browser into a
-# reported "failure". This is generous enough to avoid false negatives while still bounding
-# how long a broken/hung renderer can block export.
 BROWSER_RENDER_TIMEOUT_S = 15
 
 

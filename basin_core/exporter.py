@@ -153,17 +153,41 @@ def export_bundle(workspace, include_notes=False, include_custom=False):
     accepted = workspace.exportable()
     audit = workspace.record(include_notes, include_custom=include_custom)
     reconstruct_audit(workspace.source, audit, require_export=True)
+    brief_view = SimpleNamespace(
+        id=workspace.id,
+        created_at=workspace.created_at,
+        weights=workspace.weights,
+        evidence=audit.get("evidence", workspace.evidence),
+        evidence_refs=audit.get("evidence_refs", workspace.evidence_refs),
+        conflicts=audit.get("conflicts", workspace.conflicts),
+        custom_uploads=audit.get("custom_uploads", getattr(workspace, "custom_uploads", [])),
+        simulation_runs=audit.get("simulation_runs", getattr(workspace, "simulation_runs", [])),
+        active_simulations=audit.get("active_simulations", getattr(workspace, "active_simulations", {})),
+        simulation_reviews=audit.get("simulation_reviews", getattr(workspace, "simulation_reviews", {})),
+    )
     simulation_readme = (
-        "Reviewed illustrative reservoir experiments and their complete water-system inputs are included and replayed for internal consistency.\n"
-        if workspace.simulation_runs else
+        "Saved illustrative reservoir experiments and their complete water-system inputs are included and replayed for internal consistency; review records identify runs that received human review.\n"
+        if audit.get("simulation_runs") else
         "No saved reservoir experiment is included.\n"
+    )
+    readme_text = (
+        "================================================================================\n"
+        "WARNING: WHAT THIS ARTIFACT IS NOT\n"
+        "- NOT a hydrologic drought-of-record analysis\n"
+        "- NOT a safe-yield, firm-yield, or delivery forecast\n"
+        "- NOT validated against actual streamflow or surface evaporation\n"
+        "================================================================================\n\n"
+        "BASIN rainfall scenarios for expert review. Historical dates are source labels, not forecasts.\n"
+        "Replay with BASIN 0.2: python scripts/replay_bundle.py path/to/bundle.zip\n"
+        "See the handoff brief for verification scope, assumptions and unresolved issues.\n"
+        + simulation_readme
     )
     files = {'daily_rainfall.csv': pd.concat([rainfall_rows(s) for s in accepted]).to_csv(index=False, lineterminator='\n').encode(),
              'shortlist.csv': pd.DataFrame([summary_record(s) for s in accepted]).to_csv(index=False, lineterminator='\n').encode(),
-             'audit.json': dumps(audit), 'Hydrologist_Handoff_Brief.md': generate_brief(workspace, accepted).encode(),
+             'audit.json': dumps(audit), 'Hydrologist_Handoff_Brief.md': generate_brief(brief_view, accepted).encode(),
              'snapshot/observations.csv': workspace.source.raw, 'snapshot/manifest.json': dumps(workspace.source.manifest),
              'methodology.md': (ROOT / 'docs/methodology.md').read_bytes(),
-             'README.txt': ('================================================================================\nWARNING: WHAT THIS ARTIFACT IS NOT\n- NOT a hydrologic drought-of-record analysis\n- NOT a safe-yield, firm-yield, or delivery forecast\n- NOT validated against actual streamflow or surface evaporation\n================================================================================\n\nBASIN rainfall scenarios for expert review. Historical dates are source labels, not forecasts.\nReplay with BASIN 0.2: python scripts/replay_bundle.py path/to/bundle.zip\nSee the handoff brief for verification scope, assumptions and unresolved issues.\n' + simulation_readme).encode(),
+             'README.txt': readme_text.encode(),
              'replay_bundle.py': (ROOT / 'scripts/replay_bundle.py').read_bytes()}
     manifest = {'schema_version': audit['schema_version'], 'basin_version': __version__, 'run_id': workspace.id,
                 'accepted_ids': [s.id for s in accepted], 'private_notes_included': include_notes,

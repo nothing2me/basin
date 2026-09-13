@@ -1,6 +1,6 @@
 # BASIN current work board
 
-Updated: 2026-09-12. This file tracks current release work. The previous detailed board is preserved in [the historical archive](docs/archive/TODO_history_through_2026-09-11.md); checked historical items there are evidence records, not current release claims.
+Updated: 2026-09-13. This file tracks current release work. The previous detailed board is preserved in [the historical archive](docs/archive/TODO_history_through_2026-09-11.md); checked historical items there are evidence records, not current release claims.
 
 ## Completed and merged
 
@@ -14,6 +14,8 @@ Updated: 2026-09-12. This file tracks current release work. The previous detaile
 - [x] **T6 — automated native release gates.** Deterministic prerequisite, OpenMP, package-hygiene and model-provenance checks are implemented and tested on the development machine. Physical-device acceptance remains under Part C. Evidence: [native release hardening](docs/t6_native_release_hardening.md).
 - [x] **T2 — remove remaining report ambiguity.** Audited and standardized rainfall percentage terminology across UI, assistant, exporter, and PDF reports. Added canonical formatters `format_retained_rainfall`, `format_rainfall_reduction`, and `format_rainfall_dual_explanation` ensuring baselines and retained vs. reduction meanings are always explicit without isolated percentage claims.
 - [x] **T3 — strengthen custom-observation source language.** User-entered observations are identified as user-provided and unverified across Data, Review, and exports. Coverage dates are strictly bounded (`Coverage: YYYY-MM-DD to YYYY-MM-DD (N daily records)`). Catchment disclaimer is included (`Custom data represents unverified local observations, not a calibrated catchment model.`), and prohibited claims enforcement rejects official/verified/certified status claims.
+- [x] **Report and verified-export quality pass.** HTML and fallback PDFs share an eight-section decision-document structure, prevent long-content collisions, and preserve T2/T3 language and note consent. Verified ZIPs retain saved simulations with explicit review state and preserve hash/replay verification.
+- [x] **Responsive Review visualization polish.** Storage bars and the combined trajectory are separated into vertical panels, reservoir and threshold labels remain readable at 375×812 and 1280×720, the one-tier timeline uses its available width, and mobile navigation, Notes, and AI controls no longer crowd the analysis.
 
 ## Next technical work
 

@@ -1,5 +1,15 @@
 # BASIN current handoff
 
+## September 13 — report/export quality and responsive Review polish
+
+The handoff report and verified ZIP now present one consistent, reviewable package. Both HTML and fallback-vector PDFs follow the same eight-section order: executive summary, scenario identity, review rationale, storage assumptions, experiment results, observation provenance, limitations, and verification hashes. Long notes and labels remain inside page bounds; custom observations retain the T3 source, coverage, and catchment language; rainfall percentages retain the T2 baseline language. Verified bundles retain all saved simulation runs with explicit review state, keep note-consent behavior through revocation, and continue to pass manifest and replay verification.
+
+The Review storage illustration is now responsive. The reservoir snapshot and combined-pool trajectory use separate vertical panels, reservoir names wrap onto deliberate word lines, exact capacities remain available in hover details, and storage-band labels occupy a dedicated right gutter beside their matching lines. The single-scenario band timeline no longer reserves an empty label column. At 375×812, the top controls and four-stage navigation form compact grids, Personal Notes and AI become corner controls, and the assistant opens as a full-width drawer.
+
+Browser verification used a clean Streamlit process at 375×812 and 1280×720. The phone view showed distinct reservoir labels, readable band labels, visible playback controls, and an uncluttered scenario-band timeline; the desktop view preserved full-width chart readability. Focused verification passed `14` app/visualizer tests and `152` report/export/terminology tests. Full regression suite passed **617 passed, 3 skipped in 593.39s** with 10 export quality matrix tests in `tests/test_export_quality.py`. `git diff --check` passed.
+
+Next technical action: define T5 document-ingestion provenance, extraction-review, and privacy contracts before accepting PDF/report inputs. Presentation-laptop, projector, offline, intended-user, and organizer checks remain Part C external acceptance.
+
 ## September 13 — T2 terminology audit & T3 custom observation provenance
 
 Tasks T2 and T3 have been fully implemented, verified, and integrated:
