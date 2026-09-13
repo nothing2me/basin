@@ -275,6 +275,46 @@ def stage_trigger_milestone_figure(
     return fig
 
 
+def storage_trajectory_figure(
+    sim_df: pd.DataFrame,
+    stage_bands_pct: tuple[float, ...] = (0.40, 0.30, 0.20, 0.15),
+) -> go.Figure:
+    """Show the combined-storage result without detailed playback controls."""
+    fig = go.Figure()
+    bands = [float(value * 100 if value <= 1 else value) for value in stage_bands_pct]
+    colors = ["#059669", "#d97706", "#ea580c", "#dc2626", "#7f1d1d"]
+    bounds = [100.0, *bands, 0.0]
+    for index, (upper, lower) in enumerate(zip(bounds, bounds[1:])):
+        fig.add_hrect(y0=lower, y1=upper, fillcolor=colors[index], opacity=0.07,
+                      line_width=0, layer="below")
+    for level in bands:
+        fig.add_hline(y=level, line_dash="dot", line_color="#8b949e", line_width=1)
+    fig.add_trace(go.Scatter(
+        x=sim_df["day"], y=sim_df["combined_pct"], mode="lines",
+        line=dict(color="#087e8b", width=3), fill="tozeroy",
+        fillcolor="rgba(8,126,139,0.08)", name="Combined storage",
+        hovertemplate="Day %{x}<br>Combined storage: %{y:.1f}%<extra></extra>",
+    ))
+    end = sim_df.iloc[-1]
+    fig.add_trace(go.Scatter(
+        x=[end["day"]], y=[end["combined_pct"]], mode="markers+text",
+        text=[f"End {end['combined_pct']:.1f}%"], textposition="top left",
+        marker=dict(size=10, color="#087e8b", line=dict(width=2, color="#ffffff")),
+        showlegend=False, cliponaxis=False,
+        hovertemplate="Day %{x}<br>Combined storage: %{y:.1f}%<extra></extra>",
+    ))
+    fig.update_layout(
+        height=390, margin=dict(l=58, r=24, t=24, b=54), showlegend=False,
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Arial", size=12), hovermode="x unified",
+        xaxis=dict(title="Scenario day", showgrid=False, zeroline=False),
+        yaxis=dict(title="Combined storage", range=[0, 103], ticksuffix="%",
+                   tickvals=sorted(set([0.0, 100.0, *bands])),
+                   gridcolor="rgba(128,128,128,0.15)", zeroline=False),
+    )
+    return fig
+
+
 def drought_anomaly_matrix_figure(observations: pd.DataFrame, title_prefix: str = "Catchment Average") -> go.Figure:
     """Render a 35-year (1991–2025) x 12-month precipitation anomaly heatmap matrix."""
     if isinstance(observations, pd.DataFrame):

@@ -203,7 +203,7 @@ def test_pre_run_answers_configure_the_new_review(isolated_sessions):
     assert not any("Set up this Review" in m.value for m in at.markdown)
     expected = [TAB_LABELS[key] for key in TAB_KEYS if key in FOCUS_PRIMARY["storage"]]
     assert top_level_tab_labels(at)[:len(expected)] == expected
-    assert "Nothing has been uploaded or validated by that choice" in rendered_text(at)
+    assert "Custom data selected" in rendered_text(at)
 
 
 def test_pre_run_setup_can_be_skipped():
@@ -335,7 +335,7 @@ def test_choosing_own_data_never_implies_an_upload_happened(app):
     assert "Existing data is unchanged" in warnings
 
     next(b for b in app.button if b.label == "Use this focus").click().run()
-    assert "Nothing has been uploaded or validated by that choice" in rendered_text(app)
+    assert "Custom data selected" in rendered_text(app)
     assert not app.session_state.workspace.custom_uploads
 
 
@@ -355,7 +355,7 @@ def test_focus_does_not_apply_ranking_weights(app):
             mode_radio.set_value("advanced").run()
 
     text = rendered_text(app)
-    assert "Ranking weights are not changed by your focus" in text
+    assert "pairs well with" in text
     assert "Illustrative rural provider" in text
 
 

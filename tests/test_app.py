@@ -41,19 +41,20 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert app.session_state.workspace.weights["duration"] == 80
     app.sidebar.radio[0].set_value("Review").run()
     assert not app.exception
+    app.segmented_control(key=f"review_mode_{w.id}").set_value("advanced").run()
     app.toggle(key="storage_experiment").set_value(True).run()
     app.radio(key="reservoir_sim_subview").set_value("Additional rainfall reductions").run()
     assert not app.exception
     app.radio(key="reservoir_sim_subview").set_value("Selected scenario").run()
     assert not app.exception
-    next(t for t in app.text_input if t.label == "Experiment review rationale").set_value(
+    next(t for t in app.text_input if t.label == "Review note").set_value(
         "Checked the selected system inputs and illustrative limitations"
     ).run()
-    next(b for b in app.button if b.label == "Record experiment review").click().run()
+    next(b for b in app.button if b.label == "Save experiment review").click().run()
     assert not app.exception
     for identifier in list(w.selected):
         next(s for s in app.selectbox if s.label == "Scenario").set_value(identifier).run()
-        next(b for b in app.button if b.label == "Include this revision in handoff").click().run()
+        next(b for b in app.button if b.label == "Include").click().run()
         assert not app.exception
     app.sidebar.radio[0].set_value("Exports").run()
     next(b for b in app.button if b.label == "Build verified export").click().run()
@@ -140,10 +141,10 @@ def test_bottom_nav_syncs_sidebar_radio(tmp_path, monkeypatch):
 
     # Review each current revision and advance through the remaining shortlist.
     for index in range(len(app.session_state.workspace.selected)):
-        next(b for b in app.button if b.label == "Include this revision in handoff").click().run()
+        next(b for b in app.button if b.label == "Include").click().run()
         if index + 1 < len(app.session_state.workspace.selected):
             before_id = app.session_state.inspect_id
-            next(b for b in app.button if b.label == "Next unreviewed scenario").click().run()
+            next(b for b in app.button if b.label == "Next scenario").click().run()
             assert app.session_state.inspect_id != before_id
             assert app.session_state.workspace.get(app.session_state.inspect_id).status == "unreviewed"
     assert not app.exception
@@ -269,6 +270,8 @@ def test_custom_colors_reset_and_accessible_charts(tmp_path, monkeypatch):
     assert not app.exception
     workspace = app.session_state.workspace
     before = [(s.id, s.score, s.status) for s in workspace.scenarios]
+    next(b for b in app.button if b.label == "Use this focus").click().run()
+    app.segmented_control(key=f"review_mode_{workspace.id}").set_value("advanced").run()
     app.toggle(key="storage_experiment").set_value(True).run()
     app.radio(key="reservoir_sim_subview").set_value("Additional rainfall reductions").run()
     assert not app.exception

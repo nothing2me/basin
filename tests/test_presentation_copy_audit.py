@@ -168,30 +168,31 @@ def test_copy_inventory_completeness():
         assert len(item["proposed_concise_wording"]) < len(item["current_wording"])
 
 
-def test_copy_inventory_targets_exist_in_source_files():
-    """Verify that audited current phrases correspond to actual strings in app.py or basin_ui.py."""
+def test_copy_inventory_replacements_are_applied():
+    """The audited dense phrases are replaced by their concise equivalents."""
     app_text = (ROOT / "app.py").read_text(encoding="utf-8")
     ui_text = (ROOT / "basin_ui.py").read_text(encoding="utf-8")
 
-    anchors = [
-        (app_text, "Configures which visuals and tools appear first in Review"),
-        (app_text, "Guided explanations add orientation"),
-        (app_text, "Multiplies observed daily rainfall at affected stations"),
-        (app_text, "Three questions decide which tools appear first"),
-        (app_text, "Nothing has been uploaded or"),
-        (app_text, "Ranking weights are not"),
-        (app_text, "Optional experiment. These settings affect storage exploration"),
-        (app_text, "Cross-sector operational impacts calculated from daily scenario rainfall"),
-        (app_text, "KBDI and crop water balance models provide exploratory scenario impacts"),
-        (app_text, "monthly mean daily rainfall"),
-        (app_text, "Above zero means less rainfall than the reference over the preceding 30 days"),
-        (app_text, "frequency over time, not a percentage of stations"),
-        (app_text, "reflects your priorities"),
-        (app_text, "Changing rainfall creates a revision and clears its previous acceptance"),
-        (ui_text, "Evidence types and applicability are declarations"),
-        (ui_text, "Approval concerns rainfall content; it does not endorse later priority settings"),
-        (ui_text, "Rejected candidates are excluded from this preview"),
+    replacements = [
+        (app_text, "Choose what to focus on first", "Configures which visuals and tools appear first"),
+        (app_text, "Presentation view", "How much guidance do you want?"),
+        (app_text, "Retained rainfall percentage", "Multiplies observed daily rainfall"),
+        (app_text, "Simple View supports quick decisions", "Three questions decide which tools appear first"),
+        (app_text, "Custom data selected", "Your focus records an intent"),
+        (app_text, "pairs well with", "Ranking weights are not changed by your focus"),
+        (app_text, "Optional illustrative storage experiment", "These settings affect storage exploration"),
+        (app_text, "Decision-support estimates for crop irrigation deficit", "Cross-sector operational impacts calculated"),
+        (app_text, "Official burn bans are enacted by", "KBDI and crop water balance models provide"),
+        (app_text, "Dashed line: 1991–2020 monthly reference mean", "monthly mean daily rainfall"),
+        (app_text, "Positive: rainfall deficit", "Above zero means less rainfall"),
+        (app_text, "Concurring stress frequency", "frequency over time, not a percentage"),
+        (app_text, "based on the configured priorities", "It reflects your priorities"),
+        (app_text, "Edits create a new scenario revision", "Changing rainfall creates a revision"),
+        (ui_text, "Evidence applicability is qualitative", "Evidence types and applicability are declarations"),
+        (ui_text, "Approval covers rainfall content", "Approval concerns rainfall content"),
+        (ui_text, "Live weight preview", "Rejected candidates are excluded from this preview"),
     ]
 
-    for source_text, anchor in anchors:
-        assert anchor in source_text, f"Anchor missing from source text: {anchor!r}"
+    for source_text, concise, old in replacements:
+        assert concise in source_text, f"Concise replacement missing: {concise!r}"
+        assert old not in source_text, f"Dense wording still present: {old!r}"

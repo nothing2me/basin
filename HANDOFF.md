@@ -1,5 +1,20 @@
 # BASIN current handoff
 
+## September 13 — Simple/Advanced Review UI and density pass
+
+The presentation-mode contract from `11bbe6a` is now wired into the live Review workflow. A persistent two-button **Simple View / Advanced View** control changes presentation only; the workspace record, ranking, scenario revisions, review decisions, simulation inputs, saved runs, and exports remain on their existing contracts.
+
+- **Simple View:** keeps at most two focus tabs in the main row, moves the remaining tools under **More tools**, limits the decision area to **Include**, **Exclude**, and **Next scenario**, and hides batch review. Rainfall history/ranking and monthly agronomic detail use compact expanders. Storage uses the selected workspace system and retained settings but presents one static combined-storage trajectory and three decision metrics without playback, sensitivity, per-source bars, delivery diagnostics, or regional context.
+- **Advanced View:** exposes all five Review tools in one row, batch review, simulation inputs, animated per-source storage, additional rainfall reductions, band timelines, sector delivery, pipeline comparison, and dated context.
+- **Copy:** applied the 17-item copy audit across `app.py` and `basin_ui.py`; long setup, storage, rainfall, agronomic, evidence, and comparison explanations now use shorter labels or captions while required source-date, catchment-weighting, forecast, calibration, and official-action boundaries remain visible.
+- **Visualization:** added `storage_trajectory_figure`, which plots the exact `combined_pct` output from the existing simulation dataframe with unobtrusive assumed-band shading and no animation controls.
+
+Files changed: `app.py`, `basin_ui.py`, `basin_core/visualizers.py`, `tests/test_app.py`, `tests/test_failures.py`, `tests/test_presentation_copy_audit.py`, `tests/test_report_invalidation_app.py`, `tests/test_review_preferences.py`, `tests/test_ui_improvements.py`, and `tests/test_visualizers.py`.
+
+Verification: focused mode/copy/visualizer tests passed **70 tests**; UI regression selection passed **35 tests** after updating technical workflows to select Advanced View; the final complete suite passed **695 tests with 2 optional-runtime skips in 436.45s**. Browser verification at `127.0.0.1:8516` confirmed the Simple/Advanced switch, two-tab Simple layout, five-tab Advanced layout, compact decision actions, and the uncluttered Simple storage chart. `git diff --check` passed.
+
+Next action: run Part C external acceptance on the presentation laptop and projector, including screen-reader and intended-user review. No implementation blocker is open.
+
 ## September 13 — Simple and Advanced presentation mode contract & copy audit
 
 Implemented the non-UI foundation for **Simple View** and **Advanced View** in `basin_core/review_preferences.py` without modifying calculations, exporters, PDF generation, document ingestion, `app.py`, `basin_ui.py`, `basin_theme.py`, or visualizers.

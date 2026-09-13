@@ -12,6 +12,7 @@ from basin_core.visualizers import (
     rainfall_reference_figure,
     rainfall_shortfall_figure,
     stage_trigger_milestone_figure,
+    storage_trajectory_figure,
     drought_anomaly_matrix_figure,
 )
 
@@ -142,6 +143,18 @@ def test_stage_trigger_milestone_singletier(workspace):
     assert fig.layout.xaxis.title.text == "Scenario day"
     assert fig.layout.yaxis.showticklabels is False
     assert any(trace.y[0] == "Scenario Timeline" for trace in fig.data)
+
+
+def test_simple_storage_trajectory_uses_same_result_without_animation(workspace):
+    sc = workspace.get(workspace.selected[0])
+    sim_df = simulate_reservoir_drawdown(sc.series, initial_pct=0.48,
+                                         conservation_pct=0.0, pipeline_active=True)
+    fig = storage_trajectory_figure(sim_df)
+    assert fig.frames == ()
+    assert fig.layout.updatemenus == ()
+    assert list(fig.data[0].y) == list(sim_df["combined_pct"])
+    assert fig.data[1].text[0] == f"End {sim_df.iloc[-1]['combined_pct']:.1f}%"
+    assert fig.layout.height < 500
 
 
 def test_drought_anomaly_matrix_figure(workspace):

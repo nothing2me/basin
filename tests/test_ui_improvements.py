@@ -76,9 +76,10 @@ def test_drawer_sizing_and_smooth_transitions(monkeypatch, tmp_path):
             assert at.session_state.assistant_width == 650
 
 
-def test_high_density_layout_and_zero_mystery_expanders(monkeypatch):
-    """Verify that Review and Exports use visible tabs instead of nested expanders."""
+def test_simple_and_advanced_review_density(monkeypatch):
+    """Simple limits the main tab row; Advanced restores the full tool set."""
     from basin_core.workspace import Workspace
+    from basin_core.review_preferences import TAB_LABELS
     monkeypatch.setattr(Workspace, "save", lambda self: True)
 
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=45).run()
@@ -88,11 +89,18 @@ def test_high_density_layout_and_zero_mystery_expanders(monkeypatch):
     # On Workspace: candidate list is directly visible
     assert any(b.label == "Open scenario review" for b in at.button)
 
-    # On Review: all 5 analysis tabs are present
+    # On Review: Simple has two leading tabs and concise decision actions.
     at.sidebar.radio[0].set_value("Review").run()
     assert not at.exception
     assert any("Decide on the handoff" in m.value for m in at.markdown)
-    assert any(b.label == "Include this revision in handoff" for b in at.button)
+    assert any(b.label == "Include" for b in at.button)
+    review_tabs = [t for t in at.tabs if t.label in set(TAB_LABELS.values())]
+    assert len(review_tabs) == 5  # secondary tools remain reachable in More tools
+    assert len([t for t in review_tabs if t.label in [tab.label for tab in at.tabs[:2]]]) == 2
+
+    at.segmented_control(key=f"review_mode_{at.session_state.workspace.id}").set_value("advanced").run()
+    assert not at.exception
+    assert not any(e.label.startswith("More tools") for e in at.expander)
 
     # On Exports: 2-column layout and preview tabs are present
     at.sidebar.radio[0].set_value("Exports").run()

@@ -22,7 +22,7 @@ def evidence_panel(w, scenario, save):
     st.caption(f"{source['title']} · {source['source_locator']} · {source['review_status']}")
     st.dataframe(pd.DataFrame([registry[i] for i in attached]).drop(columns="private_note", errors="ignore"),
                  hide_index=True, width="stretch")
-    st.caption("Evidence types and applicability are declarations. No numerical trust score or automatic source winner is assigned.")
+    st.caption("Evidence applicability is qualitative; no automatic trust score is applied.")
     with st.expander("Record disagreement / conflict between evidence records", expanded=False):
         left, right = st.columns(2)
         first = left.selectbox("First evidence", list(registry), format_func=lambda i: registry[i]["title"], key=f"evidence_left_{key}")
@@ -108,7 +108,7 @@ def comparison_panel(w, save):
                                     "Why this scenario ranked here": w.selection_reason(identifier),
                                     **{f"Ranking contribution: {k}": round(v, 2) for k, v in s.components.items()}}
             st.dataframe(pd.DataFrame(rows), width="stretch")
-            st.caption("Profile names describe feature patterns. With one station, concurrence means that station's stress frequency. Approval concerns rainfall content; it does not endorse later priority settings.")
+            st.caption("Approval covers rainfall content, not later priority weights.")
         else:
             st.info("Select two or three candidates to compare their measurements and review state.")
         st.write("Preview alternative priorities on the same candidate pool")
@@ -120,7 +120,7 @@ def comparison_panel(w, save):
         if sum(weights.values()) > 0 and any(s.status != "rejected" for s in w.scenarios):
             result = w.compare_weights(weights)
             st.dataframe(pd.DataFrame(result["rows"]), hide_index=True, height=260, width="stretch")
-            st.caption("Rejected candidates are excluded from this preview. No candidates are regenerated and no reviews or shortlist entries change.")
+            st.caption("Live weight preview; candidates and review status stay unchanged.")
             if st.button("Save comparison to audit", key=f"save_comparison_{w.id}"):
                 w.compare_weights(weights, save_result=True)
                 if save(w): st.success("Comparison saved with candidate revisions, rainfall digests and both weight configurations.")

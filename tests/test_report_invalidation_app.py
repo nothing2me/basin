@@ -27,9 +27,10 @@ def app(tmp_path, monkeypatch):
 
     workspace = at.session_state.workspace
     at.sidebar.radio[0].set_value("Review").run()
+    at.segmented_control(key=f"review_mode_{workspace.id}").set_value("advanced").run()
     for identifier in list(workspace.selected):
         next(s for s in at.selectbox if s.label == "Scenario").set_value(identifier).run()
-        next(b for b in at.button if b.label == "Include this revision in handoff").click().run()
+        next(b for b in at.button if b.label == "Include").click().run()
     at.sidebar.radio[0].set_value("Exports").run()
     assert not at.exception
     return at
@@ -46,9 +47,9 @@ def preview_download_offered(at) -> bool:
 
 
 def review_current_experiment(at):
-    rationale = next(t for t in at.text_input if t.label == "Experiment review rationale")
+    rationale = next(t for t in at.text_input if t.label == "Review note")
     rationale.set_value("Checked the selected system inputs and illustrative limitations").run()
-    next(b for b in at.button if b.label == "Record experiment review").click().run()
+    next(b for b in at.button if b.label == "Save experiment review").click().run()
     assert not at.exception
 
 
