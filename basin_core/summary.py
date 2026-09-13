@@ -5,7 +5,85 @@ stress levels, historical rarity, multi-station concurrency, and reservoir
 outcomes for water board members, farm operators, and council officials.
 """
 from __future__ import annotations
+import math
 import pandas as pd
+
+
+def format_retained_rainfall(
+    fraction_or_pct: float,
+    baseline: str = "observed rainfall",
+    *,
+    is_fraction: bool = True,
+) -> str:
+    """Format retained rainfall, explicitly identifying baseline.
+
+    Args:
+        fraction_or_pct: The retained proportion (e.g. 0.70 or 70.0).
+        baseline: The reference baseline name (default "observed rainfall").
+        is_fraction: True if input is [0, 1] fraction, False if [0, 100] percentage.
+
+    Returns:
+        Formatted string, e.g. "70% of observed rainfall" or "37.5% of observed rainfall".
+    """
+    if not math.isfinite(fraction_or_pct) or fraction_or_pct < 0:
+        raise ValueError("Rainfall fraction or percentage must be a finite non-negative number")
+    pct = round(fraction_or_pct * 100 if is_fraction else fraction_or_pct, 1)
+    return f"{pct:g}% of {baseline}"
+
+
+def format_rainfall_reduction(
+    fraction_or_pct: float,
+    baseline: str = "observed rainfall",
+    *,
+    is_fraction: bool = True,
+) -> str:
+    """Format rainfall reduction, explicitly identifying baseline.
+
+    Args:
+        fraction_or_pct: The reduction proportion (e.g. 0.30 or 30.0).
+        baseline: The reference baseline name (default "observed rainfall").
+        is_fraction: True if input is [0, 1] fraction, False if [0, 100] percentage.
+
+    Returns:
+        Formatted string, e.g. "30% reduction from observed rainfall".
+    """
+    if not math.isfinite(fraction_or_pct) or fraction_or_pct < 0:
+        raise ValueError("Rainfall fraction or percentage must be a finite non-negative number")
+    pct = round(fraction_or_pct * 100 if is_fraction else fraction_or_pct, 1)
+    return f"{pct:g}% reduction from {baseline}"
+
+
+def format_rainfall_dual_explanation(
+    retained_fraction_or_pct: float,
+    baseline: str = "observed rainfall",
+    *,
+    is_fraction: bool = True,
+) -> str:
+    """Format both retained rainfall and its complementary reduction.
+
+    Args:
+        retained_fraction_or_pct: The retained proportion (e.g. 0.70 or 70.0).
+        baseline: The reference baseline name (default "observed rainfall").
+        is_fraction: True if input is [0, 1] fraction, False if [0, 100] percentage.
+
+    Returns:
+        Formatted dual explanation, e.g.:
+        0.70 -> "70% of observed rainfall (30% reduction from observed rainfall)"
+        1.00 -> "100% of observed rainfall (0% reduction)"
+        0.00 -> "0% of observed rainfall (100% reduction from observed rainfall)"
+        1.10 -> "110% of observed rainfall (10% increase over observed rainfall)"
+    """
+    if not math.isfinite(retained_fraction_or_pct) or retained_fraction_or_pct < 0:
+        raise ValueError("Rainfall fraction or percentage must be a finite non-negative number")
+    ret_pct = round(retained_fraction_or_pct * 100 if is_fraction else retained_fraction_or_pct, 1)
+    if ret_pct == 100.0:
+        return f"{ret_pct:g}% of {baseline} (0% reduction)"
+    elif ret_pct < 100.0:
+        red_pct = round(100.0 - ret_pct, 1)
+        return f"{ret_pct:g}% of {baseline} ({red_pct:g}% reduction from {baseline})"
+    else:
+        inc_pct = round(ret_pct - 100.0, 1)
+        return f"{ret_pct:g}% of {baseline} ({inc_pct:g}% increase over {baseline})"
 
 
 def scenario_summary(features: dict, station_names: dict[str, str] | None = None,

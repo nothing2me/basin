@@ -114,7 +114,7 @@ def describe_input_rainfall(scenario: Scenario, baseline_kind: str = "scenario_r
     values = list(retention.values())
     if values and all(v == values[0] for v in values):
         fraction: float | None = values[0]
-        steps = [f"constructed at {round(values[0] * 100, 1):g}% of observed rainfall"]
+        steps = [f"constructed at {round(values[0] * 100, 1):g}% of observed rainfall ({round((1.0 - values[0]) * 100, 1):g}% reduction)"]
     else:
         fraction = None
         steps = ["constructed with station-specific retention ("

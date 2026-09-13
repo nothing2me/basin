@@ -120,7 +120,9 @@ def test_stage_trigger_milestone_multitier(workspace):
     fig = stage_trigger_milestone_figure(spec)
     assert isinstance(fig, go.Figure)
     assert fig.layout.barmode == "overlay"
-    assert fig.layout.height == 230
+    assert fig.layout.height == 280
+    assert fig.layout.margin.t >= 70
+    assert fig.layout.margin.b >= 60
 
     for trace in fig.data:
         assert trace.orientation == "h"
@@ -135,7 +137,9 @@ def test_stage_trigger_milestone_singletier(workspace):
     fig = stage_trigger_milestone_figure(spec)
 
     assert isinstance(fig, go.Figure)
-    assert fig.layout.height == 130
+    assert fig.layout.height == 220
+    assert fig.layout.margin.l >= 140
+    assert fig.layout.xaxis.title.text == "Scenario day"
     assert any(trace.y[0] == "Scenario Timeline" for trace in fig.data)
 
 

@@ -20,7 +20,7 @@ from basin_core.analysis import (comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMP
 from basin_core.simulation import SimulationSettings, describe_input_rainfall, observed_percent, spectrum_view
 from basin_core.water_system import (WaterSource, WaterSystemConfig, SYSTEM_PRESETS,
                                      SYSTEM_ID_TO_LABEL, SYSTEM_LABEL_TO_ID, REGION_N_PRESET)
-from basin_core.summary import scenario_summary, reservoir_summary
+from basin_core.summary import scenario_summary, reservoir_summary, format_rainfall_dual_explanation
 from basin_core.review_preferences import (DATA_SOURCES, GOALS, GUIDANCE, GUIDED_TAB_NOTES,
                                            TAB_LABELS, ReviewPreferences, load_preferences,
                                            save_preferences)
@@ -332,6 +332,7 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
 
     fig = make_subplots(
         rows=1, cols=2, column_widths=[0.36, 0.64],
+        horizontal_spacing=0.14,
         subplot_titles=["Active Storage (ac-ft)", "Combined Pool Trajectory (%)"],
         specs=[[{"type": "bar"}, {"type": "xy"}]]
     )
@@ -380,29 +381,36 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
     b30 = cfg.stage_bands_pct[1] * 100 if len(cfg.stage_bands_pct) >= 2 else 30
     b20 = cfg.stage_bands_pct[2] * 100 if len(cfg.stage_bands_pct) >= 3 else 20
 
-    fig.add_hline(y=b40, line_dash="dash", line_color="#d97706", annotation_text=f"Band 1 ({b40:.0f}%)",
-                  annotation_position="top right", row=1, col=2)
-    fig.add_hline(y=b30, line_dash="dash", line_color="#ea580c", annotation_text=f"Band 2 ({b30:.0f}%)",
-                  annotation_position="top right", row=1, col=2)
-    fig.add_hline(y=b20, line_dash="dash", line_color="#dc2626", annotation_text=f"Band 3 ({b20:.0f}%)",
-                  annotation_position="top right", row=1, col=2)
+    reference_lines = [
+        (b40, "dash", "#d97706", f"Band 1 · {b40:.0f}%"),
+        (b30, "dash", "#ea580c", f"Band 2 · {b30:.0f}%"),
+        (b20, "dash", "#dc2626", f"Band 3 · {b20:.0f}%"),
+    ]
 
     if len(cfg.stage_bands_pct) >= 4:
         b10 = cfg.stage_bands_pct[3] * 100
-        fig.add_hline(y=b10, line_dash="dot", line_color="#991b1b", annotation_text=f"Illustrative band 4 ({b10:.0f}%)",
-                      annotation_position="top right", row=1, col=2)
+        reference_lines.append((b10, "dot", "#991b1b", f"Band 4 · {b10:.0f}%"))
 
     dead_acft = getattr(cfg, "dead_storage_acft", 0.0)
     if dead_acft > 0 and cfg.total_capacity_acft > 0:
         dead_pct = dead_acft / cfg.total_capacity_acft * 100
-        fig.add_hline(y=dead_pct, line_dash="dot", line_color="#450a0a", annotation_text=f"Assumed inactive storage ({dead_pct:.1f}%)",
-                      annotation_position="bottom right", row=1, col=2)
+        reference_lines.append((dead_pct, "dot", "#450a0a", f"Inactive storage · {dead_pct:.1f}%"))
 
     marker = getattr(cfg, "context_storage_marker_pct", None)
     if marker is not None:
         marker_pct = marker * 100
-        fig.add_hline(y=marker_pct, line_dash="dot", line_color="#7f1d1d", annotation_text=f"Configured reference marker ({marker_pct:g}%)",
-                      annotation_position="bottom left", row=1, col=2)
+        reference_lines.append((marker_pct, "dot", "#7f1d1d", f"Reference · {marker_pct:g}%"))
+
+    # A dedicated right-side gutter keeps each label aligned with its line and
+    # out of the simulated trajectory at ordinary browser zoom.
+    for level, dash, color, label in reference_lines:
+        fig.add_hline(y=level, line_dash=dash, line_color=color, line_width=2, row=1, col=2)
+        fig.add_annotation(
+            x=1.015, y=level, xref="x2 domain", yref="y2", text=label,
+            showarrow=False, xanchor="left", yanchor="middle", align="left",
+            font=dict(size=11, color=color),
+            bgcolor="rgba(17, 24, 28, 0.88)", borderpad=2,
+        )
 
     frames = []
     for idx in indices:
@@ -452,8 +460,8 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
     fig.update_xaxes(range=[0, days + 2], title="Scenario Day", row=1, col=2)
 
     fig.update_layout(
-        height=350,
-        margin=dict(l=10, r=10, t=30, b=10),
+        height=480,
+        margin=dict(l=60, r=130, t=72, b=95),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Arial", size=12),
@@ -462,7 +470,7 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
             type="buttons",
             showactive=False, bgcolor="#243239", font=dict(color="#ffffff"),
             direction="left",
-            x=0.0, y=1.24,
+            x=0.0, y=1.18,
             buttons=[
                 dict(label="▶ Play Simulation", method="animate",
                      args=[None, {"frame": {"duration": pace_ms, "redraw": True}, "fromcurrent": False, "mode": "immediate"}]),
@@ -472,9 +480,10 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
         )],
         sliders=[dict(
             active=len(indices) - 1,
-            x=0.0, y=-0.18,
+            x=0.0, y=-0.14,
             len=1.0,
             currentvalue={"prefix": "Simulation: ", "visible": True, "xanchor": "right"},
+            pad={"t": 12, "b": 8},
             steps=[dict(label=f"D{sim_df.iloc[idx]['day']}", method="animate",
                         args=[[f"Day {sim_df.iloc[idx]['day']}"], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"}])
                    for idx in indices]
@@ -714,7 +723,7 @@ TUTORIAL_STEPS = [
         "page": "Workspace",
         "tag": "SCENARIO ENGINE · RESAMPLING",
         "title": "2. Resample Historical Weather Windows",
-        "desc": "Extracts synchronized multi-station historical windows (30–365 days) with retention scaling (35%–85%) with every transformation recorded.",
+        "desc": "Extracts synchronized multi-station historical windows (30–365 days) retaining 35%–85% of observed rainfall (15%–65% reduction from observed) with every transformation recorded.",
         "directive": "Use New run in the left sidebar, then click Generate. Choose Next Step to keep the current run.",
     },
     {
@@ -1249,8 +1258,8 @@ elif page == "Workspace":
                 stations = st.multiselect("Stations", list(names), default=list(w.params.stations) if w else list(names), format_func=names.get)
                 durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
                 months = st.multiselect("Starting months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
-                retention = st.slider("Rainfall compared with original · %", 0, 100, (35, 85), 5,
-                                      help="Multiply observed daily rainfall by this fraction at the affected stations.")
+                retention = st.slider("Retained rainfall (% of observed rainfall)", 0, 100, (35, 85), 5,
+                                      help="Percentage of observed rainfall used by the scenario (e.g. 70% retained = 30% reduction from observed rainfall). Multiplies observed daily rainfall at affected stations.")
                 extent = st.selectbox("Where reduced rainfall occurs", ["All stations", "One station", "Mixed"])
                 a, b = st.columns(2)
                 count = a.selectbox("Scenarios to test", [100, 300, 500, 1000], index=1)
@@ -1555,9 +1564,13 @@ elif page == "Review":
                      "Decide whether this revision belongs in your rainfall handoff.")
             factors = list(s.provenance['retention_by_station'].values())
             if min(factors) == max(factors):
-                construction = f"Original construction retained {factors[0]:.0%} of observed rainfall at every station."
+                construction = f"Original construction retained {format_rainfall_dual_explanation(factors[0], 'observed rainfall')} at every station."
             else:
-                construction = f"Original construction retained {min(factors):.0%}–{max(factors):.0%} of observed rainfall, depending on station."
+                min_ret = round(min(factors) * 100, 1)
+                max_ret = round(max(factors) * 100, 1)
+                min_red = round((1.0 - max(factors)) * 100, 1)
+                max_red = round((1.0 - min(factors)) * 100, 1)
+                construction = f"Original construction retained {min_ret:g}%–{max_ret:g}% of observed rainfall ({min_red:g}%–{max_red:g}% reduction from observed rainfall), depending on station."
             rainfall_edits = any(h['action'] in ('scale', 'replace') for h in s.history)
             st.caption(construction + (" Later rainfall edits are included in the current chart; see revision history." if rainfall_edits else "")
                        + " Historical dates identify the source window; they are not forecast dates.")
@@ -1769,21 +1782,21 @@ elif page == "Review":
                             lowest_pass = min(passed, key=lambda x: x["retention_pct"])
                             highest_fail = max(failed, key=lambda x: x["retention_pct"])
                             st.warning(
-                                f"During this {len(s.series)}-day experiment, storage stays above {crit_pct:.0f}% with **{lowest_pass['retention_pct']:g}% of the selected scenario rainfall**, "
-                                f"and reaches the assumed {crit_pct:.0f}% band with **{highest_fail['retention_pct']:g}%** ({threshold_day_label(highest_fail['day_stage3_20'])}). Only these tested reductions are compared."
+                                f"During this {len(s.series)}-day experiment, storage stays above {crit_pct:.0f}% with **{lowest_pass['retention_pct']:g}% of the selected scenario rainfall** ({lowest_pass['reduction_pct']:g}% reduction), "
+                                f"and reaches the assumed {crit_pct:.0f}% band with **{highest_fail['retention_pct']:g}% of the selected scenario rainfall** ({highest_fail['reduction_pct']:g}% reduction) ({threshold_day_label(highest_fail['day_stage3_20'])}). Only these tested reductions are compared."
                             )
                         elif not failed:
                             st.success(f"Storage stays above the assumed {crit_pct:.0f}% band throughout this {len(s.series)}-day window for all tested rainfall inputs.")
                         else:
                             highest_fail = max(failed, key=lambda x: x["retention_pct"])
-                            st.warning(f"All tested inputs reach the assumed {crit_pct:.0f}% band within this window. The {highest_fail['retention_pct']:g}% input reaches it at {threshold_day_label(highest_fail['day_stage3_20'])}.")
+                            st.warning(f"All tested inputs reach the assumed {crit_pct:.0f}% band within this window. The {highest_fail['retention_pct']:g}% of input rainfall tier ({highest_fail['reduction_pct']:g}% reduction) reaches it at {threshold_day_label(highest_fail['day_stage3_20'])}.")
 
                         countdown_df = pd.DataFrame([
                             {
                                 "Rainfall input": r["tier_label"],
-                                "% of selected scenario": f"{r['retention_pct']:g}%",
-                                "≈ % of observed": (f"{observed_percent(r['tier_multiplier'], input_rainfall):g}%"
-                                                    if input_rainfall["observed_fraction"] is not None else "n/a"),
+                                "Retained % of selected scenario": f"{r['retention_pct']:g}% retained ({r['reduction_pct']:g}% reduction)",
+                                "≈ % of observed rainfall": (f"{observed_percent(r['tier_multiplier'], input_rainfall):g}% retained ({round(100 - observed_percent(r['tier_multiplier'], input_rainfall), 1):g}% reduction)"
+                                                            if input_rainfall["observed_fraction"] is not None else "n/a"),
                                 "Lowest Storage": f"{r['min_pct']:.1f}% ({r['min_acft']:,.0f} ac-ft)",
                                 "Final Storage": f"{r['final_pct']:.1f}%",
                                 "At or below 40%": threshold_day_label(r["day_stage1_40"]),
@@ -1804,7 +1817,10 @@ elif page == "Review":
                         sim_df = spec["tier_results"][1.0]["df"]
 
                         with tour_target("review_simulation"):
+                            st.markdown("#### Storage snapshot and combined trajectory")
+                            st.caption("Threshold labels sit beside their matching lines; use the day control to inspect the simulated path.")
                             st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms, config=chosen_sys)), width="stretch", config={"displayModeBar": False})
+                            st.markdown("#### Time in each assumed storage band")
                             st.plotly_chart(accessible_chart(stage_trigger_milestone_figure({"tier_results": {1.0: {"df": sim_df}}}, chosen_sys.stage_bands_pct)), width="stretch", config={"displayModeBar": False})
 
                         # Active-storage exhaustion in the configured experiment.
@@ -2038,7 +2054,10 @@ elif page == "Review":
                 is_us = st.session_state.get("unit_mode", "us") == "us"
                 ev_data = {
                     "Station": list(s.provenance["retention_by_station"]),
-                    "Scenario rainfall (fraction of observed)": list(s.provenance["retention_by_station"].values()),
+                    "Scenario rainfall (% of observed rainfall)": [
+                        f"{v*100:g}% retained ({round((1.0 - v)*100, 1):g}% reduction)"
+                        for v in s.provenance["retention_by_station"].values()
+                    ],
                     "Current deficit mm": [f["station_deficits_mm"][i] for i in s.provenance["retention_by_station"]],
                 }
                 if is_us:

@@ -286,6 +286,8 @@ PROHIBITED_CLAIM_PATTERNS = [
     (r"\b(licensed|certified)\s+by\s+(professional\s+engineers?|pe|hydrologists?)\b", "Cannot claim engineering certification unless signed off with valid PE credentials."),
     # Prohibits claiming 1:1 drought severity equivalence from rainfall scaling
     (r"\bscaling\s+rainfall\s+(equals|is\s+identical\s+to)\s+scaling\s+drought\s+severity\b", "Scaling rainfall retention does not scale hydrologic drought severity 1:1."),
+    # Prohibits isolated or undefined rainfall percentage claims
+    (r"\b(?:rainfall:\s*\d+%(?!\s*(?:retained|reduction|of))|\b\d+%\s*rainfall\b(?!\s*(?:tier|of|retained|reduction|window|shortfall|deficit)))", "Rainfall percentage must state baseline and whether it represents retained rainfall or reduction."),
 ]
 
 

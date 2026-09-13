@@ -1214,7 +1214,7 @@ def render_html_report(
         <thead>
             <tr>
                 <th>Stress Tier</th>
-                <th>Rainfall Retention</th>
+                <th>Retained Rainfall (% of input)</th>
                 <th>Simulated Min Storage</th>
                 <th>Band 1 ({band1_pct:g}%)</th>
                 <th>Band 2 ({band2_pct:g}%)</th>
@@ -1807,7 +1807,7 @@ def build_fallback_pdf(
     y_spec = 672
     doc.rect(p2, 36, y_spec - 18, 540, 18, fill=(0.08, 0.49, 0.55))
     doc.text(p2, 42, y_spec - 13, "Stress Tier", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 135, y_spec - 13, "Retention", font="/F2", size=7.0, color=(1, 1, 1))
+    doc.text(p2, 135, y_spec - 13, "Retained", font="/F2", size=7.0, color=(1, 1, 1))
     doc.text(p2, 190, y_spec - 13, "Min Storage (% / ac-ft)", font="/F2", size=7.0, color=(1, 1, 1))
     doc.text(p2, 315, y_spec - 13, f"Band 1 ({band1_pct:g}%)", font="/F2", size=7.0, color=(1, 1, 1))
     doc.text(p2, 385, y_spec - 13, f"Band 2 ({band2_pct:g}%)", font="/F2", size=7.0, color=(1, 1, 1))
@@ -1836,7 +1836,7 @@ def build_fallback_pdf(
         label_lines = wrap_text(r["tier_label"].split(" (")[0], "/F2", 6.5, 87, max_lines=2)
         for line_index, label_line in enumerate(label_lines):
             doc.text(p2, 42, y_r + 12 - line_index * 8, label_line, font="/F2", size=6.5)
-        doc.text(p2, 135, y_r + 6, f"{r['retention_pct']}%", font="/F1", size=7.0)
+        doc.text(p2, 135, y_r + 6, f"{r['retention_pct']:g}% retained", font="/F1", size=6.5)
         doc.text(p2, 190, y_r + 6, f"{r['min_pct']:.1f}% ({r['min_acft']:,.0f} ac-ft)", font="/F2", size=7.0)
         doc.text(p2, 315, y_r + 6, d1, font="/F1", size=7.0)
         doc.text(p2, 385, y_r + 6, d2, font="/F1", size=7.0)

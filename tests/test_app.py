@@ -87,7 +87,7 @@ def test_plain_language_four_stage_workflow(tmp_path, monkeypatch):
 
     app.sidebar.radio[0].set_value("Workspace").run()
     assert not app.exception
-    assert next(slider for slider in app.slider if slider.label == "Rainfall compared with original · %")
+    assert next(slider for slider in app.slider if slider.label == "Retained rainfall (% of observed rainfall)")
     assert next(box for box in app.selectbox if box.label == "Where reduced rainfall occurs")
     assert next(box for box in app.selectbox if box.label == "Scenarios to test")
     assert next(box for box in app.selectbox if box.label == "Scenarios to review")

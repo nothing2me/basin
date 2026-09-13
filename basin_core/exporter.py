@@ -119,13 +119,13 @@ def generate_brief(workspace, accepted):
                       f"Water system: {text_cell(system_name)}. The complete versioned configuration is stored with this run.",
                       f"Initial storage {settings['initial_storage_fraction'] * 100:g}%; conservation {settings['conservation_fraction'] * 100:g}%; pipeline available: {settings['pipeline_active']}. Model {run['model_version']}; threshold rules {run['threshold_version']}.",
                       "Review rationale: " + text_cell(workspace.simulation_reviews.get(rid, {}).get("rationale", "Not reviewed")),
-                      "", "| Rainfall retained from baseline | Minimum storage | Final storage | At/below 20% |", "|---|---|---|---|"]
+                      "", "| Retained rainfall (% of baseline) | Minimum storage | Final storage | At/below 20% |", "|---|---|---|---|"]
             for row in run["results"]["summary_table"]:
-                lines.append(f"| {row['retention_pct']:g}% | {row['min_pct']:.1f}% | {row['final_pct']:.1f}% | {threshold_text(row['day_stage3_20'])} |")
+                lines.append(f"| {row['retention_pct']:g}% retained ({row['reduction_pct']:g}% reduction) | {row['min_pct']:.1f}% | {row['final_pct']:.1f}% | {threshold_text(row['day_stage3_20'])} |")
             lines += ["", "Conservation comparison: same baseline, pipeline and initial storage; only demand reduction changes. A delay is reported only when both runs reach the threshold within the modeled period."]
             for comparison in run["results"]["conservation_comparison"]:
                 delay = f"{comparison['delay_days']} days" if comparison["delay_days"] is not None else "Not defined within modeled period"
-                lines.append(f"- {comparison['retention_percent']:g}% retained: no conservation = {threshold_text(comparison['no_conservation_day_20'])}; chosen conservation = {threshold_text(comparison['chosen_conservation_day_20'])}; delay = {delay}. Mean served evaporation {comparison['mean_evaporation_acft_per_day']:.1f} ac-ft/day; mean served demand {comparison['mean_served_demand_acft_per_day']:.1f} ac-ft/day.")
+                lines.append(f"- {comparison['retention_percent']:g}% of observed rainfall ({100 - comparison['retention_percent']:g}% reduction from observed): no conservation = {threshold_text(comparison['no_conservation_day_20'])}; chosen conservation = {threshold_text(comparison['chosen_conservation_day_20'])}; delay = {delay}. Mean served evaporation {comparison['mean_evaporation_acft_per_day']:.1f} ac-ft/day; mean served demand {comparison['mean_served_demand_acft_per_day']:.1f} ac-ft/day.")
             lines += ["", "Material assumptions:"] + [f"- {text_cell(k)}: {text_cell(v)}" for k, v in run["assumptions"].items()]
     return '\n'.join(lines) + '\n'
 

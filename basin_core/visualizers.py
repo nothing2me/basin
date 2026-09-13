@@ -249,14 +249,22 @@ def stage_trigger_milestone_figure(
 
     fig.update_layout(
         barmode="overlay",
-        height=130 if len(tier_keys) == 1 else 230,
-        margin=dict(l=10, r=10, t=30, b=10),
+        height=220 if len(tier_keys) == 1 else 280,
+        margin=dict(l=145, r=24, t=78, b=62),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Arial", size=12),
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1.0),
-        xaxis=dict(title="Scenario Timeline (Elapsed Days)", showgrid=True, zeroline=False),
-        yaxis=dict(title="", showgrid=False, zeroline=False),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.16,
+            xanchor="left",
+            x=0.0,
+            font=dict(size=10),
+            traceorder="normal",
+        ),
+        xaxis=dict(title=dict(text="Scenario day", standoff=14), showgrid=True, zeroline=False),
+        yaxis=dict(title="", showgrid=False, zeroline=False, automargin=True),
     )
     return fig
 
