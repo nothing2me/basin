@@ -1,5 +1,53 @@
 # BASIN current handoff
 
+## September 13 — Simple and Advanced presentation mode contract & copy audit
+
+Implemented the non-UI foundation for **Simple View** and **Advanced View** in `basin_core/review_preferences.py` without modifying calculations, exporters, PDF generation, document ingestion, `app.py`, `basin_ui.py`, `basin_theme.py`, or visualizers.
+
+1. **Mode Contract & Backward Compatibility**:
+   - Mapped `"guided"` $\leftrightarrow$ `"simple"` (Simple View) and `"technical"` $\leftrightarrow$ `"advanced"` (Advanced View).
+   - Preserved `GUIDANCE` keys `"guided"` and `"technical"` for existing callers while updating user-visible presentation labels to `"Simple View"` and `"Advanced View"`.
+   - Added properties `simple: bool`, `advanced: bool`, `mode: str` (`"simple"` | `"advanced"`), `presentation_label: str`, while preserving `guided` and `technical`.
+   - Constructor and `replace()` support `mode` and `guidance`.
+   - `from_record()` gracefully tolerates old files, missing values, foreign strings, and malformed mode values, safely falling back to Simple View.
+   - `to_record()` serializes both `guidance` and `mode`.
+
+2. **Typed Review Pane and Technical Detail Mappings**:
+   - `PANE_PRESENTATIONS` defines placement (`"primary"`, `"secondary"`, `"expander"`, `"hidden"`) for all 5 Review panes (`rainfall`, `provenance`, `storage`, `agronomics`, `edits`).
+   - In Simple View, primary panes are bounded to at most 2 tabs (`("rainfall", "provenance")` or focus-primary tabs), keeping cognitive load low for first-time reviewers.
+   - In Advanced View, every Review tool is primary and directly reachable.
+   - Mandatory safety disclosures and evidence provenance (`provenance`) are strictly required to remain primary in both modes.
+   - `TECHNICAL_DETAILS` specifies placement (`"primary"`, `"expander"`, `"advanced_only"`, `"tooltip"`) for 23 granular technical tools across all panes.
+
+3. **User-Visible Copy Replacement Inventory**:
+   Audited `app.py` and `basin_ui.py` to identify competing explanations, dense multi-sentence disclaimers, and negative assertions. Produced a concrete 17-item replacement inventory:
+   | Location | Context | Current Wording | Proposed Concise Wording | Reason | Target Placement |
+   |---|---|---|---|---|---|
+   | `app.py:1241` | Scenario Builder focus caption | Configures which visuals and tools appear first in Review. Does not change numerical calculations or export consent. | Choose what to focus on first. Does not affect calculations or export. | Reduces pre-run cognitive burden; disclaimers moved to tooltip | Tooltip |
+   | `app.py:1252` | Guidance selectbox | How much guidance do you want? Guided explanations add orientation; all scientific limitations remain visible in either mode. | Presentation View (Simple View / Advanced View) | Focuses on view complexity rather than user competence | Tooltip |
+   | `app.py:1284` | Retained rainfall slider | Percentage of observed rainfall used by the scenario (e.g. 70% retained = 30% reduction from observed rainfall). Multiplies observed daily rainfall at affected stations. | Retained rainfall percentage (e.g., 70% retained = 30% reduction). | Removes redundant daily multiplication sentence | Tooltip |
+   | `app.py:1490-1492` | Review setup card | Three questions decide which tools appear first. Every tool stays reachable, and none of this changes calculations, ranking weights, review decisions or export consent. | Review View: Simple for immediate decision or Advanced for full diagnostics. | Replaces verbose defensive enumeration with clear view description | Expander |
+   | `app.py:1552-1553` | Custom data intent caption | Your focus records an intent to use your own rainfall data. Nothing has been uploaded or validated by that choice; add a CSV in Step 1: Data Dashboard. | Note: Focus set for custom data. Upload and validate a CSV in Data Dashboard. | Short action-oriented reminder before tabs | Tooltip |
+   | `app.py:1556-1557` | Weight preset suggestion | This focus often pairs with the ranking preset. Ranking weights are not changed by your focus; apply a preset yourself in Step 2: Scenario Builder if you want it. | Tip: Pairs well with the suggested ranking preset in Step 2. | Eliminates repetitive multi-sentence disclaimer | Tooltip |
+   | `app.py:1680` | Storage container caption | Optional experiment. These settings affect storage exploration; the handoff decision above concerns the rainfall revision. | Optional illustrative storage experiment. | Repetitive disclaimer; full bounds in disclosures | Tooltip |
+   | `app.py:1917` | Agronomics tab top caption | Cross-sector operational impacts calculated from daily scenario rainfall. Illustrative decision-support estimates based on Texas ET Network and Texas A&M Forest Service guidelines; not regulatory declarations or official crop/burn directives. | Decision-support estimates for crop irrigation deficit and wildfire stress. | Prevents dense disclaimer from pushing visual charts below fold | Tooltip |
+   | `app.py:1964` | KBDI statutory disclaimer | KBDI and crop water balance models provide exploratory scenario impacts. Official burn bans are enacted exclusively by County Commissioners Courts under Tex. Local Gov't Code § 352.081. Reservoir stages reflect illustrative operating rules, not municipal emergency orders. | Illustrative decision support. Official burn bans are enacted exclusively by County Commissioners Courts. | Move lengthy statutory code citations to Advanced View | Advanced View |
+   | `app.py:1985` | Rainfall dashed reference line | The dashed reference uses this station's 1991–2020 monthly mean daily rainfall. The scenario line includes your current edits. | Dashed line: 1991–2020 monthly reference mean. | Shortens visual chart footnote | Tooltip |
+   | `app.py:1987` | 30-day deficit axis caption | Above zero means less rainfall than the reference over the preceding 30 days; below zero means more. The first 29 days have no complete window. | Positive: rainfall deficit vs 30-day reference; Negative: surplus. | Converts run-on prose into clear axis legend | Tooltip |
+   | `app.py:1995` | Concurrence explanation | Each station must exceed its own historical rainfall-deficit threshold in the same window. This is a frequency over time, not a percentage of stations. | Concurring stress persistence frequency across eligible 30-day windows. | Removes negative assertion; defines technical metric directly | Expander |
+   | `app.py:2000` | Ranking score caption | This reflects your priorities; it is not a probability or an evidence-quality score. | Multivariate ranking score based on configured priorities. | Replaces double-negative disclaimer with positive definition | Tooltip |
+   | `app.py:2003` | Rainfall edits tab note | Changing rainfall creates a revision and clears its previous acceptance. Add your reason in the review note first. | Edits create a new scenario revision and require review re-approval. | Concise operational rule | Tooltip |
+   | `basin_ui.py:25` | Evidence panel disclaimer | Evidence types and applicability are declarations. No numerical trust score or automatic source winner is assigned. | Evidence applicability is qualitative; no automatic trust score is applied. | Clearer phrasing | Tooltip |
+   | `basin_ui.py:111` | Candidate comparison caption | Profile names describe feature patterns. With one station, concurrence means that station's stress frequency. Approval concerns rainfall content; it does not endorse later priority settings. | Approval confirms rainfall content validity, not downstream priority weights. | Direct statement of review boundary | Advanced View |
+   | `basin_ui.py:123` | Weight preview caption | Rejected candidates are excluded from this preview. No candidates are regenerated and no reviews or shortlist entries change. | Live weight preview: candidates and review statuses remain unchanged. | Concise assurance without multiple negative clauses | Tooltip |
+
+4. **Verification**:
+   - `pytest tests/test_review_preferences.py tests/test_presentation_copy_audit.py`: **61 passed** in 60.70s.
+   - Focused test suite (`test_review_preferences.py`, `test_presentation_copy_audit.py`, `test_document_ingestion.py`, `test_custom_data.py`, `test_simulation_contract.py`, `test_rainfall_terminology.py`, `test_custom_observation_language.py`): **172 passed** in 104.53s.
+   - Preserved all boundaries: zero modifications made to calculations, exporters, PDF generation, or document ingestion. UI files (`app.py`, `basin_ui.py`, `basin_theme.py`, `visualizers.py`) are avoided for teammate implementation.
+
+Next technical action: Teammate pulls Gemini's contract, implements UI presentation layout and button hierarchy in `app.py`/`basin_ui.py`, verifies 375/640/1280px views, and runs full regression suite.
+
 ## September 13 — T5 document ingestion foundation
 
 A safe, typed domain foundation for user-provided PDF and report documents is implemented in `basin_core/document_ingestion.py` and integrated into the workspace, integrity, evidence, and export layers without adding new external parser dependencies.

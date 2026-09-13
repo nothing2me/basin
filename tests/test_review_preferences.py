@@ -17,8 +17,11 @@ from basin_core.review_preferences import (
     FOCUS_PRIMARY,
     GOALS,
     GUIDANCE,
+    PANE_PRESENTATIONS,
+    PRESENTATION_MODES,
     TAB_KEYS,
     TAB_LABELS,
+    TECHNICAL_DETAILS,
     PREFERENCES_VERSION,
     ReviewPreferences,
     load_preferences,
@@ -210,9 +213,18 @@ def test_pre_run_setup_can_be_skipped():
     next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
     at.sidebar.radio[0].set_value("Review").run()
     assert not at.exception
+    assert at.session_state["review_prefs"][1].configured is False
+
+    # In Advanced View, all tools are reachable in one row
+    mode_sc = next((sc for sc in getattr(at, "segmented_control", []) if sc.key.startswith("review_mode_")), None)
+    if mode_sc is not None:
+        mode_sc.set_value("advanced").run()
+    else:
+        mode_radio = next((r for r in at.radio if r.key.startswith("review_mode_")), None)
+        if mode_radio is not None:
+            mode_radio.set_value("advanced").run()
     assert set(top_level_tab_labels(at)) == TAB_LABEL_VALUES
     assert more_tools_expander(at) is None
-    assert at.session_state["review_prefs"][1].configured is False
 
 
 def test_setup_is_offered_and_can_be_skipped(app):
@@ -220,11 +232,25 @@ def test_setup_is_offered_and_can_be_skipped(app):
     next(b for b in app.button if b.label == "Skip for now").click().run()
     assert not app.exception
 
-    # Skipping leaves every tool in one row and no More tools drawer.
+    # Skipping leaves unconfigured state; Simple View has bounded primary tabs
+    assert app.session_state["review_prefs"][1].configured is False
+    has_toggle = any("Show all tools" in t.label for t in app.toggle)
+    has_view_mode = (
+        any(sc.key.startswith("review_mode_") for sc in getattr(app, "segmented_control", []))
+        or any(r.key.startswith("review_mode_") for r in app.radio if r.key.startswith("review_mode_"))
+    )
+    assert has_toggle or has_view_mode
+
+    # Switching to Advanced View shows all tools in one row
+    mode_sc = next((sc for sc in getattr(app, "segmented_control", []) if sc.key.startswith("review_mode_")), None)
+    if mode_sc is not None:
+        mode_sc.set_value("advanced").run()
+    else:
+        mode_radio = next((r for r in app.radio if r.key.startswith("review_mode_")), None)
+        if mode_radio is not None:
+            mode_radio.set_value("advanced").run()
     assert set(top_level_tab_labels(app)) == TAB_LABEL_VALUES
     assert more_tools_expander(app) is None
-    assert app.session_state["review_prefs"][1].configured is False
-    assert any("Show all tools" in t.label for t in app.toggle)
 
 
 @pytest.mark.parametrize("goal", list(GOALS))
@@ -264,11 +290,21 @@ def test_show_all_tools_restores_one_row_without_losing_the_focus(app):
     next(b for b in app.button if b.label == "Use this focus").click().run()
     assert more_tools_expander(app) is not None
 
-    next(t for t in app.toggle if "Show all tools" in t.label).set_value(True).run()
+    toggle = next((t for t in app.toggle if "Show all tools" in t.label), None)
+    if toggle is not None:
+        toggle.set_value(True).run()
+    else:
+        mode_sc = next((sc for sc in getattr(app, "segmented_control", []) if sc.key.startswith("review_mode_")), None)
+        if mode_sc is not None:
+            mode_sc.set_value("advanced").run()
+        else:
+            mode_radio = next((r for r in app.radio if r.key.startswith("review_mode_")), None)
+            if mode_radio is not None:
+                mode_radio.set_value("advanced").run()
+
     assert not app.exception
     assert more_tools_expander(app) is None
     assert set(top_level_tab_labels(app)) == TAB_LABEL_VALUES
-    # The focus is remembered, not discarded, so turning the toggle back off restores it.
     assert app.session_state["review_prefs"][1].goal == "handoff"
 
 
@@ -283,9 +319,12 @@ def test_focus_survives_navigation_and_is_persisted_for_reopening(app, isolated_
     assert not app.exception
     prefs = app.session_state["review_prefs"][1]
     assert (prefs.goal, prefs.guidance, prefs.configured) == ("storage", "technical", True)
-    assert more_tools_expander(app) is not None
+    assert prefs.advanced is True
+    # In Advanced View, all tools are top-level and directly reachable
+    assert set(top_level_tab_labels(app)) == TAB_LABEL_VALUES
+    assert more_tools_expander(app) is None
 
-    # Reopening the saved run reads the same choices back from disk.
+    # Reopening the saved run reads the same choices back from disk
     assert load_preferences(workspace_id, isolated_sessions) == prefs
 
 
@@ -306,6 +345,15 @@ def test_focus_does_not_apply_ranking_weights(app):
     next(b for b in app.button if b.label == "Use this focus").click().run()
 
     assert app.session_state.workspace.weights == weights_before
+    # In Advanced View, ranking preset advisory caption is displayed
+    mode_sc = next((sc for sc in getattr(app, "segmented_control", []) if sc.key.startswith("review_mode_")), None)
+    if mode_sc is not None:
+        mode_sc.set_value("advanced").run()
+    else:
+        mode_radio = next((r for r in app.radio if r.key.startswith("review_mode_")), None)
+        if mode_radio is not None:
+            mode_radio.set_value("advanced").run()
+
     text = rendered_text(app)
     assert "Ranking weights are not changed by your focus" in text
     assert "Illustrative rural provider" in text
@@ -417,3 +465,183 @@ def test_tutorial_step5_auto_expands_storage_in_more_tools():
     expander = more_tools_expander(at)
     assert expander is not None
     assert expander.proto.expanded is True
+
+
+# --------------------------------------------------------------------------------------
+# Simple and Advanced Presentation Mode Contract
+# --------------------------------------------------------------------------------------
+
+def test_old_saved_guided_and_technical_preferences_still_load(tmp_path):
+    """Old saved records with 'guided' and 'technical' load seamlessly into Simple and Advanced views."""
+    # Old guided file
+    old_guided = {"version": 1, "goal": "compare", "data_source": "regional", "guidance": "guided",
+                  "configured": True, "dismissed": True, "show_all_tools": False}
+    (tmp_path / "review-prefs-old-guided.json").write_text(json.dumps(old_guided), encoding="utf-8")
+    prefs_g = load_preferences("old-guided", tmp_path)
+    assert prefs_g.simple is True
+    assert prefs_g.advanced is False
+    assert prefs_g.mode == "simple"
+    assert prefs_g.guidance == "guided"
+    assert prefs_g.presentation_label == "Simple View"
+
+    # Old technical file
+    old_technical = {"version": 1, "goal": "storage", "data_source": "own", "guidance": "technical",
+                     "configured": True, "dismissed": True, "show_all_tools": False}
+    (tmp_path / "review-prefs-old-tech.json").write_text(json.dumps(old_technical), encoding="utf-8")
+    prefs_t = load_preferences("old-tech", tmp_path)
+    assert prefs_t.simple is False
+    assert prefs_t.advanced is True
+    assert prefs_t.mode == "advanced"
+    assert prefs_t.guidance == "technical"
+    assert prefs_t.presentation_label == "Advanced View"
+
+
+def test_simple_and_advanced_modes_persist_correctly(tmp_path):
+    """Both Simple and Advanced modes persist and round-trip through preferences storage."""
+    # Simple mode
+    prefs_s = ReviewPreferences(goal="compare", mode="simple", configured=True)
+    assert prefs_s.simple is True
+    assert prefs_s.mode == "simple"
+    assert prefs_s.guidance == "guided"
+    rec_s = prefs_s.to_record()
+    assert rec_s["mode"] == "simple"
+    assert rec_s["guidance"] == "guided"
+    save_preferences("test-simple", prefs_s, tmp_path)
+    loaded_s = load_preferences("test-simple", tmp_path)
+    assert loaded_s == prefs_s
+    assert loaded_s.simple is True
+
+    # Advanced mode
+    prefs_a = ReviewPreferences(goal="storage", mode="advanced", configured=True)
+    assert prefs_a.advanced is True
+    assert prefs_a.mode == "advanced"
+    assert prefs_a.guidance == "technical"
+    rec_a = prefs_a.to_record()
+    assert rec_a["mode"] == "advanced"
+    assert rec_a["guidance"] == "technical"
+    save_preferences("test-advanced", prefs_a, tmp_path)
+    loaded_a = load_preferences("test-advanced", tmp_path)
+    assert loaded_a == prefs_a
+    assert loaded_a.advanced is True
+
+    # Mode replace
+    switched = prefs_s.replace(mode="advanced")
+    assert switched.advanced is True
+    assert switched.mode == "advanced"
+    assert switched.guidance == "technical"
+
+
+def test_malformed_or_unknown_mode_values_safely_fallback_to_simple(tmp_path):
+    """Corrupted, unknown, or malformed mode values safely default to Simple View."""
+    for malformed in [
+        {"version": 1, "mode": "hyper_speed"},
+        {"version": 1, "mode": "expert_2026"},
+        {"version": 1, "mode": None},
+        {"version": 1, "mode": 42},
+        {"version": 1, "guidance": "quantum"},
+        {"version": 1, "guidance": ["invalid"]},
+    ]:
+        prefs = ReviewPreferences.from_record(malformed)
+        assert prefs.simple is True
+        assert prefs.advanced is False
+        assert prefs.mode == "simple"
+        assert prefs.guidance == "guided"
+
+    with pytest.raises(ValueError):
+        ReviewPreferences(mode="nonexistent_mode")
+
+
+def test_mode_changes_do_not_alter_numerical_or_review_state(app):
+    """Switching between Simple and Advanced modes never touches numbers, reviews, or config."""
+    before = workspace_state(app)
+
+    # Switch to Advanced View
+    app.radio(key="review_setup_guidance").set_value("technical").run()
+    next(b for b in app.button if b.label == "Use this focus").click().run()
+    assert not app.exception
+    prefs = app.session_state["review_prefs"][1]
+    assert prefs.advanced is True
+    assert workspace_state(app) == before
+
+    # Switch back to Simple View
+    next(b for b in app.button if b.label == "Change focus").click().run()
+    app.radio(key="review_setup_guidance").set_value("guided").run()
+    next(b for b in app.button if b.label == "Use this focus").click().run()
+    assert not app.exception
+    prefs = app.session_state["review_prefs"][1]
+    assert prefs.simple is True
+    assert workspace_state(app) == before
+
+
+def test_mandatory_safety_disclosures_remain_available_in_both_modes():
+    """Mandatory safety disclosures and evidence provenance remain primary and visible in both modes."""
+    prefs_simple = ReviewPreferences(mode="simple", configured=True)
+    prefs_advanced = ReviewPreferences(mode="advanced", configured=True)
+
+    # Pane level
+    assert PANE_PRESENTATIONS["provenance"].is_mandatory_disclosure is True
+    assert prefs_simple.pane_placement("provenance") == "primary"
+    assert prefs_advanced.pane_placement("provenance") == "primary"
+    assert "provenance" in prefs_simple.primary_panes()
+    assert "provenance" in prefs_advanced.primary_panes()
+
+    # Detail level
+    disc_detail = TECHNICAL_DETAILS["provenance_mandatory_disclosures"]
+    assert disc_detail.is_mandatory_disclosure is True
+    assert disc_detail.simple_placement == "primary"
+    assert disc_detail.advanced_placement == "primary"
+    assert prefs_simple.is_detail_visible("provenance_mandatory_disclosures") is True
+    assert prefs_advanced.is_detail_visible("provenance_mandatory_disclosures") is True
+
+
+def test_every_review_tool_remains_reachable_in_advanced_view():
+    """Every Review tool and technical detail is directly reachable in Advanced View."""
+    prefs_adv = ReviewPreferences(mode="advanced", configured=True)
+
+    # All panes are primary in Advanced View
+    assert set(prefs_adv.primary_panes()) == set(TAB_KEYS)
+    assert prefs_adv.secondary_panes() == ()
+    for pane_key in TAB_KEYS:
+        assert prefs_adv.pane_placement(pane_key) == "primary"
+
+    unconf_adv = ReviewPreferences(mode="advanced", configured=False)
+    assert unconf_adv.primary_panes() == TAB_KEYS
+    assert unconf_adv.secondary_panes() == ()
+
+    # All technical details are visible
+    for detail_key, detail in TECHNICAL_DETAILS.items():
+        assert prefs_adv.is_detail_visible(detail_key) is True
+        assert detail.advanced_placement == "primary"
+
+
+def test_simple_view_has_bounded_primary_pane_set():
+    """Simple View primary pane set is strictly bounded (at most 2 tabs) to keep cognitive load low."""
+    for goal in GOALS:
+        prefs = ReviewPreferences(goal=goal, mode="simple", configured=True)
+        primary = prefs.primary_panes()
+        secondary = prefs.secondary_panes()
+        assert len(primary) <= 2
+        assert "provenance" in primary  # Mandatory disclosures always lead
+        assert set(primary) | set(secondary) == set(TAB_KEYS)
+        assert not set(primary) & set(secondary)
+
+    # Unconfigured default
+    unconf = ReviewPreferences(mode="simple", configured=False)
+    assert len(unconf.primary_panes()) <= 2
+    assert "provenance" in unconf.primary_panes()
+
+
+def test_typed_mappings_integrity():
+    """Typed mappings conform to contract specifications."""
+    assert set(PANE_PRESENTATIONS.keys()) == set(TAB_KEYS)
+    for key, pane in PANE_PRESENTATIONS.items():
+        assert pane.key == key
+        assert pane.simple_placement in ("primary", "secondary", "expander", "hidden")
+        assert pane.advanced_placement in ("primary", "secondary", "expander", "hidden")
+
+    for key, detail in TECHNICAL_DETAILS.items():
+        assert detail.key == key
+        assert detail.pane_key in TAB_KEYS
+        assert detail.simple_placement in ("primary", "expander", "advanced_only", "tooltip")
+        assert detail.advanced_placement in ("primary", "expander", "advanced_only", "tooltip")
+        assert len(detail.reason) > 0
