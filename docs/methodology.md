@@ -1,6 +1,6 @@
 # BASIN methodology v2
 
-BASIN prepares rainfall stress scenarios and traceable evidence for professional review. Rainfall scenarios do not estimate water supply, reservoir levels, restriction dates, future probabilities, or the hydrologic drought of record. A separately labeled storage-system experiment is illustrative. Assistant-created Region N experiments can be saved and reviewed for schema 2.2 numerical replay. Review’s selectable-system preview is retained for the session/report and does not yet use the same persistence contract. Neither path establishes physical validity. Numerical checks are not expert validation.
+BASIN prepares rainfall stress scenarios and traceable evidence for professional review. Rainfall scenarios do not estimate water supply, reservoir levels, restriction dates, future probabilities, or the hydrologic drought of record. A separately labeled storage-system experiment is illustrative. Review and assistant tools use one workspace-level water-system selection. Review previews are side-effect free; recording the experiment review saves the exact selected system, settings and trajectories for schema 2.2 session and packet replay. Changing the workspace system deactivates older active runs while preserving their immutable history. Replay establishes internal numerical consistency, not physical validity or expert acceptance.
 
 ## Data contract
 

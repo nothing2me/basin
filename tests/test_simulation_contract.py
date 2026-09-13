@@ -11,6 +11,7 @@ from basin_core.exporter import export_bundle, verify_bundle, generate_brief
 from basin_core.simulation import SimulationSettings, content_hash, is_current, resolve_scenario, validate_run
 from basin_core.tools import run_stress_spectrum
 from basin_core.workspace import Workspace
+from basin_core.water_system import SMALL_MUNI_PRESET
 
 
 @pytest.mark.parametrize("value", [0, .5, 1, 15, 48, 100])
@@ -86,6 +87,43 @@ def test_baselines_and_saved_tool_result(workspace):
     assert "Historical" not in tool["summary_table"][0]["tier_label"]
 
 
+def test_review_selection_is_the_assistant_run_and_replay_system(workspace, tmp_path):
+    from basin_core.pdf_report import render_html_report
+
+    sid = workspace.selected[0]
+    region_run = workspace.run_simulation(sid, SimulationSettings())
+    workspace.select_water_system(SMALL_MUNI_PRESET, "small_municipal")
+    district_run = workspace.run_simulation(sid, SimulationSettings())
+
+    assert district_run["id"] != region_run["id"]
+    assert district_run["water_system"]["identifier"] == "small_municipal"
+    assert district_run["water_system"]["config"]["name"] == SMALL_MUNI_PRESET.name
+    assert district_run["results"] != region_run["results"]
+    assert not is_current(workspace, region_run)
+    assert is_current(workspace, district_run)
+
+    restored = Workspace.load(workspace.source, workspace.save(tmp_path))
+    assert restored.water_system_selection.config == SMALL_MUNI_PRESET
+    assert restored.active_simulation(sid) == district_run
+    validate_run(restored, district_run)
+    restored.review_simulation(district_run["id"], "Reviewed district inputs and limitations")
+    accept_rainfall(restored)
+    html = render_html_report(restored, restored.exportable())
+    assert SMALL_MUNI_PRESET.name in html
+    assert "12,000 ac-ft" in html
+    assert "Lake Corpus Christi" not in html
+    assert verify_bundle(export_bundle(restored))["simulations_replayed"] == 2
+
+
+def test_assistant_tool_uses_current_review_water_system(workspace):
+    workspace.select_water_system(SMALL_MUNI_PRESET, "small_municipal")
+    result = run_stress_spectrum(workspace, scenario_id=workspace.selected[0])
+    run = workspace.active_simulation(workspace.selected[0])
+    assert result["water_system_name"] == SMALL_MUNI_PRESET.name
+    assert run["water_system"]["identifier"] == "small_municipal"
+    assert run["assumptions"]["total_capacity_acft"] == SMALL_MUNI_PRESET.total_capacity_acft
+
+
 def accept_rainfall(workspace):
     for sid in workspace.selected:
         workspace.get(sid).review(True, "Rainfall checked")
@@ -109,6 +147,7 @@ def test_reopen_review_export_and_replay(workspace, tmp_path):
         assert audit["simulation_runs"][0] == run
     brief = generate_brief(restored, restored.exportable())
     assert "Initial storage 35%; conservation 1%; pipeline available: False" in brief
+    assert "Water system: Region N (Corpus Christi system" in brief
 
 
 def test_settings_and_input_changes_require_new_review(workspace, tmp_path):

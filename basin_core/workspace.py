@@ -18,6 +18,7 @@ from basin_core.engine import Reference, Scenario, ScenarioGenerator, ScenarioPa
 from basin_core.evidence import initial_evidence, public_copy, validate_evidence
 from basin_core.integrity import reconstruct_audit, check_digest
 from basin_core.custom_data import build_record, evidence_record, validate_records, validate_links
+from basin_core.water_system import WaterSystemConfig, WaterSystemSelection
 
 
 SESSION_DIR_ENV = "BASIN_SESSION_DIR"
@@ -59,6 +60,7 @@ class Workspace:
         self.simulation_runs = []
         self.active_simulations = {}
         self.simulation_reviews = {}
+        self.water_system_selection = WaterSystemSelection.default()
         elapsed = time.perf_counter() - wall
         self.footprint = {"wall_seconds": elapsed, "cpu_seconds": time.process_time() - cpu,
                           "process_rss_mib_at_end": psutil.Process().memory_info().rss / 1024**2,
@@ -77,11 +79,24 @@ class Workspace:
 
     def run_simulation(self, identifier: str, settings: SimulationSettings) -> dict:
         from basin_core.simulation import create_run
-        run = create_run(self, self.get(identifier), settings)
+        run = create_run(self, self.get(identifier), settings, self.water_system_selection)
         if run["id"] not in {r["id"] for r in self.simulation_runs}:
             self.simulation_runs.append(run)
         self.active_simulations[identifier] = run["id"]
         return run
+
+    def preview_simulation(self, identifier: str, settings: SimulationSettings) -> dict:
+        """Calculate the exact immutable run Review could save without changing workflow state."""
+        from basin_core.simulation import create_run
+        return create_run(self, self.get(identifier), settings, self.water_system_selection)
+
+    def select_water_system(self, config: WaterSystemConfig, identifier: str | None = None) -> WaterSystemSelection:
+        """Set the one water system used by Review, assistant tools and future saved runs."""
+        selection = WaterSystemSelection.chosen(config, identifier)
+        if selection != self.water_system_selection:
+            self.active_simulations = {}
+        self.water_system_selection = selection
+        return selection
 
     def active_simulation(self, identifier: str) -> dict | None:
         return next((r for r in self.simulation_runs if r["id"] == self.active_simulations.get(identifier)), None)
@@ -286,6 +301,7 @@ class Workspace:
                   "scenarios": [s.record(include_notes, include_series) for s in self.scenarios]}
         result.update(evidence=self.evidence, evidence_refs=self.evidence_refs, conflicts=self.conflicts,
                       evidence_history=self.evidence_history, comparisons=self.comparisons)
+        result["water_system_selection"] = self.water_system_selection.record()
         if self.custom_uploads:
             result["custom_uploads"] = self.custom_uploads
         if extended:
@@ -341,6 +357,9 @@ class Workspace:
         obj.simulation_runs = data.get("simulation_runs", [])
         obj.active_simulations = data.get("active_simulations", {})
         obj.simulation_reviews = data.get("simulation_reviews", {})
+        obj.water_system_selection = WaterSystemSelection.from_record(
+            data.get("water_system_selection", WaterSystemSelection.default().record())
+        )
         for record, scenario in zip(data["scenarios"], obj.scenarios):
             frame = pd.DataFrame(record["values"], index=pd.to_datetime(record["dates"]), columns=record["stations"])
             if list(frame.columns) != obj.reference.stations or not frame.index.equals(scenario.series.index):

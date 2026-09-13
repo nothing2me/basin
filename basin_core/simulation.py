@@ -12,6 +12,7 @@ import pandas as pd
 from basin_core.analysis import RESERVOIR_ASSUMPTIONS, simulate_stress_spectrum
 from basin_core.engine import Scenario, rainfall_digest
 from basin_core.evidence import public_copy
+from basin_core.water_system import REGION_N_PRESET, WaterSystemConfig, WaterSystemSelection
 
 if TYPE_CHECKING:
     from basin_core.workspace import Workspace
@@ -165,14 +166,15 @@ def scenario_series_at_revision(workspace: Workspace, scenario: Scenario, revisi
     return frame
 
 
-def calculate(series: pd.DataFrame, settings: SimulationSettings) -> dict:
+def calculate(series: pd.DataFrame, settings: SimulationSettings,
+              system: WaterSystemConfig = REGION_N_PRESET) -> dict:
     spec = simulate_stress_spectrum(series, tiers=settings.retention_fractions,
                                    initial_pct=settings.initial_storage_fraction,
                                    conservation_pct=settings.conservation_fraction,
-                                   pipeline_active=settings.pipeline_active)
+                                   pipeline_active=settings.pipeline_active, config=system)
     reference = spec if settings.conservation_fraction == 0 else simulate_stress_spectrum(
         series, tiers=settings.retention_fractions, initial_pct=settings.initial_storage_fraction,
-        conservation_pct=0, pipeline_active=settings.pipeline_active)
+        conservation_pct=0, pipeline_active=settings.pipeline_active, config=system)
     comparisons = []
     for chosen, baseline in zip(spec["summary_table"], reference["summary_table"]):
         before, after = baseline["day_stage3_20"], chosen["day_stage3_20"]
@@ -188,16 +190,18 @@ def calculate(series: pd.DataFrame, settings: SimulationSettings) -> dict:
             "no_conservation_trajectories": {str(m): result["df"].to_dict("records") for m, result in reference["tier_results"].items()}}
 
 
-def create_run(workspace: Workspace, scenario: Scenario, settings: SimulationSettings) -> dict:
+def create_run(workspace: Workspace, scenario: Scenario, settings: SimulationSettings,
+               water_system: WaterSystemSelection) -> dict:
     series = scenario.series.copy() if settings.baseline_kind == "scenario_revision" else workspace.reference.daily.reindex(scenario.series.index)[list(scenario.series.columns)]
-    payload = {"schema_version": "1.0", "model_version": MODEL_VERSION, "threshold_version": THRESHOLD_VERSION,
+    assumptions = water_system.config.describe_assumptions()
+    payload = {"schema_version": "2.0", "model_version": assumptions["model_version"], "threshold_version": THRESHOLD_VERSION,
                "snapshot_sha256": workspace.source.manifest["sha256"], "scenario_id": scenario.id,
                "scenario_revision": scenario.revision, "scenario_sha256": scenario.digest(),
                "evidence_context": evidence_context(workspace, scenario), "settings": asdict(settings),
-               "assumptions": RESERVOIR_ASSUMPTIONS,
+               "water_system": water_system.record(), "assumptions": assumptions,
                "baseline": {"dates": series.index.strftime("%Y-%m-%d").tolist(), "stations": list(series.columns),
                             "units": "mm/day", "values": series.to_numpy().tolist(), "sha256": rainfall_digest(series)},
-               "results": calculate(series, settings)}
+               "results": calculate(series, settings, water_system.config)}
     # JSON round-trip detaches mutable frames, tuples and assumptions from the saved record.
     payload = json.loads(json.dumps(payload, allow_nan=False))
     return {"id": "sim-" + content_hash(payload), **payload}
@@ -205,6 +209,13 @@ def create_run(workspace: Workspace, scenario: Scenario, settings: SimulationSet
 
 def settings_from_run(run: dict) -> SimulationSettings:
     return SimulationSettings(**{**run["settings"], "retention_fractions": tuple(run["settings"]["retention_fractions"])})
+
+
+def water_system_from_run(run: dict) -> WaterSystemSelection:
+    """Resolve a saved system snapshot; version 1 runs used the original Region N preset."""
+    if run.get("schema_version") == "1.0":
+        return WaterSystemSelection.default()
+    return WaterSystemSelection.from_record(run.get("water_system"))
 
 
 def validate_run(workspace: Workspace, run: dict) -> None:
@@ -230,9 +241,13 @@ def validate_run(workspace: Workspace, run: dict) -> None:
         raise ValueError("Saved simulation is not valid finite JSON content") from exc
     if run["id"] != expected_id:
         raise ValueError("Saved simulation content hash mismatch")
-    if (run["schema_version"], run["model_version"], run["threshold_version"]) != ("1.0", MODEL_VERSION, THRESHOLD_VERSION):
+    if run["schema_version"] not in ("1.0", "2.0") or run["threshold_version"] != THRESHOLD_VERSION:
         raise ValueError("Unsupported simulation version; do not reinterpret older results")
-    if run["snapshot_sha256"] != workspace.source.manifest["sha256"] or run["assumptions"] != RESERVOIR_ASSUMPTIONS:
+    selection = water_system_from_run(run)
+    expected_assumptions = RESERVOIR_ASSUMPTIONS if run["schema_version"] == "1.0" else selection.config.describe_assumptions()
+    if run["model_version"] != expected_assumptions["model_version"]:
+        raise ValueError("Simulation model version does not match its water system")
+    if run["snapshot_sha256"] != workspace.source.manifest["sha256"] or run["assumptions"] != expected_assumptions:
         raise ValueError("Simulation source or assumptions mismatch")
     scenario = workspace.get(run["scenario_id"])
     revision_series = scenario_series_at_revision(workspace, scenario, run["scenario_revision"])
@@ -249,12 +264,13 @@ def validate_run(workspace: Workspace, run: dict) -> None:
         raise ValueError("Simulation evidence context identity mismatch")
     if public_copy(context) != context:
         raise ValueError("Private annotations must not be embedded in simulation evidence")
-    compare_values(run["results"], calculate(frame, settings), "Simulation replay")
+    compare_values(run["results"], calculate(frame, settings, selection.config), "Simulation replay")
 
 
 def is_current(workspace: Workspace, run: dict) -> bool:
     try:
-        return run["evidence_context"] == evidence_context(workspace, workspace.get(run["scenario_id"]))
+        return (run["evidence_context"] == evidence_context(workspace, workspace.get(run["scenario_id"]))
+                and water_system_from_run(run).record() == workspace.water_system_selection.record())
     except (KeyError, TypeError, ValueError):
         return False
 
@@ -266,4 +282,5 @@ def spectrum_view(run: dict) -> dict:
             "conservation_comparison": run["results"]["conservation_comparison"],
             "tier_results": {float(m): {"df": pd.DataFrame(rows), "metrics": next(r for r in run["results"]["summary_table"] if r["tier_multiplier"] == float(m))} for m, rows in run["results"]["trajectories"].items()},
             "duration_days": len(run["baseline"]["dates"]), "initial_pct": settings.initial_storage_fraction * 100,
-            "conservation_pct": settings.conservation_fraction * 100, "pipeline_active": settings.pipeline_active}
+            "conservation_pct": settings.conservation_fraction * 100, "pipeline_active": settings.pipeline_active,
+            "water_system": water_system_from_run(run).record()}

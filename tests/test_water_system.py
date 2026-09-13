@@ -36,6 +36,16 @@ def test_water_system_config_validation():
         WaterSystemConfig("Sys", (WaterSource("A", 100.0),), demand_no_pipeline_acft_day=-10.0).validate()
     with pytest.raises(ValueError, match="stage_bands_pct"):
         WaterSystemConfig("Sys", (WaterSource("A", 100.0),), stage_bands_pct=(1.5, 0.3)).validate()
+    with pytest.raises(ValueError, match="strictly descending"):
+        WaterSystemConfig("Sys", (WaterSource("A", 100.0),), stage_bands_pct=(0.3, 0.4)).validate()
+    with pytest.raises(ValueError, match="one to four"):
+        WaterSystemConfig("Sys", (WaterSource("A", 100.0),), stage_bands_pct=()).validate()
+    with pytest.raises(ValueError, match="allocation_primary_fraction"):
+        WaterSystemConfig("Sys", (WaterSource("A", 100.0),), allocation_primary_fraction=True).validate()
+    with pytest.raises(ValueError, match="switches"):
+        WaterSystemConfig("Sys", (WaterSource("A", 100.0),), use_smooth_evap=1).validate()
+    with pytest.raises(ValueError, match="capacity"):
+        WaterSource("A", True).validate()
 
 
 def test_presets_validity():

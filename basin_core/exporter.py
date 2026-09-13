@@ -113,8 +113,10 @@ def generate_brief(workspace, accepted):
                 continue
             run = by_run[rid]
             settings = run["settings"]
+            system_name = run.get("water_system", {}).get("config", {}).get("name", "Region N (legacy saved run)")
             lines += ["", f"### {scenario.id}: {rid}",
                       f"Scenario revision {run['scenario_revision']}; baseline {settings['baseline_kind']}; source SHA-256 {run['snapshot_sha256']}; baseline SHA-256 {run['baseline']['sha256']}.",
+                      f"Water system: {text_cell(system_name)}. The complete versioned configuration is stored with this run.",
                       f"Initial storage {settings['initial_storage_fraction'] * 100:g}%; conservation {settings['conservation_fraction'] * 100:g}%; pipeline available: {settings['pipeline_active']}. Model {run['model_version']}; threshold rules {run['threshold_version']}.",
                       "Review rationale: " + text_cell(workspace.simulation_reviews.get(rid, {}).get("rationale", "Not reviewed")),
                       "", "| Rainfall retained from baseline | Minimum storage | Final storage | At/below 20% |", "|---|---|---|---|"]
@@ -144,12 +146,17 @@ def export_bundle(workspace, include_notes=False, include_custom=False):
     accepted = workspace.exportable()
     audit = workspace.record(include_notes, include_custom=include_custom)
     reconstruct_audit(workspace.source, audit, require_export=True)
+    simulation_readme = (
+        "Reviewed illustrative reservoir experiments and their complete water-system inputs are included and replayed for internal consistency.\n"
+        if workspace.simulation_runs else
+        "No saved reservoir experiment is included.\n"
+    )
     files = {'daily_rainfall.csv': pd.concat([rainfall_rows(s) for s in accepted]).to_csv(index=False, lineterminator='\n').encode(),
              'shortlist.csv': pd.DataFrame([summary_record(s) for s in accepted]).to_csv(index=False, lineterminator='\n').encode(),
              'audit.json': dumps(audit), 'Hydrologist_Handoff_Brief.md': generate_brief(workspace, accepted).encode(),
              'snapshot/observations.csv': workspace.source.raw, 'snapshot/manifest.json': dumps(workspace.source.manifest),
              'methodology.md': (ROOT / 'docs/methodology.md').read_bytes(),
-             'README.txt': b'================================================================================\nWARNING: WHAT THIS ARTIFACT IS NOT\n- NOT a hydrologic drought-of-record analysis\n- NOT a safe-yield, firm-yield, or delivery forecast\n- NOT validated against actual streamflow or surface evaporation\n================================================================================\n\nBASIN rainfall scenarios for expert review. Historical dates are source labels, not forecasts.\nReplay with BASIN 0.2: python scripts/replay_bundle.py path/to/bundle.zip\nSee the handoff brief for verification scope, assumptions and unresolved issues. The reservoir experiment is excluded.\n',
+             'README.txt': ('================================================================================\nWARNING: WHAT THIS ARTIFACT IS NOT\n- NOT a hydrologic drought-of-record analysis\n- NOT a safe-yield, firm-yield, or delivery forecast\n- NOT validated against actual streamflow or surface evaporation\n================================================================================\n\nBASIN rainfall scenarios for expert review. Historical dates are source labels, not forecasts.\nReplay with BASIN 0.2: python scripts/replay_bundle.py path/to/bundle.zip\nSee the handoff brief for verification scope, assumptions and unresolved issues.\n' + simulation_readme).encode(),
              'replay_bundle.py': (ROOT / 'scripts/replay_bundle.py').read_bytes()}
     manifest = {'schema_version': audit['schema_version'], 'basin_version': __version__, 'run_id': workspace.id,
                 'accepted_ids': [s.id for s in accepted], 'private_notes_included': include_notes,

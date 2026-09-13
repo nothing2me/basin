@@ -473,6 +473,7 @@ def test_reservoir_infrastructure(workspace: Workspace, scenario_id: str = "",
         retention_percentages=((1 - reduction) * 100,))
     run = workspace.run_simulation(scenario.id, settings)
     spec = spectrum_view(run)
+    selected_system = workspace.water_system_selection.config
     row = spec["summary_table"][0]
     sim = next(iter(spec["tier_results"].values()))["df"]
     input_rainfall = describe_input_rainfall(scenario, baseline_kind, scenario.revision)
@@ -484,7 +485,10 @@ def test_reservoir_infrastructure(workspace: Workspace, scenario_id: str = "",
         "retention_pct": row["retention_pct"], "input_rainfall": input_rainfall,
         "observed_pct": observed_percent(row["tier_multiplier"], input_rainfall),
         "initial_pct": spec["initial_pct"], "conservation_pct": spec["conservation_pct"],
-        "initial_acft": settings.initial_storage_fraction * sum(RESERVOIR_ASSUMPTIONS["capacities_acft"].values()),
+        "water_system_name": selected_system.name,
+        "total_capacity_acft": selected_system.total_capacity_acft,
+        "stage_bands_pct": [band * 100 for band in selected_system.stage_bands_pct],
+        "initial_acft": settings.initial_storage_fraction * selected_system.total_capacity_acft,
         **{key: row[key] for key in ("final_pct", "final_acft", "min_pct", "min_acft", "survived_critical_20pct")},
         "day_band1_40pct": row["day_stage1_40"], "day_band2_30pct": row["day_stage2_30"],
         "day_band3_20pct": row["day_stage3_20"], "day_band4_15pct": row["day_emergency_15"],
@@ -507,6 +511,8 @@ def run_stress_spectrum(workspace: Workspace, scenario_id: str = "", year: int |
     run = workspace.run_simulation(scenario.id, settings)
     spec = spectrum_view(run)
     return {**spec, "simulation_id": run["id"], "baseline_kind": baseline_kind,
+            "water_system_name": workspace.water_system_selection.config.name,
+            "stage_bands_pct": [band * 100 for band in workspace.water_system_selection.config.stage_bands_pct],
             "input_rainfall": describe_input_rainfall(scenario, baseline_kind, scenario.revision),
             "scenario_id": scenario.id, "scenario_revision": scenario.revision,
             "source_start": scenario.provenance["source_start"], "source_end": scenario.provenance["source_end"],

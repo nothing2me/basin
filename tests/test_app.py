@@ -46,6 +46,11 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert not app.exception
     app.radio(key="reservoir_sim_subview").set_value("Selected scenario").run()
     assert not app.exception
+    next(t for t in app.text_input if t.label == "Experiment review rationale").set_value(
+        "Checked the selected system inputs and illustrative limitations"
+    ).run()
+    next(b for b in app.button if b.label == "Record experiment review").click().run()
+    assert not app.exception
     for identifier in list(w.selected):
         next(s for s in app.selectbox if s.label == "Scenario").set_value(identifier).run()
         next(b for b in app.button if b.label == "Include this revision in handoff").click().run()

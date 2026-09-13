@@ -144,7 +144,12 @@ def reconstruct_audit(source, audit, legacy=False, require_export=False):
                 return by_id[identifier]
             except (KeyError, TypeError) as exc:
                 raise ValueError(f"Unknown simulation scenario: {identifier}") from exc
+        from basin_core.water_system import WaterSystemSelection
+        selection = WaterSystemSelection.from_record(
+            audit.get("water_system_selection", WaterSystemSelection.default().record())
+        )
         view = SimpleNamespace(source=source, reference=reference, get=get_scenario,
+                               water_system_selection=selection,
                                evidence=audit["evidence"], evidence_refs=audit["evidence_refs"], conflicts=audit["conflicts"])
         if not isinstance(runs, list) or not all(isinstance(run, dict) for run in runs):
             raise ValueError("Saved simulations must be a list of records")

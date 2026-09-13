@@ -288,30 +288,27 @@ Rainfall used: **{retention_text}% of that input** ({rainfall_reduction_pct:g}% 
 | Lowest point reached | {min_pct}% | {min_acft:,.0f} ac-ft |
 
 **First day at or below each assumed storage band:**
-- 40% band: {band1_text}
-- 30% band: {band2_text}
-- 20% band: {band3_text}
-- 15% band: {band4_text}
+{band_rows}
 
 **Result for this window:**
 {assessment_text}
 
 > Source: BASIN reservoir experiment `{simulation_id}` · Snapshot `{_snapshot}…`
-> ⚠️ Illustrative two-pool simulation (Lake Corpus Christi + Choke Canyon). Bands are experiment assumptions, not adopted restriction stages. Not an official forecast or regulatory restriction date.""",
+> ⚠️ Illustrative simulation of **{water_system_name}**. Bands are experiment assumptions, not adopted restriction stages. Not an official forecast or regulatory restriction date.""",
 
     "run_stress_spectrum": """**Reservoir Stress Spectrum: Scenario {scenario_id} revision {scenario_revision}** ({source_start} to {source_end})
 Duration: **{duration_days} days** · Initial storage: **{initial_pct:g}%** · Conservation: **{conservation_pct:g}%**
 Rainfall input (100% tier): {input_summary}. {input_meaning} Each tier multiplies that input.
 
-| Rainfall tier | ≈ % of observed | Lowest storage | 40% band | 30% band | 20% band | 15% band | 20% band in window |
-|---|---|---|---|---|---|---|---|
+| Rainfall tier | ≈ % of observed | Lowest storage | {band_headers} | Critical band in window |
+|---|---|---|{band_separators}|---|
 {spectrum_table}
 
 **Evaluated tier outcomes:**
 {tipping_point_text}
 
 > Source: BASIN multi-tier stress spectrum `{simulation_id}` · Snapshot `{_snapshot}…`
-> ⚠️ Illustrative two-pool simulation across rainfall multipliers. Band days are the first day at or below each assumed band; day 0 means at or below at the start. Not an official regulatory declaration.""",
+> ⚠️ Illustrative simulation of **{water_system_name}** across rainfall multipliers. Band days are the first day at or below each assumed band; day 0 means at or below at the start. Not an official regulatory declaration.""",
 }
 
 
@@ -506,23 +503,30 @@ def _render_test_reservoir_infrastructure(data: dict) -> str:
     data["observed_text"] = (f" ≈ {observed:g}% of observed rainfall" if observed is not None
                              else " · not a single multiple of the observations")
     data["retention_text"] = f"{data.get('retention_pct', 100 - data['rainfall_reduction_pct']):g}"
-    for number, key in ((1, "day_band1_40pct"), (2, "day_band2_30pct"), (3, "day_band3_20pct"), (4, "day_band4_15pct")):
+    band_keys = ("day_band1_40pct", "day_band2_30pct", "day_band3_20pct", "day_band4_15pct")
+    bands = data.get("stage_bands_pct", [40, 30, 20, 15])
+    critical_pct = bands[2] if len(bands) >= 3 else 20
+    data.setdefault("water_system_name", "configured water system")
+    band_rows = []
+    for number, (band, key) in enumerate(zip(bands, band_keys), 1):
         data[f"band{number}_text"] = threshold_day_label(data[key])
+        band_rows.append(f"- {band:g}% band: {data[f'band{number}_text']}")
+    data["band_rows"] = "\n".join(band_rows)
     day_20 = data["day_band3_20pct"]
     if data["survived_critical_20pct"]:
         data["assessment_text"] = (
-            f"Combined storage stayed above the assumed 20% band for all {data['duration_days']} days of this window, "
+            f"Combined storage stayed above the assumed {critical_pct:g}% band for all {data['duration_days']} days of this window, "
             f"with a lowest value of **{data['min_pct']}%** ({data['min_acft']:,.0f} ac-ft). "
             "This describes these assumed inputs only."
         )
     elif day_20 == 0:
         data["assessment_text"] = (
-            f"Combined storage was already at or below the assumed 20% band at the start (day 0); "
+            f"Combined storage was already at or below the assumed {critical_pct:g}% band at the start (day 0); "
             f"its lowest value was **{data['min_pct']}%** ({data['min_acft']:,.0f} ac-ft)."
         )
     else:
         data["assessment_text"] = (
-            f"Combined storage reached the assumed 20% band on **day {day_20}** and fell to "
+            f"Combined storage reached the assumed {critical_pct:g}% band on **day {day_20}** and fell to "
             f"**{data['min_pct']}%** ({data['min_acft']:,.0f} ac-ft)."
         )
     return TEMPLATES["test_reservoir_infrastructure"].format_map(data)
@@ -535,6 +539,11 @@ def _render_run_stress_spectrum(data: dict) -> str:
     data["input_summary"], data["input_meaning"] = _input_rainfall_text(data)
     info = data.get("input_rainfall") or {}
     table = data.get("summary_table", [])
+    bands = data.get("stage_bands_pct", [40, 30, 20, 15])
+    critical_pct = bands[2] if len(bands) >= 3 else 20
+    data.setdefault("water_system_name", "configured water system")
+    data["band_headers"] = " | ".join(f"{band:g}% band" for band in bands)
+    data["band_separators"] = "|".join("---" for _ in bands)
     rows = []
     for r in table:
         observed = observed_percent(r["tier_multiplier"], info) if info else None
@@ -552,20 +561,20 @@ def _render_run_stress_spectrum(data: dict) -> str:
         lowest_stayed = min(stayed, key=lambda r: r["retention_pct"])
         highest_reached = max(reached, key=lambda r: r["retention_pct"])
         data["tipping_point_text"] = (
-            f"Storage stayed above the assumed 20% band down to **{lowest_stayed['retention_pct']:g}% of input rainfall** "
+            f"Storage stayed above the assumed {critical_pct:g}% band down to **{lowest_stayed['retention_pct']:g}% of input rainfall** "
             f"and reached it at **{highest_reached['retention_pct']:g}%** ({threshold_day_label(highest_reached['day_stage3_20'])}). "
             "Only these tested tiers are compared."
         )
     elif not reached:
         lowest = min(table, key=lambda r: r["retention_pct"])
         data["tipping_point_text"] = (
-            f"No tested tier reached the assumed 20% band within this {data['duration_days']}-day window, "
+            f"No tested tier reached the assumed {critical_pct:g}% band within this {data['duration_days']}-day window, "
             f"down to {lowest['retention_pct']:g}% of input rainfall."
         )
     else:
         highest = max(reached, key=lambda r: r["retention_pct"])
         data["tipping_point_text"] = (
-            f"Every tested tier reached the assumed 20% band within this window; the {highest['retention_pct']:g}% tier "
+            f"Every tested tier reached the assumed {critical_pct:g}% band within this window; the {highest['retention_pct']:g}% tier "
             f"(the highest tested) did so at {threshold_day_label(highest['day_stage3_20'])}."
         )
 

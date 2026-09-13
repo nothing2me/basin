@@ -1,10 +1,20 @@
 # BASIN current handoff
 
+## September 12 — T1 shared storage-system contract
+
+Review and assistant tools now consume one versioned workspace water-system selection. New saved simulation records contain the complete preset or custom configuration and replay against that exact snapshot. Save/reopen restores the selection; reports and the verified handoff brief identify it. Changing the selected system deactivates previous active runs without deleting historical records or reviews.
+
+Review calculation is deliberately split into a side-effect-free preview and an explicit persistence action. Navigating between scenarios no longer creates active simulations. Choosing **Record experiment review** saves and reviews the exact preview identity; later changes to the scenario, system or settings prevent that run from being silently substituted. Assistant experiment requests continue to save runs automatically using the same workspace selection.
+
+Gemini's native-release work is integrated at `b1c51ac`, and its T4 scientific contract is integrated at `3a03ebd`. The T4 module defines and tests the data, calibration, review and prohibited-claim boundaries without changing the current illustrative calculation. Physical presentation-laptop, offline, projector, intended-user and organizer gates remain open; calibrated hydrology still requires approved source data and expert review.
+
+Verification: the final combined suite passed **590 tests with 3 optional-runtime skips in 403.10s**. A fresh browser at 127.0.0.1:8508 confirmed the Region N default, selection of the 12,000 ac-ft municipal preset, changed one-pool trajectory/metrics/wording, explicit experiment rationale, and the saved-review success state. `git diff --check` passed. Presentation-device and scientific acceptance are not implied.
+
 ## September 11 — Part C status and development-device checkpoint
 
 Current state: Review browser acceptance is merged at `cf374bd`; the status reconciliation is pushed at `0098dad`. The active release documents now separate implementation, automated verification, development-machine observation and external acceptance. The 601-line historical TODO is preserved under `docs/archive/`; the active `TODO.md` is a concise ordered queue.
 
-The documentation reconciliation corrected a material boundary: assistant-created Region N experiments are the schema 2.2 saved/replayed path. Review’s selectable storage-system experiment is a separate transient session/report configuration. Aligning these paths remains the first technical follow-up.
+The documentation reconciliation identified the former split between assistant-created Region N runs and Review’s transient selectable-system configuration. The September 12 T1 work above resolves that split.
 
 Part C checks completed on this development Windows machine:
 

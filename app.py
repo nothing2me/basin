@@ -17,8 +17,9 @@ import streamlit as st
 from basin_core.analysis import (comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMPTIONS, rainfall_tier_label,
                                  simulate_reservoir_drawdown, simulate_stress_spectrum, threshold_crossing_day,
                                  threshold_day_label)
-from basin_core.simulation import describe_input_rainfall, observed_percent
-from basin_core.water_system import WaterSource, WaterSystemConfig, REGION_N_PRESET, SMALL_MUNI_PRESET, RURAL_FARM_PRESET, SYSTEM_PRESETS
+from basin_core.simulation import SimulationSettings, describe_input_rainfall, observed_percent, spectrum_view
+from basin_core.water_system import (WaterSource, WaterSystemConfig, SYSTEM_PRESETS,
+                                     SYSTEM_ID_TO_LABEL, SYSTEM_LABEL_TO_ID, REGION_N_PRESET)
 from basin_core.summary import scenario_summary, reservoir_summary
 from basin_core.review_preferences import (DATA_SOURCES, GOALS, GUIDANCE, GUIDED_TAB_NOTES,
                                            TAB_LABELS, ReviewPreferences, load_preferences,
@@ -1645,7 +1646,9 @@ elif page == "Review":
 
                     st.markdown("##### 💧 Water Storage System")
                     sys_options = list(SYSTEM_PRESETS.keys()) + ["Custom System Configuration..."]
-                    curr_sys_choice = st.session_state.get(f"sys_preset_choice_{w.id}", sys_options[0])
+                    active_selection = w.water_system_selection
+                    selected_label = SYSTEM_ID_TO_LABEL.get(active_selection.identifier, "Custom System Configuration...")
+                    curr_sys_choice = st.session_state.get(f"sys_preset_choice_{w.id}", selected_label)
                     sys_choice = st.selectbox("Storage Infrastructure", sys_options,
                                               index=sys_options.index(curr_sys_choice) if curr_sys_choice in sys_options else 0,
                                               key=f"sys_preset_choice_{w.id}",
@@ -1653,23 +1656,29 @@ elif page == "Review":
 
                     if sys_choice == "Custom System Configuration...":
                         st.markdown("**Custom Infrastructure Setup**")
+                        custom_default = active_selection.config if active_selection.identifier == "custom" else None
                         c_cname, c_csrcs, c_cdemand = st.columns([2, 1, 1])
-                        cust_name = c_cname.text_input("System / District Name", value="Local Water District", key=f"cust_sys_name_{w.id}")
-                        cust_n_sources = c_csrcs.selectbox("Number of Storage Pools", [1, 2, 3], index=0, key=f"cust_sys_n_{w.id}")
-                        cust_demand = c_cdemand.number_input("Daily Demand (ac-ft/day)", min_value=0.1, value=12.0, step=1.0, key=f"cust_sys_demand_{w.id}")
+                        cust_name = c_cname.text_input("System / District Name", value=custom_default.name if custom_default else "Local Water District", key=f"cust_sys_name_{w.id}")
+                        default_count = len(custom_default.sources) if custom_default else 1
+                        cust_n_sources = c_csrcs.selectbox("Number of Storage Pools", [1, 2, 3], index=default_count - 1, key=f"cust_sys_n_{w.id}")
+                        cust_demand = c_cdemand.number_input("Daily Demand (ac-ft/day)", min_value=0.1, value=float(custom_default.demand_acft_day) if custom_default else 12.0, step=1.0, key=f"cust_sys_demand_{w.id}")
 
                         src_list = []
                         for s_idx in range(cust_n_sources):
                             col_sn, col_scap = st.columns([2, 2])
-                            s_name = col_sn.text_input(f"Source {s_idx+1} Name", value=f"Storage Pool {s_idx+1}", key=f"cust_src_name_{w.id}_{s_idx}")
-                            s_cap = col_scap.number_input(f"Capacity (ac-ft)", min_value=1.0, value=8000.0 if s_idx == 0 else 4000.0, step=100.0, key=f"cust_src_cap_{w.id}_{s_idx}")
+                            saved_source = custom_default.sources[s_idx] if custom_default and s_idx < len(custom_default.sources) else None
+                            s_name = col_sn.text_input(f"Source {s_idx+1} Name", value=saved_source.name if saved_source else f"Storage Pool {s_idx+1}", key=f"cust_src_name_{w.id}_{s_idx}")
+                            s_cap = col_scap.number_input(f"Capacity (ac-ft)", min_value=1.0, value=float(saved_source.capacity_acft) if saved_source else (8000.0 if s_idx == 0 else 4000.0), step=100.0, key=f"cust_src_cap_{w.id}_{s_idx}")
                             src_list.append(WaterSource.scaled_for_capacity(s_name, float(s_cap)))
                         # No separate no-pipeline demand is collected for a custom system. Leaving the
                         # dataclass default would silently switch to the regional 554 ac-ft/day.
                         chosen_sys = WaterSystemConfig(name=cust_name, sources=tuple(src_list), demand_acft_day=float(cust_demand),
                                                        demand_no_pipeline_acft_day=None)
+                        chosen_system_id = "custom"
                     else:
                         chosen_sys = SYSTEM_PRESETS[sys_choice]
+                        chosen_system_id = SYSTEM_LABEL_TO_ID[sys_choice]
+                    w.select_water_system(chosen_sys, chosen_system_id)
 
                     sim_subview = st.radio(
                         "Simulation View",
@@ -1697,7 +1706,24 @@ elif page == "Review":
                     if chosen_sys.demand_no_pipeline_acft_day is None:
                         st.caption("This system has no separate no-pipeline demand, so this setting does not change its simulated demand.")
 
-                    # Preserve the report integration contract through the optional Review UI.
+                    settings = SimulationSettings(
+                        initial_storage_fraction=init_pct,
+                        conservation_fraction=conserve_choice / 100.0,
+                        pipeline_active=pipeline_active,
+                    )
+                    preview_run = w.preview_simulation(s.id, settings)
+                    active_run = w.active_simulation(s.id)
+                    if active_run is not None and active_run["id"] != preview_run["id"]:
+                        w.active_simulations.pop(s.id, None)
+                        active_run = None
+                    reviewed_run = (
+                        active_run is not None
+                        and active_run["id"] == preview_run["id"]
+                        and active_run["id"] in w.simulation_reviews
+                    )
+                    spec = spectrum_view(preview_run)
+
+                    # Preserve one configuration across Review, assistant, reports and replay.
                     st.session_state["experiment_config"] = ExperimentConfig(
                         initial_pct=init_pct,
                         conservation_pct=conserve_choice / 100.0,
@@ -1705,13 +1731,29 @@ elif page == "Review":
                         scenario_id=s.id,
                         scenario_revision=s.revision,
                         selected=True,
+                        saved_run_id=preview_run["id"] if reviewed_run else None,
                         system_config=chosen_sys,
                     )
-                    st.caption(f"Configured for **{chosen_sys.name}** ({chosen_sys.total_capacity_acft:,.0f} ac-ft total capacity, {chosen_sys.demand_acft_day:,.1f} ac-ft/day baseline demand). These settings are preserved for reports.")
-                    st.info("⚠️ **Illustrative experiment**: conditional storage under assumed inputs. Not calibrated, not a forecast, and excluded from saved evidence packets and their verification.")
+                    st.caption(f"Configured for **{chosen_sys.name}** ({chosen_sys.total_capacity_acft:,.0f} ac-ft total capacity, {chosen_sys.demand_acft_day:,.1f} ac-ft/day baseline demand). Review and the assistant share this workspace selection. Preview `{preview_run['id'][:16]}…` becomes a saved replayable run when its review is recorded.")
+                    st.info("⚠️ **Illustrative experiment**: conditional storage under assumed inputs. Not calibrated and not a forecast. A reviewed run is included in the verified packet and replayed for internal consistency.")
+
+                    if reviewed_run:
+                        st.success("This exact system, rainfall revision and settings have a recorded experiment review.")
+                    else:
+                        simulation_rationale = st.text_input(
+                            "Experiment review rationale",
+                            placeholder="State what you checked and how the illustrative limits affect use.",
+                            key=f"simulation_rationale_{preview_run['id']}",
+                        )
+                        if st.button("Record experiment review", key=f"review_simulation_{preview_run['id']}"):
+                            try:
+                                saved_run = w.run_simulation(s.id, settings)
+                                w.review_simulation(saved_run["id"], simulation_rationale)
+                                st.rerun()
+                            except ValueError as error:
+                                st.error(str(error))
 
                     if sim_subview == "Additional rainfall reductions":
-                        spec = simulate_stress_spectrum(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active, config=chosen_sys)
                         st.plotly_chart(accessible_chart(stress_spectrum_figure(spec)), width="stretch", config={"displayModeBar": False})
 
                         st.markdown("**Time spent in assumed storage bands**")
@@ -1759,7 +1801,7 @@ elif page == "Review":
                         st.dataframe(countdown_df, hide_index=True, width="stretch")
                         st.caption(f"100% means the selected scenario: {input_rainfall['summary']}. Other inputs reduce that rainfall again; they do not reconstruct the original historical observations. Day 0 means storage was already at or below that band at the start.")
                     else:
-                        sim_df = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=pipeline_active, config=chosen_sys)
+                        sim_df = spec["tier_results"][1.0]["df"]
 
                         with tour_target("review_simulation"):
                             st.plotly_chart(accessible_chart(reservoir_simulation_figure(sim_df, pace_ms=pace_ms, config=chosen_sys)), width="stretch", config={"displayModeBar": False})

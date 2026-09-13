@@ -6,7 +6,7 @@ drawdown on their own infrastructure rather than fixed regional constants.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import math
 
 
@@ -23,11 +23,11 @@ class WaterSource:
     def validate(self) -> None:
         if not self.name or not isinstance(self.name, str):
             raise ValueError("WaterSource name must be a non-empty string")
-        if not isinstance(self.capacity_acft, (int, float)) or not math.isfinite(self.capacity_acft) or self.capacity_acft <= 0:
+        if isinstance(self.capacity_acft, bool) or not isinstance(self.capacity_acft, (int, float)) or not math.isfinite(self.capacity_acft) or self.capacity_acft <= 0:
             raise ValueError(f"WaterSource '{self.name}' capacity must be a positive number")
         for attr in ("inflow_base_acft", "inflow_sensitivity", "evap_summer_acft", "evap_winter_acft"):
             val = getattr(self, attr)
-            if not isinstance(val, (int, float)) or not math.isfinite(val) or val < 0:
+            if isinstance(val, bool) or not isinstance(val, (int, float)) or not math.isfinite(val) or val < 0:
                 raise ValueError(f"WaterSource '{self.name}' {attr} must be a non-negative number")
 
     @classmethod
@@ -84,14 +84,25 @@ class WaterSystemConfig:
             raise ValueError("WaterSystemConfig must have at least one WaterSource")
         for s in self.sources:
             s.validate()
-        if not isinstance(self.demand_acft_day, (int, float)) or not math.isfinite(self.demand_acft_day) or self.demand_acft_day < 0:
+        if isinstance(self.demand_acft_day, bool) or not isinstance(self.demand_acft_day, (int, float)) or not math.isfinite(self.demand_acft_day) or self.demand_acft_day < 0:
             raise ValueError("demand_acft_day must be a non-negative number")
         if self.demand_no_pipeline_acft_day is not None:
-            if not isinstance(self.demand_no_pipeline_acft_day, (int, float)) or not math.isfinite(self.demand_no_pipeline_acft_day) or self.demand_no_pipeline_acft_day < 0:
+            if isinstance(self.demand_no_pipeline_acft_day, bool) or not isinstance(self.demand_no_pipeline_acft_day, (int, float)) or not math.isfinite(self.demand_no_pipeline_acft_day) or self.demand_no_pipeline_acft_day < 0:
                 raise ValueError("demand_no_pipeline_acft_day must be a non-negative number")
+        if not isinstance(self.stage_bands_pct, tuple) or not 1 <= len(self.stage_bands_pct) <= 4:
+            raise ValueError("stage_bands_pct must contain one to four thresholds")
         for b in self.stage_bands_pct:
-            if not isinstance(b, (int, float)) or not 0 <= b <= 1:
+            if isinstance(b, bool) or not isinstance(b, (int, float)) or not math.isfinite(b) or not 0 <= b <= 1:
                 raise ValueError("stage_bands_pct values must be between 0 and 1")
+        if any(left <= right for left, right in zip(self.stage_bands_pct, self.stage_bands_pct[1:])):
+            raise ValueError("stage_bands_pct values must be strictly descending")
+        for label, value in (("allocation_threshold_pct", self.allocation_threshold_pct),
+                             ("allocation_primary_fraction", self.allocation_primary_fraction),
+                             ("allocation_secondary_fraction", self.allocation_secondary_fraction)):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= 1:
+                raise ValueError(f"{label} must be between 0 and 1")
+        if type(self.use_smooth_evap) is not bool or type(self.use_eac_scaling) is not bool:
+            raise ValueError("Evaporation switches must be true or false")
         if (isinstance(self.dead_storage_acft, bool) or not isinstance(self.dead_storage_acft, (int, float))
                 or not math.isfinite(self.dead_storage_acft) or not 0 <= self.dead_storage_acft <= self.total_capacity_acft):
             raise ValueError("dead_storage_acft must be between zero and total capacity")
@@ -210,3 +221,85 @@ SYSTEM_PRESETS: dict[str, WaterSystemConfig] = {
     "Region N (Corpus Christi — 2 reservoirs)": REGION_N_PRESET,
     "Region N modern-stress assumptions (inactive storage)": REGION_N_MODERN_PRESET,
 }
+
+WATER_SYSTEM_SELECTION_VERSION = "1.0"
+DEFAULT_WATER_SYSTEM_ID = "region_n_illustrative"
+SYSTEM_PRESET_IDS: dict[str, WaterSystemConfig] = {
+    "small_municipal": SMALL_MUNI_PRESET,
+    "rural_farm": RURAL_FARM_PRESET,
+    DEFAULT_WATER_SYSTEM_ID: REGION_N_PRESET,
+    "region_n_modern_stress": REGION_N_MODERN_PRESET,
+}
+SYSTEM_LABEL_TO_ID: dict[str, str] = {
+    label: next(identifier for identifier, preset in SYSTEM_PRESET_IDS.items() if preset == config)
+    for label, config in SYSTEM_PRESETS.items()
+}
+SYSTEM_ID_TO_LABEL: dict[str, str] = {identifier: label for label, identifier in SYSTEM_LABEL_TO_ID.items()}
+
+
+def _config_record(config: WaterSystemConfig) -> dict[str, object]:
+    config.validate()
+    return asdict(config)
+
+
+def _config_from_record(record: object) -> WaterSystemConfig:
+    if not isinstance(record, dict):
+        raise ValueError("Water system configuration must be a record")
+    source_fields = {"name", "capacity_acft", "inflow_base_acft", "inflow_sensitivity", "evap_summer_acft", "evap_winter_acft"}
+    sources = record.get("sources")
+    if not isinstance(sources, (list, tuple)) or not sources:
+        raise ValueError("Water system configuration must contain storage sources")
+    parsed_sources: list[WaterSource] = []
+    for source in sources:
+        if not isinstance(source, dict) or set(source) != source_fields:
+            raise ValueError("Water source configuration has an invalid shape")
+        parsed_sources.append(WaterSource(**source))
+    allowed = set(WaterSystemConfig.__dataclass_fields__) - {"sources"}
+    if set(record) != allowed | {"sources"}:
+        raise ValueError("Water system configuration has an invalid shape")
+    values = {key: record[key] for key in allowed}
+    values["sources"] = tuple(parsed_sources)
+    values["stage_bands_pct"] = tuple(values["stage_bands_pct"])
+    config = WaterSystemConfig(**values)
+    config.validate()
+    return config
+
+
+@dataclass(frozen=True)
+class WaterSystemSelection:
+    """Versioned identity and complete inputs for the workspace's active water system."""
+
+    identifier: str
+    config: WaterSystemConfig
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.identifier, str) or not self.identifier.strip():
+            raise ValueError("Water system identifier must be a non-empty string")
+        self.config.validate()
+        preset = SYSTEM_PRESET_IDS.get(self.identifier)
+        if preset is not None and preset != self.config:
+            raise ValueError("Water system preset identifier does not match its configuration")
+        if preset is None and self.identifier != "custom":
+            raise ValueError("Unknown water system identifier")
+
+    @classmethod
+    def default(cls) -> WaterSystemSelection:
+        return cls(DEFAULT_WATER_SYSTEM_ID, REGION_N_PRESET)
+
+    @classmethod
+    def chosen(cls, config: WaterSystemConfig, identifier: str | None = None) -> WaterSystemSelection:
+        if identifier is None:
+            identifier = next((key for key, preset in SYSTEM_PRESET_IDS.items() if preset == config), "custom")
+        return cls(identifier, config)
+
+    def record(self) -> dict[str, object]:
+        return {"schema_version": WATER_SYSTEM_SELECTION_VERSION,
+                "identifier": self.identifier, "config": _config_record(self.config)}
+
+    @classmethod
+    def from_record(cls, record: object) -> WaterSystemSelection:
+        if not isinstance(record, dict) or set(record) != {"schema_version", "identifier", "config"}:
+            raise ValueError("Water system selection has an invalid shape")
+        if record["schema_version"] != WATER_SYSTEM_SELECTION_VERSION:
+            raise ValueError("Unsupported water system selection version")
+        return cls(str(record["identifier"]), _config_from_record(record["config"]))

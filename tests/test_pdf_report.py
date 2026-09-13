@@ -14,6 +14,7 @@ from basin_core.pdf_report import (
     model_total_capacity_acft,
     render_html_report,
 )
+from basin_core.water_system import WaterSource, WaterSystemConfig
 
 # Values the report used to hard-code or substitute. None of them may reappear in output.
 FABRICATED_VECTOR_STRINGS = [
@@ -137,18 +138,21 @@ def test_band_volumes_are_derived_from_total_capacity():
     assert band_storage_acft(0.20) == pytest.approx(183980.0)
 
 
-def test_reports_follow_the_model_assumptions_when_they_change(approved, monkeypatch):
+def test_reports_follow_the_selected_system_assumptions(approved):
     """Capacity must be read from the model, not restated in the report as a constant."""
-    monkeypatch.setitem(
-        RESERVOIR_ASSUMPTIONS, "capacities_acft", {"Pool A": 100000.0, "Pool B": 400000.0}
+    system = WaterSystemConfig(
+        name="Test 500k system",
+        sources=(WaterSource.scaled_for_capacity("Pool A", 100000.0),
+                 WaterSource.scaled_for_capacity("Pool B", 400000.0)),
     )
     accepted = approved.exportable()
+    config = ExperimentConfig(system_config=system)
 
-    html = render_html_report(approved, accepted)
+    html = render_html_report(approved, accepted, config=config)
     assert "500,000 ac-ft" in html
     assert "919,900" not in html
 
-    pdf_bytes = build_fallback_pdf(approved, accepted)
+    pdf_bytes = build_fallback_pdf(approved, accepted, config=config)
     assert b"500,000" in pdf_bytes
     assert b"200,000" in pdf_bytes  # the 40% band of the patched capacity
     assert b"919,900" not in pdf_bytes

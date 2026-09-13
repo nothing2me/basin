@@ -181,7 +181,7 @@ def test_test_reservoir_infrastructure(workspace):
     rendered = render_tool_result("test_reservoir_infrastructure", data)
     assert "Reservoir Infrastructure Stress Test" in rendered
     assert "Lowest point reached" in rendered
-    assert "Illustrative two-pool simulation" in rendered
+    assert "Illustrative simulation of **Region N" in rendered
 
 
 def test_run_stress_spectrum(workspace):
@@ -191,7 +191,7 @@ def test_run_stress_spectrum(workspace):
     rendered = render_tool_result("run_stress_spectrum", data)
     assert "Reservoir Stress Spectrum" in rendered
     assert "Evaluated tier outcomes" in rendered or "Tipping Point Analysis" in rendered
-    assert "Illustrative two-pool" in rendered
+    assert "Illustrative simulation of **Region N" in rendered
 
 
 def test_all_templates_render_and_have_disclaimers(workspace):

@@ -227,19 +227,19 @@ ILLUSTRATIVE_BANDS: tuple[tuple[float, str], ...] = (
 SURVEYED_CAPACITIES_ACFT = {"Lake Corpus Christi": 256062.0, "Choke Canyon": 662820.0}
 
 
-def model_capacities_acft() -> dict[str, float]:
+def model_capacities_acft(system: WaterSystemConfig = REGION_N_PRESET) -> dict[str, float]:
     """Per-reservoir capacities exactly as the reservoir model assumes them."""
-    return {str(k): float(v) for k, v in RESERVOIR_ASSUMPTIONS["capacities_acft"].items()}
+    return {source.name: float(source.capacity_acft) for source in system.sources}
 
 
-def model_total_capacity_acft() -> float:
+def model_total_capacity_acft(system: WaterSystemConfig = REGION_N_PRESET) -> float:
     """Combined conservation-pool capacity used as the denominator by the model."""
-    return float(sum(model_capacities_acft().values()))
+    return float(sum(model_capacities_acft(system).values()))
 
 
-def band_storage_acft(fraction: float) -> float:
+def band_storage_acft(fraction: float, system: WaterSystemConfig = REGION_N_PRESET) -> float:
     """Storage volume at a given fraction of the model's combined capacity."""
-    return model_total_capacity_acft() * float(fraction)
+    return model_total_capacity_acft(system) * float(fraction)
 
 
 # Adobe standard glyph widths (units per 1000) for the three base-14 fonts the vector
@@ -508,7 +508,7 @@ def _report_context(workspace, accepted: Sequence, config: ExperimentConfig):
             config = replace(config, scenario_id=primary.id, scenario_revision=getattr(primary, "revision", None))
         return config, primary, note, compute_report_metrics(primary, config)
 
-    from basin_core.simulation import is_current, settings_from_run, validate_run
+    from basin_core.simulation import is_current, settings_from_run, validate_run, water_system_from_run
     try:
         validate_run(workspace, run)
     except ValueError as error:
@@ -528,6 +528,7 @@ def _report_context(workspace, accepted: Sequence, config: ExperimentConfig):
         scenario_revision=run["scenario_revision"],
         selected=True,
         saved_run_id=run["id"],
+        system_config=water_system_from_run(run).config,
     )
     return saved_config, scenario, None, _metrics_from_saved_run(run, scenario)
 
@@ -603,11 +604,25 @@ def render_html_report(
     manifest = getattr(workspace.source, "manifest", {}) or {}
     record_span = f"{manifest.get('start', 'unknown start')} to {manifest.get('end', 'unknown end')}"
 
-    capacities = model_capacities_acft()
-    total_capacity = model_total_capacity_acft()
+    system = config.system_config or REGION_N_PRESET
+    system_assumptions = system.describe_assumptions()
+    report_bands = tuple((fraction, f"Band {index}") for index, fraction in enumerate(system.stage_bands_pct, 1))
+    critical_fraction = system.stage_bands_pct[2] if len(system.stage_bands_pct) >= 3 else 0.20
+    band1_pct = (system.stage_bands_pct[0] if len(system.stage_bands_pct) >= 1 else 0.40) * 100
+    band2_pct = (system.stage_bands_pct[1] if len(system.stage_bands_pct) >= 2 else 0.30) * 100
+    critical_pct = critical_fraction * 100
+    capacities = model_capacities_acft(system)
+    total_capacity = model_total_capacity_acft(system)
     capacity_breakdown = "; ".join(f"{name} {value:,.0f} ac-ft" for name, value in capacities.items())
+    region_n_sources = set(capacities) == set(SURVEYED_CAPACITIES_ACFT)
     surveyed_total = sum(SURVEYED_CAPACITIES_ACFT.values())
     surveyed_breakdown = "; ".join(f"{name} {value:,.0f} ac-ft" for name, value in SURVEYED_CAPACITIES_ACFT.items())
+    capacity_comparison = (
+        f"For comparison, the project research packet records TWDB volumetric survey values of {surveyed_breakdown} "
+        f"(combined {surveyed_total:,.0f} ac-ft). Reconciling the model assumption with the surveys is open work; this report does not claim the two agree."
+        if region_n_sources else
+        "No external capacity survey comparison is configured for this selected system; review its user-selected or preset inputs before use."
+    )
 
     unavailable_note = (
         "" if metrics.available
@@ -626,7 +641,7 @@ def render_html_report(
         tipping_point_tier = metrics.tipping_point_tier or UNAVAILABLE
     else:
         depletion_range_val = "No breach in modeled window*"
-        depletion_range_sub = "*Storage >20% across modeled window (toy model)"
+        depletion_range_sub = f"*Storage >{critical_pct:g}% across modeled window (toy model)"
         tipping_point_tier = "No tier reached Stage 3 in sim"
 
     # Matched conservation comparison. A delay is defined only when both runs cross.
@@ -649,13 +664,13 @@ def render_html_report(
             conservation_sub = f"*Evaporation dominates at Day {day_base_3}"
     elif day_base_3 is not None and day_cons_3 is None:
         conservation_val = "Delay not defined*"
-        conservation_sub = "*Chosen run did not reach 20% within the modeled window"
+        conservation_sub = f"*Chosen run did not reach {critical_pct:g}% within the modeled window"
     elif day_base_3 is None and day_cons_3 is None:
         conservation_val = "Delay not defined*"
-        conservation_sub = "*Neither matched run reached 20% within the modeled window"
+        conservation_sub = f"*Neither matched run reached {critical_pct:g}% within the modeled window"
     else:
         conservation_val = "Delay not defined*"
-        conservation_sub = "*Matched runs did not both reach 20% within the modeled window"
+        conservation_sub = f"*Matched runs did not both reach {critical_pct:g}% within the modeled window"
 
     # Primary loss driver
     if metrics.available and metrics.mean_evaporation_acft is not None:
@@ -669,9 +684,9 @@ def render_html_report(
     if spectrum_data and "summary_table" in spectrum_data:
         for r in spectrum_data["summary_table"]:
             status_badge = (
-                '<span class="badge badge-success">Above 20% in window</span>'
+                f'<span class="badge badge-success">Above {critical_pct:g}% in window</span>'
                 if r["survived_critical_20pct"]
-                else '<span class="badge badge-neutral">At/below 20% in window</span>'
+                else f'<span class="badge badge-neutral">At/below {critical_pct:g}% in window</span>'
             )
             # Day 0 is a crossing at the start, not an absent value.
             d1, d2, d3 = ("—" if r.get(key) is None else f"{threshold_day_label(r[key])}*"
@@ -699,12 +714,12 @@ def render_html_report(
                    "Last band the model distinguishes before storage exhaustion."),
     }
     band_html_rows = ""
-    for band_fraction, band_name in ILLUSTRATIVE_BANDS:
+    for band_fraction, band_name in report_bands:
         actions, effect = band_actions[band_name]
         band_html_rows += (
             "<tr>"
             f"<td><strong>{escape(band_name)}</strong></td>"
-            f"<td>&le; {band_fraction * 100:.0f}% ({band_storage_acft(band_fraction):,.0f} ac-ft)</td>"
+            f"<td>&le; {band_fraction * 100:.0f}% ({band_storage_acft(band_fraction, system):,.0f} ac-ft)</td>"
             f"<td>{escape(actions)}</td>"
             f"<td>{escape(effect)}</td>"
             "</tr>"
@@ -715,7 +730,7 @@ def render_html_report(
         overview_sentence = (
             f"Derived using primary scenario <strong>{escape(primary_id)}</strong> at "
             f"<strong>{init_frac * 100:.0f}% initial storage</strong>, it evaluates whether emergency "
-            f"conservation ({cons_frac * 100:g}%) defers breaching the illustrative 20% reserve band (Stage 3)."
+            f"conservation ({cons_frac * 100:g}%) defers reaching the illustrative {critical_pct:g}% reserve band (Band 3)."
         )
     else:
         tipping_point_sub = unavailable_note
@@ -1156,10 +1171,10 @@ def render_html_report(
 
     <div class="section-title">Illustrative Drought Response Reference Framework</div>
     <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
-        <strong>Illustrative assumption, not adopted policy.</strong> The storage bands below are this experiment's own assumption ({escape(str(RESERVOIR_ASSUMPTIONS["thresholds"]))}). BASIN does not reproduce any adopted drought contingency ordinance, and the response categories listed are generic planning language rather than measures any authority has adopted. Confirm the currently adopted plan and any active declarations with the responsible utility before operational use.
+        <strong>Illustrative assumption, not adopted policy.</strong> The storage bands below are this experiment's own assumption ({escape(str(system_assumptions["thresholds"]))}). BASIN does not reproduce any adopted drought contingency ordinance, and the response categories listed are generic planning language rather than measures any authority has adopted. Confirm the currently adopted plan and any active declarations with the responsible utility before operational use.
     </p>
     <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
-        <strong>Capacity basis.</strong> Band volumes are computed against the model's assumed combined conservation-pool capacity of {total_capacity:,.0f} ac-ft ({escape(capacity_breakdown)}). That is the experiment's assumption, not a survey-verified figure. For comparison, the project research packet records TWDB volumetric survey values of {escape(surveyed_breakdown)} (combined {surveyed_total:,.0f} ac-ft). Reconciling the model assumption with the surveys is open work; this report does not claim the two agree.
+        <strong>Capacity basis.</strong> Band volumes are computed against the selected system's assumed combined capacity of {total_capacity:,.0f} ac-ft ({escape(capacity_breakdown)}). That is the experiment's assumption, not a survey-verified figure. {escape(capacity_comparison)}
     </p>
     <table>
         <thead>
@@ -1190,7 +1205,7 @@ def render_html_report(
     <!-- Page 2 Equal-Prominence Matrix Callout -->
     <div style="background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 6px; padding: 9px 12px; margin-bottom: 10px; font-size: 9.5pt; font-weight: 600; color: #92400e; line-height: 1.4;">
         ⚠️ ILLUSTRATIVE SENSITIVITY EXPERIMENT ONLY — NOT AN OPERATIONAL FORECAST<br>
-        <span style="font-weight: 400; font-size: 8.5pt; color: #78350f;">Drawdown trajectories reflect an illustrative two-pool mass-balance with an uncalibrated inflow proxy ({escape(str(RESERVOIR_ASSUMPTIONS["inflow"]))}) and a fixed seasonal evaporation assumption. They do NOT represent safe yield, actual reservoir levels, or regulatory curtailment dates.</span>
+        <span style="font-weight: 400; font-size: 8.5pt; color: #78350f;">Drawdown trajectories reflect the selected system's illustrative mass-balance with an uncalibrated inflow proxy ({escape(str(system_assumptions["inflow"]))}) and seasonal evaporation assumptions. They do NOT represent safe yield, actual reservoir levels, or regulatory curtailment dates.</span>
     </div>
 
     <div class="section-title">Illustrative Storage Sensitivity Spectrum (Non-Predictive)</div>
@@ -1201,9 +1216,9 @@ def render_html_report(
                 <th>Stress Tier</th>
                 <th>Rainfall Retention</th>
                 <th>Simulated Min Storage</th>
-                <th>Stage 1 (40%)</th>
-                <th>Stage 2 (30%)</th>
-                <th>Stage 3 (20%)</th>
+                <th>Band 1 ({band1_pct:g}%)</th>
+                <th>Band 2 ({band2_pct:g}%)</th>
+                <th>Band 3 ({critical_pct:g}%)</th>
                 <th>Simulated Outcome</th>
             </tr>
         </thead>
@@ -1570,6 +1585,12 @@ def build_fallback_pdf(
         body_text = f"Evaluated {len(accepted)} accepted scenarios under {init_frac * 100:g}% starting storage."
 
     spectrum_data = metrics.spectrum_data
+    system = config.system_config or REGION_N_PRESET
+    report_bands = tuple((fraction, f"Band {index}") for index, fraction in enumerate(system.stage_bands_pct, 1))
+    critical_fraction = system.stage_bands_pct[2] if len(system.stage_bands_pct) >= 3 else 0.20
+    band1_pct = (system.stage_bands_pct[0] if len(system.stage_bands_pct) >= 1 else 0.40) * 100
+    band2_pct = (system.stage_bands_pct[1] if len(system.stage_bands_pct) >= 2 else 0.30) * 100
+    critical_pct = critical_fraction * 100
     unavailable_note = (
         "" if metrics.available
         else f"Simulation unavailable: {metrics.unavailable_reason}. No substitute figures are shown."
@@ -1585,7 +1606,7 @@ def build_fallback_pdf(
         depletion_range_sub = f"*Day {metrics.earliest_breach_day} in uncalibrated sim"
     else:
         depletion_range_val = "No breach in window*"
-        depletion_range_sub = "*Storage >20% across modeled window"
+        depletion_range_sub = f"*Storage >{critical_pct:g}% across modeled window"
 
     # Conservation benefit
     day_base_3 = metrics.day_base_stage3
@@ -1606,13 +1627,13 @@ def build_fallback_pdf(
             conservation_sub = "*Evaporation dominates storage"
     elif day_base_3 is not None and day_cons_3 is None:
         conservation_val = "Delay not defined*"
-        conservation_sub = "*Chosen run did not reach 20% in the modeled window"
+        conservation_sub = f"*Chosen run did not reach {critical_pct:g}% in the modeled window"
     elif day_base_3 is None and day_cons_3 is None:
         conservation_val = "Delay not defined*"
-        conservation_sub = "*Neither matched run reached 20% in the modeled window"
+        conservation_sub = f"*Neither matched run reached {critical_pct:g}% in the modeled window"
     else:
         conservation_val = "Delay not defined*"
-        conservation_sub = "*Matched runs did not both reach 20% in the modeled window"
+        conservation_sub = f"*Matched runs did not both reach {critical_pct:g}% in the modeled window"
 
     # Dominant loss driver
     if metrics.available and metrics.mean_evaporation_acft is not None:
@@ -1622,10 +1643,11 @@ def build_fallback_pdf(
         loss_driver_val = UNAVAILABLE
         loss_driver_sub = "*Not computed for this report"
 
-    capacities = model_capacities_acft()
-    total_capacity = model_total_capacity_acft()
+    capacities = model_capacities_acft(system)
+    total_capacity = model_total_capacity_acft(system)
     capacity_breakdown = "; ".join(f"{name} {value:,.0f}" for name, value in capacities.items())
     surveyed_total = sum(SURVEYED_CAPACITIES_ACFT.values())
+    region_n_sources = set(capacities) == set(SURVEYED_CAPACITIES_ACFT)
     tier_count = len(spectrum_data.get("summary_table", [])) if spectrum_data else 0
     replay_line = (
         "* Bundle Replay Command: not applicable, this report was generated without a session"
@@ -1678,7 +1700,7 @@ def build_fallback_pdf(
         tier_finding = f"- {unavailable_note}"
     else:
         tier_finding = (
-            f"- The 20% band ({band_storage_acft(0.20):,.0f} ac-ft of model capacity) is tested across "
+            f"- The {critical_pct:g}% band ({band_storage_acft(critical_fraction, system):,.0f} ac-ft of model capacity) is tested across "
             f"{tier_count} rainfall retention tiers; see page 2."
         )
 
@@ -1687,13 +1709,13 @@ def build_fallback_pdf(
     elif day_base_3 is not None and day_cons_3 is not None:
         verb = "deferred" if day_cons_3 > day_base_3 else "did not defer"
         mandate_finding = (
-            f"- In this run the {cons_frac * 100:g}% conservation setting {verb} the 20% band "
+            f"- In this run the {cons_frac * 100:g}% conservation setting {verb} the {critical_pct:g}% band "
             f"(no-conservation Day {day_base_3}, chosen-conservation Day {day_cons_3})."
         )
     elif day_base_3 is None and day_cons_3 is None:
-        mandate_finding = "- Neither matched conservation run reached the 20% band in the modeled window; no delay is defined."
+        mandate_finding = f"- Neither matched conservation run reached the {critical_pct:g}% band in the modeled window; no delay is defined."
     else:
-        mandate_finding = "- The matched conservation runs did not both reach the 20% band; no delay is defined."
+        mandate_finding = f"- The matched conservation runs did not both reach the {critical_pct:g}% band; no delay is defined."
 
     findings = [
         f"- Combined storage across the model's reservoirs: {total_capacity:,.0f} ac-ft "
@@ -1730,10 +1752,10 @@ def build_fallback_pdf(
     }
     rows_framework = [
         (name,
-         f"<= {fraction * 100:.0f}% ({band_storage_acft(fraction):,.0f} ac-ft)",
+         f"<= {fraction * 100:.0f}% ({band_storage_acft(fraction, system):,.0f} ac-ft)",
          band_actions[name][0],
          band_actions[name][1])
-        for fraction, name in ILLUSTRATIVE_BANDS
+        for fraction, name in report_bands
     ]
 
     for idx, (stg, cap, act1, act2) in enumerate(rows_framework):
@@ -1746,8 +1768,12 @@ def build_fallback_pdf(
         doc.text(p1, 260, y_r + 5, act2, font="/F1", size=6.8)
 
     doc.text(p1, 36, 236, f"Band volumes use the model's assumed combined capacity of {total_capacity:,.0f} ac-ft ({capacity_breakdown} ac-ft).", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
-    doc.text(p1, 36, 226, f"That is this experiment's assumption, not a survey-verified figure: the project research packet records TWDB volumetric", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
-    doc.text(p1, 36, 216, f"survey values summing to {surveyed_total:,.0f} ac-ft. Reconciling the two is open work; this report does not claim they agree.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
+    if region_n_sources:
+        doc.text(p1, 36, 226, "The project research packet records separate TWDB volumetric survey values for these Region N sources.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
+        doc.text(p1, 36, 216, f"Those values sum to {surveyed_total:,.0f} ac-ft; this report does not claim the model assumptions agree with them.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
+    else:
+        doc.text(p1, 36, 226, "No external capacity survey comparison is configured for this selected system.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
+        doc.text(p1, 36, 216, "Review its user-selected or preset capacity inputs before use.", font="/F1", size=6.8, color=(0.35, 0.4, 0.48))
 
     # Experiment configuration actually used for every simulated figure in this report
     doc.rect(p1, 36, 96, 540, 108, fill=(0.98, 0.99, 1.0), stroke=(0.8, 0.85, 0.92))
@@ -1783,9 +1809,9 @@ def build_fallback_pdf(
     doc.text(p2, 42, y_spec - 13, "Stress Tier", font="/F2", size=7.0, color=(1, 1, 1))
     doc.text(p2, 135, y_spec - 13, "Retention", font="/F2", size=7.0, color=(1, 1, 1))
     doc.text(p2, 190, y_spec - 13, "Min Storage (% / ac-ft)", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 315, y_spec - 13, "Stage 1 (40%)", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 385, y_spec - 13, "Stage 2 (30%)", font="/F2", size=7.0, color=(1, 1, 1))
-    doc.text(p2, 455, y_spec - 13, "Stage 3 (20%)", font="/F2", size=7.0, color=(1, 1, 1))
+    doc.text(p2, 315, y_spec - 13, f"Band 1 ({band1_pct:g}%)", font="/F2", size=7.0, color=(1, 1, 1))
+    doc.text(p2, 385, y_spec - 13, f"Band 2 ({band2_pct:g}%)", font="/F2", size=7.0, color=(1, 1, 1))
+    doc.text(p2, 455, y_spec - 13, f"Band 3 ({critical_pct:g}%)", font="/F2", size=7.0, color=(1, 1, 1))
     doc.text(p2, 520, y_spec - 13, "Sim Status", font="/F2", size=7.0, color=(1, 1, 1))
 
     spec_rows = spectrum_data["summary_table"] if spectrum_data and "summary_table" in spectrum_data else []
@@ -1804,7 +1830,7 @@ def build_fallback_pdf(
         # Day 0 is a crossing at the start, not an absent value.
         d1, d2, d3 = ("--" if r.get(key) is None else "Day 0 (start)" if r[key] == 0 else f"Day {r[key]}"
                       for key in ("day_stage1_40", "day_stage2_30", "day_stage3_20"))
-        stat = "Above 20%" if r.get("survived_critical_20pct") else "At/below 20%"
+        stat = f"Above {critical_pct:g}%" if r.get("survived_critical_20pct") else f"At/below {critical_pct:g}%"
         stat_col = (0.1, 0.55, 0.35) if r.get("survived_critical_20pct") else (0.75, 0.25, 0.2)
 
         label_lines = wrap_text(r["tier_label"].split(" (")[0], "/F2", 6.5, 87, max_lines=2)

@@ -45,6 +45,13 @@ def preview_download_offered(at) -> bool:
     return any("Download PDF Preview" in b.label for b in at.download_button)
 
 
+def review_current_experiment(at):
+    rationale = next(t for t in at.text_input if t.label == "Experiment review rationale")
+    rationale.set_value("Checked the selected system inputs and illustrative limitations").run()
+    next(b for b in at.button if b.label == "Record experiment review").click().run()
+    assert not at.exception
+
+
 def test_review_settings_become_the_shared_configuration(app):
     """The Review controls, not hard-coded defaults, define the report configuration."""
     app.sidebar.radio[0].set_value("Review").run()
@@ -62,6 +69,24 @@ def test_review_settings_become_the_shared_configuration(app):
     assert config.conservation_pct == pytest.approx(0.30)
     assert config.pipeline_active is False
     assert config.scenario_id == app.session_state.inspect_id
+    assert config.saved_run_id is None
+    assert config.system_config == app.session_state.workspace.water_system_selection.config
+
+
+def test_review_storage_selection_updates_the_saved_run_contract(app):
+    from basin_core.water_system import SMALL_MUNI_PRESET
+
+    app.sidebar.radio[0].set_value("Review").run()
+    app.toggle(key="storage_experiment").set_value(True).run()
+    next(s for s in app.selectbox if s.label == "Storage Infrastructure").set_value(
+        "Small Municipal District (12k ac-ft)"
+    ).run()
+    review_current_experiment(app)
+    workspace = app.session_state.workspace
+    run = workspace.active_simulation(app.session_state.inspect_id)
+    assert workspace.water_system_selection.config == SMALL_MUNI_PRESET
+    assert run["water_system"]["identifier"] == "small_municipal"
+    assert run["assumptions"]["total_capacity_acft"] == 12000.0
 
 
 def test_configuration_defaults_are_explicit_before_any_experiment(app):
@@ -139,6 +164,8 @@ def test_exported_pdf_uses_the_selected_settings(app):
     app.toggle(key="storage_experiment").set_value(True).run()
     app.selectbox(key="review_initial_storage").set_value("35% (illustrative)").run()
     app.select_slider(key="review_conservation").set_value(30).run()
+    review_current_experiment(app)
+    configured = app.session_state.experiment_config
     app.sidebar.radio[0].set_value("Exports").run()
     next(b for b in app.button if b.label == "Build verified export").click().run()
     assert not app.exception
@@ -146,8 +173,10 @@ def test_exported_pdf_uses_the_selected_settings(app):
     pdf_bytes = app.session_state.packet["pdf_bytes"]
     assert b"35% of combined capacity" in pdf_bytes
     assert b"30% demand reduction" in pdf_bytes
-    assert b"Selected in Review" in pdf_bytes
+    assert b"Saved reviewed run" in pdf_bytes
+    assert b"Water system" in pdf_bytes
     assert b"48% of combined capacity" not in pdf_bytes
+    assert app.session_state.packet["config"] == configured.fingerprint()
 
 
 def test_same_revision_note_change_invalidates_preview(app):
@@ -216,6 +245,7 @@ def test_hiding_experiment_preserves_report_configuration(app):
     app.selectbox(key="review_initial_storage").set_value("35% (illustrative)").run()
     app.select_slider(key="review_conservation").set_value(20).run()
     app.checkbox(key="review_pipeline_active").set_value(False).run()
+    review_current_experiment(app)
     configured = app.session_state.experiment_config
 
     app.toggle(key="storage_experiment").set_value(False).run()

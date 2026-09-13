@@ -1,23 +1,23 @@
 # BASIN current work board
 
-Updated: 2026-09-11. This file tracks current release work. The previous detailed board is preserved in [the historical archive](docs/archive/TODO_history_through_2026-09-11.md); checked historical items there are evidence records, not current release claims.
+Updated: 2026-09-12. This file tracks current release work. The previous detailed board is preserved in [the historical archive](docs/archive/TODO_history_through_2026-09-11.md); checked historical items there are evidence records, not current release claims.
 
 ## Completed and merged
 
 - [x] **Tasks 1–3 — release integration.** Optional native-runtime install/repair, numerical meaning corrections, PDF outcome disclosure, consent/revocation coverage and upstream integration are on `main`. Evidence: [integration review](docs/tasks_1_3_integration_review.md) and [current handoff](HANDOFF.md).
 - [x] **Part A — tailored Review.** The Scenario Builder asks three questions before generation. Four display profiles (`compare`, `storage`, `operations`, `handoff`) change Review ordering and disclosure without changing calculations or ranking. Review also provides an optional focus chooser for example, restored and legacy sessions.
-- [x] **Part B — saved illustrative experiments.** Assistant-created Region N simulation settings, trajectories, review rationale and provenance persist in schema 2.2 sessions and are replayed in the verified ZIP. Replay establishes internal consistency, not calibration or forecast validity. Review’s selectable-system preview remains a separate session/report path until T1 is resolved.
+- [x] **Part B — saved illustrative experiments.** Simulation settings, selected water-system inputs, trajectories, review rationale and provenance persist in schema 2.2 sessions and are replayed in the verified ZIP. Replay establishes internal consistency, not calibration or forecast validity.
 - [x] **Task 4 — Review browser acceptance on the development machine.** Dark/light, 1280×720 and 375×812, all focus profiles, skipped setup, Show all, Change focus, session restore, keyboard focus and tutorial targeting were observed in the actual browser. Evidence: [Review acceptance handoff](docs/review_acceptance_handoff.md). This is not presentation-laptop, projector, screen-reader or intended-user acceptance.
 - [x] **Task 5 — current-status reconciliation.** Current docs distinguish implementation, automated verification, local browser observation and external acceptance. Evidence: [status reconciliation handoff](docs/status_reconciliation_handoff.md).
+- [x] **T1 — shared storage-system selection.** Review and assistant tools use one workspace selection. Review previews are side-effect free; recording the experiment review saves the exact system/settings/run. Presets and custom systems persist through save/reopen, reports and verified replay. Changing the system deactivates earlier active runs without deleting their immutable history.
+- [x] **T4 — scientific boundary and validation contract.** Catchment weighting, reservoir hypsometry, inflow routing, calibrated evaporation, calibration review and prohibited-claim checks now have typed, tested contracts. The illustrative calculation remains unchanged until expert-approved data and calibration evidence are available. Evidence: [scientific contract and audit](docs/scientific_contract_and_audit.md).
+- [x] **T6 — automated native release gates.** Deterministic prerequisite, OpenMP, package-hygiene and model-provenance checks are implemented and tested on the development machine. Physical-device acceptance remains under Part C. Evidence: [native release hardening](docs/t6_native_release_hardening.md).
 
 ## Next technical work
 
-- [ ] **T1 — align assistant and Review storage systems.** Assistant simulation requests are tied to Region N while Review can select another configured storage system. Define one shared selection contract before changing calculations.
 - [ ] **T2 — remove remaining report ambiguity.** Audit legacy report percentage arguments and ensure every rainfall percentage says whether it is retained rainfall or reduction from observations.
 - [ ] **T3 — strengthen custom-observation source language.** Keep user-entered sources and observation periods explicit across Data, Review and exports. Do not imply station identity, catchment fit or source authenticity.
-- [ ] **T4 — decide the area-model boundary.** Catchment weighting, reservoir surface area and calibrated inflow/evaporation remain future domain work. Do not extend the illustrative experiment until an expert-approved data/model contract exists.
 - [ ] **T5 — document ingestion.** PDF/report ingestion remains future work; define provenance, extraction review and privacy contracts first.
-- [ ] **T6 — native release gates.** Verify VC++ and CPU prerequisites, offline `vcomp140.dll` handling, model license/provenance, advisory status and a frozen-package privacy inspection.
 
 ## Part C external acceptance
 

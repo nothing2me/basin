@@ -36,7 +36,7 @@ The sentence judges should remember:
 - Show the chosen Review focus and the **More tools** disclosure.
 - If storage is relevant, select a configured system and identify all assumptions on screen. The Review preview is retained for the current session/report; do not call it a saved schema 2.2 experiment.
 - Describe threshold days as outcomes of those inputs. Do not convert them into official restriction dates, forecasts or policy recommendations.
-- If demonstrating a saved assistant-created Region N experiment, record its review rationale so its provenance can be replayed. Explain that selectable Review systems do not yet share this persistence path.
+- If demonstrating a storage experiment, choose the workspace water system first. Review and assistant tools share that selection. Record the experiment review before export so the exact system inputs, settings, trajectories and rationale can be replayed from the verified packet.
 
 ### 2:15–2:45 — Human decision and handoff
 

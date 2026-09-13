@@ -1,6 +1,6 @@
 # BASIN claim inventory
 
-Updated: 2026-09-11 | Release line: `main`
+Updated: 2026-09-12 | Release line: `main`
 
 This inventory separates source availability, automated verification, local observation and external acceptance. Historical wording in `submission_record.md` records the original proposal; it does not automatically describe the current product.
 
@@ -21,7 +21,7 @@ States used below:
 | The bundled snapshot contains 1991–2025 NOAA GHCN-Daily observations for three airport stations. | Automatically verified | `data/manifest.json` and snapshot checks. The stations are reproducible regional proxies, not validated catchment rainfall. |
 | Users can edit, reject, approve and trace rainfall revisions and evidence disagreements. | Implemented; automatically verified | Session/history tests and bundle replay. Approval is a local content decision, not engineering certification. |
 | Review is tailored to a stated use case. | Implemented; automatically verified; observed locally | Three pre-run questions select one of four display profiles. The profile changes ordering/disclosure only. Review also offers an optional focus chooser for sessions without that setup. Browser evidence is in `review_acceptance_handoff.md`. |
-| Assistant-created Region N storage experiments persist and replay. | Implemented; automatically verified | Schema 2.2 stores versioned settings, trajectories, evidence context and review rationale. Review’s selectable-system preview and report configuration are a separate path and do not yet create these saved records. Replay checks internal numerical consistency; it does not establish physical or operational validity. |
+| Review and assistant storage experiments share the selected water system and can persist and replay. | Implemented; automatically verified | One versioned workspace selection covers presets and custom systems. Review previews are side-effect free; recording a review saves the full system configuration, settings, trajectories, evidence context and rationale. Assistant tools use the same selection. Reports and schema 2.2 packet replay consume the saved snapshot. Replay checks internal numerical consistency; it does not establish physical or operational validity. |
 | The optional assistant can use embedded Qwen when its pinned runtime and weights are ready. | Implemented; automatically tested without claiming device readiness | Deterministic tools remain available without the model. Model outputs are constrained and checked, but there is no blanket “zero hallucination” or network-isolation certification. Actual-laptop load time and offline behavior remain open. |
 
 ## Evidence, uploads and outputs
