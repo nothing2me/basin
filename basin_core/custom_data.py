@@ -14,6 +14,43 @@ from basin_core.uploads import RainfallPreview, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
 
 
+CUSTOM_CATCHMENT_DISCLAIMER = (
+    "Custom data represents unverified local observations, not a calibrated catchment model."
+)
+
+
+def format_custom_source_label(station_name: str | None, provider: str | None = None) -> str:
+    """Format user-provided source identity with mandatory unverified indicator."""
+    station_clean = station_name.strip() if station_name and station_name.strip() else ""
+    provider_clean = provider.strip() if provider and provider.strip() else ""
+    if station_clean and provider_clean:
+        return f"User-provided dataset '{station_clean}' by '{provider_clean}' (unverified)"
+    elif station_clean:
+        return f"User-provided dataset '{station_clean}' (unverified)"
+    elif provider_clean:
+        return f"User-provided dataset by '{provider_clean}' (unverified)"
+    return "User-provided dataset (unverified)"
+
+
+def format_custom_coverage_dates(
+    start_date: str | date | None,
+    end_date: str | date | None,
+    valid_record_count: int | None = None,
+) -> str:
+    """Format exact record coverage bounded by min/max valid observation dates."""
+    s = str(start_date).strip() if start_date is not None else ""
+    e = str(end_date).strip() if end_date is not None else ""
+    if not s or not e or s == "None" or e == "None":
+        return "Coverage: Date range unavailable."
+    if s == e:
+        rec = f" ({valid_record_count} record)" if valid_record_count is not None else " (1 record)"
+        return f"Coverage: Single date {s}{rec}."
+    if valid_record_count is not None:
+        rec_label = "record" if valid_record_count == 1 else "daily records"
+        return f"Coverage: {s} to {e} ({valid_record_count} {rec_label})."
+    return f"Coverage: {s} to {e}."
+
+
 def digest(value) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
 
@@ -64,7 +101,7 @@ def build_record(raw: bytes, source, *, station: str, location: str, unit: str, 
     return record
 
 
-def evidence_record(record: dict) -> dict:
+def _legacy_evidence_record(record: dict) -> dict:
     return {"id": record["id"], "title": "Custom rainfall comparison: " + record["station"],
             "publisher": record["provider"], "source_locator": "custom://" + record["id"][7:],
             "source_date": record["end"], "retrieved_at": "", "geographic_scope": record["location"],
@@ -73,6 +110,20 @@ def evidence_record(record: dict) -> dict:
                 + "; reference: " + record["reference_station"] + "; relationship: " + record["relationship"]
                 + "; daily basis: " + record["observation_basis"] + "; rationale/uncertainty: " + record["rationale"]
                 + "; comparison: " + record["comparison"]["status"] + ". Supporting evidence only; user review is not scientific validation.",
+            "private_note": ""}
+
+
+def evidence_record(record: dict) -> dict:
+    source_label = format_custom_source_label(record.get("station"), record.get("provider"))
+    coverage = format_custom_coverage_dates(record.get("start"), record.get("end"), record.get("valid_days"))
+    return {"id": record["id"], "title": f"Custom rainfall comparison: {source_label}",
+            "publisher": record["provider"], "source_locator": "custom://" + record["id"][7:],
+            "source_date": record["end"], "retrieved_at": "", "geographic_scope": record["location"],
+            "kind": "derived calculation", "units": "mm", "review_status": "reviewed for this exercise",
+            "description": f"Source: {source_label}; {coverage}; original SHA-256: " + record["original_sha256"] + "; normalized SHA-256: " + record["normalized_sha256"]
+                + "; reference: " + record["reference_station"] + "; relationship: " + record["relationship"]
+                + "; daily basis: " + record["observation_basis"] + "; rationale/uncertainty: " + record["rationale"]
+                + "; comparison: " + record["comparison"]["status"] + f". Supporting evidence only; {CUSTOM_CATCHMENT_DISCLAIMER} User review is not scientific validation.",
             "private_note": ""}
 
 
@@ -153,7 +204,7 @@ def validate_links(records, refs, evidence, scenarios) -> None:
             raise ValueError("Custom upload links unknown scenarios")
         actual = dict(evidence_by_id.get(record["id"], {}))
         actual.setdefault("private_note", "")
-        if actual != evidence_record(record):
+        if actual != evidence_record(record) and actual != _legacy_evidence_record(record):
             raise ValueError("Custom evidence description differs from saved data")
     for scenario in scenarios:
         wanted = sorted(i for i in active if scenario.id in registry[i]["scenario_ids"])

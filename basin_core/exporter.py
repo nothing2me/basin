@@ -14,6 +14,11 @@ from basin_core import __version__
 from basin_core.data import CachedSource, ROOT
 from basin_core.evidence import public_copy
 from basin_core.integrity import compare_values, reconstruct_audit
+from basin_core.custom_data import (
+    CUSTOM_CATCHMENT_DISCLAIMER,
+    format_custom_coverage_dates,
+    format_custom_source_label,
+)
 
 SCHEMA = '2.0'
 CHECKS = ['complete file inventory and hashes', 'source snapshot identity', 'exact dates, station order and units',
@@ -96,9 +101,11 @@ def generate_brief(workspace, accepted):
     if getattr(workspace, "custom_uploads", []):
         lines += ["", "## Custom rainfall evidence", "",
                   "Included with separate custom-data consent: normalized observations, source metadata, review rationale and all saved comparison versions in audit.json. Original CSV bytes and filenames are excluded. The original byte hash is recorded, not independently verified without those bytes.",
-                  "Comparisons are replayed against the bundled NOAA snapshot. They support scenario review; they do not replace scenario rainfall, establish catchment suitability or calibrate a model."]
+                  "Comparisons are replayed against the bundled NOAA snapshot. They support scenario review; they do not replace scenario rainfall, establish catchment suitability or calibrate a model. " + CUSTOM_CATCHMENT_DISCLAIMER]
         for record in workspace.custom_uploads:
-            lines.append("- " + text_cell(record["id"]) + ": " + text_cell(record["station"]) + "; " + text_cell(record["comparison"]["status"]) + "; linked scenarios: " + ", ".join(record["scenario_ids"]))
+            src_lbl = format_custom_source_label(record["station"], record.get("provider"))
+            cov_lbl = format_custom_coverage_dates(record.get("start"), record.get("end"), record.get("valid_days"))
+            lines.append("- " + text_cell(record["id"]) + ": " + text_cell(src_lbl) + "; " + cov_lbl + "; " + text_cell(record["comparison"]["status"]) + "; linked scenarios: " + ", ".join(record["scenario_ids"]) + ". " + CUSTOM_CATCHMENT_DISCLAIMER)
     if getattr(workspace, "simulation_runs", []):
         from basin_core.analysis import threshold_text
         lines = [line.replace("The separate illustrative reservoir experiment is excluded from this packet.", "Saved illustrative experiments are included below; numerical replay does not establish physical validity.") for line in lines]

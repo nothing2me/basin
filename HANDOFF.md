@@ -1,5 +1,26 @@
 # BASIN current handoff
 
+## September 13 — T2 terminology audit & T3 custom observation provenance
+
+Tasks T2 and T3 have been fully implemented, verified, and integrated:
+
+1. **T2 — Rainfall percentage terminology audit:**
+   - Standardized all user-visible and exported rainfall percentages to explicitly state their baseline and whether they denote retained rainfall (e.g. "70% of observed rainfall") or a reduction (e.g. "30% reduction from observed rainfall").
+   - Implemented canonical formatters in `basin_core/summary.py` (`format_retained_rainfall`, `format_rainfall_reduction`, `format_rainfall_dual_explanation`) with strict numerical validation rejecting negative, NaN, and infinite values.
+   - Audited and updated `app.py`, `basin_core/assistant.py`, `basin_core/exporter.py`, `basin_core/pdf_report.py`, `basin_core/simulation.py`, and `basin_core/scientific_contract.py`.
+   - Prohibited isolated or undefined percentage claims via `validate_report_text_against_prohibited_claims`.
+   - Verified by `tests/test_rainfall_terminology.py` (9 tests passing).
+
+2. **T3 — Custom-observation source and date language:**
+   - Explicitly marked all user-provided datasets as unverified across preview, comparison, saved panels, and exports (`format_custom_source_label`).
+   - Standardized observation date bounds with valid record counts (`format_custom_coverage_dates`).
+   - Integrated mandatory proxy/catchment disclaimer: `"Custom data represents unverified local observations, not a calibrated catchment model."`
+   - Strengthened `validate_report_text_against_prohibited_claims` to strictly reject claims of official, verified, or certified status for custom data.
+   - Preserved full backward compatibility with legacy saved evidence records in `custom_data.py`.
+   - Verified by `tests/test_custom_observation_language.py` (8 tests passing).
+
+Verification: The full test suite passed **607 passed, 3 skipped in 825.52s**. Zero failures. `git diff --check` clean. Presentation-device and scientific acceptance remain governed by Part C.
+
 ## September 12 — T1 shared storage-system contract
 
 Review and assistant tools now consume one versioned workspace water-system selection. New saved simulation records contain the complete preset or custom configuration and replay against that exact snapshot. Save/reopen restores the selection; reports and the verified handoff brief identify it. Changing the selected system deactivates previous active runs without deleting historical records or reviews.

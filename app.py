@@ -33,7 +33,8 @@ from basin_core.pdf_report import ExperimentConfig, generate_pdf_report_with_sta
 from basin_core.workspace import Workspace, session_dir
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
-from basin_core.custom_data import active_ids, digest
+from basin_core.custom_data import (active_ids, digest, format_custom_source_label,
+                                    format_custom_coverage_dates, CUSTOM_CATCHMENT_DISCLAIMER)
 from basin_core.visualizers import rainfall_reference_figure, rainfall_shortfall_figure, stage_trigger_milestone_figure, drought_anomaly_matrix_figure
 from basin_core.agronomics import calculate_crop_water_deficit, calculate_kbdi, CROP_COEFFICIENTS
 
@@ -116,8 +117,8 @@ def local_rainfall_preview(expanded=False):
         except ValueError as error:
             st.error(str(error))
             return
-        st.text(f"{preview.station} — {preview.location}")
-        st.caption(f"{preview.observations[0][0]} to {preview.observations[-1][0]} · Input: {preview.unit}; charts: mm")
+        st.markdown(f"**Source: {format_custom_source_label(preview.station)}** — {preview.location}")
+        st.caption(f"{format_custom_coverage_dates(preview.observations[0][0], preview.observations[-1][0], preview.valid_days)} · Input: {preview.unit}; charts: mm")
         a, b, c = st.columns(3)
         a.metric("Valid rainfall days", preview.valid_days)
         b.metric("Missing rainfall days", preview.missing_days)
@@ -135,7 +136,7 @@ def local_rainfall_preview(expanded=False):
         st.plotly_chart(accessible_chart(fig), width="stretch", config={"displayModeBar": False})
         st.dataframe(frame, hide_index=True, width="stretch")
         st.caption(f"Original file SHA-256: {preview.original_sha256}")
-        st.info("Local station suitability and historical reference are not yet established. No percentile, forecast or scenario change is produced by this preview.")
+        st.info(f"⚠️ {CUSTOM_CATCHMENT_DISCLAIMER} No percentile, forecast or scenario change is produced by this preview.")
 
         with st.container(border=True):
             st.markdown("##### 🌟 Data Sovereignty: Use in Scenario Generator")
@@ -177,7 +178,7 @@ def uploaded_reference_comparison(preview, raw):
     token = f"{preview.original_sha256}_{preview.unit}_{preview.station}_{preview.location}_{station_id}"
     relationship = st.selectbox("Relationship to uploaded station", ["Not established", "Same physical station (user confirmed)", "Different station: regional proxy only"], key=f"relationship_{token}")
     daily = st.checkbox("I checked that the daily observation periods are comparable", key=f"daily_basis_{token}", help="Dates alone do not prove the gauges observe the same 24-hour period. Leave unchecked if unknown.")
-    st.warning("Nearby or regional stations may experience different rain. A difference does not show which dataset is correct, establish catchment rainfall or predict a shortage.")
+    st.warning(f"Nearby or regional stations may experience different rain. A difference does not show which dataset is correct, establish catchment rainfall or predict a shortage. {CUSTOM_CATCHMENT_DISCLAIMER}")
     relation = "not_established" if relationship == "Not established" else "same_station" if relationship.startswith("Same") else "regional_proxy"
     persist_custom_panel(preview, raw, station_id, relation, daily, token)
     if relationship == "Not established" or not daily:
@@ -239,7 +240,7 @@ def persist_custom_panel(preview, raw, reference_station, relationship, daily, t
             chosen = st.multiselect("Scenarios supported by this evidence", [s.id for s in workspace.scenarios], default=workspace.selected)
             provider = st.text_input("Source / provider", value="Local Municipal / Sponsor Observation")
             basis = st.text_input("Observation-day definition", value="Midnight-to-midnight local standard time; unflagged observations", help="Timezone and daily reporting window, or explicitly explain what is unknown.")
-            rationale = st.text_area("Why this reference is appropriate, or what remains uncertain", value="Nearby municipal monitoring gage providing secondary ground-truth verification of regional drought conditions.")
+            rationale = st.text_area("Why this reference is appropriate, or what remains uncertain", value="User-provided municipal monitoring gauge provided for local observation context (unverified by BASIN).")
             reviewed = st.checkbox("I reviewed the upload and declarations and consent to saving the original bytes and metadata locally")
             submit = st.form_submit_button("Save reviewed evidence")
         if submit:
@@ -268,8 +269,9 @@ def saved_custom_panel(workspace):
         versions = {r["id"]: r for r in workspace.custom_uploads}
         identifier = st.selectbox("Saved upload version", list(versions), format_func=lambda i: versions[i]["station"] + " · " + i[-8:] + (" · current" if i in active else " · superseded"))
         record = versions[identifier]
-        st.markdown("**" + record["station"].replace("*", "") + "**")
-        st.caption(f"{record['start']} to {record['end']} · original unit: {record['input_unit']} · linked scenarios: {', '.join(record['scenario_ids'])}")
+        st.markdown(f"**Source: {format_custom_source_label(record['station'], record.get('provider'))}**")
+        st.caption(f"{format_custom_coverage_dates(record.get('start'), record.get('end'), record.get('valid_days'))} · original unit: {record['input_unit']} · linked scenarios: {', '.join(record['scenario_ids'])}")
+        st.caption(f"⚠️ {CUSTOM_CATCHMENT_DISCLAIMER}")
         with st.expander("Source identity and suitability details"):
             st.write({k: record[k] for k in ("id", "station", "location", "provider", "input_unit", "start", "end", "original_sha256", "normalized_sha256", "reference_station", "relationship", "observation_basis", "rationale", "scenario_ids")})
         result = record["comparison"]
@@ -1237,7 +1239,7 @@ elif page == "Workspace":
             has_custom = any(s.startswith("LOCAL_") for s in names)
             if has_custom:
                 local_name = next(names[s] for s in names if s.startswith("LOCAL_"))
-                st.success(f"✅ **Custom Gauge Active**: Generating scenarios from uploaded data: **{local_name}**.")
+                st.info(f"📂 **Custom Gauge Active**: Generating scenarios from user-provided dataset '{local_name}' (unverified). ⚠️ {CUSTOM_CATCHMENT_DISCLAIMER}")
             else:
                 st.info("📂 **Upload your rainfall CSV here to drive scenarios with your own gauge:**")
                 local_rainfall_preview(expanded=True)

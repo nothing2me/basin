@@ -12,11 +12,11 @@ Updated: 2026-09-12. This file tracks current release work. The previous detaile
 - [x] **T1 — shared storage-system selection.** Review and assistant tools use one workspace selection. Review previews are side-effect free; recording the experiment review saves the exact system/settings/run. Presets and custom systems persist through save/reopen, reports and verified replay. Changing the system deactivates earlier active runs without deleting their immutable history.
 - [x] **T4 — scientific boundary and validation contract.** Catchment weighting, reservoir hypsometry, inflow routing, calibrated evaporation, calibration review and prohibited-claim checks now have typed, tested contracts. The illustrative calculation remains unchanged until expert-approved data and calibration evidence are available. Evidence: [scientific contract and audit](docs/scientific_contract_and_audit.md).
 - [x] **T6 — automated native release gates.** Deterministic prerequisite, OpenMP, package-hygiene and model-provenance checks are implemented and tested on the development machine. Physical-device acceptance remains under Part C. Evidence: [native release hardening](docs/t6_native_release_hardening.md).
+- [x] **T2 — remove remaining report ambiguity.** Audited and standardized rainfall percentage terminology across UI, assistant, exporter, and PDF reports. Added canonical formatters `format_retained_rainfall`, `format_rainfall_reduction`, and `format_rainfall_dual_explanation` ensuring baselines and retained vs. reduction meanings are always explicit without isolated percentage claims.
+- [x] **T3 — strengthen custom-observation source language.** User-entered observations are identified as user-provided and unverified across Data, Review, and exports. Coverage dates are strictly bounded (`Coverage: YYYY-MM-DD to YYYY-MM-DD (N daily records)`). Catchment disclaimer is included (`Custom data represents unverified local observations, not a calibrated catchment model.`), and prohibited claims enforcement rejects official/verified/certified status claims.
 
 ## Next technical work
 
-- [ ] **T2 — remove remaining report ambiguity.** Audit legacy report percentage arguments and ensure every rainfall percentage says whether it is retained rainfall or reduction from observations.
-- [ ] **T3 — strengthen custom-observation source language.** Keep user-entered sources and observation periods explicit across Data, Review and exports. Do not imply station identity, catchment fit or source authenticity.
 - [ ] **T5 — document ingestion.** PDF/report ingestion remains future work; define provenance, extraction review and privacy contracts first.
 
 ## Part C external acceptance

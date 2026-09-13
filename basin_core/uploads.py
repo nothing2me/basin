@@ -35,6 +35,18 @@ class RainfallPreview:
     def missing_days(self) -> int:
         return self.expected_days - self.valid_days
 
+    @property
+    def source_label(self) -> str:
+        from basin_core.custom_data import format_custom_source_label
+        return format_custom_source_label(self.station)
+
+    @property
+    def coverage_label(self) -> str:
+        from basin_core.custom_data import format_custom_coverage_dates
+        if not self.observations:
+            return "Coverage: Date range unavailable."
+        return format_custom_coverage_dates(self.observations[0][0], self.observations[-1][0], self.valid_days)
+
 
 def preview_rainfall(raw: bytes, station: str, location: str,
                      unit: Literal["mm", "inches"],
