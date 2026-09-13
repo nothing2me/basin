@@ -161,7 +161,7 @@ body:has(.st-key-assistant_drawer) .block-container,body:has(.st-key-assistant_d
 @media(max-width:550px){.st-key-assistant_tab_open{right:92vw!important}.st-key-assistant_drawer{width:92vw!important}}
 .st-key-assistant_tab_closed button,.st-key-assistant_tab_open button{border-radius:12px 0 0 12px!important;padding:18px 8px!important;writing-mode:vertical-rl!important;text-orientation:mixed!important;transform:none!important;font-size:.78rem!important;font-weight:700!important;letter-spacing:.1em!important;text-transform:uppercase!important;background:#356273!important;color:#fff!important;border:1px solid color-mix(in srgb,#fff 20%,transparent)!important;border-right:none!important;box-shadow:-4px 0 16px rgba(0,0,0,.35)!important;cursor:pointer!important;min-height:120px!important}
 .st-key-assistant_tab_closed button:hover,.st-key-assistant_tab_open button:hover{background:#2878A0!important;box-shadow:-6px 0 20px rgba(40,120,160,.45)!important}
-@media(max-width:600px){
+@media(max-width:760px){
     .block-container,[data-testid="stMainBlockContainer"]{padding:1rem .8rem 5rem!important}
     [data-testid="stHorizontalBlock"]:has(.st-key-global_unit_selector){
         display:grid!important;grid-template-columns:1fr 1fr!important;gap:.55rem!important;align-items:center!important
