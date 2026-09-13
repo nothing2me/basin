@@ -250,7 +250,7 @@ def stage_trigger_milestone_figure(
     fig.update_layout(
         barmode="overlay",
         height=220 if len(tier_keys) == 1 else 280,
-        margin=dict(l=145, r=24, t=78, b=62),
+        margin=dict(l=45 if len(tier_keys) == 1 else 145, r=24, t=78, b=62),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Arial", size=12),
@@ -264,7 +264,13 @@ def stage_trigger_milestone_figure(
             traceorder="normal",
         ),
         xaxis=dict(title=dict(text="Scenario day", standoff=14), showgrid=True, zeroline=False),
-        yaxis=dict(title="", showgrid=False, zeroline=False, automargin=True),
+        yaxis=dict(
+            title="",
+            showgrid=False,
+            zeroline=False,
+            automargin=True,
+            showticklabels=len(tier_keys) > 1,
+        ),
     )
     return fig
 

@@ -138,8 +138,9 @@ def test_stage_trigger_milestone_singletier(workspace):
 
     assert isinstance(fig, go.Figure)
     assert fig.layout.height == 220
-    assert fig.layout.margin.l >= 140
+    assert fig.layout.margin.l == 45
     assert fig.layout.xaxis.title.text == "Scenario day"
+    assert fig.layout.yaxis.showticklabels is False
     assert any(trace.y[0] == "Scenario Timeline" for trace in fig.data)
 
 

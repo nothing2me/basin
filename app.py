@@ -327,16 +327,31 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
 
     cfg = config or REGION_N_PRESET
     n_sources = len(cfg.sources)
-    source_labels = [f"{s.name}<br>(Max {s.capacity_acft:,.0f} ac-ft)" for s in cfg.sources]
+    def compact_source_label(source: WaterSource) -> str:
+        lines: list[str] = []
+        current = ""
+        for word in source.name.split():
+            candidate = f"{current} {word}".strip()
+            if current and len(candidate) > 11:
+                lines.append(current)
+                current = word
+            else:
+                current = candidate
+        if current:
+            lines.append(current)
+        return "<br>".join(lines)
+
+    source_labels = [compact_source_label(source) for source in cfg.sources]
     palette = ["#0d9488", "#087e8b", "#0284c7", "#0369a1"]
     colors = [palette[i % len(palette)] for i in range(n_sources)]
     max_cap = max(s.capacity_acft for s in cfg.sources)
 
     fig = make_subplots(
-        rows=1, cols=2, column_widths=[0.36, 0.64],
-        horizontal_spacing=0.14,
+        rows=2, cols=1,
+        row_heights=[0.42, 0.58],
+        vertical_spacing=0.22,
         subplot_titles=["Active Storage (ac-ft)", "Combined Pool Trajectory (%)"],
-        specs=[[{"type": "bar"}, {"type": "xy"}]]
+        specs=[[{"type": "bar"}], [{"type": "xy"}]]
     )
 
     init_row = sim_df.iloc[-1]
@@ -366,8 +381,12 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
         marker=dict(color=colors, line=dict(width=1.5, color="#123d38")),
         text=text_init,
         textposition="outside", textfont=dict(size=12), cliponaxis=False,
+        customdata=[[source.name, source.capacity_acft] for source in cfg.sources],
         name="Reservoir Storage",
-        hovertemplate="<b>%{x}</b><br>Storage: %{y:,.0f} ac-ft<extra></extra>"
+        hovertemplate=(
+            "<b>%{customdata[0]}</b><br>Capacity: %{customdata[1]:,.0f} ac-ft"
+            "<br>Storage: %{y:,.0f} ac-ft<extra></extra>"
+        )
     ), row=1, col=1)
 
     fig.add_trace(go.Scatter(
@@ -377,7 +396,7 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
         line=dict(color="#087e8b", width=2.5),
         name="Combined %",
         hovertemplate="Day %{x}<br>Storage: %{y:.1f}%<extra></extra>"
-    ), row=1, col=2)
+    ), row=2, col=1)
 
     b40 = cfg.stage_bands_pct[0] * 100 if len(cfg.stage_bands_pct) >= 1 else 40
     b30 = cfg.stage_bands_pct[1] * 100 if len(cfg.stage_bands_pct) >= 2 else 30
@@ -406,7 +425,7 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
     # A dedicated right-side gutter keeps each label aligned with its line and
     # out of the simulated trajectory at ordinary browser zoom.
     for level, dash, color, label in reference_lines:
-        fig.add_hline(y=level, line_dash=dash, line_color=color, line_width=2, row=1, col=2)
+        fig.add_hline(y=level, line_dash=dash, line_color=color, line_width=2, row=2, col=1)
         fig.add_annotation(
             x=1.015, y=level, xref="x2 domain", yref="y2", text=label,
             showarrow=False, xanchor="left", yanchor="middle", align="left",
@@ -458,12 +477,13 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
     fig.frames = frames
 
     fig.update_yaxes(range=[0, max_cap * 1.18], title="ac-ft", row=1, col=1)
-    fig.update_yaxes(range=[0, 100], title="Combined %", row=1, col=2)
-    fig.update_xaxes(range=[0, days + 2], title="Scenario Day", row=1, col=2)
+    fig.update_xaxes(tickangle=0, tickfont=dict(size=10), automargin=True, row=1, col=1)
+    fig.update_yaxes(range=[0, 100], title="Combined %", row=2, col=1)
+    fig.update_xaxes(range=[0, days + 2], title="Scenario Day", row=2, col=1)
 
     fig.update_layout(
-        height=480,
-        margin=dict(l=60, r=130, t=72, b=95),
+        height=700,
+        margin=dict(l=60, r=115, t=76, b=100),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Arial", size=12),
@@ -472,7 +492,7 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
             type="buttons",
             showactive=False, bgcolor="#243239", font=dict(color="#ffffff"),
             direction="left",
-            x=0.0, y=1.18,
+            x=0.0, xanchor="left", y=1.12,
             buttons=[
                 dict(label="▶ Play Simulation", method="animate",
                      args=[None, {"frame": {"duration": pace_ms, "redraw": True}, "fromcurrent": False, "mode": "immediate"}]),
@@ -482,7 +502,7 @@ def reservoir_simulation_figure(sim_df: pd.DataFrame, pace_ms: int = 150, config
         )],
         sliders=[dict(
             active=len(indices) - 1,
-            x=0.0, y=-0.14,
+            x=0.0, y=-0.10,
             len=1.0,
             currentvalue={"prefix": "Simulation: ", "visible": True, "xanchor": "right"},
             pad={"t": 12, "b": 8},
@@ -940,13 +960,13 @@ top_l, top_c, top_r = st.columns([1.2, 1.8, 1.2])
 with top_l:
     u_choice = st.selectbox(
         "Units",
-        ["🇺🇸 US Customary (in, ac-ft)", "🌐 Metric (mm, m³)"],
+        ["🇺🇸 US · in / ac-ft", "🌐 Metric · mm / m³"],
         index=0 if st.session_state.get("unit_mode", "us") == "us" else 1,
         key="global_unit_selector",
         label_visibility="collapsed",
         help="Switch units across all charts, tables, and KPI metrics.",
     )
-    st.session_state["unit_mode"] = "us" if "US Customary" in u_choice else "metric"
+    st.session_state["unit_mode"] = "us" if u_choice.startswith("🇺🇸") else "metric"
 
 with top_c:
     logo_file = ROOT / "assets" / "basin-logo.png"
