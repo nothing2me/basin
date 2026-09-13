@@ -45,8 +45,11 @@ def validate_evidence(records, references, conflicts, scenario_ids):
         locator = record["source_locator"]
         url = urlparse(locator)
         if url.scheme:
-            if not ((url.scheme in ("https", "http") and url.netloc) or (url.scheme == "custom" and re.fullmatch(r"custom://[0-9a-f]{64}", locator))):
-                raise ValueError("Evidence source must be an HTTP(S) URL or a docs/*.md reference")
+            is_web = url.scheme in ("https", "http") and bool(url.netloc)
+            is_custom = url.scheme == "custom" and bool(re.fullmatch(r"custom://[0-9a-f]{64}", locator))
+            is_doc_ref = url.scheme == "doc" and bool(re.fullmatch(r"doc://doc-[0-9a-f]{64}/page/\d+", locator))
+            if not (is_web or is_custom or is_doc_ref):
+                raise ValueError("Evidence source must be an HTTP(S) URL, custom://, doc://, or a docs/*.md reference")
         else:
             is_doc = bool(re.fullmatch(r"docs/[A-Za-z0-9_-]+\.md", locator))
             is_filing = bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 _.,/:#()\-]{2,120}", locator))

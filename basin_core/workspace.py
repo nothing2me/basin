@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 import json
 import base64
+import hashlib
 import os
 from pathlib import Path
 import platform
@@ -57,6 +58,8 @@ class Workspace:
         self.comparisons = []
         self.custom_uploads = []
         self.custom_originals = {}
+        self.documents = []
+        self.document_originals = {}
         self.simulation_runs = []
         self.active_simulations = {}
         self.simulation_reviews = {}
@@ -186,6 +189,113 @@ class Workspace:
         self.evidence_history.append({"at": utc_now(), "action": "save custom upload", "id": record["id"], "supersedes": record["supersedes"]})
         return record["id"]
 
+    def ingest_document(self, raw: bytes, filename: str, provider: str, privacy: str = "private", limits=None):
+        from basin_core.document_ingestion import ingest_document as _ingest, DocumentLimits
+        lims = limits or DocumentLimits()
+        doc = _ingest(raw, filename, provider, privacy=privacy, limits=lims)
+        if any(d.identity.id == doc.identity.id for d in self.documents):
+            raise ValueError(f"Document with exact same content already ingested: {doc.identity.id}")
+        self.documents.append(doc)
+        self.document_originals[doc.identity.id] = base64.b64encode(raw).decode("ascii")
+        return doc
+
+    def extract_document(self, doc_id: str, custom_blocks=None, limits=None):
+        from basin_core.document_ingestion import (
+            extract_plain_text_blocks, extract_pdf_stub_blocks,
+            SupportedMediaType, DocumentLimits
+        )
+        lims = limits or DocumentLimits()
+        doc = next((d for d in self.documents if d.identity.id == doc_id), None)
+        if doc is None:
+            raise ValueError(f"Unknown document ID: {doc_id}")
+
+        if doc.identity.media_type == SupportedMediaType.PLAIN_TEXT.value:
+            raw = base64.b64decode(self.document_originals[doc_id])
+            extracted = extract_plain_text_blocks(doc, raw.decode("utf-8"), limits=lims)
+        else:
+            extracted = extract_pdf_stub_blocks(doc, custom_blocks=custom_blocks, limits=lims)
+
+        idx = next(i for i, d in enumerate(self.documents) if d.identity.id == doc_id)
+        self.documents[idx] = extracted
+        return extracted
+
+    def submit_document_for_review(self, doc_id: str):
+        from basin_core.document_ingestion import submit_document_for_review as _submit
+        doc = next((d for d in self.documents if d.identity.id == doc_id), None)
+        if doc is None:
+            raise ValueError(f"Unknown document ID: {doc_id}")
+        updated = _submit(doc)
+        idx = next(i for i, d in enumerate(self.documents) if d.identity.id == doc_id)
+        self.documents[idx] = updated
+        return updated
+
+    def review_and_accept_document(
+        self,
+        doc_id: str,
+        reviewer_rationale: str,
+        confirmed_statement: str,
+        reviewed_block_ids: list[str],
+        scenario_ids: list[str],
+        private_note: str = "",
+        geographic_scope: str = "Local document context (uncalibrated)",
+        kind: str = "policy statement",
+    ):
+        from basin_core.document_ingestion import (
+            review_and_accept_document as _review_accept,
+            document_to_evidence_record,
+        )
+        doc = next((d for d in self.documents if d.identity.id == doc_id), None)
+        if doc is None:
+            raise ValueError(f"Unknown document ID: {doc_id}")
+        if not scenario_ids:
+            raise ValueError("Choose existing scenarios to attach the evidence")
+        for identifier in scenario_ids:
+            self.get(identifier)
+
+        accepted_doc = _review_accept(
+            doc,
+            reviewer_rationale=reviewer_rationale,
+            confirmed_statement=confirmed_statement,
+            reviewed_block_ids=reviewed_block_ids,
+            private_note=private_note,
+        )
+        idx = next(i for i, d in enumerate(self.documents) if d.identity.id == doc_id)
+        self.documents[idx] = accepted_doc
+
+        evidence_records = [
+            document_to_evidence_record(accepted_doc, bid, geographic_scope=geographic_scope, kind=kind)
+            for bid in reviewed_block_ids
+        ]
+        for ev_rec in evidence_records:
+            if ev_rec["id"] not in {e["id"] for e in self.evidence}:
+                self.add_evidence(ev_rec, scenario_ids)
+
+        return accepted_doc, evidence_records
+
+    def reject_document(self, doc_id: str, rationale: str):
+        from basin_core.document_ingestion import reject_document as _reject
+        doc = next((d for d in self.documents if d.identity.id == doc_id), None)
+        if doc is None:
+            raise ValueError(f"Unknown document ID: {doc_id}")
+        rejected = _reject(doc, rationale)
+        idx = next(i for i, d in enumerate(self.documents) if d.identity.id == doc_id)
+        self.documents[idx] = rejected
+
+        doc_locator_prefix = f"doc://{doc_id}/"
+        to_remove = [e["id"] for e in self.evidence if e.get("source_locator", "").startswith(doc_locator_prefix)]
+        if to_remove:
+            affected_scenarios = set()
+            new_refs = {}
+            for sid, refs in self.evidence_refs.items():
+                new_refs[sid] = [r for r in refs if r not in to_remove]
+                if len(new_refs[sid]) != len(refs):
+                    affected_scenarios.add(sid)
+            self.evidence = [e for e in self.evidence if e["id"] not in to_remove]
+            self.evidence_refs = new_refs
+            if affected_scenarios:
+                self._invalidate_evidence(list(affected_scenarios))
+        return rejected
+
     def add_conflict(self, left_id, right_id, disagreement, comparability, private_note=""):
         conflict = {"id": "conflict-" + uuid.uuid4().hex[:12], "left_id": left_id, "right_id": right_id,
                     "disagreement": disagreement, "comparability": comparability,
@@ -304,6 +414,10 @@ class Workspace:
         result["water_system_selection"] = self.water_system_selection.record()
         if self.custom_uploads:
             result["custom_uploads"] = self.custom_uploads
+        if getattr(self, "documents", []):
+            from basin_core.document_ingestion import filter_documents_for_export, DocumentRecord
+            recs = [d if isinstance(d, DocumentRecord) else DocumentRecord.from_dict(d) for d in self.documents]
+            result["documents"] = filter_documents_for_export(recs, include_notes=include_notes, include_all_states=include_notes)
         if extended:
             result.update(simulation_runs=self.simulation_runs, active_simulations=self.active_simulations,
                           simulation_reviews=self.simulation_reviews)
@@ -320,6 +434,9 @@ class Workspace:
         if self.custom_uploads:
             validate_records(self.custom_uploads, self.source, self.custom_originals)
             record["custom_originals"] = self.custom_originals
+        if getattr(self, "documents", []):
+            record["document_originals"] = getattr(self, "document_originals", {})
+            record["documents"] = [d.to_dict() if hasattr(d, "to_dict") else d for d in self.documents]
         temporary.write_text(json.dumps(record, allow_nan=False), encoding="utf-8")
         # Append-only event snapshots avoid silently erasing review history between saves.
         audit = directory / f"audit-{self.id}.jsonl"
@@ -353,6 +470,15 @@ class Workspace:
         obj.custom_uploads = data.get("custom_uploads", [])
         obj.custom_originals = data.get("custom_originals", {})
         validate_records(obj.custom_uploads, source, obj.custom_originals)
+        raw_docs = data.get("documents", [])
+        from basin_core.document_ingestion import DocumentRecord
+        obj.documents = [DocumentRecord.from_dict(d) if isinstance(d, dict) else d for d in raw_docs]
+        obj.document_originals = data.get("document_originals", {})
+        for doc in obj.documents:
+            if doc.identity.id in obj.document_originals:
+                raw_bytes = base64.b64decode(obj.document_originals[doc.identity.id])
+                if hashlib.sha256(raw_bytes).hexdigest() != doc.identity.sha256:
+                    raise ValueError(f"Saved original document bytes disagree with identity digest: {doc.identity.id}")
         obj.notes = data.get("provider_notes", "")
         obj.simulation_runs = data.get("simulation_runs", [])
         obj.active_simulations = data.get("active_simulations", {})

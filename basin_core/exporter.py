@@ -106,6 +106,24 @@ def generate_brief(workspace, accepted):
             src_lbl = format_custom_source_label(record["station"], record.get("provider"))
             cov_lbl = format_custom_coverage_dates(record.get("start"), record.get("end"), record.get("valid_days"))
             lines.append("- " + text_cell(record["id"]) + ": " + text_cell(src_lbl) + "; " + cov_lbl + "; " + text_cell(record["comparison"]["status"]) + "; linked scenarios: " + ", ".join(record["scenario_ids"]) + ". " + CUSTOM_CATCHMENT_DISCLAIMER)
+    docs = getattr(workspace, "documents", [])
+    accepted_docs = [
+        d for d in docs
+        if (d.state if hasattr(d, "state") else d.get("state")) == "accepted_as_evidence"
+    ]
+    if accepted_docs:
+        lines += ["", "## Document evidence", "",
+                  "Included with human review: cited page statements and source provenance. Original document bytes and unaccepted drafts are excluded.",
+                  "User-provided document evidence represents unverified contextual reference, not a calibrated catchment model or official policy."]
+        for d in accepted_docs:
+            ident = d.identity if hasattr(d, "identity") else d.get("identity", {})
+            rev = d.review if hasattr(d, "review") else d.get("review", {})
+            fname = ident.original_filename if hasattr(ident, "original_filename") else ident.get("original_filename", "")
+            prov = ident.source_provider if hasattr(ident, "source_provider") else ident.get("source_provider", "")
+            statement = rev.confirmed_statement if hasattr(rev, "confirmed_statement") else (rev.get("confirmed_statement", "") if rev else "")
+            pages = rev.reviewed_pages if hasattr(rev, "reviewed_pages") else (rev.get("reviewed_pages", []) if rev else [])
+            page_str = ", ".join(str(p) for p in pages)
+            lines.append(f"- {text_cell(fname)} ({text_cell(prov)}): cited page(s) {page_str}. Confirmed statement: {text_cell(statement)}.")
     if getattr(workspace, "simulation_runs", []):
         from basin_core.analysis import threshold_text
         lines = [line.replace("The separate illustrative reservoir experiment is excluded from this packet.", "Saved illustrative experiments are included below; numerical replay does not establish physical validity.") for line in lines]
@@ -161,6 +179,7 @@ def export_bundle(workspace, include_notes=False, include_custom=False):
         evidence_refs=audit.get("evidence_refs", workspace.evidence_refs),
         conflicts=audit.get("conflicts", workspace.conflicts),
         custom_uploads=audit.get("custom_uploads", getattr(workspace, "custom_uploads", [])),
+        documents=audit.get("documents", getattr(workspace, "documents", [])),
         simulation_runs=audit.get("simulation_runs", getattr(workspace, "simulation_runs", [])),
         active_simulations=audit.get("active_simulations", getattr(workspace, "active_simulations", {})),
         simulation_reviews=audit.get("simulation_reviews", getattr(workspace, "simulation_reviews", {})),
@@ -196,6 +215,11 @@ def export_bundle(workspace, include_notes=False, include_custom=False):
                 'files': {n: hashlib.sha256(b).hexdigest() for n, b in files.items()}}
     if workspace.custom_uploads:
         manifest['custom_data_included'] = True
+    if getattr(workspace, "documents", []):
+        manifest['document_evidence_included'] = any(
+            (d.state if hasattr(d, "state") else d.get("state")) == "accepted_as_evidence"
+            for d in workspace.documents
+        )
     files['bundle_manifest.json'] = dumps(manifest)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
@@ -232,6 +256,8 @@ def _verify(payload):
             raise ValueError('Private annotations included despite privacy setting')
         if 'custom_originals' in audit:
             raise ValueError('Original private CSV bytes must not appear in a packet')
+        if 'document_originals' in audit:
+            raise ValueError('Original private document bytes must not appear in a packet')
         if audit.get('custom_uploads') and manifest.get('custom_data_included') is not True:
             raise ValueError('Custom data consent is missing')
         params, reference, scenarios = reconstruct_audit(source, audit, require_export=True)
@@ -257,6 +283,7 @@ def _verify(payload):
         for row, wanted in zip(summary.to_dict('records'), expected_summary): compare_values(row, wanted, 'Shortlist summary')
         view = SimpleNamespace(**{k: audit[k] for k in ('id', 'created_at', 'weights', 'evidence', 'evidence_refs', 'conflicts')})
         view.custom_uploads = audit.get('custom_uploads', [])
+        view.documents = audit.get('documents', [])
         view.simulation_runs = audit.get('simulation_runs', [])
         view.active_simulations = audit.get('active_simulations', {})
         view.simulation_reviews = audit.get('simulation_reviews', {})

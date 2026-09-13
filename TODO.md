@@ -16,10 +16,11 @@ Updated: 2026-09-13. This file tracks current release work. The previous detaile
 - [x] **T3 — strengthen custom-observation source language.** User-entered observations are identified as user-provided and unverified across Data, Review, and exports. Coverage dates are strictly bounded (`Coverage: YYYY-MM-DD to YYYY-MM-DD (N daily records)`). Catchment disclaimer is included (`Custom data represents unverified local observations, not a calibrated catchment model.`), and prohibited claims enforcement rejects official/verified/certified status claims.
 - [x] **Report and verified-export quality pass.** HTML and fallback PDFs share an eight-section decision-document structure, prevent long-content collisions, and preserve T2/T3 language and note consent. Verified ZIPs retain saved simulations with explicit review state and preserve hash/replay verification.
 - [x] **Responsive Review visualization polish.** Storage bars and the combined trajectory are separated into vertical panels, reservoir and threshold labels remain readable at 375×812 and 1280×720, the one-tier timeline uses its available width, and mobile navigation, Notes, and AI controls no longer crowd the analysis.
+- [x] **T5 — document ingestion foundation.** Implemented safe, typed domain foundation in `basin_core/document_ingestion.py` with immutable content-addressed identity (`doc-{sha256}`), magic-number and bounds validation, separate page-level extraction modeling, pure review/promotion state machine, citation-linked evidence records, prohibited-claim enforcement, and privacy-preserving verified export. Final upload UI, OCR, and real-document acceptance remain open.
 
 ## Next technical work
 
-- [ ] **T5 — document ingestion.** PDF/report ingestion remains future work; define provenance, extraction review and privacy contracts first.
+- [ ] **T5 follow-up — upload UI and parser adapter.** Streamlit document upload and review interface, dedicated PDF parsing adapter, page preview with block selection, and OCR remain future work.
 
 ## Part C external acceptance
 

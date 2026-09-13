@@ -1,5 +1,33 @@
 # BASIN current handoff
 
+## September 13 — T5 document ingestion foundation
+
+A safe, typed domain foundation for user-provided PDF and report documents is implemented in `basin_core/document_ingestion.py` and integrated into the workspace, integrity, evidence, and export layers without adding new external parser dependencies.
+
+1. **Document Identity & Strict Boundaries**:
+   - Ingested documents receive deterministic, content-addressed IDs (`doc-{sha256}`) and immutable metadata records (`DocumentIdentity`).
+   - Magic signature sniffing validates `%PDF-` for PDFs and clean UTF-8 text for `.txt`. Mismatched extensions, archive files (`.zip`, `.gz`, `.tar`, `.7z`), executables (`MZ`, `ELF`, `.exe`), encrypted/password-protected PDFs (`/Encrypt`), active scripts/macros (`/JavaScript`, `/JS`, `/Launch`), empty files, and path-traversal filenames are rejected with typed errors.
+   - File size is capped at 30 MB, page count at 100 pages, and text volume at bounded character limits.
+   - Original file bytes are stored privately in session state (`document_originals`), outside Git and excluded from exported bundles.
+
+2. **Extraction Modeling & State Machine**:
+   - Extraction produces page-level blocks (`ExtractionBlock`) preserving page numbers, deterministic block IDs, text status (`success`, `partial`, `empty`), and content digests.
+   - Extracted text is treated as unverified source material and is never automatically promoted to evidence.
+   - Strict lifecycle transitions enforced: `uploaded` $\to$ `extracted` $\to$ `needs_review` $\to$ `accepted_as_evidence` / `rejected`.
+
+3. **Human Review, Evidence Connection & Claim Boundaries**:
+   - Promotion to evidence strictly requires human review recording reviewer rationale, confirmed statement, cited page/block IDs, and exact source digest match.
+   - Accepted material converts to standard BASIN evidence records citing `doc://doc-{sha256}/page/{page_num}` with mandatory non-predictive disclaimers.
+   - Attaching or rejecting document evidence invalidates scenario approvals, requiring reviewed re-approval.
+   - Review rationales and confirmed statements are strictly validated against BASIN prohibited claims boundaries (rejecting official approval, certified forecasts, calibrated catchment, safe yield, and prompt injection).
+
+4. **Privacy & Verified Replay**:
+   - Default exports include accepted evidence citations and provenance while stripping raw document bytes, unreviewed drafts, and private notes (unless consented). Replay verification succeeds with document evidence.
+
+Verification: `pytest tests/test_document_ingestion.py` passed **40 passed in 2.65s**. Focused regression suite passed **174 passed in 60.46s**. The full repository suite passed **657 passed, 3 skipped in 449.87s**. `git diff --check` passed.
+
+Next technical action: implement the PDF extraction adapter and Streamlit document upload/review interface. Presentation-laptop, projector, offline, intended-user, and organizer checks remain Part C external acceptance.
+
 ## September 13 — report/export quality and responsive Review polish
 
 The handoff report and verified ZIP now present one consistent, reviewable package. Both HTML and fallback-vector PDFs follow the same eight-section order: executive summary, scenario identity, review rationale, storage assumptions, experiment results, observation provenance, limitations, and verification hashes. Long notes and labels remain inside page bounds; custom observations retain the T3 source, coverage, and catchment language; rainfall percentages retain the T2 baseline language. Verified bundles retain all saved simulation runs with explicit review state, keep note-consent behavior through revocation, and continue to pass manifest and replay verification.

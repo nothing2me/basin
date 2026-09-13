@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
 from types import SimpleNamespace
 
 import numpy as np
@@ -132,6 +133,20 @@ def reconstruct_audit(source, audit, legacy=False, require_export=False):
     validate_records(custom, source)
     if not legacy:
         validate_links(custom, audit["evidence_refs"], audit["evidence"], scenarios)
+    docs_data = audit.get("documents", [])
+    if docs_data:
+        from basin_core.document_ingestion import DocumentRecord, DocumentState
+        for d in docs_data:
+            rec = DocumentRecord.from_dict(d) if isinstance(d, dict) else d
+            if require_export and rec.state != DocumentState.ACCEPTED_AS_EVIDENCE.value:
+                raise ValueError("Only accepted document evidence may be exported in verified bundles")
+    doc_evidence = [e for e in audit.get("evidence", []) if e.get("source_locator", "").startswith("doc://")]
+    if doc_evidence:
+        known_doc_ids = {d.get("identity", {}).get("id") if isinstance(d, dict) else d.identity.id for d in docs_data}
+        for ev in doc_evidence:
+            match = re.match(r"^doc://(doc-[0-9a-f]{64})/page/\d+$", ev["source_locator"])
+            if not match or match.group(1) not in known_doc_ids:
+                raise ValueError(f"Document evidence references unknown or unrecorded document: {ev['id']}")
     runs = audit.get("simulation_runs", [])
     extended_history = any(e["action"] == "supporting evidence changed" or "review_context_sha256" in e for s in scenarios for e in s.history)
     if (runs or extended_history) and audit["schema_version"] != "2.2":
