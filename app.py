@@ -1324,9 +1324,6 @@ elif w is None and page in ("Review", "Exports"):
     st.button("◀ Return to Step 1: Data Dashboard", key=f"btn_return_data_{page}", on_click=switch_page, args=("Data",), width="stretch")
 
 elif page == "Workspace":
-    st.markdown("**Which rainfall scenarios deserve a closer look?**")
-    st.caption("Configure generation settings, establish ranking priorities, and examine candidate shortlists.")
-
     # Review focus is chosen before generation so the resulting run opens with the
     # relevant measurements and visuals leading. Repeated runs inherit the current
     # run's profile; the profile remains presentation-only.
@@ -1374,26 +1371,26 @@ elif page == "Workspace":
             st.caption("This run will use the full Review layout. You can choose a focus later in Review.")
 
     # Scenario Generation & Priority Weights Builder
-    c_gen, c_weights = st.columns([1, 1])
+    c_gen = st.container()
     with c_gen:
         with tour_target("sidebar_generator"):
             with st.container(border=True):
-                st.markdown("##### Resample Weather Windows")
+                st.markdown("##### Build rainfall scenarios")
                 stations = st.multiselect(
-                    "Search and select stations", list(names),
+                    "Stations", list(names),
                     default=list(w.params.stations) if w else list(names), format_func=names.get,
-                    help="Open the menu and type a station name or station ID to search.",
+                    help="Type a station name or ID to search.",
                     placeholder="Type a station name or ID",
                 )
 
                 range_options = [
-                    "Seasonal mix · 90, 180 and 270 days",
-                    "30-day seasonal windows",
-                    "90-day seasonal windows",
-                    "180-day seasonal windows",
-                    "270-day seasonal windows",
-                    "365-day seasonal windows",
-                    "Custom date ranges",
+                    "Recommended · 90, 180 and 270 days",
+                    "30 days",
+                    "90 days",
+                    "180 days",
+                    "270 days",
+                    "365 days",
+                    "Custom dates",
                 ]
                 saved_ranges = tuple(getattr(w.params, "calendar_ranges", ())) if w else ()
                 saved_duration_option = {
@@ -1408,19 +1405,27 @@ elif page == "Workspace":
                 )
                 range_mode = st.selectbox(
                     "Date range", range_options, index=default_range_index,
-                    help="Quick choices sample several seasons. Custom ranges accept exact start and end dates and times.",
+                    help="Choose a common window length or select exact dates.",
                 )
                 calendar_ranges = []
-                if range_mode == "Custom date ranges":
+                custom_range_incomplete = False
+                if range_mode == "Custom dates":
                     source_start_date = pd.Timestamp(source.manifest["start"]).date()
                     source_end_date = pd.Timestamp(source.manifest["end"]).date()
-                    with st.popover("📅 Set exact dates and times", width="stretch"):
+                    with st.popover("📅 Choose dates", width="stretch"):
+                        saved_has_more_options = len(saved_ranges) > 1 or any(
+                            datetime.fromisoformat(start).time() != datetime.min.time()
+                            or datetime.fromisoformat(end).strftime("%H:%M") != "23:59"
+                            for start, end in saved_ranges
+                        )
+                        more_date_options = st.toggle(
+                            "More date options", value=saved_has_more_options,
+                            help="Add more ranges or record exact start and end times.",
+                        )
                         range_count = int(st.number_input(
                             "Number of ranges", min_value=1, max_value=4,
                             value=max(1, min(4, len(saved_ranges))), step=1,
-                            help="Add up to four distinct calendar ranges to the same run.",
-                        ))
-                        st.caption("Choose exact dates from the loaded record. Times are saved for audit; daily rainfall calculations use whole calendar days.")
+                        )) if more_date_options else 1
                         for range_index in range(range_count):
                             if range_index < len(saved_ranges):
                                 saved_start = datetime.fromisoformat(saved_ranges[range_index][0])
@@ -1433,26 +1438,30 @@ elif page == "Workspace":
                                 saved_start = datetime(
                                     default_start_date.year, default_start_date.month, default_start_date.day, 0, 0,
                                 )
-                            st.markdown(f"**Range {range_index + 1}**")
-                            start_col, end_col = st.columns(2)
-                            start_date = start_col.date_input(
-                                "Start date", value=saved_start.date(),
+                            date_label = "Dates" if range_count == 1 else f"Dates · Range {range_index + 1}"
+                            selected_dates = st.date_input(
+                                date_label, value=(saved_start.date(), saved_end.date()),
                                 min_value=source_start_date, max_value=source_end_date,
-                                key=f"scenario_range_{range_index}_start_date",
+                                key=f"scenario_range_{range_index}_dates",
                             )
-                            start_time = start_col.time_input(
-                                "Start time", value=saved_start.time(),
-                                key=f"scenario_range_{range_index}_start_time",
-                            )
-                            end_date = end_col.date_input(
-                                "End date", value=saved_end.date(),
-                                min_value=source_start_date, max_value=source_end_date,
-                                key=f"scenario_range_{range_index}_end_date",
-                            )
-                            end_time = end_col.time_input(
-                                "End time", value=saved_end.time(),
-                                key=f"scenario_range_{range_index}_end_time",
-                            )
+                            if len(selected_dates) != 2:
+                                custom_range_incomplete = True
+                                st.caption("Select an end date.")
+                                continue
+                            start_date, end_date = selected_dates
+                            if more_date_options:
+                                start_col, end_col = st.columns(2)
+                                start_time = start_col.time_input(
+                                    "Start time", value=saved_start.time(),
+                                    key=f"scenario_range_{range_index}_start_time",
+                                )
+                                end_time = end_col.time_input(
+                                    "End time", value=saved_end.time(),
+                                    key=f"scenario_range_{range_index}_end_time",
+                                )
+                            else:
+                                start_time = datetime.min.time()
+                                end_time = datetime.strptime("23:59", "%H:%M").time()
                             calendar_ranges.append((
                                 datetime.combine(start_date, start_time).isoformat(timespec="minutes"),
                                 datetime.combine(end_date, end_time).isoformat(timespec="minutes"),
@@ -1461,7 +1470,7 @@ elif page == "Workspace":
                     for start_value, end_value in calendar_ranges:
                         start_value_dt, end_value_dt = datetime.fromisoformat(start_value), datetime.fromisoformat(end_value)
                         days = (end_value_dt.date() - start_value_dt.date()).days + 1
-                        range_summaries.append(f"{start_value_dt:%b %d, %Y %H:%M} → {end_value_dt:%b %d, %Y %H:%M} ({days} days)")
+                        range_summaries.append(f"{start_value_dt:%b %d, %Y} → {end_value_dt:%b %d, %Y} ({days} days)")
                     st.caption(" · ".join(range_summaries))
 
                 with st.form("generate", border=False):
@@ -1476,16 +1485,18 @@ elif page == "Workspace":
         if generate:
             if not stations:
                 st.error("⚠️ Select at least one station before generating scenarios.")
+            elif custom_range_incomplete:
+                st.error("⚠️ Select both a start and end date.")
             else:
                 try:
                     with st.spinner("Computing…"):
                         preset_durations = {
-                            "Seasonal mix · 90, 180 and 270 days": (90, 180, 270),
-                            "30-day seasonal windows": (30,),
-                            "90-day seasonal windows": (90,),
-                            "180-day seasonal windows": (180,),
-                            "270-day seasonal windows": (270,),
-                            "365-day seasonal windows": (365,),
+                            "Recommended · 90, 180 and 270 days": (90, 180, 270),
+                            "30 days": (30,),
+                            "90 days": (90,),
+                            "180 days": (180,),
+                            "270 days": (270,),
+                            "365 days": (365,),
                         }
                         if calendar_ranges:
                             durations = tuple(sorted({
@@ -1525,7 +1536,7 @@ elif page == "Workspace":
                 except (ValueError, OSError) as error:
                     st.error(str(error))
 
-    with c_weights:
+    with st.expander("Advanced ranking settings", expanded=False):
         with tour_target("sidebar_presets"):
             with st.container(border=True):
                 st.markdown("##### Ranking Priorities & Weights")

@@ -14,15 +14,16 @@ def test_searchable_station_picker_and_exact_custom_date_range(tmp_path, monkeyp
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
     app.sidebar.radio[0].set_value("Workspace").run()
 
-    station_picker = next(widget for widget in app.multiselect if widget.label == "Search and select stations")
+    station_picker = next(widget for widget in app.multiselect if widget.label == "Stations")
     assert set(station_picker.value) == {"USW00012924", "USW00012912", "USW00012921"}
     date_range = next(widget for widget in app.selectbox if widget.label == "Date range")
-    date_range.set_value("Custom date ranges").run()
-    assert [widget.label for widget in app.date_input] == ["Start date", "End date"]
+    date_range.set_value("Custom dates").run()
+    assert [widget.label for widget in app.date_input] == ["Dates"]
+    assert not app.time_input
+    next(widget for widget in app.toggle if widget.label == "More date options").set_value(True).run()
     assert [widget.label for widget in app.time_input] == ["Start time", "End time"]
 
-    app.date_input[0].set_value(date(2014, 3, 15))
-    app.date_input[1].set_value(date(2014, 6, 12))
+    app.date_input[0].set_value((date(2014, 3, 15), date(2014, 6, 12)))
     app.time_input[0].set_value(time(8, 30))
     app.time_input[1].set_value(time(17, 45))
     app.run()
