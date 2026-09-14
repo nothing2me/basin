@@ -122,7 +122,7 @@ def _fake_wheel(folder: Path, distribution: str, version: str, tag: str) -> Path
 
 
 def _offline_pip(wheelhouse: Path) -> subprocess.CompletedProcess:
-    command = native.pip_commands(sys.executable, NATIVE_FILE, wheelhouse, repair=False)[0] + ["--dry-run"]
+    command = native.pip_commands(sys.executable, NATIVE_FILE, wheelhouse, repair=False)[0] + ["--dry-run", "--ignore-installed"]
     env = {k: v for k, v in os.environ.items() if not k.upper().startswith("PIP_")}
     # Any attempt to reach an index fails immediately instead of silently succeeding.
     env.update(HTTP_PROXY="http://127.0.0.1:9", HTTPS_PROXY="http://127.0.0.1:9", NO_PROXY="",

@@ -1328,7 +1328,16 @@ def semantic_query_route(workspace, prompt: str) -> str:
     if is_concurrence_faq:
         return DOMAIN_TOPICS["concurrence"]
 
-    if any(k in p for k in ["35%", "35 percent", "thirty-five percent", "stage 3", "critical shortage", "critical storage", "35% threshold", "35% storage", "why 35%"]):
+    is_storage_35_faq = (
+        not any(k in p for k in ["spectrum", "initial storage", "run simulation", "test reservoir"])
+        and any(k in p for k in [
+            "what happens at 35", "why 35", "explain 35", "what is 35", "35% threshold",
+            "35 percent threshold", "35% storage", "35 percent storage", "stage 3 critical",
+            "what is stage 3", "stage 3 shortage", "35% combined storage", "35 percent combined storage",
+            "thirty-five percent", "critical shortage", "critical storage"
+        ])
+    )
+    if is_storage_35_faq:
         return DOMAIN_TOPICS["storage_35pct"]
 
     if any(k in p for k in ["dead pool", "inactive storage", "dead storage", "75,000", "75000", "cavitation", "pump cavitation", "lowest outlet", "intake sill"]):
