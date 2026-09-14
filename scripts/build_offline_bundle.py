@@ -42,15 +42,13 @@ def copy_runtime():
     for vcdll in base_python.glob("vcruntime*.dll"):
         shutil.copy2(vcdll, RUNTIME_DIR / vcdll.name)
 
-    # Copy msvcp140.dll and vcomp140.dll (OpenMP runtime for native AI) if available
+    # Copy msvcp140.dll and vcomp140.dll (OpenMP runtime) if available
     sys32 = Path(os.environ.get("SystemRoot", "C:\\Windows")) / "System32"
-    for dll_name in ("msvcp140.dll", "vcomp140.dll"):
-        dll_path = sys32 / dll_name
-        if dll_path.exists():
-            shutil.copy2(dll_path, RUNTIME_DIR / dll_name)
-            log(f"Copied {dll_name} from System32 into runtime.")
-        else:
-            log(f"Optional {dll_name} not found in System32.")
+    for vc_dll in ["msvcp140.dll", "vcomp140.dll"]:
+        vc_path = sys32 / vc_dll
+        if vc_path.exists():
+            shutil.copy2(vc_path, RUNTIME_DIR / vc_dll)
+            log(f"Copied {vc_dll} from System32 into runtime.")
 
     # 2. Copy DLLs folder
     src_dlls = base_python / "DLLs"
@@ -109,7 +107,7 @@ def copy_application_files():
         shutil.copy2(ROOT / pyfile, BUNDLE_DIR / pyfile)
 
     # 3. Directories
-    for d in ["basin_core", "assets", "data", ".streamlit"]:
+    for d in ["basin_core", "assets", "data", ".streamlit", "static"]:
         src = ROOT / d
         dst = BUNDLE_DIR / d
         if src.exists():

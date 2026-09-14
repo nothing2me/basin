@@ -932,6 +932,234 @@ def parse_experiment_arguments(prompt: str, spectrum_request: bool) -> dict:
     return arguments
 
 
+DOMAIN_TOPICS: dict[str, str] = {
+    "concurrence": (
+        "**Hydrologic Concept: Multi-Station Concurrence & Regional Stress**\n\n"
+        "In BASIN, **station stress concurrence** measures the percentage of 30-day rolling windows where multiple precipitation stations "
+        "across Region N simultaneously experience severe rainfall deficits (exceeding each station's 75th-percentile rolling deficit from the 1991–2020 climatology).\n\n"
+        "### Why Concurrence Matters to Water Managers & Rural Councils\n"
+        "- **Local storm gaps vs. Systemic drought**: Isolated convective thunderstorms in South Texas frequently leave one county dry while raining on an adjacent one. "
+        "A low-concurrence drought represents localized stress where neighboring water utilities or tributary streams may still have available water.\n"
+        "- **Regional intake failure**: High concurrence (>60–70%) means the entire drainage network (Nueces, Frio, and Atascosa river basins) is simultaneously deprived of runoff. "
+        "Inflows into both Choke Canyon Reservoir and Lake Corpus Christi cease together.\n"
+        "- **Rural council impact**: During high-concurrence events, inter-utility water sharing and raw water purchase agreements from nearby districts become impossible "
+        "because all regional water rights face simultaneous curtailment under TWDB Region N rules.\n\n"
+        "> ⚠️ Station stress indicates statistical rainfall deficits at NOAA gauges. It is not an official Texas regulatory drought category."
+    ),
+    "storage_35pct": (
+        "**Operational Milestone: 35% Combined Storage Threshold (Stage 3 Critical Shortage)**\n\n"
+        "Under the City of Corpus Christi Drought Contingency Plan (which governs wholesale treated water deliveries across Nueces, San Patricio, and surrounding Region N communities), "
+        "**35% combined conservation storage** across Choke Canyon Reservoir and Lake Corpus Christi is the regulatory trigger for **Stage 3: Critical Water Shortage**.\n\n"
+        "### Operational & Regulatory Consequences\n"
+        "1. **Mandatory Retail Curtailment**: Lawn irrigation is restricted to once every two weeks (or prohibited entirely depending on season/demand), vehicle washing at home is banned, and non-essential municipal uses cease.\n"
+        "2. **Wholesale Customer Reductions**: Rural water supply corporations (WSCs) and municipal utility districts (MUDs) purchasing wholesale water face contractual delivery limits "
+        "(typically 10% to 30% reduction requirements). Failure to meet targets incurs steep emergency volumetric surcharges.\n"
+        "3. **Industrial Surcharges**: High-volume industrial users (refineries, petrochemical facilities) face escalating conservation surcharges and mandatory drought management enforcement.\n"
+        "4. **Survival Buffer**: In BASIN stress simulations, dropping to 35% storage typically leaves fewer than 150–200 days of water under baseline uncurtailed demand before reaching emergency dead-pool access conditions. "
+        "Implementing a 15% demand reduction extends system survival by 50 to 80 days.\n\n"
+        "> ⚠️ Storage thresholds are illustrative experiment indicators. Official stage declarations are made exclusively by municipal and regional governing bodies."
+    ),
+    "dead_pool": (
+        "**Reservoir Engineering: Inactive Storage (Dead Pool) & 75,000 ac-ft Reserve**\n\n"
+        "**Dead pool (inactive storage)** is the water volume residing below the lowest gravity outlet gates or intake sills of a dam structure. "
+        "Even though water remains physically visible in the lakebed, it cannot be discharged downstream through existing penstocks or gravity intake conduits.\n\n"
+        "### Why BASIN Reserves 75,000 Acre-Feet\n"
+        "- **Physical System Thresholds**:\n"
+        "  - *Choke Canyon Reservoir*: Inactive pool is approximately 32,000 acre-feet.\n"
+        "  - *Lake Corpus Christi (Wesley Seale Dam)*: Inactive pool is approximately 43,000 acre-feet.\n"
+        "  - *Combined System*: Together, they represent **~75,000 ac-ft** of gravity-inaccessible water.\n"
+        "- **Emergency Pumping & Cavitation Hazards**: Accessing water below the gravity sill requires emergency barge-mounted temporary low-lift pumps. As water depth drops into shallow mudflats:\n"
+        "  - Surface vortices form, entraining air and causing severe **pump impeller cavitation**, damaging pump machinery within hours.\n"
+        "  - Sediment, organic debris, and manganese/iron concentrations spike, overwhelming conventional coagulation and filtration at water treatment plants.\n"
+        "  - Total dissolved solids (TDS) and salinity surge due to prolonged evaporative concentration.\n"
+        "- **Planning Integrity**: Safe-yield hydrology models must never count dead pool storage as deliverable municipal reserve. "
+        "Reserving 75,000 ac-ft prevents dangerous overestimation of community drought endurance.\n\n"
+        "> ⚠️ Physical dead pool elevations and capacities reflect published TWDB volumetric surveys."
+    ),
+    "mary_rhodes": (
+        "**Regional Infrastructure: Mary Rhodes Pipeline (72 MGD External Supply Buffer)**\n\n"
+        "The **Mary Rhodes Pipeline** is the primary drought mitigation lifeline for Region N. Phase 1 delivers raw water 101 miles from Lake Texana (Lavaca-Navidad River Authority) "
+        "to Corpus Christi's O.N. Stevens Water Treatment Plant, with Phase 2 extending pumping access to the Colorado River.\n\n"
+        "### Hydraulic & Operational Significance\n"
+        "- **Capacity**: Pumping capacity of up to **72 million gallons per day (MGD)** (~221 acre-feet per day).\n"
+        "- **Reservoir Sparing**: Every gallon delivered via the Mary Rhodes Pipeline directly reduces raw water withdrawal from the Choke Canyon / Lake Corpus Christi reservoir system, "
+        "preserving combined storage during local droughts in the Nueces basin.\n"
+        "- **Pipeline Sensitivity in BASIN**: In BASIN's reservoir experiment, disabling the pipeline (`pipeline_active=False`) immediately shifts ~221 ac-ft/day of extra baseload demand onto the reservoirs, "
+        "accelerating countdown to Stage 3 (35% storage) by months.\n"
+        "- **Risk Factor**: If interbasin transfer permits are curtailed during statewide exceptional drought, or if pipeline pump stations suffer power or mechanical failures, "
+        "regional water systems must instantly absorb severe demand shocks.\n\n"
+        "> ⚠️ Pipeline modeling in BASIN assumes constant rated transfer capacity unless toggled off by the user."
+    ),
+    "kmeans_diversity": (
+        "**Statistical Methodology: K-Means Diversity vs. Top-Deficit Clones**\n\n"
+        "When screening historical weather data for drought stress, sorting purely by rainfall deficit creates a severe analytical blindspot called **the clone problem**.\n\n"
+        "### Why Pure Ranking Fails\n"
+        "- **Temporal Clones**: If an analyst simply selects the top 6 highest-deficit windows, the algorithm will pick 6 overlapping slices of the exact same event "
+        "(for instance, six 180-day windows from the 2011 drought starting just days apart). Testing infrastructure against 6 near-identical windows provides zero information on how the system responds to different physical drought regimes.\n\n"
+        "### How BASIN Solves It\n"
+        "- **5-Dimensional Feature Clustering**: BASIN normalizes and clusters all candidate scenarios using K-Means across 5 hydrologic features:\n"
+        "  1. *Historical Severity Percentile* (depth of rainfall gap)\n"
+        "  2. *Duration Fraction* (short acute vs. multi-year chronic)\n"
+        "  3. *Station Concurrence* (localized storm void vs. basin-wide failure)\n"
+        "  4. *Summer Seasonality Fraction* (high-evaporation summer vs. winter dry spell)\n"
+        "  5. *Maximum Consecutive Dry Days* (dry spell persistence)\n"
+        "- **Representative Shortlist**: BASIN selects the highest-scoring candidate from each distinct drought profile cluster. "
+        "This guarantees councils test resilience against acute summer flash droughts, long chronic multi-season drawdowns, and high-concurrence regional crises.\n\n"
+        "> ⚠️ Clusters group statistical feature profiles; they do not represent scientifically formalized meteorological categories."
+    ),
+    "rural_councils": (
+        "**Decision Guidance: Drought Preparedness for Rural Councils & Small Utilities**\n\n"
+        "Rural water supply corporations (WSCs), small municipalities, and municipal utility districts (MUDs) in Region N operate under unique constraints: "
+        "limited auxiliary storage, reliance on single wholesale contracts or shallow aquifers, and long transmission lines vulnerable to pressure loss.\n\n"
+        "### 5 Actionable Recommendations from BASIN Analysis\n"
+        "1. **Watch Multi-Station Concurrence**: When BASIN scenarios show concurrence above 60%, neighboring water systems and agricultural irrigation districts will be stressed simultaneously. "
+        "Do not rely on emergency mutual-aid interconnections or ad-hoc water hauling.\n"
+        "2. **Audit Wholesale Water Contracts**: Check contract triggers with wholesale providers (e.g., City of Corpus Christi). "
+        "Know the exact volumetric allocation cuts and surcharges that take effect at **40% (Stage 2)** and **35% (Stage 3)** combined storage.\n"
+        "3. **Inspect & Exercise Auxiliary Groundwater**: Shallow Carrizo, Gulf Coast, or Queen City aquifer wells should be tested for drawdown, pump motor amp draw, "
+        "and total dissolved solids (TDS) before surface reservoir storage drops below 40%.\n"
+        "4. **Implement Tiered Demand Management Early**: Enforcing once-per-week lawn watering during Stage 1 or 2 delays entry into Stage 3 emergency surcharges, preserving financial liquidity for the district.\n"
+        "5. **Test 10%–15% Conservation in BASIN**: In BASIN's stress spectrum, a 15% community demand reduction can extend reservoir survival by 50 to 80 days during an exceptional drought, "
+        "providing critical lead time for emergency infrastructure funding.\n\n"
+        "> ⚠️ Advisory decision-support synthesis. Local utility boards must follow their formally adopted Drought Contingency Plans."
+    ),
+    "scenarios_vs_forecasts": (
+        "**Scientific Boundary: Synthetic Scenarios vs. Predictive Forecasts**\n\n"
+        "BASIN is an **exploratory vulnerability workbench**, not a weather forecasting service.\n\n"
+        "- **Weather Forecasts (Predictive)**: Predict what the atmosphere will physically produce over the next 7 to 90 days based on numerical weather prediction models (GFS, ECMWF) "
+        "and ENSO teleconnections. Forecasts carry increasing uncertainty beyond 10 days.\n"
+        "- **Drought Scenarios (Stress-Testing)**: Answer *'What would happen to our reservoirs and water distribution system if a drought of specific duration and deficit occurred?'* "
+        "BASIN resamples historical NOAA weather sequences and scales rainfall deficits to test the structural boundaries of regional water systems.\n"
+        "- **Operational Rule**: Scenarios reveal system failure modes and tipping points; they do not predict the calendar date of the next rainstorm.\n\n"
+        "> ⚠️ BASIN generates deterministic stress scenarios. It never issues predictive weather forecasts or regulatory restriction dates."
+    ),
+    "deficit_vs_volume": (
+        "**Hydrologic Principle: Station Deficit (mm) vs. Reservoir Volume (ac-ft)**\n\n"
+        "- **Point Rainfall Deficit (mm or inches)**: Measures the depth of missing precipitation at a single rain gauge compared to the 30-year climate normal (1991–2020).\n"
+        "- **Reservoir Inflow (acre-feet)**: An acre-foot is 325,851 gallons (water covering one acre one foot deep). Reservoir volume is the spatial integration of streamflow across an entire watershed minus evaporative losses and diversions.\n"
+        "- **The Runoff Disconnect**: In South Texas watersheds, dry antecedent soil moisture conditions mean that during initial drought stages, parched soils and vegetation absorb 95%+ of light rain. "
+        "The **runoff coefficient** frequently falls below **2% to 5%**. Consequently, a 100 mm rain gauge deficit does not equate to a predictable 100 mm reservoir level drop; "
+        "streamflow can remain near zero until soils are saturated.\n\n"
+        "> ⚠️ Point gauge statistics must not be directly substituted for catchment-averaged volumetric inflow."
+    ),
+    "summer_evaporation": (
+        "**Climatic Principle: Summer Onset & Evaporation Compounding**\n\n"
+        "In South Texas (Region N), the timing of drought onset drastically changes infrastructure risk:\n"
+        "- **Gross Lake Evaporation**: Annual reservoir surface evaporation in the Nueces Basin ranges between **60 and 70 inches per year**, heavily concentrated from June through August "
+        "where daily pan evaporation regularly exceeds 0.35 inches/day.\n"
+        "- **Coincident Peak Demand**: Summer droughts coincide with maximum municipal lawn watering, air conditioning cooling tower consumption, and peak agricultural irrigation demand.\n"
+        "- **Compounding Depletion Rate**: A 180-day drought starting in May or June draws down combined reservoir storage at up to **2.5× the rate** of an identical 180-day winter drought, "
+        "quickly pushing systems past Stage 2 (40%) and Stage 3 (35%) restrictions.\n\n"
+        "> ⚠️ Seasonal weights in BASIN prioritize summer-onset droughts to reflect this evaporative and demand multiplier."
+    )
+}
+
+
+def _render_workspace_summary(workspace) -> str:
+    """Render a comprehensive overview of the loaded run and shortlisted scenarios."""
+    import calendar
+    scenarios = getattr(workspace, "scenarios", [])
+    selected_ids = getattr(workspace, "selected", [])
+    if not scenarios:
+        return "⚠️ **No scenarios in workspace**: Generate or load scenarios first."
+
+    total_candidates = len(scenarios)
+    shortlist_count = len(selected_ids)
+    sys_obj = getattr(getattr(workspace, "water_system_selection", None), "config", None)
+    sys_desc = f"{sys_obj.name} ({sys_obj.total_capacity_acft:,.0f} ac-ft)" if sys_obj else "Region N Reservoir System"
+
+    shortlisted = [workspace.get(sid) for sid in selected_ids if any(s.id == sid for s in scenarios)]
+    pool = shortlisted or scenarios
+
+    peak_deficit_s = max(pool, key=lambda s: s.features.get("deficit_mm", 0.0))
+    longest_s = max(pool, key=lambda s: s.features.get("duration_days", 0))
+    highest_concur_s = max(pool, key=lambda s: s.features.get("concurrence", 0.0))
+
+    header = "| Scenario | Duration | Shortfall (mm) | Shortfall (in) | Concurrence | Percentile | Profile | Status |\n|---|---|---|---|---|---|---|---|"
+    rows = []
+    for s in shortlisted:
+        f = s.features
+        def_mm = f.get("deficit_mm", 0.0)
+        def_in = def_mm / 25.4
+        conc_pct = f.get("concurrence", 0.0) * 100
+        p_pct = f.get("historical_percentile", 0.0) * 100
+        prof = getattr(s, "cluster_name", f"Group {s.cluster}")
+        status_symbol = "✓ Accepted" if s.status == "accepted" else ("✗ Rejected" if s.status == "rejected" else "Unreviewed")
+        rows.append(f"| **{s.id}** | {f.get('duration_days', 0)} d | {def_mm:.1f} mm | {def_in:.2f} in | {conc_pct:.1f}% | {p_pct:.0f}th | {prof} | {status_symbol} |")
+
+    table_md = header + "\n" + "\n".join(rows)
+    snapshot = getattr(getattr(workspace, "source", None), "manifest", {}).get("sha256", "provisional")[:12]
+
+    return (
+        f"**Workspace Run & Shortlist Overview** (Run `{getattr(workspace, 'id', 'current')}`)\n\n"
+        f"Generated **{total_candidates} candidates**; **{shortlist_count} scenarios shortlisted** for hydrologic review.\n"
+        f"Active Water System: **{sys_desc}**.\n\n"
+        f"{table_md}\n\n"
+        f"**Key Run Findings:**\n"
+        f"- **Peak Rainfall Shortfall**: **{peak_deficit_s.id}** with {peak_deficit_s.features['deficit_mm']:.1f} mm ({peak_deficit_s.features['deficit_mm']/25.4:.2f} in) deficit over {peak_deficit_s.features['duration_days']} days.\n"
+        f"- **Longest Multi-Season Drought**: **{longest_s.id}** spanning {longest_s.features['duration_days']} days ({calendar.month_name[longest_s.features['onset_month']]} onset).\n"
+        f"- **Most Widespread Regional Stress**: **{highest_concur_s.id}** with {highest_concur_s.features['concurrence']*100:.1f}% multi-station concurrence across Region N.\n\n"
+        f"> Source: BASIN workspace · Snapshot `{snapshot}…`\n"
+        f"> 💡 *To inspect an individual scenario, ask `Tell me about {selected_ids[0] if selected_ids else 'B-001'}`. "
+        f"To compare candidates, ask `Compare {selected_ids[0]} and {selected_ids[1] if len(selected_ids) > 1 else selected_ids[0]}`. "
+        f"To test reservoir survival, ask `Can reservoir survive {selected_ids[0]} with 20% lower rainfall?`.*"
+    )
+
+
+def _render_rank_comparison(workspace, id_a: str, id_b: str) -> str:
+    """Compare the multi-criteria ranking components and score differences between two scenarios."""
+    s1 = workspace.get(id_a)
+    s2 = workspace.get(id_b)
+    w = workspace.weights
+    c1, c2 = s1.components, s2.components
+
+    header = f"| Priority Component | Weight | {id_a} Contribution | {id_b} Contribution | Delta ({id_a} − {id_b}) |\n|---|---|---|---|---|"
+    rows = []
+    keys = ["severity", "duration", "concurrence", "season"]
+    labels = {"severity": "Severity", "duration": "Duration", "concurrence": "Concurrence", "season": "Seasonality"}
+    advantages = {}
+    for k in keys:
+        contrib_a = c1.get(k, 0.0)
+        contrib_b = c2.get(k, 0.0)
+        delta = contrib_a - contrib_b
+        weight_val = w.get(k, 0.0)
+        weight_str = f"{weight_val:.0f}%" if weight_val > 1.0 else f"{weight_val*100:.0f}%"
+        rows.append(f"| {labels[k]} | {weight_str} | {contrib_a:.2f} | {contrib_b:.2f} | {delta:+.2f} |")
+        advantages[k] = delta
+
+    total_delta = s1.score - s2.score
+    rows.append(f"| **Total Priority Score** | **100%** | **{s1.score:.2f}** | **{s2.score:.2f}** | **{total_delta:+.2f}** |")
+    table_md = header + "\n" + "\n".join(rows)
+
+    winner, loser = (id_a, id_b) if total_delta >= 0 else (id_b, id_a)
+    win_s, lose_s = (s1, s2) if total_delta >= 0 else (s2, s1)
+
+    adv_for_winner = {k: (c1[k] - c2[k] if total_delta >= 0 else c2[k] - c1[k]) for k in keys}
+    top_comp = max(adv_for_winner, key=adv_for_winner.get)
+    top_margin = adv_for_winner[top_comp]
+
+    w_sev = w['severity'] if w['severity'] > 1.0 else w['severity'] * 100
+    explanation = (
+        f"**Why {winner} ranked higher than {loser}:**\n"
+        f"Under your active ranking weights, **{winner}** earned **{top_margin:+.2f} more points** from **{labels[top_comp]}** than {loser}. "
+    )
+    if win_s.features['duration_days'] != lose_s.features['duration_days']:
+        explanation += (
+            f"Even though {loser} had a longer duration ({lose_s.features['duration_days']} d vs {win_s.features['duration_days']} d), "
+            f"the {w_sev:.0f}% severity weight prioritized {winner}'s deeper rainfall shortfall "
+            f"({win_s.features['deficit_mm']:.1f} mm vs {lose_s.features['deficit_mm']:.1f} mm)."
+        )
+
+    snapshot = getattr(getattr(workspace, "source", None), "manifest", {}).get("sha256", "provisional")[:12]
+    return (
+        f"**Ranking Comparison: {id_a} vs {id_b}**\n\n"
+        f"{table_md}\n\n"
+        f"{explanation}\n\n"
+        f"> Source: BASIN workspace · Snapshot `{snapshot}…`\n"
+        f"> ⚠️ Scores are ranking priorities calculated from your weight settings, not probabilities or physical safety ratings."
+    )
+
+
 def semantic_query_route(workspace, prompt: str) -> str:
     """Deterministic Semantic Entity & Synonym Graph intent router.
 
@@ -939,6 +1167,7 @@ def semantic_query_route(workspace, prompt: str) -> str:
     years, and parameter thresholds, executes verified local tools, and renders
     standard templates completely offline with zero LLM dependency.
     """
+    import calendar
     from basin_core.tools import (
         check_concurrence,
         check_export_readiness,
@@ -969,10 +1198,10 @@ def semantic_query_route(workspace, prompt: str) -> str:
             "uncalibrated mass-balance sensitivity model using historical rainfall proxies, not a delivery forecast."
         )
 
-    if any(q in p for q in [
+    if any(q in p for k in [
         "should council", "should the city", "declare stage", "mandate stage",
         "should we declare", "declare an emergency", "mandate cuts"
-    ]):
+    ] for q in [k]):
         return (
             "⚠️ **Analysis Boundary (Policy Governance)**: BASIN is an analytical rainfall scenario workbench, "
             "not a regulatory decision authority. Official drought stages are declared exclusively by municipal and regional "
@@ -1018,6 +1247,126 @@ def semantic_query_route(workspace, prompt: str) -> str:
     # 4. Dates, only when written
     date_matches = re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", p)
 
+    # 5. Workspace Run & Shortlist Overview
+    is_summary_query = (
+        not id_matches and any(k in p for k in [
+            "scenarios ive just run", "scenarios i've just run", "scenarios i just ran", "scenarios ive run",
+            "scenarios in this run", "scenarios in my run", "scenarios run",
+            "summarize scenarios", "summarise scenarios", "summarize the scenarios", "summarise the scenarios",
+            "summarize my scenarios", "summarise my scenarios",
+            "overview of scenarios", "overview of the run", "run overview", "run summary", "workspace summary",
+            "summarize my shortlist", "summarize the shortlist", "shortlist overview", "shortlist summary",
+            "what scenarios did i run", "what scenarios have i run", "what scenarios are in", "what are my scenarios",
+            "show my scenarios", "show me my scenarios", "list my scenarios", "my scenarios",
+            "tell me about the scenarios", "describe the scenarios"
+        ])
+    )
+    if is_summary_query:
+        return _render_workspace_summary(workspace)
+
+    # 6. Auto-identify worst / longest / top scenarios when requested without explicit ID
+    is_worst_query = (
+        not id_matches and any(k in p for k in [
+            "worst scenario", "worst drought", "most severe scenario", "most severe drought",
+            "highest deficit scenario", "largest deficit scenario", "biggest deficit scenario",
+            "which scenario is the worst", "what is the worst scenario", "which is the worst"
+        ])
+    )
+    if is_worst_query and getattr(workspace, "scenarios", None):
+        candidates = getattr(workspace, "selected", []) or [s.id for s in workspace.scenarios]
+        target_id = max(candidates, key=lambda sid: workspace.get(sid).features.get("deficit_mm", 0.0))
+        target_s = workspace.get(target_id)
+        intro = f"**Worst Scenario by Deficit: {target_id}** ({target_s.features['deficit_mm']:.1f} mm / {target_s.features['deficit_mm']/25.4:.2f} in shortfall over {target_s.features['duration_days']} days)\n\n"
+        return intro + render_tool_result("describe_scenario", describe_scenario(workspace, target_id))
+
+    is_longest_query = (
+        not id_matches and any(k in p for k in [
+            "longest scenario", "longest drought", "longest duration scenario", "maximum duration scenario",
+            "which scenario is the longest", "what is the longest scenario"
+        ])
+    )
+    if is_longest_query and getattr(workspace, "scenarios", None):
+        candidates = getattr(workspace, "selected", []) or [s.id for s in workspace.scenarios]
+        target_id = max(candidates, key=lambda sid: workspace.get(sid).features.get("duration_days", 0))
+        target_s = workspace.get(target_id)
+        intro = f"**Longest Drought Scenario: {target_id}** ({target_s.features['duration_days']} days duration, {calendar.month_name[target_s.features['onset_month']]} onset)\n\n"
+        return intro + render_tool_result("describe_scenario", describe_scenario(workspace, target_id))
+
+    is_top_query = (
+        not id_matches and any(k in p for k in [
+            "top scenario", "top-ranked scenario", "top ranked scenario", "#1 scenario",
+            "number one scenario", "headline scenario", "highest ranked scenario"
+        ])
+    )
+    if is_top_query and getattr(workspace, "scenarios", None):
+        target_id = workspace.selected[0] if getattr(workspace, "selected", None) else workspace.scenarios[0].id
+        target_s = workspace.get(target_id)
+        intro = f"**Top-Ranked Scenario: {target_id}** (Priority Score: {target_s.score:.2f}, Profile: {getattr(target_s, 'cluster_name', f'Group {target_s.cluster}')})\n\n"
+        return intro + render_tool_result("describe_scenario", describe_scenario(workspace, target_id))
+
+    # 7. Comparative ranking explanation between 2 scenarios
+    if len(id_matches) >= 2 and any(k in p for k in [
+        "why did", "higher than", "better than", "ahead of", "beat", "rank higher",
+        "ranked higher", "rank vs", "compare ranking", "compare score", "why is"
+    ]):
+        return _render_rank_comparison(workspace, id_matches[0], id_matches[1])
+
+    # 8. Compare top 2 without explicit IDs
+    if len(id_matches) < 2 and any(k in p for k in ["top two", "top 2", "first two", "first 2", "compare shortlisted"]):
+        if len(getattr(workspace, "selected", [])) >= 2:
+            res = compare_scenarios(workspace, workspace.selected[0], workspace.selected[1])
+            return render_tool_result("compare_scenarios", res)
+
+    # 9. Domain Hydrologic & Rural Council FAQ
+    is_concurrence_faq = (
+        any(k in p for k in [
+            "what is concurrence", "what does concurrence mean", "explain concurrence",
+            "define concurrence", "meaning of concurrence", "why does concurrence matter",
+            "why is concurrence important", "concurrence in plain english", "plain english concurrence"
+        ]) or (not id_matches and "concurrence" in p and any(k in p for k in ["what", "how", "mean", "concept", "explain", "define", "meaning", "plain english", "understand", "why"]))
+    )
+    if is_concurrence_faq:
+        return DOMAIN_TOPICS["concurrence"]
+
+    if any(k in p for k in ["35%", "35 percent", "thirty-five percent", "stage 3", "critical shortage", "critical storage", "35% threshold", "35% storage", "why 35%"]):
+        return DOMAIN_TOPICS["storage_35pct"]
+
+    if any(k in p for k in ["dead pool", "inactive storage", "dead storage", "75,000", "75000", "cavitation", "pump cavitation", "lowest outlet", "intake sill"]):
+        return DOMAIN_TOPICS["dead_pool"]
+
+    if any(k in p for k in ["mary rhodes", "pipeline buffer", "lake texana", "colorado river pipeline", "72 mgd", "interbasin transfer", "external supply"]):
+        return DOMAIN_TOPICS["mary_rhodes"]
+
+    if (
+        any(k in p for k in ["kmeans", "k-means"]) and any(k in p for k in ["why", "cluster", "clustering", "purpose", "top 6", "top-6", "clone", "diversity"])
+    ) or any(k in p for k in ["why kmeans", "why k-means", "why cluster", "why clustering", "why not top 6", "clone problem", "diversity vs clones", "kmeans clustering"]):
+        return DOMAIN_TOPICS["kmeans_diversity"]
+
+    if any(k in p for k in [
+        "rural council", "rural councils", "small utility", "small utilities", "small water",
+        "water board", "water boards", "small town", "municipal utility district", "mud", "wsc",
+        "councils prepare", "utilities do", "advice for rural", "rural water"
+    ]):
+        return DOMAIN_TOPICS["rural_councils"]
+
+    if (
+        ("forecast" in p and any(k in p for k in ["difference", "scenario", "predict", "versus", "vs"]))
+        or any(k in p for k in ["is this a forecast", "predict rainfall", "are these predictions", "predictive model", "scenario vs forecast", "forecast vs scenario"])
+    ):
+        return DOMAIN_TOPICS["scenarios_vs_forecasts"]
+
+    if (
+        ("mm" in p and "acre-feet" in p)
+        or any(k in p for k in ["deficit in mm vs acre-feet", "convert mm to acre feet", "runoff coefficient", "why mm not acre feet", "point deficit vs reservoir volume", "station deficit vs storage"])
+    ):
+        return DOMAIN_TOPICS["deficit_vs_volume"]
+
+    if any(k in p for k in [
+        "summer evaporation", "summer onset", "summer drought", "summer droughts", "evaporation role",
+        "pan evaporation", "summer vs winter", "lake evaporation", "evaporation affect", "evaporative loss"
+    ]):
+        return DOMAIN_TOPICS["summer_evaporation"]
+
     try:
         spectrum_request = any(k in p for k in ["spectrum", "stress spectrum", "multi-tier", "tiers", "tipping point", "sweep", "countdown", "days to breach", "days-to-breach"])
         reservoir_request = any(k in p for k in ["survive", "survival", "infrastructure", "reservoir", "drawdown", "capacity", "storage", "restriction", "lake corpus christi", "choke canyon"])
@@ -1027,7 +1376,11 @@ def semantic_query_route(workspace, prompt: str) -> str:
             if len(id_matches) > 1:
                 return clarify("name one scenario ID for this experiment; several were given: " + ", ".join(id_matches) + ".")
             arguments = parse_experiment_arguments(p, spectrum_request)
-            arguments.update(scenario_id=id_matches[0] if id_matches else "", year=year)
+            if not id_matches and year is None:
+                target_id = workspace.selected[0] if getattr(workspace, "selected", None) else (workspace.scenarios[0].id if getattr(workspace, "scenarios", None) else "")
+            else:
+                target_id = id_matches[0] if id_matches else ""
+            arguments.update(scenario_id=target_id, year=year)
             if spectrum_request:
                 return render_tool_result("run_stress_spectrum", run_stress_spectrum(workspace, **arguments))
             return render_tool_result("test_reservoir_infrastructure", test_reservoir_infrastructure(workspace, **arguments))
