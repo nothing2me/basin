@@ -1383,95 +1383,31 @@ elif page == "Workspace":
                     placeholder="Type a station name or ID",
                 )
 
-                range_options = [
-                    "Recommended · 90, 180 and 270 days",
-                    "30 days",
-                    "90 days",
-                    "180 days",
-                    "270 days",
-                    "365 days",
-                    "Custom dates",
-                ]
                 saved_ranges = tuple(getattr(w.params, "calendar_ranges", ())) if w else ()
-                saved_duration_option = {
-                    (30,): 1,
-                    (90,): 2,
-                    (180,): 3,
-                    (270,): 4,
-                    (365,): 5,
-                }
-                default_range_index = 6 if saved_ranges else (
-                    saved_duration_option.get(tuple(w.params.durations), 0) if w else 0
-                )
-                range_mode = st.selectbox(
-                    "Date range", range_options, index=default_range_index,
-                    help="Choose a common window length or select exact dates.",
+                source_start_date = pd.Timestamp(source.manifest["start"]).date()
+                source_end_date = pd.Timestamp(source.manifest["end"]).date()
+                if saved_ranges:
+                    saved_start = datetime.fromisoformat(saved_ranges[0][0]).date()
+                    saved_end = datetime.fromisoformat(saved_ranges[0][1]).date()
+                else:
+                    saved_end = source_end_date
+                    saved_start = max(source_start_date, source_end_date - timedelta(days=89))
+                selected_dates = st.date_input(
+                    "Dates", value=(saved_start, saved_end),
+                    min_value=source_start_date, max_value=source_end_date,
+                    help="Click the field to use the calendar, or type the start and end dates.",
+                    key="scenario_dates",
                 )
                 calendar_ranges = []
-                custom_range_incomplete = False
-                if range_mode == "Custom dates":
-                    source_start_date = pd.Timestamp(source.manifest["start"]).date()
-                    source_end_date = pd.Timestamp(source.manifest["end"]).date()
-                    with st.popover("📅 Choose dates", width="stretch"):
-                        saved_has_more_options = len(saved_ranges) > 1 or any(
-                            datetime.fromisoformat(start).time() != datetime.min.time()
-                            or datetime.fromisoformat(end).strftime("%H:%M") != "23:59"
-                            for start, end in saved_ranges
-                        )
-                        more_date_options = st.toggle(
-                            "More date options", value=saved_has_more_options,
-                            help="Add more ranges or record exact start and end times.",
-                        )
-                        range_count = int(st.number_input(
-                            "Number of ranges", min_value=1, max_value=4,
-                            value=max(1, min(4, len(saved_ranges))), step=1,
-                        )) if more_date_options else 1
-                        for range_index in range(range_count):
-                            if range_index < len(saved_ranges):
-                                saved_start = datetime.fromisoformat(saved_ranges[range_index][0])
-                                saved_end = datetime.fromisoformat(saved_ranges[range_index][1])
-                            else:
-                                saved_end = datetime(
-                                    source_end_date.year, source_end_date.month, source_end_date.day, 23, 59,
-                                )
-                                default_start_date = max(source_start_date, source_end_date - timedelta(days=89))
-                                saved_start = datetime(
-                                    default_start_date.year, default_start_date.month, default_start_date.day, 0, 0,
-                                )
-                            date_label = "Dates" if range_count == 1 else f"Dates · Range {range_index + 1}"
-                            selected_dates = st.date_input(
-                                date_label, value=(saved_start.date(), saved_end.date()),
-                                min_value=source_start_date, max_value=source_end_date,
-                                key=f"scenario_range_{range_index}_dates",
-                            )
-                            if len(selected_dates) != 2:
-                                custom_range_incomplete = True
-                                st.caption("Select an end date.")
-                                continue
-                            start_date, end_date = selected_dates
-                            if more_date_options:
-                                start_col, end_col = st.columns(2)
-                                start_time = start_col.time_input(
-                                    "Start time", value=saved_start.time(),
-                                    key=f"scenario_range_{range_index}_start_time",
-                                )
-                                end_time = end_col.time_input(
-                                    "End time", value=saved_end.time(),
-                                    key=f"scenario_range_{range_index}_end_time",
-                                )
-                            else:
-                                start_time = datetime.min.time()
-                                end_time = datetime.strptime("23:59", "%H:%M").time()
-                            calendar_ranges.append((
-                                datetime.combine(start_date, start_time).isoformat(timespec="minutes"),
-                                datetime.combine(end_date, end_time).isoformat(timespec="minutes"),
-                            ))
-                    range_summaries = []
-                    for start_value, end_value in calendar_ranges:
-                        start_value_dt, end_value_dt = datetime.fromisoformat(start_value), datetime.fromisoformat(end_value)
-                        days = (end_value_dt.date() - start_value_dt.date()).days + 1
-                        range_summaries.append(f"{start_value_dt:%b %d, %Y} → {end_value_dt:%b %d, %Y} ({days} days)")
-                    st.caption(" · ".join(range_summaries))
+                custom_range_incomplete = len(selected_dates) != 2
+                if custom_range_incomplete:
+                    st.caption("Select an end date.")
+                else:
+                    start_date, end_date = selected_dates
+                    calendar_ranges.append((
+                        datetime.combine(start_date, datetime.min.time()).isoformat(timespec="minutes"),
+                        datetime.combine(end_date, datetime.strptime("23:59", "%H:%M").time()).isoformat(timespec="minutes"),
+                    ))
 
                 with st.form("generate", border=False):
                     retention = st.slider("Retained rainfall (% of observed rainfall)", 0, 100, (35, 85), 5,
@@ -1490,23 +1426,11 @@ elif page == "Workspace":
             else:
                 try:
                     with st.spinner("Computing…"):
-                        preset_durations = {
-                            "Recommended · 90, 180 and 270 days": (90, 180, 270),
-                            "30 days": (30,),
-                            "90 days": (90,),
-                            "180 days": (180,),
-                            "270 days": (270,),
-                            "365 days": (365,),
-                        }
-                        if calendar_ranges:
-                            durations = tuple(sorted({
-                                (datetime.fromisoformat(end).date() - datetime.fromisoformat(start).date()).days + 1
-                                for start, end in calendar_ranges
-                            }))
-                            months = tuple(sorted({datetime.fromisoformat(start).month for start, _end in calendar_ranges}))
-                        else:
-                            durations = preset_durations[range_mode]
-                            months = (1, 4, 7, 10)
+                        durations = tuple(sorted({
+                            (datetime.fromisoformat(end).date() - datetime.fromisoformat(start).date()).days + 1
+                            for start, end in calendar_ranges
+                        }))
+                        months = tuple(sorted({datetime.fromisoformat(start).month for start, _end in calendar_ranges}))
                         params = ScenarioParams(
                             tuple(stations), tuple(durations), tuple(months), retention[0]/100,
                             retention[1]/100, extent, count, int(seed),
