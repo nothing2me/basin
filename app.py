@@ -334,6 +334,12 @@ def analysis_context_for_run() -> AnalysisContext:
 def render_analysis_context_intake(workspace=None) -> AnalysisContext | None:
     """Ask who will use the run and keep geography separate from model claims."""
     existing = getattr(workspace, "analysis_context", None)
+    if existing is None and st.session_state.get("pending_analysis_context") is not None:
+        try:
+            existing = AnalysisContext.from_record(st.session_state.pending_analysis_context)
+        except (TypeError, ValueError, KeyError):
+            # The normal validation below will present a useful correction path.
+            existing = None
     if "context_scope" not in st.session_state:
         st.session_state.context_scope = (
             "Specific community or provider"
@@ -1286,9 +1292,11 @@ if page == "Data":
         data_analysis_context.community,
         data_analysis_context.counties,
     ) if data_analysis_context is not None else ("incomplete",)
-    if st.session_state.get("observed_context_signature") != data_context_signature:
+    observed_context_changed = st.session_state.get("observed_context_signature") != data_context_signature
+    if observed_context_changed or "observed_rainfall_stations" not in st.session_state:
         st.session_state["observed_context_signature"] = data_context_signature
         st.session_state["observed_rainfall_stations"] = data_target_stations
+    if observed_context_changed or "heatmap_station_perspective" not in st.session_state:
         st.session_state["heatmap_station_perspective"] = "Targeted station set (equal average)"
     with tab_ts:
         left, right = st.columns([3, 1])

@@ -115,6 +115,14 @@ def test_specific_city_context_survives_data_to_builder_transition(tmp_path, mon
     accept.click().run()
     assert app.session_state.page == "Workspace"
 
+    next(button for button in app.button if button.label.startswith("◀ Back to Step 1")).click().run()
+    assert app.session_state.context_scope == "Specific community or provider"
+    assert app.session_state.context_org_name == "City of Alice"
+    assert app.session_state.context_counties == ["Jim Wells"]
+    assert app.multiselect(key="observed_rainfall_stations").value == ["USW00012932"]
+    next(button for button in app.button if button.label.startswith("✅ Accept Baseline")).click().run()
+    assert app.session_state.page == "Workspace"
+
     next(button for button in app.button if button.label == "Create rainfall scenarios").click().run()
     context = app.session_state.workspace.analysis_context
     assert context.organization_name == "City of Alice"
