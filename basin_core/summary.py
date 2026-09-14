@@ -94,17 +94,8 @@ def scenario_summary(features: dict, station_names: dict[str, str] | None = None
     percentile = features.get("historical_percentile", 0.0)
     concurrence = features.get("concurrence", 0.0)
     benchmark_n = features.get("benchmark_n", 0)
-    beyond = features.get("beyond_rainfall_reference", False)
     dry_spell = features.get("max_dry_days", 0)
-
-    if percentile >= 0.95 or beyond:
-        rarity = "an exceptionally rare deficit"
-    elif percentile >= 0.80:
-        rarity = "a severe drought run"
-    elif percentile >= 0.60:
-        rarity = "a moderate drought deficit"
-    else:
-        rarity = "a deficit within typical historical variation"
+    station_count = len(features.get("station_deficits_mm", {})) or len(station_names or {})
 
     deficit_in = deficit / 25.4
     if unit_system == "metric":
@@ -113,26 +104,34 @@ def scenario_summary(features: dict, station_names: dict[str, str] | None = None
         deficit_fmt = f"**{deficit_in:,.2f} in ({deficit:,.1f} mm)**"
 
     summary_parts = [
-        f"This **{duration}-day scenario** produces an average rainfall deficit of {deficit_fmt} across monitored stations — "
-        f"{rarity} (exceeding **{percentile * 100:.0f}%** of {benchmark_n} comparable historical windows)."
+        f"This **{duration}-day scenario** has a net rainfall shortfall of {deficit_fmt}, averaged equally across the selected stations."
     ]
-
-    if concurrence >= 0.40:
+    if benchmark_n >= 5:
         summary_parts.append(
-            f"Crucially, all monitored stations experience drought stress simultaneously in **{concurrence * 100:.0f}%** of eligible 30-day windows, "
-            "pointing to regional, multi-basin supply stress rather than an isolated dry pocket."
-        )
-    elif concurrence > 0:
-        summary_parts.append(
-            f"Stations experience concurrent drought stress in **{concurrence * 100:.0f}%** of 30-day windows."
+            f"The shortfall equals or exceeds **{percentile * 100:.0f}%** of {benchmark_n} historical comparison windows; "
+            "this is a sample comparison, not a drought probability."
         )
     else:
         summary_parts.append(
-            "Rainfall reductions are localized; stations rarely hit threshold deficits in the same 30-day window."
+            f"Only {benchmark_n} historical comparison windows are available; this small sample does not support a rarity claim."
+        )
+
+    eligible = features.get("eligible_concurrence_days")
+    if eligible == 0:
+        summary_parts.append("No eligible 30-day windows are available for the station-stress comparison.")
+    elif station_count == 1:
+        summary_parts.append(
+            f"The selected station exceeds its rainfall-stress threshold in **{concurrence * 100:.0f}%** of eligible 30-day windows; "
+            "this measures persistence at one station."
+        )
+    else:
+        summary_parts.append(
+            f"All selected stations exceed their rainfall-stress thresholds together in **{concurrence * 100:.0f}%** of eligible 30-day windows. "
+            "Station rainfall alone does not establish basin-wide water-supply conditions."
         )
 
     if dry_spell >= 30:
-        summary_parts.append(f"The longest continuous dry spell (< 1 mm/day) lasts **{dry_spell} days**.")
+        summary_parts.append(f"The longest run below 1 mm/day at any selected station lasts **{dry_spell} days**.")
 
     return " ".join(summary_parts)
 

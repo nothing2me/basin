@@ -1,5 +1,16 @@
 # BASIN current handoff
 
+## September 14 — Community/provider context and credibility correction
+
+- Added a Data Dashboard intake for a Region N-wide run or a named city/provider. Specific runs record organization type/name, county or counties, optional service-area label, supply relationship, and planning purpose.
+- Preserved that context in session save/load, Review, verified audit and Markdown handoff, and both HTML and vector PDF reports. The contract remains `context_only`: it does not silently claim that bundled gauges or a storage preset represent the named community.
+- Wired the full Region N observation catalog into the satellite map: 191 NOAA rainfall stations, 228 USGS water sites, streams, lakes/reservoirs, HUC8 subbasins, county boundaries, and the Region N outline. Catalog presence does not imply an active gauge or modeling suitability.
+- Replaced unsupported summary and assistant claims. Rainfall percentiles are described as sample comparisons; gauge concurrence no longer implies basin-wide supply failure; 35% storage is an illustrative input rather than Stage 3; and the 75,000 ac-ft reserve remains a configurable assumption.
+
+Verification: 144 cross-surface context/map/report/replay/scientific-contract tests passed, followed by the complete suite at 719 passed with 2 expected optional-runtime skips. Browser rehearsal completed Data → Builder → Review for City of Alice, Alice service area, Jim Wells County, and displayed the same context in Review.
+
+Remaining acceptance: map a provider's actual supply/catchment and representative gauges with a practitioner, confirm the correct adopted plan/contract, complete presentation-laptop testing, and review Esri offline-tile redistribution terms before release packaging.
+
 ## September 13–14 — Offline satellite basemap, Windows PDF visuals, and hydrologist assistant routing
 
 Delivered offline-first satellite imagery, restored full visual PDF generation on Windows, and implemented robust natural language query handling for the built-in AI assistant.
@@ -19,7 +30,7 @@ Delivered offline-first satellite imagery, restored full visual PDF generation o
    - **Workspace Run & Shortlist Overview (`_render_workspace_summary`)**: Responds to queries about scenarios just run with a structured table of shortlisted scenarios, candidate counts, water system capacity, and key extremes (peak shortfall, longest chronic drought, highest concurrence).
    - **Worst / Top / Longest Auto-Resolution**: Intelligently identifies and profiles target scenarios when no ID is provided (e.g. "What is the worst scenario?").
    - **Comparative Ranking Breakdown (`_render_rank_comparison`)**: Generates side-by-side component score tables explaining why scenario A beat scenario B.
-   - **9 Domain Hydrologic & Rural Council FAQs**: Multi-station concurrence, 35% Stage 3 storage threshold, 75k ac-ft dead pool reserve / pump cavitation, Mary Rhodes Pipeline 72 MGD buffer, K-Means clustering diversity vs clones, rural council drought checklist, scenarios vs forecasts boundary, point deficit (mm) vs reservoir volume (ac-ft) runoff gap, and summer lake evaporation compounding.
+   - **9 Domain Hydrologic & Rural Council FAQs**: Multi-station concurrence, illustrative storage inputs, inactive-storage assumptions, Mary Rhodes Pipeline context, clustering diversity, rural council review checklist, scenarios versus forecasts, point rainfall versus reservoir volume, and summer timing boundaries. Unsupported operational conclusions added in the original routing pass were corrected on September 14.
    - Verified across 55 assistant tests (16 tests in `tests/test_assistant_hydrologist_queries.py`).
 
 Verification: `tests/test_assistant_hydrologist_queries.py` (16 passed), `tests/test_geo_map.py` (4 passed), `tests/test_pdf_report.py` (23 passed), `tests/test_qwen_security.py` (16 passed), `tests/test_native_runtime_install.py` (50 passed, 2 skipped). Zero test regressions.

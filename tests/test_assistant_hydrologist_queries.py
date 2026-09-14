@@ -89,14 +89,13 @@ def test_assistant_concurrence_concept_faq(workspace):
     ]
     for q in queries:
         reply = semantic_query_route(workspace, q)
-        assert "Multi-Station Concurrence & Regional Stress" in reply
-        assert "75th-percentile rolling deficit" in reply
-        assert "Local storm gaps vs. Systemic drought" in reply
-        assert "Rural council impact" in reply
+        assert "Multi-Station Concurrence" in reply
+        assert "rainfall-stress thresholds" in reply
+        assert "does not establish streamflow" in reply
 
 
 def test_assistant_35_percent_storage_threshold_faq(workspace):
-    """Assert queries asking about the 35% storage threshold explain Stage 3 critical shortage."""
+    """A 35% query must distinguish an experiment setting from the current Stage 3 threshold."""
     queries = [
         "What happens at 35% storage?",
         "Why is 35% storage critical?",
@@ -105,14 +104,14 @@ def test_assistant_35_percent_storage_threshold_faq(workspace):
     ]
     for q in queries:
         reply = semantic_query_route(workspace, q)
-        assert "35% Combined Storage Threshold" in reply
-        assert "Stage 3: Critical Water Shortage" in reply
-        assert "Mandatory Retail Curtailment" in reply
-        assert "Wholesale Customer Reductions" in reply
+        assert "35% Combined Storage in BASIN" in reply
+        assert "below 20% combined storage" in reply
+        assert "illustrative starting value" in reply
+        assert "does not determine mandatory restrictions" in reply
 
 
 def test_assistant_dead_pool_and_75k_reserve_faq(workspace):
-    """Assert queries asking about dead pool explain the 75,000 ac-ft reserve and cavitation hazards."""
+    """Dead-pool answers must identify the 75,000 ac-ft value as an assumption."""
     queries = [
         "What is dead pool or inactive storage?",
         "Why does BASIN reserve 75,000 acre-feet?",
@@ -120,11 +119,10 @@ def test_assistant_dead_pool_and_75k_reserve_faq(workspace):
     ]
     for q in queries:
         reply = semantic_query_route(workspace, q)
-        assert "Inactive Storage (Dead Pool) & 75,000 ac-ft Reserve" in reply
-        assert "Choke Canyon Reservoir" in reply
-        assert "Lake Corpus Christi" in reply
-        assert "75,000 ac-ft" in reply
-        assert "pump impeller cavitation" in reply
+        assert "Inactive Storage (Dead Pool) and the 75,000 ac-ft Assumption" in reply
+        assert "configurable experiment assumption" in reply
+        assert "has not established that value" in reply
+        assert "does not simulate intake hydraulics" in reply
 
 
 def test_assistant_mary_rhodes_pipeline_faq(workspace):
@@ -136,10 +134,11 @@ def test_assistant_mary_rhodes_pipeline_faq(workspace):
     ]
     for q in queries:
         reply = semantic_query_route(workspace, q)
-        assert "Mary Rhodes Pipeline (72 MGD External Supply Buffer)" in reply
+        assert "Mary Rhodes Pipeline Context" in reply
         assert "Lake Texana" in reply
-        assert "72 million gallons per day" in reply
-        assert "Reservoir Sparing" in reply
+        assert "72–79 million-gallon-per-day range" in reply
+        assert "not a guaranteed delivery rate" in reply
+        assert "does not reproduce pipeline hydraulics" in reply
 
 
 def test_assistant_kmeans_clustering_vs_clones_faq(workspace):
@@ -153,8 +152,8 @@ def test_assistant_kmeans_clustering_vs_clones_faq(workspace):
         reply = semantic_query_route(workspace, q)
         assert "K-Means Diversity vs. Top-Deficit Clones" in reply
         assert "the clone problem" in reply
-        assert "5-Dimensional Feature Clustering" in reply
-        assert "Representative Shortlist" in reply
+        assert "clusters candidates" in reply
+        assert "less repetitive shortlist" in reply
 
 
 def test_assistant_rural_council_drought_preparedness(workspace):
@@ -166,11 +165,11 @@ def test_assistant_rural_council_drought_preparedness(workspace):
     ]
     for q in queries:
         reply = semantic_query_route(workspace, q)
-        assert "Drought Preparedness for Rural Councils & Small Utilities" in reply
-        assert "Watch Multi-Station Concurrence" in reply
-        assert "Audit Wholesale Water Contracts" in reply
-        assert "Inspect & Exercise Auxiliary Groundwater" in reply
-        assert "Implement Tiered Demand Management Early" in reply
+        assert "Using BASIN with Rural Councils and Small Utilities" in reply
+        assert "Confirm the service area" in reply
+        assert "Review station coverage" in reply
+        assert "current drought plan and wholesale contract" in reply
+        assert "does not prescribe restrictions" in reply
 
 
 def test_assistant_scenario_vs_forecast_scientific_boundary(workspace):
@@ -183,8 +182,8 @@ def test_assistant_scenario_vs_forecast_scientific_boundary(workspace):
     for q in queries:
         reply = semantic_query_route(workspace, q)
         assert "Synthetic Scenarios vs. Predictive Forecasts" in reply
-        assert "Weather Forecasts (Predictive)" in reply
-        assert "Drought Scenarios (Stress-Testing)" in reply
+        assert "Weather forecasts" in reply
+        assert "BASIN scenarios" in reply
 
 
 def test_assistant_deficit_mm_vs_reservoir_volume_acft(workspace):
@@ -196,10 +195,9 @@ def test_assistant_deficit_mm_vs_reservoir_volume_acft(workspace):
     ]
     for q in queries:
         reply = semantic_query_route(workspace, q)
-        assert "Station Deficit (mm) vs. Reservoir Volume (ac-ft)" in reply
-        assert "Point Rainfall Deficit" in reply
-        assert "Reservoir Inflow (acre-feet)" in reply
-        assert "The Runoff Disconnect" in reply
+        assert "Station Rainfall Shortfall (mm) vs. Reservoir Volume (ac-ft)" in reply
+        assert "Point rainfall shortfall" in reply
+        assert "Reservoir inflow and storage" in reply
         assert "runoff coefficient" in reply
 
 
@@ -212,10 +210,9 @@ def test_assistant_summer_evaporation_compounding(workspace):
     ]
     for q in queries:
         reply = semantic_query_route(workspace, q)
-        assert "Summer Onset & Evaporation Compounding" in reply
-        assert "Gross Lake Evaporation" in reply
-        assert "60 and 70 inches per year" in reply
-        assert "Coincident Peak Demand" in reply
+        assert "Summer Timing, Evaporation, and Demand" in reply
+        assert "does not calculate lake evaporation" in reply
+        assert "requires current evaporation, demand, inflow" in reply
 
 
 def test_assistant_unspecified_reservoir_survival_auto_resolves_top_scenario(workspace):
@@ -255,7 +252,29 @@ def test_assistant_conversational_history_flow(workspace):
 
     # Turn 2: Follow-up question on concurrence
     reply_2, history = run_assistant(workspace, "What does concurrence mean in plain English?", history, use_qwen=False)
-    assert "Multi-Station Concurrence & Regional Stress" in reply_2
+    assert "Multi-Station Concurrence" in reply_2
     assert len(history) == 4
     assert history[2]["role"] == "user"
     assert history[3]["role"] == "assistant"
+
+
+def test_domain_answers_exclude_unsupported_operational_claims(workspace):
+    prompts = [
+        "Explain concurrence",
+        "What happens at 35% storage?",
+        "Why does BASIN reserve 75,000 acre-feet?",
+        "How does the pipeline buffer reservoir drought?",
+        "What advice do you have for small water utilities?",
+        "Why are summer droughts worse?",
+    ]
+    combined = "\n".join(semantic_query_route(workspace, prompt) for prompt in prompts).lower()
+    forbidden = [
+        "35% combined conservation storage is the regulatory trigger",
+        "regional intake failure",
+        "all regional water rights face simultaneous curtailment",
+        "gravity-inaccessible water",
+        "50 to 80 days",
+        "2.5× the rate",
+    ]
+    for claim in forbidden:
+        assert claim not in combined

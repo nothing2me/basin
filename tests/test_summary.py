@@ -15,8 +15,9 @@ def test_scenario_summary_severe():
     text = scenario_summary(features)
     assert "180-day scenario" in text
     assert "240.5 mm" in text
-    assert "exceptionally rare" in text
-    assert "multi-basin supply stress" in text
+    assert "96%" in text
+    assert "sample comparison, not a drought probability" in text
+    assert "does not establish basin-wide water-supply conditions" in text
     assert "42 days" in text
 
 
@@ -32,7 +33,21 @@ def test_scenario_summary_moderate():
     }
     text = scenario_summary(features)
     assert "90-day scenario" in text
-    assert "typical historical variation" in text
+    assert "50%" in text
+    assert "historical comparison windows" in text
+
+
+def test_scenario_summary_small_sample_does_not_claim_rarity():
+    text = scenario_summary({
+        "duration_days": 30,
+        "deficit_mm": 20.0,
+        "historical_percentile": 1.0,
+        "concurrence": 0.0,
+        "benchmark_n": 2,
+        "eligible_concurrence_days": 0,
+    })
+    assert "small sample does not support a rarity claim" in text
+    assert "No eligible 30-day windows" in text
 
 
 def test_reservoir_summary_breached():
