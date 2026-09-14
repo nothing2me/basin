@@ -20,6 +20,7 @@ from basin_core.evidence import initial_evidence, public_copy, validate_evidence
 from basin_core.integrity import reconstruct_audit, check_digest
 from basin_core.custom_data import build_record, evidence_record, validate_records, validate_links
 from basin_core.water_system import WaterSystemConfig, WaterSystemSelection
+from basin_core.analysis_context import AnalysisContext
 
 
 SESSION_DIR_ENV = "BASIN_SESSION_DIR"
@@ -36,7 +37,7 @@ def session_dir() -> Path:
 
 
 class Workspace:
-    def __init__(self, source: CachedSource, params: ScenarioParams, size=6):
+    def __init__(self, source: CachedSource, params: ScenarioParams, size=6, analysis_context: AnalysisContext | None = None):
         wall, cpu = time.perf_counter(), time.process_time()
         self.id = uuid.uuid4().hex[:12]
         self.created_at = utc_now()
@@ -64,6 +65,7 @@ class Workspace:
         self.active_simulations = {}
         self.simulation_reviews = {}
         self.water_system_selection = WaterSystemSelection.default()
+        self.analysis_context = analysis_context or AnalysisContext.region_wide()
         elapsed = time.perf_counter() - wall
         self.footprint = {"wall_seconds": elapsed, "cpu_seconds": time.process_time() - cpu,
                           "process_rss_mib_at_end": psutil.Process().memory_info().rss / 1024**2,
@@ -100,6 +102,22 @@ class Workspace:
             self.active_simulations = {}
         self.water_system_selection = selection
         return selection
+
+    def set_analysis_context(self, context: AnalysisContext) -> AnalysisContext:
+        """Record the intended decision owner without changing rainfall calculations."""
+        if not isinstance(context, AnalysisContext):
+            raise ValueError("Use a validated analysis context")
+        if context != self.analysis_context:
+            before = self.analysis_context.record()
+            self.analysis_context = context
+            self.selection_history.append({
+                "at": utc_now(),
+                "action": "analysis context changed",
+                "before": before,
+                "after": context.record(),
+                "selected": self.selected.copy(),
+            })
+        return self.analysis_context
 
     def active_simulation(self, identifier: str) -> dict | None:
         return next((r for r in self.simulation_runs if r["id"] == self.active_simulations.get(identifier)), None)
@@ -412,6 +430,7 @@ class Workspace:
         result.update(evidence=self.evidence, evidence_refs=self.evidence_refs, conflicts=self.conflicts,
                       evidence_history=self.evidence_history, comparisons=self.comparisons)
         result["water_system_selection"] = self.water_system_selection.record()
+        result["analysis_context"] = self.analysis_context.record()
         if self.custom_uploads:
             result["custom_uploads"] = self.custom_uploads
         if getattr(self, "documents", []):
@@ -486,6 +505,7 @@ class Workspace:
         obj.water_system_selection = WaterSystemSelection.from_record(
             data.get("water_system_selection", WaterSystemSelection.default().record())
         )
+        obj.analysis_context = AnalysisContext.from_record(data.get("analysis_context"))
         for record, scenario in zip(data["scenarios"], obj.scenarios):
             frame = pd.DataFrame(record["values"], index=pd.to_datetime(record["dates"]), columns=record["stations"])
             if list(frame.columns) != obj.reference.stations or not frame.index.equals(scenario.series.index):

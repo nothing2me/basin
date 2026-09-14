@@ -600,6 +600,12 @@ def render_html_report(
     stations = ", ".join(workspace.params.stations)
     weights_summary = ", ".join(f"{k.capitalize()}: {v}%" for k, v in workspace.weights.items())
     primary_id = primary_scenario.id if primary_scenario else "None"
+    analysis_context = getattr(workspace, "analysis_context", None)
+    audience_label = getattr(analysis_context, "audience_label", "Region N planning area")
+    county_label = getattr(analysis_context, "county_label", "All 11 Region N counties")
+    context_boundary = (
+        "This names the intended audience; it does not select representative gauges or calibrate the storage experiment."
+    )
 
     manifest = getattr(workspace.source, "manifest", {}) or {}
     record_span = f"{manifest.get('start', 'unknown start')} to {manifest.get('end', 'unknown end')}"
@@ -1165,6 +1171,7 @@ def render_html_report(
             <div><span class="meta-badge">Companion Brief · Illustrative Simulation</span></div>
             <div><strong>Run ID:</strong> <span class="font-mono">{escape(run_id)}</span></div>
             <div><strong>Date:</strong> {escape(created_date)} · NOAA GHCN-Daily</div>
+            <div><strong>Prepared for:</strong> {escape(audience_label)}</div>
         </div>
     </div>
 
@@ -1177,6 +1184,7 @@ def render_html_report(
     <!-- SECTION 1: EXECUTIVE SUMMARY -->
     <div class="report-section" id="section-1">
         <div class="section-title">1. Executive Summary</div>
+        <p><strong>Intended decision context:</strong> {escape(audience_label)} · {escape(county_label)}. {escape(context_boundary)}</p>
         <div class="callout">
             <div class="callout-title">The Bottom Line — Executive Overview</div>
             <p>This report presents human-reviewed rainfall stress scenarios and an <strong>illustrative reservoir drawdown experiment</strong> across the reservoirs the model represents ({escape(capacity_breakdown)}; combined <strong>{total_capacity:,.0f} ac-ft</strong>). {overview_sentence} <em>This simulation is an exploratory sensitivity tool, not an operational delivery forecast.</em></p>
@@ -1727,6 +1735,8 @@ def build_fallback_pdf(
         evidence_records = []
         conflicts = []
         provider_note = ""
+        audience_label = "Region N planning area"
+        county_label = "All 11 Region N counties"
     else:
         workspace = workspace_or_title
         accepted = list(accepted_or_text or [])
@@ -1745,6 +1755,9 @@ def build_fallback_pdf(
         evidence_records = list(getattr(workspace, "evidence", []) or [])
         conflicts = list(getattr(workspace, "conflicts", []) or [])
         provider_note = str(getattr(workspace, "notes", "") or "").strip()
+        analysis_context = getattr(workspace, "analysis_context", None)
+        audience_label = getattr(analysis_context, "audience_label", "Region N planning area")
+        county_label = getattr(analysis_context, "county_label", "All 11 Region N counties")
 
     spectrum_data = metrics.spectrum_data
     system = config.system_config or REGION_N_PRESET
@@ -1873,6 +1886,11 @@ def build_fallback_pdf(
         ],
     )
     flow.heading("1. EXECUTIVE SUMMARY", size=10.0)
+    flow.paragraph(
+        f"Prepared for: {audience_label} | Service area: {county_label}. "
+        "This names the intended audience; it does not select representative gauges or calibrate the storage experiment.",
+        size=7.0,
+    )
     flow.heading("THE BOTTOM LINE -- EXECUTIVE OVERVIEW", size=8.5)
     primary_id = getattr(primary_scenario, "id", "None")
     flow.paragraph(

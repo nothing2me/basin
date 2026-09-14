@@ -32,6 +32,8 @@ from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle, generate_brief, summary_record, rainfall_rows
 from basin_core.pdf_report import ExperimentConfig, generate_pdf_report_with_status, report_state_token
 from basin_core.workspace import Workspace, session_dir
+from basin_core.analysis_context import (AnalysisContext, DECISION_USES, ORGANIZATION_TYPES,
+                                         REGION_N_COUNTIES, SUPPLY_RELATIONSHIPS)
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
 from basin_core.custom_data import (active_ids, digest, format_custom_source_label,
@@ -153,7 +155,9 @@ def local_rainfall_preview(expanded=False):
                 st.session_state["custom_source"] = new_src
                 st.session_state["selected_stations"] = [st_id]
                 params = ScenarioParams((st_id,), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
-                st.session_state.workspace = Workspace(new_src, params, 6)
+                st.session_state.workspace = Workspace(
+                    new_src, params, 6, analysis_context=analysis_context_for_run()
+                )
                 st.session_state.data_accepted = True
                 st.session_state.page = "Workspace"
                 st.rerun()
@@ -299,6 +303,98 @@ def save(w):
     except OSError as error:
         st.error(f"Save failed: {error}")
         return False
+
+
+def analysis_context_from_widgets() -> AnalysisContext:
+    """Build the validated decision context currently shown on the Data page."""
+    specific = st.session_state.get("context_scope", "Region-wide screening") == "Specific community or provider"
+    if not specific:
+        return AnalysisContext.region_wide()
+    return AnalysisContext(
+        scope="specific_provider",
+        organization_type=st.session_state.get("context_org_type", "municipality"),
+        organization_name=st.session_state.get("context_org_name", ""),
+        counties=tuple(st.session_state.get("context_counties", [])),
+        community=st.session_state.get("context_community", ""),
+        supply_relationship=st.session_state.get("context_supply", "unknown"),
+        decision_use=st.session_state.get("context_decision", "modeling_request"),
+    )
+
+
+def analysis_context_for_run() -> AnalysisContext:
+    """Return the context preserved across Streamlit page/widget cleanup."""
+    pending = st.session_state.get("pending_analysis_context")
+    if pending is not None:
+        return AnalysisContext.from_record(pending)
+    return analysis_context_from_widgets()
+
+
+def render_analysis_context_intake(workspace=None) -> AnalysisContext | None:
+    """Ask who will use the run and keep geography separate from model claims."""
+    existing = getattr(workspace, "analysis_context", None)
+    if "context_scope" not in st.session_state:
+        st.session_state.context_scope = (
+            "Specific community or provider"
+            if existing and existing.scope == "specific_provider"
+            else "Region-wide screening"
+        )
+        specific_existing = existing is not None and existing.scope == "specific_provider"
+        st.session_state.context_org_type = existing.organization_type if specific_existing else "municipality"
+        st.session_state.context_org_name = existing.organization_name if specific_existing else ""
+        st.session_state.context_counties = list(existing.counties) if specific_existing else []
+        st.session_state.context_community = existing.community if specific_existing else ""
+        st.session_state.context_supply = existing.supply_relationship if specific_existing else "unknown"
+        st.session_state.context_decision = existing.decision_use if specific_existing else "modeling_request"
+
+    with st.container(border=True):
+        st.markdown("### Who and what area is this screening for?")
+        st.caption("This decision context is saved in the run and handoff. It does not automatically select representative gauges or calibrate a local water system.")
+
+        def set_specific_defaults():
+            if (st.session_state.get("context_scope") == "Specific community or provider"
+                    and not st.session_state.get("context_org_name", "").strip()):
+                st.session_state.context_org_type = "municipality"
+                st.session_state.context_supply = "unknown"
+                st.session_state.context_decision = "modeling_request"
+
+        st.radio(
+            "Screening scope",
+            ["Region-wide screening", "Specific community or provider"],
+            horizontal=True,
+            key="context_scope",
+            on_change=set_specific_defaults,
+        )
+        if st.session_state.context_scope == "Specific community or provider":
+            left, right = st.columns(2)
+            left.selectbox("Organization type", list(ORGANIZATION_TYPES), format_func=ORGANIZATION_TYPES.get,
+                           key="context_org_type")
+            left.text_input("City, provider, district or organization", key="context_org_name",
+                            placeholder="Example: City of Alice or Nueces County WCID No. 3")
+            left.text_input("Community or service-area label (optional)", key="context_community",
+                            placeholder="Example: Mathis service area")
+            right.multiselect("Region N county or counties", list(REGION_N_COUNTIES), key="context_counties")
+            right.selectbox("Water-source relationship", list(SUPPLY_RELATIONSHIPS),
+                            format_func=SUPPLY_RELATIONSHIPS.get, key="context_supply")
+            right.selectbox("Decision being prepared", list(DECISION_USES),
+                            format_func=DECISION_USES.get, key="context_decision")
+        else:
+            st.info("The run will be labeled for all 11 Region N counties and will remain a regional rainfall-scenario screen.")
+
+        try:
+            context = analysis_context_from_widgets()
+        except ValueError as error:
+            st.warning(str(error))
+            return None
+
+        if workspace is not None and context != existing:
+            if st.button("Save decision context to this run", key=f"save_context_{workspace.id}", type="primary"):
+                workspace.set_analysis_context(context)
+                st.session_state.pending_analysis_context = context.record()
+                if save(workspace):
+                    st.success("Decision context saved with this run and its next export.")
+        elif workspace is not None:
+            st.caption(f"Current run: **{context.audience_label}** · {context.county_label}")
+        return context
 
 
 def chart(fig, height=300):
@@ -646,6 +742,11 @@ def store_review_preferences(workspace_id, preferences):
 
 
 def switch_page(name):
+    if name == "Workspace" and "context_scope" in st.session_state:
+        try:
+            st.session_state.pending_analysis_context = analysis_context_from_widgets().record()
+        except ValueError:
+            pass
     st.session_state.page = name
     w = st.session_state.get("workspace")
     if name == "Review" and w and w.selected and not st.session_state.get("inspect_id"):
@@ -1068,6 +1169,7 @@ if w is None and page == "Data":
 
 if page == "Data":
     saved_custom_panel(w)
+    data_analysis_context = render_analysis_context_intake(w)
     
     # 1. Direct Data & Focus Intake (High-density, 0-friction)
     intake_col1, intake_col2 = st.columns([1.6, 2.4])
@@ -1124,16 +1226,11 @@ if page == "Data":
         quality = pd.DataFrame(source.manifest["quality"])
         station_table = metadata.merge(quality, on="station_id")
 
-        col_map, col_stn = st.columns([1.35, 1.0], gap="large")
-        with col_map:
-            col_map_title, col_map_tog = st.columns([1.8, 1.2])
-            col_map_title.markdown("**Texas Regional Observation Map**")
-            col_map_tog.toggle("🛰️ Satellite overlay", key="map_satellite_mode", help="Overlay high-resolution satellite imagery tiles (requires active internet connection). When off or offline, BASIN renders the baked-in Texas vector GIS map.")
-            st.plotly_chart(basin_map(station_table), width="stretch", config={"displayModeBar": False})
-            st.caption("Corpus Christi, Victoria & San Antonio airport observations are provisional regional proxies. Texas Vector GIS Map works 100% offline.")
-        with col_stn:
+        from basin_core.region_n_map import render_observation_map
+        render_observation_map(station_table)
+        with st.expander("Loaded analysis stations and observation quality", expanded=False):
             st.markdown("**Station Registry & Observation Quality**")
-            st.caption("Station completeness and data quality flags across the 35-year NOAA observation record.")
+            st.caption("These are the rainfall series loaded for analysis. Other map stations provide geographic context until their observations are separately loaded and reviewed.")
             st.dataframe(
                 station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
                 hide_index=True, width="stretch", height=380,
@@ -1203,6 +1300,7 @@ if page == "Data":
         st.markdown("**Step 1 Acceptance: Confirm Observation Baseline**")
         st.caption("Verify NOAA station proxies and data completeness before proceeding to scenario generation. Uploaded local rainfall CSVs (if any) are validated here.")
         def accept_data_baseline():
+            st.session_state.pending_analysis_context = data_analysis_context.record()
             st.session_state.data_accepted = True
             switch_page("Workspace")
 
@@ -1211,6 +1309,7 @@ if page == "Data":
             key="btn_accept_data_baseline",
             type="primary",
             on_click=accept_data_baseline,
+            disabled=data_analysis_context is None,
             width="stretch"
         )
         st.markdown('</div>', unsafe_allow_html=True)
@@ -1302,7 +1401,7 @@ elif page == "Workspace":
                 try:
                     with st.spinner("Computing…"):
                         params = ScenarioParams(tuple(stations), tuple(durations), tuple(months), retention[0]/100, retention[1]/100, extent, count, int(seed))
-                        new = Workspace(source, params, size)
+                        new = Workspace(source, params, size, analysis_context=analysis_context_for_run())
                         if w:
                             new.notes = w.notes
                         st.session_state.workspace = new
@@ -1485,6 +1584,12 @@ elif page == "Review":
         st.info("💡 **No Active Analysis Run**: To review drought scenarios, first configure and start a run in **Scenario Builder**.")
         st.button("➔ Go to Step 2: Scenario Builder", key="btn_review_to_workspace_empty", on_click=switch_page, args=("Workspace",), type="primary")
     else:
+        context = w.analysis_context
+        st.info(
+            f"**Screening for:** {context.audience_label} · **Service area:** {context.county_label} · "
+            f"**Purpose:** {DECISION_USES[context.decision_use]}. "
+            "This identifies the intended decision context; gauge suitability and local system calibration still require review."
+        )
         prefs = review_preferences(w.id)
 
         is_editing = st.session_state.get(f"review_editing_{w.id}", False)
@@ -2174,8 +2279,12 @@ elif page == "Exports":
         st.button("➔ Go to Step 2: Scenario Builder", key="btn_exports_to_workspace_empty", on_click=switch_page, args=("Workspace",), type="primary")
     else:
         chosen = [w.get(i) for i in w.selected]
+        context = w.analysis_context
         st.markdown("**Review what your recipient will receive**")
-        st.caption("A readable rainfall brief, daily values, source evidence and a replayable audit. Review decisions control what can be exported.")
+        st.caption(
+            f"Prepared for {context.audience_label} ({context.county_label}). A readable rainfall brief, daily values, "
+            "source evidence and a replayable audit are included. Review decisions control what can be exported."
+        )
 
         # Single experiment configuration every report on this page is generated from.
         experiment_config = st.session_state.get("experiment_config")

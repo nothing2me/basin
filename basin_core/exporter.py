@@ -63,11 +63,25 @@ def text_cell(value):
 
 def generate_brief(workspace, accepted):
     total = sum(workspace.weights.values())
+    context = getattr(workspace, "analysis_context", None)
+    context_lines = []
+    if context is not None:
+        from basin_core.analysis_context import DECISION_USES, ORGANIZATION_TYPES, SUPPLY_RELATIONSHIPS
+        context_lines = [
+            '## Intended decision context', '',
+            f'- **Organization / audience:** {text_cell(context.audience_label)}',
+            f'- **Organization type:** {text_cell(ORGANIZATION_TYPES[context.organization_type])}',
+            f'- **Service area:** {text_cell(context.county_label)}',
+            f'- **Water-source relationship:** {text_cell(SUPPLY_RELATIONSHIPS[context.supply_relationship])}',
+            f'- **Planning use:** {text_cell(DECISION_USES[context.decision_use])}', '',
+            'This context identifies the intended user and area. It does not select representative gauges, establish catchment suitability, or calibrate a municipal water system.', '',
+        ]
     lines = ['> ⚠️ **WHAT THIS ARTIFACT IS NOT:** This document is NOT a hydrologic drought-of-record analysis, NOT a safe-yield or delivery forecast, NOT a reservoir breach projection, and NOT validated against actual streamflow or surface evaporation.', '',
              '# BASIN — Rainfall Scenario Handoff', '', f'Run: `{workspace.id}` · created {workspace.created_at} · BASIN {__version__}', '',
              '## Purpose and limits', '',
              'An analyst selected rainfall stress scenarios for deeper drought-planning analysis. Accept records a local rainfall-content review; it does not establish professional sign-off, validated catchment suitability, probability, water supply or restriction dates.', '',
              'Stations are provisional regional airport proxies. Rainfall retention cannot be applied directly to naturalized streamflow. A domain specialist must determine geographic suitability, rainfall–runoff modeling, operating rules and any appropriate downstream modeling application.', '',
+             *context_lines,
              '## Community Priority Configuration', '', 'User-selected normalized weights (illustrative priorities; no provider endorsement):', '']
     lines += [f'- {k.title()}: {v / total:.1%} (raw weight {v})' for k, v in workspace.weights.items()]
     lines += ['', 'Approval applies to rainfall content; current weights may differ from weights at approval. The shortlist changes only on an explicit rebuild or manual swap.', '',
@@ -183,6 +197,7 @@ def export_bundle(workspace, include_notes=False, include_custom=False):
         simulation_runs=audit.get("simulation_runs", getattr(workspace, "simulation_runs", [])),
         active_simulations=audit.get("active_simulations", getattr(workspace, "active_simulations", {})),
         simulation_reviews=audit.get("simulation_reviews", getattr(workspace, "simulation_reviews", {})),
+        analysis_context=getattr(workspace, "analysis_context", None),
     )
     simulation_readme = (
         "Saved illustrative reservoir experiments and their complete water-system inputs are included and replayed for internal consistency; review records identify runs that received human review.\n"
@@ -282,6 +297,9 @@ def _verify(payload):
             raise ValueError('Shortlist summary inventory mismatch')
         for row, wanted in zip(summary.to_dict('records'), expected_summary): compare_values(row, wanted, 'Shortlist summary')
         view = SimpleNamespace(**{k: audit[k] for k in ('id', 'created_at', 'weights', 'evidence', 'evidence_refs', 'conflicts')})
+        if audit.get('analysis_context'):
+            from basin_core.analysis_context import AnalysisContext
+            view.analysis_context = AnalysisContext.from_record(audit['analysis_context'])
         view.custom_uploads = audit.get('custom_uploads', [])
         view.documents = audit.get('documents', [])
         view.simulation_runs = audit.get('simulation_runs', [])

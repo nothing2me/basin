@@ -75,6 +75,7 @@ date,USW00012924,USW00012912,USW00012921
 
 - `schema_version`: e.g. `"2.0"` or `"2.1"`
 - `workspace_id`: 12-character unique identifier
+- `analysis_context`: Intended user and service-area context. It records `scope`, organization type/name, Region N counties, optional community/service-area label, supply relationship, planning use, and `modeling_effect: "context_only"`. This field does not assert that selected gauges or a storage preset represent that community.
 - `params`: Resampling parameters (stations, durations, onset months, retention range, seed, extent)
 - `scenarios`: Full candidate audit array:
   - `id`: Scenario identifier
