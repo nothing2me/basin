@@ -298,3 +298,175 @@ def test_short_unbreached_window_does_not_claim_six_months(approved):
         assert '>6 Mo' not in html and b'>6 Mo' not in pdf
     finally:
         primary.series = original
+
+
+# --------------------------------------------------------------------------------------
+# Comprehensive tests for all 12 checklist requirements
+# --------------------------------------------------------------------------------------
+
+def test_charts_embedded_in_html_report(approved):
+    """Item 2: Static PNG charts generated via Kaleido must be embedded in HTML report."""
+    accepted = approved.exportable()
+    html = render_html_report(approved, accepted)
+    assert "data:image/png;base64" in html
+    assert "Figure 1: Projected Reservoir Storage Trajectory" in html
+    assert "Figure 2: Milestone Gantt Timeline" in html
+
+
+def test_ml_diversity_comparison_and_silhouette_context(approved):
+    """Items 3 & 4: 3-way ML diversity table and silhouette score domain context."""
+    accepted = approved.exportable()
+    html = render_html_report(approved, accepted)
+    pdf_bytes = build_fallback_pdf(approved, accepted)
+
+    # HTML assertions
+    assert "ML Selection Methodology & Diversity Evidence" in html
+    assert "BASIN diverse shortlist" in html
+    assert "Score only" in html
+    assert "Seeded random" in html
+    assert "Drought Groups Covered" in html
+    assert "Mean Feature Separation" in html
+    assert "Mean Priority Score" in html
+    assert "silhouette score of" in html
+    assert "weak-to-borderline cluster separation" in html
+
+    # Vector PDF assertions
+    assert b"ML SELECTION METHODOLOGY" in pdf_bytes
+    assert b"BASIN diverse shortlist" in pdf_bytes
+    assert b"Score only" in pdf_bytes
+    assert b"Seeded random" in pdf_bytes
+    assert b"silhouette score of" in pdf_bytes
+
+
+def test_scenario_ranking_rationale_and_concurrence_detail(approved):
+    """Items 5 & 6: Data-grounded ranking rationale and station concurrence breakdown."""
+    accepted = approved.exportable()
+    html = render_html_report(approved, accepted)
+    pdf_bytes = build_fallback_pdf(approved, accepted)
+
+    assert "primary ranking driver is" in html
+    assert "composite score" in html
+    assert "rank #" in html
+    assert b"ranking driver is" in pdf_bytes
+
+    # Concurrence station persistence details
+    assert "Concurrence & Breakdown" in html
+
+
+def test_station_completeness_table_in_observation_provenance(approved):
+    """Item 7: Quantitative station data completeness table in Section 6."""
+    accepted = approved.exportable()
+    html = render_html_report(approved, accepted)
+    pdf_bytes = build_fallback_pdf(approved, accepted)
+
+    assert "Quantitative Station Data Completeness" in html
+    assert "Missing/Excluded" in html
+    assert "Completeness" in html
+    assert "%" in html
+    assert b"QUANTITATIVE STATION DATA COMPLETENESS" in pdf_bytes
+
+
+def test_multi_band_reporting_in_bottom_line(approved):
+    """Item 8: Highest response band reached is reported across all 4 tiers."""
+    accepted = approved.exportable()
+    # At 35% initial storage, Band 1 (40%) is already crossed at day 0 or day 1, Band 2 (30%) is crossed later
+    html = render_html_report(approved, accepted, initial_pct=0.35)
+    pdf_bytes = build_fallback_pdf(approved, accepted, initial_pct=0.35)
+
+    assert "highest band" in html.lower()
+    assert "Band" in html
+    assert b"highest response band reached" in pdf_bytes.lower() or b"highest band" in pdf_bytes.lower()
+
+
+def test_paired_35_percent_benchmark_finding(approved):
+    """Item 9: Paired 35% initial storage benchmark finding callout."""
+    accepted = approved.exportable()
+    html = render_html_report(approved, accepted)
+    pdf_bytes = build_fallback_pdf(approved, accepted)
+
+    assert "Comparative Stress Finding — 35% Initial Storage Benchmark" in html
+    assert "35% initial storage" in html
+    assert "20% critical reserve" in html
+    assert "evaporation" in html.lower()
+    assert b"35% benchmark finding" in pdf_bytes.lower() or b"35% initial storage benchmark" in pdf_bytes.lower()
+
+
+def test_public_summary_vs_private_review_notes(approved):
+    """Item 10: Public selection rationale is visible; private reviewer note is omitted unless consented."""
+    for s in approved.selected:
+        approved.get(s).review(True, "CONFIDENTIAL-REVIEWER-FEEDBACK")
+    accepted = approved.exportable()
+
+    # Without consent: public rationale visible, private note omitted
+    html_no_consent = render_html_report(approved, accepted, include_notes=False)
+    pdf_no_consent = build_fallback_pdf(approved, accepted, include_notes=False)
+    assert "CONFIDENTIAL-REVIEWER-FEEDBACK" not in html_no_consent
+    assert b"CONFIDENTIAL-REVIEWER-FEEDBACK" not in pdf_no_consent
+    assert "primary ranking driver is" in html_no_consent
+    assert b"ranking driver is" in pdf_no_consent
+
+    # With consent: private note included with clear label
+    html_consent = render_html_report(approved, accepted, include_notes=True)
+    pdf_consent = build_fallback_pdf(approved, accepted, include_notes=True)
+    assert "CONFIDENTIAL-REVIEWER-FEEDBACK" in html_consent
+    assert b"CONFIDENTIAL-REVIEWER-FEEDBACK" in pdf_consent
+    assert "Private review note (consented export)" in html_consent
+
+
+def test_page_one_orientation_precedes_warning_box(approved):
+    """Item 11: Executive summary and Bottom Line orientation precede the Warning/Caveat box."""
+    accepted = approved.exportable()
+    html = render_html_report(approved, accepted)
+    from tests.test_report_layout import page_text
+
+    pdf_bytes = build_fallback_pdf(approved, accepted)
+    text = page_text(pdf_bytes)
+
+    bottom_line_idx = html.index("The Bottom Line — Executive Overview")
+    warning_idx = html.index("WHAT THIS DOCUMENT IS NOT")
+    assert bottom_line_idx < warning_idx, "Executive Summary Bottom Line must precede warning box in HTML"
+
+    bottom_line_pdf_idx = text.index("THE BOTTOM LINE")
+    warning_pdf_idx = text.index("WHAT THIS ARTIFACT IS NOT")
+    assert bottom_line_pdf_idx < warning_pdf_idx, "Executive Summary Bottom Line must precede warning box in PDF"
+
+
+def test_inline_plain_language_glosses(approved):
+    """Item 12: 6-10 word inline plain-language glosses for technical jargon."""
+    accepted = approved.exportable()
+    html = render_html_report(approved, accepted)
+    pdf_bytes = build_fallback_pdf(approved, accepted)
+    from tests.test_report_layout import page_text
+
+    pdf_text = " ".join(page_text(pdf_bytes).split())
+
+    assert "share of regional stations simultaneously experiencing precipitation deficits" in html
+    assert "historical frequency rank relative to all observed drought windows" in html
+    assert "minimum sample size required for robust statistical significance" in html
+
+    assert "share of regional stations simultaneously experiencing precipitation deficits" in pdf_text
+    assert "historical frequency rank relative to all observed drought windows" in pdf_text
+    assert "minimum sample size required for robust statistical significance" in pdf_text
+
+
+def test_long_config_strings_do_not_overflow(approved):
+    """Item 1: Long water system name and scenario descriptions wrap without collision."""
+    from basin_core.water_system import WaterSource, WaterSystemConfig
+    from tests.test_report_layout import overlapping_pairs, out_of_bounds
+
+    long_name = "Lower Colorado River Authority (LCRA) Extended Multi-County Regional Water Supply and Flood Protection System"
+    system = WaterSystemConfig(
+        name=long_name,
+        sources=(WaterSource.scaled_for_capacity("Long Pool A", 250000.0),
+                 WaterSource.scaled_for_capacity("Long Pool B", 250000.0)),
+    )
+    accepted = approved.exportable()
+    config = ExperimentConfig(system_config=system)
+
+    pdf_bytes = build_fallback_pdf(approved, accepted, config=config)
+    assert not overlapping_pairs(pdf_bytes)
+    assert not out_of_bounds(pdf_bytes)
+
+    html = render_html_report(approved, accepted, config=config)
+    assert long_name in html
+
