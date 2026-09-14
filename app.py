@@ -1275,10 +1275,28 @@ if page == "Data":
                 }
             )
     tab_ts, tab_heatmap, tab_meta = st.tabs(["📈 Observed Time Series", "🗓️ 35-Year Drought Anomaly Matrix", "ℹ️ Snapshot Metadata & Quality Policy"])
+    data_target_stations = (
+        suggested_station_ids(source, data_analysis_context)
+        if data_analysis_context is not None else default_stations
+    ) or default_stations
+    data_context_signature = (
+        data_analysis_context.scope,
+        data_analysis_context.rainfall_target,
+        data_analysis_context.organization_name,
+        data_analysis_context.community,
+        data_analysis_context.counties,
+    ) if data_analysis_context is not None else ("incomplete",)
+    if st.session_state.get("observed_context_signature") != data_context_signature:
+        st.session_state["observed_context_signature"] = data_context_signature
+        st.session_state["observed_rainfall_stations"] = data_target_stations
+        st.session_state["heatmap_station_perspective"] = "Targeted station set (equal average)"
     with tab_ts:
         left, right = st.columns([3, 1])
-        station_view = left.multiselect("Observed rainfall", list(names), default=default_stations,
-                                        format_func=station_option_label)
+        station_view = left.multiselect(
+            "Observed rainfall", list(names), key="observed_rainfall_stations",
+            format_func=station_option_label,
+            help="Defaults follow the rainfall evidence target above. You can inspect other loaded stations without changing the later scenario run."
+        )
         interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"])
         if station_view:
             observations = source.select(station_view)
@@ -1302,10 +1320,14 @@ if page == "Data":
         st.markdown("**35-Year Monthly Climatological Anomaly Matrix (1991–2025)**")
         st.caption("Displays percentage departure from the 35-year monthly mean baseline for each month. Crimson cells indicate severe drought deficits; teal/emerald cells indicate rainfall surpluses. Exposes historical multi-month drought runs (such as 1996, 2011, and 2022) across the record.")
         c_hm_st, _ = st.columns([2, 2])
-        hm_station_choice = c_hm_st.selectbox("Heatmap station perspective", ["Default station set (equal average)", *[f"{names[s_id]} ({s_id})" for s_id in names]])
-        if hm_station_choice.startswith("Default station"):
-            hm_obs = source.select(default_stations)
-            hm_title = "Default station set (equal average)"
+        hm_station_choice = c_hm_st.selectbox(
+            "Heatmap station perspective",
+            ["Targeted station set (equal average)", *[f"{names[s_id]} ({s_id})" for s_id in names]],
+            key="heatmap_station_perspective",
+        )
+        if hm_station_choice.startswith("Targeted station"):
+            hm_obs = source.select(data_target_stations)
+            hm_title = "Selected rainfall target (equal average)"
         else:
             selected_s_id = next(s_id for s_id in names if f"({s_id})" in hm_station_choice)
             hm_obs = source.select([selected_s_id])

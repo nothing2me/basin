@@ -109,6 +109,7 @@ def test_specific_city_context_survives_data_to_builder_transition(tmp_path, mon
     app.text_input(key="context_org_name").set_value("City of Alice").run()
     app.text_input(key="context_community").set_value("Alice service area").run()
     app.multiselect(key="context_counties").set_value(["Jim Wells"]).run()
+    assert app.multiselect(key="observed_rainfall_stations").value == ["USW00012932"]
     accept = next(button for button in app.button if button.label.startswith("✅ Accept Baseline"))
     assert not accept.disabled
     accept.click().run()
