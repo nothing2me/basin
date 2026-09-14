@@ -66,7 +66,7 @@ def generate_brief(workspace, accepted):
     context = getattr(workspace, "analysis_context", None)
     context_lines = []
     if context is not None:
-        from basin_core.analysis_context import DECISION_USES, ORGANIZATION_TYPES, SUPPLY_RELATIONSHIPS
+        from basin_core.analysis_context import DECISION_USES, ORGANIZATION_TYPES, RAINFALL_TARGETS, SUPPLY_RELATIONSHIPS
         context_lines = [
             '## Intended decision context', '',
             f'- **Organization / audience:** {text_cell(context.audience_label)}',
@@ -74,14 +74,28 @@ def generate_brief(workspace, accepted):
             f'- **Service area:** {text_cell(context.county_label)}',
             f'- **Water-source relationship:** {text_cell(SUPPLY_RELATIONSHIPS[context.supply_relationship])}',
             f'- **Planning use:** {text_cell(DECISION_USES[context.decision_use])}', '',
-            'This context identifies the intended user and area. It does not select representative gauges, establish catchment suitability, or calibrate a municipal water system.', '',
+            f'- **Rainfall evidence target:** {text_cell(RAINFALL_TARGETS[context.rainfall_target])}', '',
+            'The rainfall target controls which point stations are offered and selected for scenario generation. It does not establish catchment suitability or calibrate a municipal water system.', '',
         ]
+    registry = {item["id"]: item for item in workspace.source.manifest.get("stations", [])}
+    quality = {item["station_id"]: item for item in workspace.source.manifest.get("quality", [])}
+    station_lines = ['## Rainfall evidence selected for this run', '']
+    for station_id in workspace.params.stations:
+        item = registry.get(station_id, {})
+        completeness = quality.get(station_id, {}).get("completeness_pct", "unknown")
+        station_lines.append(
+            f'- **{text_cell(item.get("name", station_id))}** (`{text_cell(station_id)}`) · '
+            f'{text_cell(item.get("county", "County not recorded"))} County · {completeness}% accepted observation days · '
+            'point station; source-water catchment relationship unvalidated'
+        )
+    station_lines += ['', 'Stations are equally weighted point observations. A practitioner must confirm whether they represent the community or its water-source area.', '']
     lines = ['> ⚠️ **WHAT THIS ARTIFACT IS NOT:** This document is NOT a hydrologic drought-of-record analysis, NOT a safe-yield or delivery forecast, NOT a reservoir breach projection, and NOT validated against actual streamflow or surface evaporation.', '',
              '# BASIN — Rainfall Scenario Handoff', '', f'Run: `{workspace.id}` · created {workspace.created_at} · BASIN {__version__}', '',
              '## Purpose and limits', '',
              'An analyst selected rainfall stress scenarios for deeper drought-planning analysis. Accept records a local rainfall-content review; it does not establish professional sign-off, validated catchment suitability, probability, water supply or restriction dates.', '',
-             'Stations are provisional regional airport proxies. Rainfall retention cannot be applied directly to naturalized streamflow. A domain specialist must determine geographic suitability, rainfall–runoff modeling, operating rules and any appropriate downstream modeling application.', '',
+             'Rainfall retention cannot be applied directly to naturalized streamflow. A domain specialist must determine geographic suitability, rainfall–runoff modeling, operating rules and any appropriate downstream modeling application.', '',
              *context_lines,
+             *station_lines,
              '## Community Priority Configuration', '', 'User-selected normalized weights (illustrative priorities; no provider endorsement):', '']
     lines += [f'- {k.title()}: {v / total:.1%} (raw weight {v})' for k, v in workspace.weights.items()]
     lines += ['', 'Approval applies to rainfall content; current weights may differ from weights at approval. The shortlist changes only on an explicit rebuild or manual swap.', '',
@@ -188,6 +202,8 @@ def export_bundle(workspace, include_notes=False, include_custom=False):
     brief_view = SimpleNamespace(
         id=workspace.id,
         created_at=workspace.created_at,
+        source=workspace.source,
+        params=workspace.params,
         weights=workspace.weights,
         evidence=audit.get("evidence", workspace.evidence),
         evidence_refs=audit.get("evidence_refs", workspace.evidence_refs),
@@ -297,6 +313,8 @@ def _verify(payload):
             raise ValueError('Shortlist summary inventory mismatch')
         for row, wanted in zip(summary.to_dict('records'), expected_summary): compare_values(row, wanted, 'Shortlist summary')
         view = SimpleNamespace(**{k: audit[k] for k in ('id', 'created_at', 'weights', 'evidence', 'evidence_refs', 'conflicts')})
+        view.source = source
+        view.params = params
         if audit.get('analysis_context'):
             from basin_core.analysis_context import AnalysisContext
             view.analysis_context = AnalysisContext.from_record(audit['analysis_context'])

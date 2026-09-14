@@ -6,7 +6,7 @@ Updated: September 8, 2026 | Product baseline: BASIN 0.2.0 (`BASIN.exe`)
 
 1. **Sidebar / Launch (`BASIN.exe`)**:
    - Show native desktop execution (EdgeChromium WebView2, no terminal flashing).
-   - Use default settings: three provisional stations (`USW00012924`, `USW00012912`, `USW00012921`); 90, 180, 270 days; Jan/Apr/Jul/Oct; 35–85% retention; 300 candidates; 6 shortlisted; seed 22.
+   - Choose **Specific community or provider**, enter **City of Alice**, select **Jim Wells**, and keep **Local community / selected county area**. In Scenario Builder, show that Alice International Airport (`USW00012932`) is preselected from the two loaded Jim Wells records. Use 90, 180, 270 days; Jan/Apr/Jul/Oct; 35–85% retention; 300 candidates; 6 shortlisted; seed 22.
    - Explain the missing layer: small utilities cannot afford $50k and 6 months for HEC-ResSim/WAM to screen early drought stresses. Generate.
 
 2. **Workspace / Clustering & Ranking**:

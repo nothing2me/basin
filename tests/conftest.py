@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from basin_core.data import CachedSource
+from basin_core.data import CachedSource, default_station_ids
 from basin_core.engine import ScenarioParams
 from basin_core.workspace import SESSION_DIR_ENV, Workspace, session_dir
 
@@ -35,4 +35,4 @@ def source():
 
 @pytest.fixture
 def workspace(source):
-    return Workspace(source, ScenarioParams(tuple(source.daily.columns), candidates=30), size=3)
+    return Workspace(source, ScenarioParams(tuple(default_station_ids(source)), candidates=30), size=3)

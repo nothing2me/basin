@@ -27,13 +27,14 @@ from basin_core.review_preferences import (DATA_SOURCES, GOALS, GUIDANCE, GUIDED
                                            save_preferences)
 from basin_ui import evidence_panel, comparison_panel, assistant_panel
 from basin_theme import apply_design, appearance_picker, custom_appearance, accessible_chart, reveal_tour_target
-from basin_core.data import CachedSource, ROOT
+from basin_core.data import (CachedSource, ROOT, default_station_ids,
+                             suggested_station_ids, target_station_ids)
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle, generate_brief, summary_record, rainfall_rows
 from basin_core.pdf_report import ExperimentConfig, generate_pdf_report_with_status, report_state_token
 from basin_core.workspace import Workspace, session_dir
 from basin_core.analysis_context import (AnalysisContext, DECISION_USES, ORGANIZATION_TYPES,
-                                         REGION_N_COUNTIES, SUPPLY_RELATIONSHIPS)
+                                         RAINFALL_TARGETS, REGION_N_COUNTIES, SUPPLY_RELATIONSHIPS)
 from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
 from basin_core.custom_data import (active_ids, digest, format_custom_source_label,
@@ -318,6 +319,7 @@ def analysis_context_from_widgets() -> AnalysisContext:
         community=st.session_state.get("context_community", ""),
         supply_relationship=st.session_state.get("context_supply", "unknown"),
         decision_use=st.session_state.get("context_decision", "modeling_request"),
+        rainfall_target=st.session_state.get("context_rainfall_target", "community_area"),
     )
 
 
@@ -345,10 +347,11 @@ def render_analysis_context_intake(workspace=None) -> AnalysisContext | None:
         st.session_state.context_community = existing.community if specific_existing else ""
         st.session_state.context_supply = existing.supply_relationship if specific_existing else "unknown"
         st.session_state.context_decision = existing.decision_use if specific_existing else "modeling_request"
+        st.session_state.context_rainfall_target = getattr(existing, "rainfall_target", "community_area") if specific_existing else "community_area"
 
     with st.container(border=True):
         st.markdown("### Who and what area is this screening for?")
-        st.caption("This decision context is saved in the run and handoff. It does not automatically select representative gauges or calibrate a local water system.")
+        st.caption("For a local-area target, the selected counties narrow the rainfall stations offered in Scenario Builder. Water-supply source areas still require deliberate station selection.")
 
         def set_specific_defaults():
             if (st.session_state.get("context_scope") == "Specific community or provider"
@@ -356,6 +359,7 @@ def render_analysis_context_intake(workspace=None) -> AnalysisContext | None:
                 st.session_state.context_org_type = "municipality"
                 st.session_state.context_supply = "unknown"
                 st.session_state.context_decision = "modeling_request"
+                st.session_state.context_rainfall_target = "community_area"
 
         st.radio(
             "Screening scope",
@@ -377,6 +381,9 @@ def render_analysis_context_intake(workspace=None) -> AnalysisContext | None:
                             format_func=SUPPLY_RELATIONSHIPS.get, key="context_supply")
             right.selectbox("Decision being prepared", list(DECISION_USES),
                             format_func=DECISION_USES.get, key="context_decision")
+            right.selectbox("Rainfall evidence target", ["community_area", "source_area"],
+                            format_func=RAINFALL_TARGETS.get, key="context_rainfall_target",
+                            help="Local targets use stations in the selected counties. Source-area targets keep all Region N stations available for a professional selection.")
         else:
             st.info("The run will be labeled for all 11 Region N counties and will remain a regional rainfall-scenario screen.")
 
@@ -904,8 +911,8 @@ def start_example(source, names, force=False):
         st.session_state.confirm_reset_example = True
         return
     st.session_state.pop("confirm_reset_example", None)
-    params = ScenarioParams(tuple(names), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
-    workspace = Workspace(source, params, 6)
+    params = ScenarioParams(tuple(default_station_ids(source)), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
+    workspace = Workspace(source, params, 6, analysis_context=analysis_context_for_run())
     st.session_state.workspace = workspace
     st.session_state.data_accepted = True
     st.session_state.scenarios_accepted = True
@@ -921,8 +928,8 @@ def start_tutorial(source, names):
     st.session_state.page = TUTORIAL_STEPS[0]["page"]
     curr_w = st.session_state.get("workspace")
     if curr_w is None:
-        params = ScenarioParams(tuple(names), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
-        new_w = Workspace(source, params, 6)
+        params = ScenarioParams(tuple(default_station_ids(source)), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
+        new_w = Workspace(source, params, 6, analysis_context=analysis_context_for_run())
         st.session_state.workspace = new_w
         save(new_w)
     if st.session_state.get("workspace") and not st.session_state.get("inspect_id"):
@@ -1037,6 +1044,20 @@ except (OSError, ValueError, KeyError) as error:
     st.error(f"Snapshot unavailable: {error}")
     st.stop()
 names = {s["id"]: s["name"].title().replace(" Intl Ap", "").replace(" Rgnl Ap", "") for s in source.manifest["stations"]}
+default_stations = default_station_ids(source)
+station_registry = {item["id"]: item for item in source.manifest["stations"]}
+station_quality = {item["station_id"]: item for item in source.manifest.get("quality", [])}
+
+
+def station_option_label(station_id):
+    item = station_registry[station_id]
+    quality = station_quality.get(station_id, {})
+    place = f" · {item['county']} County" if item.get("county") else ""
+    coverage = f" · {quality['completeness_pct']:.1f}% accepted days" if "completeness_pct" in quality else ""
+    readiness = " · limited default windows" if item.get("eligible_default_settings", 12) < 12 else ""
+    return f"{names[station_id]}{place}{coverage}{readiness}"
+
+
 w = st.session_state.get("workspace")
 if w is not None and st.session_state.get("report_workspace_id") != w.id:
     for report_key in ("experiment_config", "preview_pdf", "packet",
@@ -1226,28 +1247,38 @@ if page == "Data":
         quality = pd.DataFrame(source.manifest["quality"])
         station_table = metadata.merge(quality, on="station_id")
 
+        # Custom and legacy manifests may not yet carry the regional targeting
+        # metadata.  Keep the data page usable and label unknown values plainly.
+        for column, fallback in (("county", "Not recorded"), ("eligible_default_settings", None)):
+            if column not in station_table:
+                station_table[column] = fallback
+
         from basin_core.region_n_map import render_observation_map
         render_observation_map(station_table)
         with st.expander("Loaded analysis stations and observation quality", expanded=False):
             st.markdown("**Station Registry & Observation Quality**")
             st.caption("These are the rainfall series loaded for analysis. Other map stations provide geographic context until their observations are separately loaded and reviewed.")
             st.dataframe(
-                station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
+                station_table[["station_id", "name", "county", "latitude", "longitude", "completeness_pct",
+                               "missing_or_excluded_days", "eligible_default_settings", "trace_days"]],
                 hide_index=True, width="stretch", height=380,
                 column_config={
                     "station_id": "ID",
                     "name": "Station Name",
+                    "county": "Region N county",
                     "latitude": st.column_config.NumberColumn("Lat", format="%.2f"),
                     "longitude": st.column_config.NumberColumn("Lon", format="%.2f"),
                     "completeness_pct": st.column_config.NumberColumn("Complete %", format="%.3f"),
                     "missing_or_excluded_days": st.column_config.NumberColumn("Missing"),
+                    "eligible_default_settings": st.column_config.NumberColumn("Usable default settings", help="Out of 12 combinations of the default months and durations, requiring at least five complete pre-2016 comparison windows."),
                     "trace_days": st.column_config.NumberColumn("Trace"),
                 }
             )
     tab_ts, tab_heatmap, tab_meta = st.tabs(["📈 Observed Time Series", "🗓️ 35-Year Drought Anomaly Matrix", "ℹ️ Snapshot Metadata & Quality Policy"])
     with tab_ts:
         left, right = st.columns([3, 1])
-        station_view = left.multiselect("Observed rainfall", list(names), default=list(names), format_func=names.get)
+        station_view = left.multiselect("Observed rainfall", list(names), default=default_stations,
+                                        format_func=station_option_label)
         interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"])
         if station_view:
             observations = source.select(station_view)
@@ -1271,10 +1302,10 @@ if page == "Data":
         st.markdown("**35-Year Monthly Climatological Anomaly Matrix (1991–2025)**")
         st.caption("Displays percentage departure from the 35-year monthly mean baseline for each month. Crimson cells indicate severe drought deficits; teal/emerald cells indicate rainfall surpluses. Exposes historical multi-month drought runs (such as 1996, 2011, and 2022) across the record.")
         c_hm_st, _ = st.columns([2, 2])
-        hm_station_choice = c_hm_st.selectbox("Heatmap station perspective", ["Catchment composite (All stations average)", *[f"{names[s_id]} ({s_id})" for s_id in names]])
-        if hm_station_choice.startswith("Catchment"):
-            hm_obs = source.select(list(names))
-            hm_title = "Catchment composite"
+        hm_station_choice = c_hm_st.selectbox("Heatmap station perspective", ["Default station set (equal average)", *[f"{names[s_id]} ({s_id})" for s_id in names]])
+        if hm_station_choice.startswith("Default station"):
+            hm_obs = source.select(default_stations)
+            hm_title = "Default station set (equal average)"
         else:
             selected_s_id = next(s_id for s_id in names if f"({s_id})" in hm_station_choice)
             hm_obs = source.select([selected_s_id])
@@ -1326,6 +1357,34 @@ elif w is None and page in ("Review", "Exports"):
 elif page == "Workspace":
     st.markdown("**Which rainfall scenarios deserve a closer look?**")
     st.caption("Configure generation settings, establish ranking priorities, and examine candidate shortlists.")
+    builder_context = w.analysis_context if w else analysis_context_for_run()
+    builder_rainfall_target = getattr(
+        builder_context, "rainfall_target", "community_area" if builder_context.scope == "specific_provider" else "region_wide"
+    )
+    local_target = builder_context.scope == "specific_provider" and builder_rainfall_target == "community_area"
+    targeted_candidates = target_station_ids(source, builder_context) if local_target else list(names)
+    suggested_stations = suggested_station_ids(source, builder_context)
+    if w:
+        suggested_stations = list(w.params.stations)
+        targeted_candidates = list(dict.fromkeys([*targeted_candidates, *w.params.stations]))
+    st.info(
+        f"**Prepared for:** {builder_context.audience_label} · **Rainfall target:** "
+        f"{RAINFALL_TARGETS[builder_rainfall_target]}. "
+        + (
+            f"BASIN found {len(targeted_candidates)} bundled station(s) in {builder_context.county_label} and preselected the best name/coverage match."
+            if local_target and targeted_candidates else
+            "Choose the source-area stations deliberately; BASIN does not infer a utility's supply catchment from its city name."
+        )
+    )
+    show_outside_target = False
+    if local_target:
+        if not targeted_candidates:
+            st.warning("No bundled 1991–2025 station matches the selected county. Change the rainfall target to source-area selection or add reviewed local observations before generating.")
+        show_outside_target = st.checkbox(
+            "Also show stations outside the local target area",
+            help="Use this only when the selected community relies on a different source area or a professional has chosen a regional comparison.",
+        )
+    station_options = list(names) if show_outside_target or not local_target else targeted_candidates
 
     # Review focus is chosen before generation so the resulting run opens with the
     # relevant measurements and visuals leading. Repeated runs inherit the current
@@ -1379,7 +1438,13 @@ elif page == "Workspace":
         with tour_target("sidebar_generator"):
             with st.form("generate", border=True):
                 st.markdown("##### Resample Weather Windows")
-                stations = st.multiselect("Stations", list(names), default=list(w.params.stations) if w else list(names), format_func=names.get)
+                stations = st.multiselect(
+                    "Rainfall stations to screen",
+                    station_options,
+                    default=suggested_stations,
+                    format_func=station_option_label,
+                    help="Point observations are combined with equal weight. Review gaps and geographic suitability before handoff.",
+                )
                 durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
                 months = st.multiselect("Starting months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
                 retention = st.slider("Retained rainfall (% of observed rainfall)", 0, 100, (35, 85), 5,
@@ -1585,10 +1650,15 @@ elif page == "Review":
         st.button("➔ Go to Step 2: Scenario Builder", key="btn_review_to_workspace_empty", on_click=switch_page, args=("Workspace",), type="primary")
     else:
         context = w.analysis_context
+        review_rainfall_target = getattr(
+            context, "rainfall_target", "community_area" if context.scope == "specific_provider" else "region_wide"
+        )
+        selected_station_names = ", ".join(names.get(station, station) for station in w.params.stations)
         st.info(
             f"**Screening for:** {context.audience_label} · **Service area:** {context.county_label} · "
-            f"**Purpose:** {DECISION_USES[context.decision_use]}. "
-            "This identifies the intended decision context; gauge suitability and local system calibration still require review."
+            f"**Rainfall target:** {RAINFALL_TARGETS[review_rainfall_target]} · "
+            f"**Stations analyzed:** {selected_station_names}. "
+            "Point-station selection targets the rainfall evidence; local water-supply calibration still requires review."
         )
         prefs = review_preferences(w.id)
 
@@ -2280,9 +2350,13 @@ elif page == "Exports":
     else:
         chosen = [w.get(i) for i in w.selected]
         context = w.analysis_context
+        export_rainfall_target = getattr(
+            context, "rainfall_target", "community_area" if context.scope == "specific_provider" else "region_wide"
+        )
         st.markdown("**Review what your recipient will receive**")
         st.caption(
-            f"Prepared for {context.audience_label} ({context.county_label}). A readable rainfall brief, daily values, "
+            f"Prepared for {context.audience_label} ({context.county_label}); rainfall target: {RAINFALL_TARGETS[export_rainfall_target]}. "
+            "A readable rainfall brief, daily values, "
             "source evidence and a replayable audit are included. Review decisions control what can be exported."
         )
 

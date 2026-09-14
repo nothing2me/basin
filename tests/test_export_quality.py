@@ -29,7 +29,7 @@ import json
 import zipfile
 import pytest
 
-from basin_core.data import CachedSource
+from basin_core.data import CachedSource, default_station_ids
 from basin_core.engine import ScenarioParams
 from basin_core.workspace import Workspace
 from basin_core.water_system import (
@@ -57,7 +57,7 @@ from tests.test_report_layout import drawn_items, overlapping_pairs, out_of_boun
 @pytest.fixture
 def base_workspace():
     source = CachedSource()
-    w = Workspace(source, ScenarioParams(tuple(source.daily.columns), candidates=30), size=3)
+    w = Workspace(source, ScenarioParams(tuple(default_station_ids(source)), candidates=30), size=3)
     for sid in w.selected:
         w.get(sid).review(True, f"Accepted for test {sid}")
     return w

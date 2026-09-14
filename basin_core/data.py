@@ -4,11 +4,69 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import re
 
 import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def default_station_ids(source: "CachedSource") -> list[str]:
+    """Return the manifest's demonstration defaults with a legacy fallback."""
+    configured = [item["id"] for item in source.manifest["stations"] if item.get("default_for_analysis")]
+    if configured:
+        return configured
+    legacy = [station for station in ("USW00012924", "USW00012912", "USW00012921")
+              if station in source.daily.columns]
+    return legacy or list(source.daily.columns[:3])
+
+
+def target_station_ids(source: "CachedSource", context) -> list[str]:
+    """Return stations inside the selected decision area, preserving manifest order."""
+    if getattr(context, "scope", "region_wide") == "region_wide":
+        return list(source.daily.columns)
+    counties = set(getattr(context, "counties", ()))
+    return [item["id"] for item in source.manifest["stations"] if item.get("county") in counties]
+
+
+def suggested_station_ids(source: "CachedSource", context) -> list[str]:
+    """Choose a transparent local-area starting set; never infer water-source catchments."""
+    if getattr(context, "scope", "region_wide") == "region_wide":
+        return default_station_ids(source)
+    if getattr(context, "rainfall_target", "community_area") != "community_area":
+        return default_station_ids(source)
+
+    registry = {item["id"]: item for item in source.manifest["stations"]}
+    quality = {item["station_id"]: item for item in source.manifest.get("quality", [])}
+    candidates = target_station_ids(source, context)
+    if not candidates:
+        return []
+
+    target_text = " ".join((getattr(context, "organization_name", ""), getattr(context, "community", ""))).lower()
+    ignored = {"city", "of", "water", "district", "county", "service", "area", "provider", "wsc", "mud", "wcid"}
+    target_words = {word for word in re.findall(r"[a-z]+", target_text) if len(word) > 2 and word not in ignored}
+
+    def rank(station_id):
+        item = registry[station_id]
+        station_words = set(re.findall(r"[a-z]+", item.get("name", "").lower()))
+        exact_place_match = bool(target_words & station_words)
+        ready = item.get("default_settings_ready", False)
+        usable_settings = int(item.get("eligible_default_settings", 0))
+        completeness = float(quality.get(station_id, {}).get("completeness_pct", 0.0))
+        return (exact_place_match, ready, usable_settings, completeness)
+
+    ranked = sorted(candidates, key=rank, reverse=True)
+    exact = [station for station in ranked if rank(station)[0]]
+    if exact:
+        return exact[:3]
+
+    selected = []
+    for county in getattr(context, "counties", ()):
+        county_candidates = [station for station in ranked if registry[station].get("county") == county]
+        if county_candidates:
+            selected.append(county_candidates[0])
+    return selected[:3]
 
 
 class CachedSource:

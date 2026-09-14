@@ -1,9 +1,8 @@
 """Decision-owner and service-area context for a BASIN screening run.
 
-This context explains who the rainfall shortlist is for.  It is deliberately
-separate from station selection and the optional storage experiment: naming a
-community does not assert that the bundled gauges or a water-system preset are
-hydrologically representative of that community.
+This context explains who the rainfall shortlist is for and targets the station
+choices offered for generation. Naming a community still does not assert that a
+point gauge or water-system preset represents its source-water catchment.
 """
 from __future__ import annotations
 
@@ -42,6 +41,12 @@ DECISION_USES = {
     "other": "Other planning use",
 }
 
+RAINFALL_TARGETS = {
+    "community_area": "Local community / selected county area",
+    "source_area": "Water-supply source area (select stations manually)",
+    "region_wide": "Region N-wide rainfall context",
+}
+
 
 @dataclass(frozen=True)
 class AnalysisContext:
@@ -54,7 +59,8 @@ class AnalysisContext:
     community: str
     supply_relationship: str
     decision_use: str
-    modeling_effect: str = "context_only"
+    rainfall_target: str = "community_area"
+    modeling_effect: str = "station_targeting"
 
     def __post_init__(self) -> None:
         if self.scope not in {"region_wide", "specific_provider"}:
@@ -65,8 +71,12 @@ class AnalysisContext:
             raise ValueError("Unknown water-source relationship")
         if self.decision_use not in DECISION_USES:
             raise ValueError("Unknown planning use")
-        if self.modeling_effect != "context_only":
-            raise ValueError("Community context cannot alter calculations without a reviewed spatial model")
+        if self.rainfall_target not in RAINFALL_TARGETS:
+            raise ValueError("Unknown rainfall evidence target")
+        if self.scope == "region_wide" and self.rainfall_target != "region_wide":
+            raise ValueError("Region-wide context must use the Region N rainfall target")
+        if self.modeling_effect != "station_targeting":
+            raise ValueError("Analysis context must use the supported station-targeting contract")
         name = self.organization_name.strip()
         community = self.community.strip()
         object.__setattr__(self, "organization_name", name)
@@ -88,6 +98,7 @@ class AnalysisContext:
             community="",
             supply_relationship="multiple",
             decision_use="regional_screening",
+            rainfall_target="region_wide",
         )
 
     @classmethod
@@ -96,13 +107,21 @@ class AnalysisContext:
             return cls.region_wide()
         if not isinstance(record, dict):
             raise ValueError("Invalid analysis context")
-        expected = {
+        required = {
             "scope", "organization_type", "organization_name", "counties",
             "community", "supply_relationship", "decision_use", "modeling_effect",
         }
-        if set(record) != expected:
+        allowed = required | {"rainfall_target"}
+        if not required <= set(record) or not set(record) <= allowed:
             raise ValueError("Analysis context fields are missing or unsupported")
-        return cls(**{**record, "counties": tuple(record["counties"])})
+        rainfall_target = record.get(
+            "rainfall_target", "region_wide" if record["scope"] == "region_wide" else "community_area"
+        )
+        values = {**record, "counties": tuple(record["counties"]), "rainfall_target": rainfall_target}
+        # Saved 2.2 runs used context_only before community targeting was added.
+        if values["modeling_effect"] == "context_only":
+            values["modeling_effect"] = "station_targeting"
+        return cls(**values)
 
     def record(self) -> dict:
         result = asdict(self)

@@ -14,7 +14,29 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/"
-IDS = ["USW00012924", "USW00012912", "USW00012921"]
+STATIONS = (
+    ("USW00012932", "Jim Wells", True),       # Alice International Airport
+    ("USC00411720", "Live Oak", True),       # Choke Canyon Dam
+    ("USW00012924", "Nueces", True),         # Corpus Christi
+    ("USC00417704", "Aransas", False),       # Rockport
+    ("USC00410639", "Bee", False),           # Beeville
+    ("USC00413063", "Brooks", False),         # Falfurrias; record ends 2022
+    ("USC00410690", "Duval", False),          # Benavides
+    ("USC00413341", "Duval", False),          # Freer
+    ("USC00415661", "Jim Wells", False),      # Mathis 4 SSW
+    ("USC00418081", "Kenedy", False),         # Sarita 7 E; record ends 2017
+    ("USC00414810", "Kleberg", False),        # Kingsville
+    ("USW00012928", "Kleberg", False),        # Kingsville NAAS
+    ("USC00413508", "Live Oak", False),       # George West
+    ("USC00419007", "Live Oak", False),       # Three Rivers
+    ("USC00419717", "Live Oak", False),       # Whitsett
+    ("USC00411337", "McMullen", False),       # Calliham
+    ("USC00415303", "McMullen", False),       # Loma Alta
+    ("USC00417677", "Nueces", False),         # Robstown
+    ("USW00012926", "Nueces", False),         # Corpus Christi NAS
+    ("USC00419559", "San Patricio", False),   # Welder Wildlife Foundation
+)
+IDS = [station_id for station_id, _, _ in STATIONS]
 
 
 def download(path):
@@ -50,11 +72,14 @@ def main():
         payloads = list(pool.map(download, ["ghcnd-stations.txt", "ghcnd-version.txt"] + [f"all/{s}.dly" for s in IDS]))
     metadata = payloads[0].decode("utf-8")
     registry = []
+    station_config = {station_id: (county, is_default) for station_id, county, is_default in STATIONS}
     for station in IDS:
         line = next(line for line in metadata.splitlines() if line[:11] == station)
+        county, is_default = station_config[station]
         registry.append({"id": station, "name": line[41:71].strip(), "latitude": float(line[12:20]),
                          "longitude": float(line[21:30]), "elevation_m": float(line[31:37]),
-                         "role": "Provisional regional station proxy; catchment representativeness unvalidated",
+                         "county": county, "default_for_analysis": is_default,
+                         "role": "Region N point-observation station; catchment representativeness unvalidated",
                          "catchment": None, "source": BASE + f"all/{station}.dly"})
     frames = [parse_dly(raw, station) for station, raw in zip(IDS, payloads[2:])]
     frame = pd.concat(frames).sort_values(["date", "station_id"])
@@ -67,10 +92,31 @@ def main():
                         "missing_or_excluded_days": expected - valid,
                         "completeness_pct": round(valid / expected * 100, 3),
                         "trace_days": int(group.mflag.eq("T").sum())})
+    daily_frame = frame.copy()
+    daily_frame["date"] = pd.to_datetime(daily_frame["date"])
+    daily = daily_frame.pivot(index="date", columns="station_id", values="precip_mm").reindex(
+        pd.date_range("1991-01-01", "2025-12-31", freq="D")
+    )
+    for item in registry:
+        usable = 0
+        series = daily[item["id"]]
+        for month in (1, 4, 7, 10):
+            for duration in (90, 180, 270):
+                starts = pd.date_range("1991-01-01", "2015-12-31", freq="MS")
+                starts = starts[starts.month == month]
+                complete = sum(
+                    1 for start in starts
+                    if start + pd.Timedelta(days=duration - 1) <= pd.Timestamp("2015-12-31")
+                    and series.loc[start:start + pd.Timedelta(days=duration - 1)].notna().all()
+                )
+                usable += int(complete >= 5)
+        item["eligible_default_settings"] = usable
+        item["default_settings_ready"] = usable == 12
     manifest = {"schema_version": "1.0", "source": "NOAA NCEI GHCN-Daily", "dataset_version": payloads[1].decode().strip(),
                 "downloaded_at": datetime.now(timezone.utc).isoformat(), "start": "1991-01-01", "end": "2025-12-31",
                 "sha256": hashlib.sha256(raw_csv).hexdigest(), "stations": registry, "quality": quality,
                 "raw_sha256": {s: hashlib.sha256(r).hexdigest() for s, r in zip(IDS, payloads[2:])},
+                "selection": "Region N GHCN-Daily stations with records beginning by 1991 and extending through 2025, plus the longest available Brooks and Kenedy County records so all 11 counties can be targeted. Sparse settings remain unavailable rather than imputed.",
                 "policy": "PRCP only; tenths mm / 10; missing/negative, nonblank QFLAG, MFLAG P excluded; trace = 0; no imputation; MDPR never used. Complete simultaneous windows only.",
                 "documentation": BASE + "readme.txt"}
     target = ROOT / "data"

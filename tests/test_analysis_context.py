@@ -7,6 +7,7 @@ from pathlib import Path
 from streamlit.testing.v1 import AppTest
 
 from basin_core.analysis_context import AnalysisContext, REGION_N_COUNTIES
+from basin_core.data import suggested_station_ids, target_station_ids
 from basin_core.exporter import export_bundle, verify_bundle
 from basin_core.pdf_report import build_fallback_pdf, render_html_report
 from basin_core.workspace import Workspace
@@ -56,7 +57,8 @@ def test_context_round_trips_with_workspace_and_verified_handoff(workspace, tmp_
     assert "## Intended decision context" in brief
     assert "City of Alice" in brief
     assert "Jim Wells" in brief
-    assert "does not select representative gauges" in brief
+    assert "Rainfall evidence target" in brief
+    assert "ALICE INTL AP" in brief
 
     accepted = restored.exportable()
     html = render_html_report(restored, accepted)
@@ -64,7 +66,22 @@ def test_context_round_trips_with_workspace_and_verified_handoff(workspace, tmp_
     assert "Prepared for:</strong> City of Alice" in html
     assert "Jim Wells" in html
     assert b"Prepared for: City of Alice" in pdf
-    assert b"does not select representative gauges" in pdf
+    assert b"source-water catchment" in pdf
+
+
+def test_legacy_context_migrates_to_station_targeting():
+    record = specific_context().record()
+    record.pop("rainfall_target")
+    record["modeling_effect"] = "context_only"
+    restored = AnalysisContext.from_record(record)
+    assert restored.rainfall_target == "community_area"
+    assert restored.modeling_effect == "station_targeting"
+
+
+def test_specific_city_targets_local_station_choices(source):
+    context = specific_context()
+    assert target_station_ids(source, context) == ["USW00012932", "USC00415661"]
+    assert suggested_station_ids(source, context) == ["USW00012932"]
 
 
 def test_older_saved_run_without_context_loads_as_explicit_region_wide(workspace, tmp_path):
@@ -102,3 +119,5 @@ def test_specific_city_context_survives_data_to_builder_transition(tmp_path, mon
     assert context.organization_name == "City of Alice"
     assert context.community == "Alice service area"
     assert context.counties == ("Jim Wells",)
+    assert context.rainfall_target == "community_area"
+    assert app.session_state.workspace.params.stations == ("USW00012932",)

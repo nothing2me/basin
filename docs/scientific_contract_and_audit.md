@@ -19,7 +19,7 @@ An engineering audit of `basin_core/analysis.py`, `basin_core/water_system.py`, 
   $$\bar{P}_t = \frac{1}{N} \sum_{i=1}^N P_{i,t}$$
   In `basin_core/analysis.py` line 173: `series.mean(axis=1)` averages daily precipitation equally across all selected stations.
 - **Deficiency:**
-  The default preset uses three NOAA airport stations: Corpus Christi Intl (`USW00012924`), Victoria Regional (`USW00012935`), and San Antonio Intl (`USW00012921`). These stations reside outside or on the far periphery of the actual drainage basins. Furthermore, the lower Nueces catchment feeding Lake Corpus Christi is **16,656 square miles**, while the Frio catchment feeding Choke Canyon is **5,490 square miles**. Treating precipitation at these disparate locations with equal 33.3% weights introduces substantial spatial distortion and fails to represent actual runoff-generating rainfall over the headwaters.
+  The regional default uses Alice International Airport (`USW00012932`), Choke Canyon Dam (`USC00411720`), and Corpus Christi (`USW00012924`). Local-community selection narrows choices by Region N county; source-area selection remains manual. These are point observations with equal weights. That targeting improves geographic relevance for screening but does not establish an area-weighted catchment product or actual runoff-generating rainfall over a utility's source watershed.
 
 ### 1.2 Instantaneous Linear Inflow Heuristic
 - **Current Formulation:**

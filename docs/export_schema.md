@@ -34,7 +34,7 @@ BASIN-[id].zip
 
 ### Example
 ```csv
-date,USW00012924,USW00012912,USW00012921
+date,USW00012932,USC00411720,USW00012924
 2011-06-01,0.0,0.0,0.0
 2011-06-02,0.0,0.0,1.2
 2011-06-03,4.5,0.0,0.0
@@ -75,7 +75,7 @@ date,USW00012924,USW00012912,USW00012921
 
 - `schema_version`: e.g. `"2.0"` or `"2.1"`
 - `workspace_id`: 12-character unique identifier
-- `analysis_context`: Intended user and service-area context. It records `scope`, organization type/name, Region N counties, optional community/service-area label, supply relationship, planning use, and `modeling_effect: "context_only"`. This field does not assert that selected gauges or a storage preset represent that community.
+- `analysis_context`: Intended user, service area, and rainfall target. It records `scope`, organization type/name, Region N counties, optional community/service-area label, supply relationship, planning use, rainfall target, and `modeling_effect: "station_targeting"`. It explains why stations were offered or selected without asserting that a point gauge or storage preset represents the community's source-water catchment.
 - `params`: Resampling parameters (stations, durations, onset months, retention range, seed, extent)
 - `scenarios`: Full candidate audit array:
   - `id`: Scenario identifier

@@ -52,6 +52,8 @@ class Reference:
     def __init__(self, source: CachedSource, stations: list[str]):
         self.stations = stations
         self.daily = source.select(stations)
+        registry = {item["id"]: item for item in source.manifest.get("stations", [])}
+        self.has_custom_stations = any(registry.get(station, {}).get("custom", False) for station in stations)
         normal = self.daily.loc["1991":"2020"]
         counts = normal.groupby(normal.index.month).count()
         if len(counts) != 12 or (counts < 600).any().any():
@@ -233,8 +235,7 @@ class ScenarioGenerator:
         rng = np.random.default_rng(p.seed)
         eligible = {}
         unavailable = []
-        is_custom_run = any(s not in ("USW00012924", "USW00012912", "USW00012921") for s in p.stations)
-        min_pre2015 = 0 if is_custom_run else 5
+        min_pre2015 = 0 if ref.has_custom_stations else 5
         for month in p.months:
             for duration in p.durations:
                 windows = ref.windows(month, duration)

@@ -22,7 +22,7 @@ Updated: 2026-09-13. This file tracks current release work. The previous detaile
 - [x] **Offline Region N satellite basemap and bundling.** Pre-cached 340 high-resolution satellite tiles (zoom 6–11, 4.28 MB) covering Region N bounds with local static serving, instant loading (0.03s build time), and on-demand stream/lake vector toggles. Updated offline bundle build scripts.
 - [x] **Windows PDF visual export.** Enabled headless Microsoft Edge rendering on Windows, restoring full Kaleido figures (pareto frontier, stage milestone timelines), 3-way ML model comparison tables, and diagnostic cards in exported PDFs.
 - [x] **AI Assistant natural language routing.** Enhanced `basin_core/assistant.py` with workspace run overview, worst/longest scenario auto-resolution, rank comparison delta tables, and bounded domain explanations. The assistant now distinguishes the current 20% Corpus Christi Stage 3 threshold from BASIN's illustrative 35% input, labels 75,000 ac-ft as a configurable assumption, and avoids converting rainfall concurrence into supply failure.
-- [x] **Named community/provider decision context.** Data Dashboard now asks whether the screening is Region N-wide or for a named city/provider, records county/service area, supply relationship and planning use, and carries that context through save/replay, Review, verified exports and PDF reports. The record is context-only until representative gauges and a local water system are professionally mapped.
+- [x] **Named community/provider station targeting.** Data Dashboard asks whether the screening is Region N-wide or for a named city/provider and whether rainfall should target the local county area or a manually selected source-water area. Local mode filters 20 loaded Region N point stations by county and preselects a place/coverage match; save/replay, Review, verified exports and reports preserve the target and exact stations. Catchment representativeness and local water-system calibration remain practitioner decisions.
 
 ## Next technical work
 
@@ -40,7 +40,7 @@ Updated: 2026-09-13. This file tracks current release work. The previous detaile
 ## Claim boundaries for every release
 
 - BASIN constructs and reviews rainfall-stress scenarios. It does not forecast reservoir levels, safe yield, deliveries, official restriction dates or drought probability.
-- Airport observations are reproducible regional proxies, not validated catchment rainfall.
+- Loaded NOAA point observations are screening evidence, not validated catchment rainfall or an area-weighted basin product.
 - Saved storage experiments are uncalibrated. Numerical replay does not validate their assumptions or establish operational outcomes.
 - SHA-256 checks establish internal packet consistency. They do not authenticate a source or provide a digital signature.
 - Local development checks do not establish presentation-device, practitioner, scientific, accessibility or organizer acceptance.

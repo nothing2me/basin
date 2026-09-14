@@ -30,6 +30,7 @@ from basin_core.analysis import (
     threshold_crossing_day,
     threshold_day_label,
 )
+from basin_core.analysis_context import RAINFALL_TARGETS
 from basin_core.tools import (
     check_concurrence,
     explain_ranking,
@@ -848,8 +849,11 @@ def render_html_report(
     analysis_context = getattr(workspace, "analysis_context", None)
     audience_label = getattr(analysis_context, "audience_label", "Region N planning area")
     county_label = getattr(analysis_context, "county_label", "All 11 Region N counties")
+    rainfall_target = RAINFALL_TARGETS.get(
+        getattr(analysis_context, "rainfall_target", "region_wide"), "Region N-wide rainfall context"
+    )
     context_boundary = (
-        "This names the intended audience; it does not select representative gauges or calibrate the storage experiment."
+        "The rainfall target scopes point-station choices; it does not establish source-water catchment representativeness or calibrate the storage experiment."
     )
 
     manifest = getattr(workspace.source, "manifest", {}) or {}
@@ -1461,13 +1465,14 @@ def render_html_report(
             <div><strong>Run ID:</strong> <span class="font-mono">{escape(run_id)}</span></div>
             <div><strong>Date:</strong> {escape(created_date)} · NOAA GHCN-Daily</div>
             <div><strong>Prepared for:</strong> {escape(audience_label)}</div>
+            <div><strong>Rainfall target:</strong> {escape(rainfall_target)}</div>
         </div>
     </div>
 
     <!-- SECTION 1: EXECUTIVE SUMMARY (Page 1 Orientation Precedes Warning Box) -->
     <div class="report-section" id="section-1">
         <div class="section-title">1. Executive Summary</div>
-        <p style="font-size: 8pt; margin-bottom: 6px;"><strong>Intended decision context:</strong> {escape(audience_label)} · {escape(county_label)}. {escape(context_boundary)}</p>
+        <p style="font-size: 8pt; margin-bottom: 6px;"><strong>Intended decision context:</strong> {escape(audience_label)} · {escape(county_label)} · {escape(rainfall_target)}. {escape(context_boundary)}</p>
         <div class="callout">
             <div class="callout-title">The Bottom Line — Executive Overview</div>
             <p>This report presents human-reviewed rainfall stress scenarios and an <strong>illustrative reservoir drawdown experiment</strong> across the reservoirs the model represents ({escape(capacity_breakdown)}; combined <strong>{total_capacity:,.0f} ac-ft</strong>). {overview_sentence} <em>This simulation is an exploratory sensitivity tool, not an operational delivery forecast.</em></p>
@@ -2039,6 +2044,7 @@ def build_fallback_pdf(
         provider_note = ""
         audience_label = "Region N planning area"
         county_label = "All 11 Region N counties"
+        rainfall_target = "Region N-wide rainfall context"
         workspace = None
     else:
         workspace = workspace_or_title
@@ -2061,6 +2067,9 @@ def build_fallback_pdf(
         analysis_context = getattr(workspace, "analysis_context", None)
         audience_label = getattr(analysis_context, "audience_label", "Region N planning area")
         county_label = getattr(analysis_context, "county_label", "All 11 Region N counties")
+        rainfall_target = RAINFALL_TARGETS.get(
+            getattr(analysis_context, "rainfall_target", "region_wide"), "Region N-wide rainfall context"
+        )
 
     spectrum_data = metrics.spectrum_data
     system = config.system_config or REGION_N_PRESET
@@ -2196,8 +2205,8 @@ def build_fallback_pdf(
     # -------------------------------------------------------------------------
     flow.heading("1. EXECUTIVE SUMMARY", size=10.0)
     flow.paragraph(
-        f"Prepared for: {audience_label} | Service area: {county_label}. "
-        "This names the intended audience; it does not select representative gauges or calibrate the storage experiment.",
+        f"Prepared for: {audience_label} | Service area: {county_label} | Rainfall target: {rainfall_target}. "
+        "The target scopes point-station choices; it does not establish source-water catchment representativeness or calibrate the storage experiment.",
         size=7.0,
     )
     flow.heading("THE BOTTOM LINE -- EXECUTIVE OVERVIEW", size=8.5)

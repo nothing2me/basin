@@ -150,7 +150,7 @@
 *(Live demo conducted directly on the presentation laptop by Noah and Mohammed)*
 
 #### Demo Step 1: Data Dashboard & Cryptographic Verification (30:00 – 31:30)
-- **Action:** Open `BASIN.exe`. Show the NOAA GHCN-Daily baseline covering 1991–2025 across Corpus Christi, Victoria, and San Antonio.
+- **Action:** Open `BASIN.exe`. Select City of Alice and Jim Wells County, then show BASIN narrow the 20-station Region N snapshot to local candidates and preselect Alice International Airport. State that station targeting is auditable screening evidence, not a claim about the city's supply catchment.
 - **Narration:** *"Notice the SHA-256 digest recorded in the header. We can also upload a local rural rain gauge CSV in one click; BASIN instantly sanitizes, aligns, and compares it against regional NOAA baselines."*
 
 #### Demo Step 2: Scenario Builder & Unsupervised Clustering (31:30 – 33:30)

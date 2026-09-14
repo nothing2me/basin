@@ -1,9 +1,18 @@
 # BASIN current handoff
 
+## September 14 — City selection now targets rainfall evidence
+
+- City/provider intake now asks whether rainfall should represent the local community area or a separately chosen water-supply source area. Local mode filters Scenario Builder to the selected Region N counties and preselects the strongest place-name, usable-setting, and completeness match.
+- Replaced the three out-of-region/regional proxy snapshot with 20 NOAA GHCN-Daily point stations spanning all 11 Region N counties. Alice, Choke Canyon Dam, and Corpus Christi are the reproducible regional defaults. Station gaps remain missing, and the manifest records completeness plus default-setting readiness.
+- Review, Markdown handoff, verified audit, and HTML/vector PDF reports identify the rainfall target and exact point stations. Every surface states that county targeting does not prove source-water catchment representativeness.
+- Corrected the custom-data exception so newly bundled public stations still require five complete pre-2016 comparison windows per setting; weak settings are excluded instead of silently accepted.
+
+Verification: 35 core city-targeting/app tests and 134 context, pipeline, app, integrity, PDF, layout, and export-quality tests passed in the isolated worktree. Fresh-checkout verification is run after the commit so it checks the exact committed snapshot.
+
 ## September 14 — Community/provider context and credibility correction
 
 - Added a Data Dashboard intake for a Region N-wide run or a named city/provider. Specific runs record organization type/name, county or counties, optional service-area label, supply relationship, and planning purpose.
-- Preserved that context in session save/load, Review, verified audit and Markdown handoff, and both HTML and vector PDF reports. The contract remains `context_only`: it does not silently claim that bundled gauges or a storage preset represent the named community.
+- Preserved that context in session save/load, Review, verified audit and Markdown handoff, and both HTML and vector PDF reports. The `station_targeting` contract narrows local station choices while avoiding unsupported claims that a point gauge or storage preset represents the named community's source-water catchment.
 - Wired the full Region N observation catalog into the satellite map: 191 NOAA rainfall stations, 228 USGS water sites, streams, lakes/reservoirs, HUC8 subbasins, county boundaries, and the Region N outline. Catalog presence does not imply an active gauge or modeling suitability.
 - Replaced unsupported summary and assistant claims. Rainfall percentiles are described as sample comparisons; gauge concurrence no longer implies basin-wide supply failure; 35% storage is an illustrative input rather than Stage 3; and the 75,000 ac-ft reserve remains a configurable assumption.
 

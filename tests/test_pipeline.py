@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from basin_core.analysis import WeightedSumRanking, shortlist, COMMUNITY_PRESETS, simulate_reservoir_drawdown
-from basin_core.data import CachedSource
+from basin_core.data import CachedSource, default_station_ids
 from basin_core.engine import Reference, ScenarioGenerator, ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle
 from basin_core.workspace import Workspace
@@ -37,7 +37,7 @@ def test_parameters_rejected(source, overrides):
 
 
 def test_generation_determinism_and_synchronized_source(source):
-    params = ScenarioParams(tuple(source.daily.columns), candidates=20)
+    params = ScenarioParams(tuple(default_station_ids(source)), candidates=20)
     a, _ = ScenarioGenerator(source, params).generate()
     b, _ = ScenarioGenerator(source, params).generate()
     assert [s.digest() for s in a] == [s.digest() for s in b]
@@ -48,14 +48,20 @@ def test_generation_determinism_and_synchronized_source(source):
         assert not s.series.isna().any().any()
 
 
+def test_sparse_public_station_does_not_receive_custom_data_exception(source):
+    params = ScenarioParams(("USC00410639",), candidates=10)
+    with pytest.raises(ValueError, match="No complete, season-matched windows"):
+        ScenarioGenerator(source, params).generate()
+
+
 def test_missing_window_excluded(source):
-    ref = Reference(source, list(source.daily.columns))
+    ref = Reference(source, default_station_ids(source))
     ref.daily.loc["2001-01-15", ref.stations[0]] = np.nan
     assert "2001-01-01" not in [w["start"] for w in ref.windows(1, 90)]
 
 
 def test_feature_boundaries_and_fixed_reference(source):
-    ref = Reference(source, list(source.daily.columns))
+    ref = Reference(source, default_station_ids(source))
     dates = pd.date_range("2001-07-01", periods=90)
     dry = pd.DataFrame(0.0, index=dates, columns=ref.stations)
     features = ref.features(dry)
@@ -189,7 +195,7 @@ def test_offline_pipeline(source, monkeypatch):
         raise AssertionError("Unexpected network connection")
     monkeypatch.setattr(socket.socket, "connect", forbidden)
     monkeypatch.setattr(socket, "create_connection", forbidden)
-    w = Workspace(source, ScenarioParams(tuple(source.daily.columns), candidates=10), size=3)
+    w = Workspace(source, ScenarioParams(tuple(default_station_ids(source)), candidates=10), size=3)
     for identifier in w.selected:
         w.get(identifier).review(True)
     assert verify_bundle(export_bundle(w))["verified"]
