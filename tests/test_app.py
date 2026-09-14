@@ -1,8 +1,37 @@
 from pathlib import Path
+from datetime import date, time
 
 from streamlit.testing.v1 import AppTest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_searchable_station_picker_and_exact_custom_date_range(tmp_path, monkeypatch):
+    from basin_core.workspace import Workspace
+
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    app.sidebar.radio[0].set_value("Workspace").run()
+
+    station_picker = next(widget for widget in app.multiselect if widget.label == "Search and select stations")
+    assert set(station_picker.value) == {"USW00012924", "USW00012912", "USW00012921"}
+    date_range = next(widget for widget in app.selectbox if widget.label == "Date range")
+    date_range.set_value("Custom date ranges").run()
+    assert [widget.label for widget in app.date_input] == ["Start date", "End date"]
+    assert [widget.label for widget in app.time_input] == ["Start time", "End time"]
+
+    app.date_input[0].set_value(date(2014, 3, 15))
+    app.date_input[1].set_value(date(2014, 6, 12))
+    app.time_input[0].set_value(time(8, 30))
+    app.time_input[1].set_value(time(17, 45))
+    app.run()
+    next(button for button in app.button if button.label == "Create rainfall scenarios").click().run()
+
+    assert not app.exception
+    assert app.session_state.workspace.params.calendar_ranges == (
+        ("2014-03-15T08:30", "2014-06-12T17:45"),
+    )
 
 
 def test_full_user_workflow(tmp_path, monkeypatch):

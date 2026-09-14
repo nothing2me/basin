@@ -108,7 +108,12 @@ def reconstruct_record(record, reference, legacy=False):
 def reconstruct_audit(source, audit, legacy=False, require_export=False):
     if audit["snapshot_sha256"] != source.manifest["sha256"]:
         raise ValueError("Audit source snapshot identity mismatch")
-    params = ScenarioParams(**{**audit["params"], **{k: tuple(audit["params"][k]) for k in ("stations", "durations", "months")}})
+    raw_params = audit["params"]
+    params = ScenarioParams(**{
+        **raw_params,
+        **{k: tuple(raw_params[k]) for k in ("stations", "durations", "months")},
+        "calendar_ranges": tuple(tuple(value) for value in raw_params.get("calendar_ranges", ())),
+    })
     params.validate()
     reference = Reference(source, list(params.stations))
     records = audit["scenarios"]

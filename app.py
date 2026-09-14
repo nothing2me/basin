@@ -1377,30 +1377,130 @@ elif page == "Workspace":
     c_gen, c_weights = st.columns([1, 1])
     with c_gen:
         with tour_target("sidebar_generator"):
-            with st.form("generate", border=True):
+            with st.container(border=True):
                 st.markdown("##### Resample Weather Windows")
-                stations = st.multiselect("Stations", list(names), default=list(w.params.stations) if w else list(names), format_func=names.get)
-                durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
-                months = st.multiselect("Starting months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
-                retention = st.slider("Retained rainfall (% of observed rainfall)", 0, 100, (35, 85), 5,
-                                      help="Retained rainfall percentage (for example, 70% retained = 30% reduction).")
-                extent = st.selectbox("Where reduced rainfall occurs", ["All stations", "One station", "Mixed"])
-                a, b = st.columns(2)
-                count = a.selectbox("Scenarios to test", [100, 300, 500, 1000], index=1)
-                size = b.selectbox("Scenarios to review", [3, 4, 6, 8], index=2)
-                seed = st.number_input("Repeatable run seed", 0, 4294967295, w.params.seed if w else 22)
-                generate = st.form_submit_button("Create rainfall scenarios", type="primary", width="stretch")
+                stations = st.multiselect(
+                    "Search and select stations", list(names),
+                    default=list(w.params.stations) if w else list(names), format_func=names.get,
+                    help="Open the menu and type a station name or station ID to search.",
+                    placeholder="Type a station name or ID",
+                )
+
+                range_options = [
+                    "Seasonal mix · 90, 180 and 270 days",
+                    "30-day seasonal windows",
+                    "90-day seasonal windows",
+                    "180-day seasonal windows",
+                    "270-day seasonal windows",
+                    "365-day seasonal windows",
+                    "Custom date ranges",
+                ]
+                saved_ranges = tuple(getattr(w.params, "calendar_ranges", ())) if w else ()
+                saved_duration_option = {
+                    (30,): 1,
+                    (90,): 2,
+                    (180,): 3,
+                    (270,): 4,
+                    (365,): 5,
+                }
+                default_range_index = 6 if saved_ranges else (
+                    saved_duration_option.get(tuple(w.params.durations), 0) if w else 0
+                )
+                range_mode = st.selectbox(
+                    "Date range", range_options, index=default_range_index,
+                    help="Quick choices sample several seasons. Custom ranges accept exact start and end dates and times.",
+                )
+                calendar_ranges = []
+                if range_mode == "Custom date ranges":
+                    source_start_date = pd.Timestamp(source.manifest["start"]).date()
+                    source_end_date = pd.Timestamp(source.manifest["end"]).date()
+                    with st.popover("📅 Set exact dates and times", width="stretch"):
+                        range_count = int(st.number_input(
+                            "Number of ranges", min_value=1, max_value=4,
+                            value=max(1, min(4, len(saved_ranges))), step=1,
+                            help="Add up to four distinct calendar ranges to the same run.",
+                        ))
+                        st.caption("Choose exact dates from the loaded record. Times are saved for audit; daily rainfall calculations use whole calendar days.")
+                        for range_index in range(range_count):
+                            if range_index < len(saved_ranges):
+                                saved_start = datetime.fromisoformat(saved_ranges[range_index][0])
+                                saved_end = datetime.fromisoformat(saved_ranges[range_index][1])
+                            else:
+                                saved_end = datetime(
+                                    source_end_date.year, source_end_date.month, source_end_date.day, 23, 59,
+                                )
+                                default_start_date = max(source_start_date, source_end_date - timedelta(days=89))
+                                saved_start = datetime(
+                                    default_start_date.year, default_start_date.month, default_start_date.day, 0, 0,
+                                )
+                            st.markdown(f"**Range {range_index + 1}**")
+                            start_col, end_col = st.columns(2)
+                            start_date = start_col.date_input(
+                                "Start date", value=saved_start.date(),
+                                min_value=source_start_date, max_value=source_end_date,
+                                key=f"scenario_range_{range_index}_start_date",
+                            )
+                            start_time = start_col.time_input(
+                                "Start time", value=saved_start.time(),
+                                key=f"scenario_range_{range_index}_start_time",
+                            )
+                            end_date = end_col.date_input(
+                                "End date", value=saved_end.date(),
+                                min_value=source_start_date, max_value=source_end_date,
+                                key=f"scenario_range_{range_index}_end_date",
+                            )
+                            end_time = end_col.time_input(
+                                "End time", value=saved_end.time(),
+                                key=f"scenario_range_{range_index}_end_time",
+                            )
+                            calendar_ranges.append((
+                                datetime.combine(start_date, start_time).isoformat(timespec="minutes"),
+                                datetime.combine(end_date, end_time).isoformat(timespec="minutes"),
+                            ))
+                    range_summaries = []
+                    for start_value, end_value in calendar_ranges:
+                        start_value_dt, end_value_dt = datetime.fromisoformat(start_value), datetime.fromisoformat(end_value)
+                        days = (end_value_dt.date() - start_value_dt.date()).days + 1
+                        range_summaries.append(f"{start_value_dt:%b %d, %Y %H:%M} → {end_value_dt:%b %d, %Y %H:%M} ({days} days)")
+                    st.caption(" · ".join(range_summaries))
+
+                with st.form("generate", border=False):
+                    retention = st.slider("Retained rainfall (% of observed rainfall)", 0, 100, (35, 85), 5,
+                                          help="Retained rainfall percentage (for example, 70% retained = 30% reduction).")
+                    extent = st.selectbox("Where reduced rainfall occurs", ["All stations", "One station", "Mixed"])
+                    a, b = st.columns(2)
+                    count = a.selectbox("Scenarios to test", [100, 300, 500, 1000], index=1)
+                    size = b.selectbox("Scenarios to review", [3, 4, 6, 8], index=2)
+                    seed = st.number_input("Repeatable run seed", 0, 4294967295, w.params.seed if w else 22)
+                    generate = st.form_submit_button("Create rainfall scenarios", type="primary", width="stretch")
         if generate:
             if not stations:
                 st.error("⚠️ Select at least one station before generating scenarios.")
-            elif not durations:
-                st.error("⚠️ Select at least one duration window.")
-            elif not months:
-                st.error("⚠️ Select at least one starting calendar month.")
             else:
                 try:
                     with st.spinner("Computing…"):
-                        params = ScenarioParams(tuple(stations), tuple(durations), tuple(months), retention[0]/100, retention[1]/100, extent, count, int(seed))
+                        preset_durations = {
+                            "Seasonal mix · 90, 180 and 270 days": (90, 180, 270),
+                            "30-day seasonal windows": (30,),
+                            "90-day seasonal windows": (90,),
+                            "180-day seasonal windows": (180,),
+                            "270-day seasonal windows": (270,),
+                            "365-day seasonal windows": (365,),
+                        }
+                        if calendar_ranges:
+                            durations = tuple(sorted({
+                                (datetime.fromisoformat(end).date() - datetime.fromisoformat(start).date()).days + 1
+                                for start, end in calendar_ranges
+                            }))
+                            months = tuple(sorted({datetime.fromisoformat(start).month for start, _end in calendar_ranges}))
+                        else:
+                            durations = preset_durations[range_mode]
+                            months = (1, 4, 7, 10)
+                        params = ScenarioParams(
+                            tuple(stations), tuple(durations), tuple(months), retention[0]/100,
+                            retention[1]/100, extent, count, int(seed),
+                            calendar_ranges=tuple(calendar_ranges),
+                        )
                         new = Workspace(source, params, size, analysis_context=analysis_context_for_run())
                         if w:
                             new.notes = w.notes
