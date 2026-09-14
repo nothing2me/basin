@@ -1,5 +1,29 @@
 # BASIN current handoff
 
+## September 13–14 — Offline satellite basemap, Windows PDF visuals, and hydrologist assistant routing
+
+Delivered offline-first satellite imagery, restored full visual PDF generation on Windows, and implemented robust natural language query handling for the built-in AI assistant.
+
+1. **Offline Region N Satellite Basemap (`basin_core/region_n_map.py`)**:
+   - Pre-cached 340 high-resolution satellite tiles (zoom levels 6–11, total 4.28 MB) at `static/tiles/World_Imagery/{z}/{y}/{x}.jpg` covering the Region N bounding box (`[-98.80, 26.59, -96.71, 28.78]`).
+   - Enabled `enableStaticServing = true` in `.streamlit/config.toml` for zero-latency local HTTP serving with MapLibre GL overzooming at zoom 12+.
+   - Defaulted heavy stream/lake vectors (10,669 features) to an on-demand checkbox, reducing initial JSON payload from 10.01 MB to 495 KB (95% drop) and figure generation from 3.73s to 0.03s (100x speedup).
+   - Added `scripts/download_region_n_tiles.py` and updated `scripts/build_offline_bundle.py`.
+
+2. **Windows PDF Visual Export (`basin_core/pdf_report.py`)**:
+   - Removed the hardcoded `if sys.platform == "win32"` fallback bypass in `generate_pdf_report_with_status`.
+   - Headless Microsoft Edge (`msedge.exe`) renders the HTML report directly to PDF on Windows in ~2 seconds (~335 KB), preserving all Kaleido visual charts (Pareto frontier, Stage milestone timelines), 3-way ML model comparison tables, and diagnostic scorecards.
+   - Clean degradation to the 24 KB vector fallback preserved if headless browser rendering fails.
+
+3. **AI Assistant Natural Language & Intent Enhancements (`basin_core/assistant.py`)**:
+   - **Workspace Run & Shortlist Overview (`_render_workspace_summary`)**: Responds to queries about scenarios just run with a structured table of shortlisted scenarios, candidate counts, water system capacity, and key extremes (peak shortfall, longest chronic drought, highest concurrence).
+   - **Worst / Top / Longest Auto-Resolution**: Intelligently identifies and profiles target scenarios when no ID is provided (e.g. "What is the worst scenario?").
+   - **Comparative Ranking Breakdown (`_render_rank_comparison`)**: Generates side-by-side component score tables explaining why scenario A beat scenario B.
+   - **9 Domain Hydrologic & Rural Council FAQs**: Multi-station concurrence, 35% Stage 3 storage threshold, 75k ac-ft dead pool reserve / pump cavitation, Mary Rhodes Pipeline 72 MGD buffer, K-Means clustering diversity vs clones, rural council drought checklist, scenarios vs forecasts boundary, point deficit (mm) vs reservoir volume (ac-ft) runoff gap, and summer lake evaporation compounding.
+   - Verified across 55 assistant tests (16 tests in `tests/test_assistant_hydrologist_queries.py`).
+
+Verification: `tests/test_assistant_hydrologist_queries.py` (16 passed), `tests/test_geo_map.py` (4 passed), `tests/test_pdf_report.py` (23 passed), `tests/test_qwen_security.py` (16 passed), `tests/test_native_runtime_install.py` (50 passed, 2 skipped). Zero test regressions.
+
 ## September 13 — Simple/Advanced Review UI and density pass
 
 The presentation-mode contract from `11bbe6a` is now wired into the live Review workflow. A persistent two-button **Simple View / Advanced View** control changes presentation only; the workspace record, ranking, scenario revisions, review decisions, simulation inputs, saved runs, and exports remain on their existing contracts.
