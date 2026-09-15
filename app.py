@@ -39,6 +39,7 @@ from basin_core.uploads import TEMPLATE, preview_rainfall
 from basin_core.rainfall_comparison import compare_rainfall
 from basin_core.custom_data import (active_ids, digest, format_custom_source_label,
                                     format_custom_coverage_dates, CUSTOM_CATCHMENT_DISCLAIMER)
+from basin_core.document_ingestion import DOCUMENT_CATCHMENT_DISCLAIMER, DocumentState
 from basin_core.visualizers import (rainfall_reference_figure, rainfall_shortfall_figure,
                                     stage_trigger_milestone_figure, storage_trajectory_figure,
                                     drought_anomaly_matrix_figure,
@@ -307,6 +308,244 @@ def save(w):
     except OSError as error:
         st.error(f"Save failed: {error}")
         return False
+
+
+def supporting_documents_panel(workspace: Workspace | None):
+    """UI for user-provided supporting document ingestion, extraction, and evidence review."""
+    st.markdown("##### 📄 Supporting Documents & Cited Evidence")
+    st.caption(
+        f"Attach local PDF or plain-text reports as unverified context. "
+        f"{DOCUMENT_CATCHMENT_DISCLAIMER} Extraction is not verification; promotion to evidence requires human review."
+    )
+
+    if workspace is None:
+        st.info("Start an analysis (click 'Try an example' or build scenarios in Step 2) before adding supporting documents.")
+        return
+
+    # Section 1: Ingest New Document
+    with st.container(border=True):
+        st.markdown("###### Add Document")
+        c_file, c_meta = st.columns([1.5, 1.5])
+        with c_file:
+            uploaded = st.file_uploader(
+                "Upload document (.pdf or .txt)",
+                type=["pdf", "txt"],
+                key="supporting_doc_file_uploader",
+                help="Only .pdf and .txt files up to 30 MB / 100 pages. Scripts, macros, and encryption are rejected.",
+            )
+        with c_meta:
+            provider = st.text_input(
+                "Source / Provider organization",
+                key="supporting_doc_provider_input",
+                placeholder="e.g. City Water Dept / River Authority",
+                help="Organization or source that published the document.",
+            )
+            privacy = st.selectbox(
+                "Privacy classification",
+                ["private", "public"],
+                index=0,
+                key="supporting_doc_privacy_select",
+                help="Private documents remain strictly on this device and are omitted from default exports.",
+            )
+
+        if st.button("Add document", key="btn_add_supporting_doc", type="primary", disabled=uploaded is None):
+            if not provider.strip():
+                st.error("Please enter a source / provider organization name.")
+            elif uploaded is None:
+                st.error("Please choose a file to upload.")
+            else:
+                try:
+                    raw_bytes = uploaded.getvalue()
+                    doc = workspace.ingest_document(
+                        raw=raw_bytes,
+                        filename=uploaded.name,
+                        provider=provider.strip(),
+                        privacy=privacy,
+                    )
+                    save(workspace)
+                    st.success(f"Document '{doc.identity.original_filename}' added successfully ({doc.identity.sha256[:8]}…).")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Failed to add document: {exc}")
+
+    # Section 2: Compact Document List
+    if not workspace.documents:
+        st.caption("No supporting documents added yet.")
+        return
+
+    st.markdown("###### Document Catalog")
+    table_data = [
+        {
+            "Document ID": d.identity.id[:12] + "…",
+            "Filename": d.identity.original_filename,
+            "Provider": d.identity.source_provider,
+            "Size": f"{d.identity.byte_size / 1024:.1f} KB",
+            "State": d.state.replace("_", " ").title(),
+            "Privacy": d.identity.privacy.capitalize(),
+            "Digest (SHA-256)": f"{d.identity.sha256[:12]}…",
+        }
+        for d in workspace.documents
+    ]
+    st.dataframe(pd.DataFrame(table_data), hide_index=True, width="stretch")
+
+    # Section 3: Document Inspection & Review Workflow
+    doc_map = {d.identity.id: f"{d.identity.original_filename} ({d.identity.source_provider}) — {d.state.replace('_', ' ').title()}" for d in workspace.documents}
+    selected_id = st.selectbox(
+        "Select document for details & review",
+        list(doc_map.keys()),
+        format_func=lambda did: doc_map[did],
+        key="selected_doc_review_id",
+    )
+    doc = next((d for d in workspace.documents if d.identity.id == selected_id), None)
+    if doc is None:
+        return
+
+    with st.container(border=True):
+        st.markdown(f"###### Inspect: {doc.identity.original_filename}")
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric("State", doc.state.replace("_", " ").title())
+        d2.metric("Media Type", doc.identity.media_type)
+        d3.metric("Size", f"{doc.identity.byte_size / 1024:.1f} KB")
+        d4.metric("Privacy", doc.identity.privacy.capitalize())
+
+        st.caption(f"**SHA-256 Digest**: `{doc.identity.sha256}` · **Ingested**: `{doc.identity.ingested_at[:19]}`")
+
+        # Extracted Text Excerpt (Bounded Plain-Text)
+        if doc.blocks:
+            st.markdown("**Extracted Text Excerpt**")
+            # Render bounded excerpt (up to 5 blocks, each up to 600 chars)
+            for b in doc.blocks[:5]:
+                status_icon = "🟢" if b.extraction_status == "success" else ("🟡" if b.extraction_status == "partial" else "⚪")
+                preview_text = b.extracted_text[:600] + ("…" if len(b.extracted_text) > 600 else "")
+                if not preview_text.strip():
+                    preview_text = "[Empty text block]"
+                st.markdown(f"{status_icon} **Block `{b.block_id}`** (Page {b.page_number}, {len(b.extracted_text)} chars)")
+                st.code(preview_text, language=None)
+            if len(doc.blocks) > 5:
+                st.caption(f"Showing first 5 of {len(doc.blocks)} extracted blocks. All blocks remain available for evidence citation.")
+        elif doc.state == DocumentState.UPLOADED.value:
+            st.info("Document text has not been extracted yet. Click **Extract text blocks** below to begin.")
+
+        # Lifecycle Step Actions: Extract -> Submit for review -> Accept as evidence / Reject
+        st.divider()
+
+        if doc.state == DocumentState.UPLOADED.value:
+            st.markdown("**Action: Extract Text**")
+            st.caption("Extract text blocks from the uploaded file for inspection and human review.")
+            if st.button("Extract text blocks", key=f"btn_extract_{doc.identity.id}", type="primary"):
+                try:
+                    workspace.extract_document(doc.identity.id)
+                    save(workspace)
+                    st.success("Extraction complete.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Extraction failed: {exc}")
+
+        elif doc.state == DocumentState.EXTRACTED.value:
+            st.markdown("**Action: Submit for Review**")
+            st.caption("Mark extracted text as ready for formal review and evidence citation.")
+            if st.button("Submit document for review", key=f"btn_submit_rev_{doc.identity.id}", type="primary"):
+                try:
+                    workspace.submit_document_for_review(doc.identity.id)
+                    save(workspace)
+                    st.success("Document submitted for review.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Submission failed: {exc}")
+
+        elif doc.state in (DocumentState.NEEDS_REVIEW.value, DocumentState.REJECTED.value):
+            st.markdown("**Action: Human Review Decision**")
+            st.caption("Review extracted blocks, cite specific blocks, and provide rationale before promoting to evidence.")
+
+            available_block_ids = [b.block_id for b in doc.blocks]
+            cited_blocks = st.multiselect(
+                "Select block(s) to cite",
+                available_block_ids,
+                default=available_block_ids[:1] if available_block_ids else [],
+                key=f"cited_blocks_{doc.identity.id}",
+                help="Select one or more extracted block IDs that support the confirmed statement.",
+            )
+            scen_options = [s.id for s in workspace.scenarios]
+            linked_scenarios = st.multiselect(
+                "Attach evidence to scenario(s)",
+                scen_options,
+                default=workspace.selected if workspace.selected else scen_options[:1],
+                key=f"attach_scenarios_{doc.identity.id}",
+                help="Scenarios that this document evidence will be associated with.",
+            )
+            confirmed_stmt = st.text_area(
+                "Confirmed statement from document (required)",
+                key=f"confirmed_stmt_{doc.identity.id}",
+                placeholder="Specific factual or policy statement found in cited blocks...",
+                help="Must state specific factual context without claiming official regulatory approval or physical validation.",
+            )
+            rationale = st.text_area(
+                "Reviewer rationale (required)",
+                key=f"rationale_{doc.identity.id}",
+                placeholder="Explain why this excerpt was reviewed and how it provides context...",
+                help="Must explain your evaluation without making prohibited claims.",
+            )
+            priv_note = st.text_input(
+                "Private reviewer note (optional)",
+                key=f"priv_note_{doc.identity.id}",
+                help="Private to this device; excluded from unconsented public exports.",
+            )
+
+            col_acc, col_rej = st.columns(2)
+            with col_acc:
+                if st.button("Accept as evidence", key=f"btn_accept_{doc.identity.id}", type="primary", width="stretch"):
+                    if not cited_blocks:
+                        st.error("Please select at least one block to cite.")
+                    elif not linked_scenarios:
+                        st.error("Please select at least one scenario to attach evidence to.")
+                    elif not confirmed_stmt.strip():
+                        st.error("Confirmed statement is required.")
+                    elif not rationale.strip():
+                        st.error("Reviewer rationale is required.")
+                    else:
+                        try:
+                            workspace.review_and_accept_document(
+                                doc_id=doc.identity.id,
+                                reviewer_rationale=rationale.strip(),
+                                confirmed_statement=confirmed_stmt.strip(),
+                                reviewed_block_ids=cited_blocks,
+                                scenario_ids=linked_scenarios,
+                                private_note=priv_note.strip(),
+                            )
+                            save(workspace)
+                            st.success("Document accepted as evidence!")
+                            st.rerun()
+                        except Exception as exc:
+                            st.error(f"Cannot accept document: {exc}")
+
+            with col_rej:
+                if st.button("Reject document", key=f"btn_reject_{doc.identity.id}", width="stretch"):
+                    if not rationale.strip():
+                        st.error("A rationale is required to record a rejection.")
+                    else:
+                        try:
+                            workspace.reject_document(doc.identity.id, rationale.strip())
+                            save(workspace)
+                            st.info("Document rejected.")
+                            st.rerun()
+                        except Exception as exc:
+                            st.error(f"Cannot reject document: {exc}")
+
+        elif doc.state == DocumentState.ACCEPTED_AS_EVIDENCE.value:
+            st.success("✅ **Accepted as Evidence**")
+            if doc.review:
+                st.markdown(f"**Confirmed statement**: {doc.review.confirmed_statement}")
+                st.markdown(f"**Reviewer rationale**: {doc.review.reviewer_rationale}")
+                st.caption(f"Cited blocks: {', '.join(doc.review.reviewed_blocks)} (Pages: {', '.join(str(p) for p in doc.review.reviewed_pages)}) · Reviewed: {doc.review.reviewed_at[:19]}")
+
+            if st.button("Revoke evidence / Reject document", key=f"btn_revoke_{doc.identity.id}"):
+                try:
+                    workspace.reject_document(doc.identity.id, "Evidence revoked by user")
+                    save(workspace)
+                    st.info("Document status changed to rejected; evidence links removed.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Revocation failed: {exc}")
 
 
 def analysis_context_from_widgets() -> AnalysisContext:
@@ -1487,11 +1726,12 @@ if page == "Data":
 
     catalog = load_catalog()
     with st.expander("Data Sources, Station Catalogs & Snapshot Metadata", expanded=False):
-        tab_loaded, tab_cat, tab_meta, tab_custom = st.tabs([
+        tab_loaded, tab_cat, tab_meta, tab_custom, tab_docs = st.tabs([
             "Loaded Analysis Stations",
             "Regional Map Station Catalog",
             "Snapshot Manifest & Quality Policies",
             "Upload Custom Catchment CSV (Optional)",
+            "Supporting documents",
         ])
         with tab_loaded:
             st.markdown("**Loaded Analysis Station Registry & Observation Quality**")
@@ -1538,6 +1778,8 @@ if page == "Data":
             st.markdown("**Custom Station CSV Upload & Validation**")
             st.caption("Upload local rain gauge CSV records to observe completeness and compare against the regional baseline.")
             local_rainfall_preview(as_expander=False)
+        with tab_docs:
+            supporting_documents_panel(w)
 
     def accept_data_baseline():
         st.session_state.pending_analysis_context = data_analysis_context.record()
