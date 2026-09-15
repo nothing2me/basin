@@ -83,6 +83,9 @@ def test_specific_city_targets_local_station_choices(source):
     assert target_station_ids(source, context) == ["USW00012932", "USC00415661"]
     assert suggested_station_ids(source, context) == ["USW00012932"]
 
+    source_area = AnalysisContext.from_record({**context.record(), "rainfall_target": "source_area"})
+    assert suggested_station_ids(source, source_area) == []
+
 
 def test_older_saved_run_without_context_loads_as_explicit_region_wide(workspace, tmp_path):
     record = workspace.record(include_series=True)

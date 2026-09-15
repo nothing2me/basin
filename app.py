@@ -1415,7 +1415,6 @@ elif page == "Workspace":
             help="Use this only when the selected community relies on a different source area or a professional has chosen a regional comparison.",
         )
     station_options = list(names) if show_outside_target or not local_target else targeted_candidates
-
     # Review focus is chosen before generation so the resulting run opens with the
     # relevant measurements and visuals leading. Repeated runs inherit the current
     # run's profile; the profile remains presentation-only.
@@ -1463,39 +1462,94 @@ elif page == "Workspace":
             st.caption("This run will use the full Review layout. You can choose a focus later in Review.")
 
     # Scenario Generation & Priority Weights Builder
-    c_gen, c_weights = st.columns([1, 1])
+    c_gen = st.container()
     with c_gen:
         with tour_target("sidebar_generator"):
-            with st.form("generate", border=True):
-                st.markdown("##### Resample Weather Windows")
+            with st.container(border=True):
+                st.markdown("##### Build rainfall scenarios")
                 stations = st.multiselect(
-                    "Rainfall stations to screen",
-                    station_options,
-                    default=suggested_stations,
-                    format_func=station_option_label,
-                    help="Point observations are combined with equal weight. Review gaps and geographic suitability before handoff.",
+                    "Stations", station_options,
+                    default=suggested_stations, format_func=station_option_label,
+                    help="Type a station name or ID to search. Point observations are combined with equal weight; confirm geographic suitability before handoff.",
+                    placeholder="Type a station name or ID",
                 )
-                durations = st.multiselect("Durations · days", [30, 60, 90, 180, 270, 365], default=list(w.params.durations) if w else [90, 180, 270])
-                months = st.multiselect("Starting months", list(range(1, 13)), default=list(w.params.months) if w else [1, 4, 7, 10], format_func=lambda m: calendar.month_abbr[m])
-                retention = st.slider("Retained rainfall (% of observed rainfall)", 0, 100, (35, 85), 5,
-                                      help="Retained rainfall percentage (for example, 70% retained = 30% reduction).")
-                extent = st.selectbox("Where reduced rainfall occurs", ["All stations", "One station", "Mixed"])
-                a, b = st.columns(2)
-                count = a.selectbox("Scenarios to test", [100, 300, 500, 1000], index=1)
-                size = b.selectbox("Scenarios to review", [3, 4, 6, 8], index=2)
-                seed = st.number_input("Repeatable run seed", 0, 4294967295, w.params.seed if w else 22)
-                generate = st.form_submit_button("Create rainfall scenarios", type="primary", width="stretch")
+
+                saved_ranges = tuple(getattr(w.params, "calendar_ranges", ())) if w else ()
+                source_start_date = pd.Timestamp(source.manifest["start"]).date()
+                source_end_date = pd.Timestamp(source.manifest["end"]).date()
+                if saved_ranges:
+                    saved_start = datetime.fromisoformat(saved_ranges[0][0]).date()
+                    saved_end = datetime.fromisoformat(saved_ranges[0][1]).date()
+                else:
+                    default_frame = source.select(suggested_stations) if suggested_stations else None
+                    complete_ends = (
+                        default_frame.notna().all(axis=1).rolling(90).sum().eq(90)
+                        if default_frame is not None else pd.Series(dtype=bool)
+                    )
+                    if complete_ends.any():
+                        saved_end = complete_ends[complete_ends].index[-1].date()
+                        saved_start = saved_end - timedelta(days=89)
+                    else:
+                        saved_end = source_end_date
+                        saved_start = max(source_start_date, source_end_date - timedelta(days=89))
+                selected_dates = st.date_input(
+                    "Historical source window", value=(saved_start, saved_end),
+                    min_value=source_start_date, max_value=source_end_date,
+                    help="Choose the observed rainfall event BASIN will stress. These are historical source dates, not forecast dates.",
+                    key="scenario_dates",
+                )
+                calendar_ranges = []
+                custom_range_incomplete = len(selected_dates) != 2
+                if custom_range_incomplete:
+                    st.caption("Select an end date.")
+                else:
+                    start_date, end_date = selected_dates
+                    calendar_ranges.append((
+                        datetime.combine(start_date, datetime.min.time()).isoformat(timespec="minutes"),
+                        datetime.combine(end_date, datetime.strptime("23:59", "%H:%M").time()).isoformat(timespec="minutes"),
+                    ))
+
+                with st.form("generate", border=False):
+                    retention = st.slider("Retained rainfall (% of observed rainfall)", 0, 100, (35, 85), 5,
+                                          help="Retained rainfall percentage (for example, 70% retained = 30% reduction).")
+                    extent = st.selectbox("Where reduced rainfall occurs", ["All stations", "One station", "Mixed"])
+                    a, b = st.columns(2)
+                    count = a.selectbox("Scenarios to test", [100, 300, 500, 1000], index=1)
+                    size = b.selectbox("Scenarios to review", [3, 4, 6, 8], index=2)
+                    seed = st.number_input("Repeatable run seed", 0, 4294967295, w.params.seed if w else 22)
+                    generate = st.form_submit_button("Create rainfall scenarios", type="primary", width="stretch")
         if generate:
             if not stations:
                 st.error("⚠️ Select at least one station before generating scenarios.")
-            elif not durations:
-                st.error("⚠️ Select at least one duration window.")
-            elif not months:
-                st.error("⚠️ Select at least one starting calendar month.")
+            elif custom_range_incomplete:
+                st.error("⚠️ Select both a start and end date.")
             else:
+                range_start = datetime.fromisoformat(calendar_ranges[0][0]).date()
+                range_end = datetime.fromisoformat(calendar_ranges[0][1]).date()
+                selected_frame = source.select(list(stations)).loc[str(range_start):str(range_end)]
+                incomplete_stations = [
+                    station_option_label(station) for station in stations
+                    if selected_frame[station].isna().any()
+                ]
+                if incomplete_stations:
+                    st.error(
+                        "The selected historical window contains missing NOAA observations for: "
+                        + "; ".join(incomplete_stations)
+                        + ". Choose another date range or remove those stations."
+                    )
+                    st.stop()
                 try:
                     with st.spinner("Computing…"):
-                        params = ScenarioParams(tuple(stations), tuple(durations), tuple(months), retention[0]/100, retention[1]/100, extent, count, int(seed))
+                        durations = tuple(sorted({
+                            (datetime.fromisoformat(end).date() - datetime.fromisoformat(start).date()).days + 1
+                            for start, end in calendar_ranges
+                        }))
+                        months = tuple(sorted({datetime.fromisoformat(start).month for start, _end in calendar_ranges}))
+                        params = ScenarioParams(
+                            tuple(stations), tuple(durations), tuple(months), retention[0]/100,
+                            retention[1]/100, extent, count, int(seed),
+                            calendar_ranges=tuple(calendar_ranges),
+                        )
                         new = Workspace(source, params, size, analysis_context=analysis_context_for_run())
                         if w:
                             new.notes = w.notes
@@ -1520,7 +1574,7 @@ elif page == "Workspace":
                 except (ValueError, OSError) as error:
                     st.error(str(error))
 
-    with c_weights:
+    with st.expander("Advanced ranking settings", expanded=False):
         with tour_target("sidebar_presets"):
             with st.container(border=True):
                 st.markdown("##### Ranking Priorities & Weights")

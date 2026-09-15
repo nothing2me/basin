@@ -30,6 +30,7 @@ class ScenarioParams:
     extent: str = "All stations"
     candidates: int = 300
     seed: int = 22
+    calendar_ranges: tuple[tuple[str, str], ...] = ()
 
     def validate(self):
         if not self.stations or len(set(self.stations)) != len(self.stations):
@@ -44,6 +45,40 @@ class ScenarioParams:
             raise ValueError("Unknown spatial stress pattern")
         if type(self.candidates) is not int or not 10 <= self.candidates <= 1000 or type(self.seed) is not int or not 0 <= self.seed < 2**32:
             raise ValueError("Use 10–1000 candidates and a seed from 0 to 4294967295")
+        if not isinstance(self.calendar_ranges, tuple) or len(self.calendar_ranges) > 4:
+            raise ValueError("Use no more than four custom date ranges")
+        seen_ranges = set()
+        for date_range in self.calendar_ranges:
+            if not isinstance(date_range, tuple) or len(date_range) != 2 or not all(isinstance(value, str) for value in date_range):
+                raise ValueError("Each custom date range needs an ISO start and end timestamp")
+            try:
+                start, end = (datetime.fromisoformat(value) for value in date_range)
+            except ValueError as error:
+                raise ValueError("Custom date ranges must use valid ISO timestamps") from error
+            if (start.tzinfo is None) != (end.tzinfo is None):
+                raise ValueError("Custom date range timestamps must use matching time zones")
+            days = (end.date() - start.date()).days + 1
+            if end < start or not 30 <= days <= 365:
+                raise ValueError("Each custom date range must span 30–365 observation days")
+            if date_range in seen_ranges:
+                raise ValueError("Custom date ranges must be distinct")
+            seen_ranges.add(date_range)
+
+    def sampling_windows(self) -> tuple[tuple[int, int, int, str | None, str | None], ...]:
+        """Return season/day/duration templates used by the historical resampler.
+
+        Exact timestamps are retained for audit and display. The NOAA inputs are
+        daily, so sub-day times do not change the selected rainfall values.
+        """
+        if self.calendar_ranges:
+            windows = []
+            for start_value, end_value in self.calendar_ranges:
+                start, end = datetime.fromisoformat(start_value), datetime.fromisoformat(end_value)
+                duration = (end.date() - start.date()).days + 1
+                windows.append((start.month, start.day, duration, start_value, end_value))
+            return tuple(windows)
+        return tuple((month, 1, duration, None, None)
+                     for month in self.months for duration in self.durations)
 
 
 class Reference:
@@ -236,13 +271,38 @@ class ScenarioGenerator:
         eligible = {}
         unavailable = []
         min_pre2015 = 0 if ref.has_custom_stations else 5
-        for month in p.months:
-            for duration in p.durations:
-                windows = ref.windows(month, duration)
-                if len([w for w in windows if w["end"] <= "2015-12-31"]) >= min_pre2015 and len(windows) >= 1:
-                    eligible[(month, duration)] = windows
+        for month, start_day, duration, requested_start, requested_end in p.sampling_windows():
+            if requested_start is not None:
+                requested_dates = pd.date_range(
+                    datetime.fromisoformat(requested_start).date(),
+                    datetime.fromisoformat(requested_end).date(),
+                )
+                requested_frame = ref.daily.reindex(requested_dates)
+                if requested_frame.isna().any().any():
+                    windows = []
                 else:
-                    unavailable.append({"month": month, "duration": duration, "reason": "Insufficient complete reference windows"})
+                    values = requested_frame.to_numpy()
+                    deficit = float(np.maximum(
+                        (ref.expected(requested_dates) - values).sum(axis=0), 0,
+                    ).mean())
+                    windows = [{
+                        "start": str(requested_dates[0].date()),
+                        "end": str(requested_dates[-1].date()),
+                        "values": values,
+                        "deficit_mm": deficit,
+                    }]
+            else:
+                windows = ref.windows(month, duration, start_day=start_day)
+            setting = (month, start_day, duration, requested_start, requested_end)
+            enough_reference_windows = requested_start is not None or (
+                len([w for w in windows if w["end"] <= "2015-12-31"]) >= min_pre2015
+            )
+            if enough_reference_windows and windows:
+                eligible[setting] = windows
+            else:
+                unavailable.append({"month": month, "start_day": start_day, "duration": duration,
+                                    "requested_start": requested_start, "requested_end": requested_end,
+                                    "reason": "Insufficient complete reference windows"})
         if not eligible:
             raise ValueError("No complete, season-matched windows for these settings")
         scenarios, seen = [], set()
@@ -250,8 +310,8 @@ class ScenarioGenerator:
         attempts = 0
         while len(scenarios) < p.candidates and attempts < p.candidates * 20:
             attempts += 1
-            month, duration = keys[int(rng.integers(len(keys)))]
-            windows = eligible[(month, duration)]
+            month, start_day, duration, requested_start, requested_end = keys[int(rng.integers(len(keys)))]
+            windows = eligible[(month, start_day, duration, requested_start, requested_end)]
             window = windows[int(rng.integers(len(windows)))]
             retention = float(rng.uniform(p.retention_min, p.retention_max))
             extent = p.extent if p.extent != "Mixed" else ["All stations", "One station"][int(rng.integers(2))]
@@ -273,7 +333,19 @@ class ScenarioGenerator:
                           "requested_extent": p.extent, "constructed_extent": extent,
                           "kind": "historical resample" if np.all(factors == 1) else "constructed rainfall stress test",
                           "date_meaning": "Historical source dates used as scenario day labels; not a forecast"}
+            if requested_start is not None:
+                provenance.update(
+                    requested_start=requested_start,
+                    requested_end=requested_end,
+                    requested_range_meaning=(
+                        "Exact historical source range selected by the user. Sub-day times are retained for audit "
+                        "but do not change daily rainfall values."
+                    ),
+                )
             scenarios.append(Scenario(f"B-{len(scenarios)+1:03}", series, provenance, ref))
         return scenarios, {"attempts": attempts, "duplicates_skipped": attempts - len(scenarios),
                            "unavailable_settings": unavailable, "actual_candidates": len(scenarios),
-                           "eligible_windows": {f"month={m},days={d}": len(w) for (m, d), w in eligible.items()}}
+                           "eligible_windows": {
+                               f"month={m},day={day},days={duration},range={start or 'seasonal'}": len(windows)
+                               for (m, day, duration, start, _end), windows in eligible.items()
+                           }}

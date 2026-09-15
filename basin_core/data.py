@@ -35,7 +35,7 @@ def suggested_station_ids(source: "CachedSource", context) -> list[str]:
     if getattr(context, "scope", "region_wide") == "region_wide":
         return default_station_ids(source)
     if getattr(context, "rainfall_target", "community_area") != "community_area":
-        return default_station_ids(source)
+        return []
 
     registry = {item["id"]: item for item in source.manifest["stations"]}
     quality = {item["station_id"]: item for item in source.manifest.get("quality", [])}

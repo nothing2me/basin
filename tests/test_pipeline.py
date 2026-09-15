@@ -11,6 +11,7 @@ from basin_core.analysis import WeightedSumRanking, shortlist, COMMUNITY_PRESETS
 from basin_core.data import CachedSource, default_station_ids
 from basin_core.engine import Reference, ScenarioGenerator, ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle
+from basin_core.integrity import reconstruct_audit
 from basin_core.workspace import Workspace
 from scripts.fetch_noaa import parse_dly
 
@@ -52,6 +53,51 @@ def test_sparse_public_station_does_not_receive_custom_data_exception(source):
     params = ScenarioParams(("USC00410639",), candidates=10)
     with pytest.raises(ValueError, match="No complete, season-matched windows"):
         ScenarioGenerator(source, params).generate()
+
+
+def test_custom_calendar_range_constrains_sampling_and_preserves_exact_times(source):
+    requested = (("2014-03-15T08:30", "2014-06-12T17:45"),)
+    params = ScenarioParams(
+        tuple(default_station_ids(source)), candidates=10, calendar_ranges=requested,
+    )
+
+    scenarios, generation = ScenarioGenerator(source, params).generate()
+
+    assert len(scenarios) == 10
+    assert params.sampling_windows() == ((3, 15, 90, *requested[0]),)
+    assert all(s.provenance["requested_start"] == requested[0][0] for s in scenarios)
+    assert all(s.provenance["requested_end"] == requested[0][1] for s in scenarios)
+    assert all(s.provenance["source_start"] == "2014-03-15" for s in scenarios)
+    assert all(s.provenance["source_end"] == "2014-06-12" for s in scenarios)
+    assert all(s.provenance["source_window_days"] == 90 for s in scenarios)
+    assert any("day=15" in key for key in generation["eligible_windows"])
+
+
+@pytest.mark.parametrize("calendar_ranges", [
+    (("2026-03-15T08:30", "2026-03-16T17:45"),),
+    (("2026-03-15T08:30", "2027-03-15T17:45"),),
+    (("not-a-date", "2026-06-12T17:45"),),
+    (("2026-06-12T17:45", "2026-03-15T08:30"),),
+])
+def test_custom_calendar_range_validation(source, calendar_ranges):
+    params = ScenarioParams(tuple(source.daily.columns), candidates=10, calendar_ranges=calendar_ranges)
+    with pytest.raises(ValueError, match="custom date range|Custom date range"):
+        ScenarioGenerator(source, params)
+
+
+def test_custom_calendar_ranges_round_trip_through_saved_audit(source):
+    requested = (("2014-04-10T06:15", "2014-07-08T21:30"),)
+    workspace = Workspace(
+        source,
+        ScenarioParams(tuple(default_station_ids(source)), candidates=10, calendar_ranges=requested),
+        size=3,
+    )
+    audit = json.loads(json.dumps(workspace.record(include_series=True)))
+
+    params, _reference, scenarios = reconstruct_audit(source, audit)
+
+    assert params.calendar_ranges == requested
+    assert [scenario.digest() for scenario in scenarios] == [scenario.digest() for scenario in workspace.scenarios]
 
 
 def test_missing_window_excluded(source):

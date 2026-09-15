@@ -1,8 +1,32 @@
 from pathlib import Path
+from datetime import date
 
 from streamlit.testing.v1 import AppTest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_searchable_station_picker_and_direct_date_range(tmp_path, monkeypatch):
+    from basin_core.workspace import Workspace
+
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    app.sidebar.radio[0].set_value("Workspace").run()
+
+    station_picker = next(widget for widget in app.multiselect if widget.label == "Stations")
+    assert set(station_picker.value) == {"USW00012932", "USC00411720", "USW00012924"}
+    assert [widget.label for widget in app.date_input] == ["Historical source window"]
+    assert not app.time_input
+
+    app.date_input[0].set_value((date(2014, 3, 15), date(2014, 6, 12)))
+    app.run()
+    next(button for button in app.button if button.label == "Create rainfall scenarios").click().run()
+
+    assert not app.exception
+    assert app.session_state.workspace.params.calendar_ranges == (
+        ("2014-03-15T00:00", "2014-06-12T23:59"),
+    )
 
 
 def test_full_user_workflow(tmp_path, monkeypatch):
