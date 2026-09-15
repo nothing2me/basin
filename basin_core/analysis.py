@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import replace
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -643,5 +644,108 @@ def build_shortlist_scorecard(
         })
 
     return pd.DataFrame(rows)
+
+
+def compare_demand_curtailment_policies(
+    series: pd.DataFrame,
+    initial_pct: float = 0.48,
+    conservation_pct: float = 0.0,
+    pipeline_active: bool = True,
+    config: WaterSystemConfig | None = None,
+    stepped_policy: bool = False,
+    policy_schedule: dict[int, float] | None = None,
+    pipeline_reliability_pct: float | None = None,
+) -> dict[str, object]:
+    """Compare configured sector curtailment against no sector-specific curtailment.
+
+    Holding rainfall, starting storage, pipeline availability, aggregate demand reduction,
+    capacities, inflow assumptions, evaporation assumptions, and stage thresholds constant,
+    this runs two simulations differing only in whether sector-specific stage curtailment is active.
+
+    Returns structured results, threshold crossings, and deltas without hardcoding dates,
+    savings, or policy benefits.
+    """
+    cfg = config if config is not None else REGION_N_PRESET
+    cfg.validate()
+
+    if cfg.stage_curtailment_active:
+        cfg_configured = cfg
+        cfg_flat = replace(cfg, stage_curtailment_active=False)
+    elif len(cfg.stage_bands_pct) >= 4:
+        cfg_configured = replace(cfg, stage_curtailment_active=True)
+        cfg_flat = cfg
+    else:
+        cfg_configured = cfg
+        cfg_flat = cfg
+
+    sim_kwargs = {
+        "series": series,
+        "initial_pct": initial_pct,
+        "conservation_pct": conservation_pct,
+        "pipeline_active": pipeline_active,
+        "stepped_policy": stepped_policy,
+        "policy_schedule": policy_schedule,
+        "pipeline_reliability_pct": pipeline_reliability_pct,
+    }
+
+    df_configured = simulate_reservoir_drawdown(**sim_kwargs, config=cfg_configured)
+    df_flat = simulate_reservoir_drawdown(**sim_kwargs, config=cfg_flat)
+
+    # 1. Configured critical band crossing
+    bands = cfg.stage_bands_pct
+    band_crit_pct = (bands[2] if len(bands) >= 3 else 0.20) * 100
+    day_crit_configured = threshold_crossing_day(df_configured, initial_pct, band_crit_pct)
+    day_crit_flat = threshold_crossing_day(df_flat, initial_pct, band_crit_pct)
+    day_crit_delta = (day_crit_configured - day_crit_flat) if (day_crit_configured is not None and day_crit_flat is not None) else None
+
+    # 2. Day active-storage limit reached (is_day_zero)
+    day_active_configured = int(df_configured.loc[df_configured["is_day_zero"], "day"].iloc[0]) if df_configured["is_day_zero"].any() else None
+    day_active_flat = int(df_flat.loc[df_flat["is_day_zero"], "day"].iloc[0]) if df_flat["is_day_zero"].any() else None
+    day_active_delta = (day_active_configured - day_active_flat) if (day_active_configured is not None and day_active_flat is not None) else None
+
+    # 3. Total unmet modeled demand
+    unmet_configured = float(df_configured["unmet_demand_acft"].sum())
+    unmet_flat = float(df_flat["unmet_demand_acft"].sum())
+    unmet_delta = unmet_configured - unmet_flat
+
+    # 4. Domestic and industrial curtailed volume
+    curt_dom_configured = float(df_configured["curtailed_domestic_acft"].sum())
+    curt_ind_configured = float(df_configured["curtailed_industrial_acft"].sum())
+    curt_dom_flat = float(df_flat["curtailed_domestic_acft"].sum())
+    curt_ind_flat = float(df_flat["curtailed_industrial_acft"].sum())
+    curt_dom_delta = curt_dom_configured - curt_dom_flat
+    curt_ind_delta = curt_ind_configured - curt_ind_flat
+
+    boundary_statement = (
+        "This comparison is an illustrative numerical experiment using configured shares "
+        "and is not an adopted allocation or forecast."
+    )
+
+    return {
+        "configured_label": "Configured sector schedule",
+        "flat_label": "No sector-specific curtailment",
+        "configured_config": cfg_configured,
+        "flat_config": cfg_flat,
+        "df_configured": df_configured,
+        "df_flat": df_flat,
+        "crit_band_pct": band_crit_pct,
+        "crit_day_configured": day_crit_configured,
+        "crit_day_flat": day_crit_flat,
+        "crit_day_delta": day_crit_delta,
+        "active_limit_day_configured": day_active_configured,
+        "active_limit_day_flat": day_active_flat,
+        "active_limit_day_delta": day_active_delta,
+        "unmet_demand_configured_acft": unmet_configured,
+        "unmet_demand_flat_acft": unmet_flat,
+        "unmet_demand_delta_acft": unmet_delta,
+        "curtailed_domestic_configured_acft": curt_dom_configured,
+        "curtailed_domestic_flat_acft": curt_dom_flat,
+        "curtailed_domestic_delta_acft": curt_dom_delta,
+        "curtailed_industrial_configured_acft": curt_ind_configured,
+        "curtailed_industrial_flat_acft": curt_ind_flat,
+        "curtailed_industrial_delta_acft": curt_ind_delta,
+        "boundary_statement": boundary_statement,
+    }
+
 
 

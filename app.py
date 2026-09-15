@@ -16,7 +16,7 @@ import streamlit as st
 
 from basin_core.analysis import (comparison, COMMUNITY_PRESETS, RESERVOIR_ASSUMPTIONS, rainfall_tier_label,
                                  simulate_reservoir_drawdown, simulate_stress_spectrum, threshold_crossing_day,
-                                 threshold_day_label, build_shortlist_scorecard)
+                                 threshold_day_label, build_shortlist_scorecard, compare_demand_curtailment_policies)
 from basin_core.simulation import SimulationSettings, describe_input_rainfall, observed_percent, spectrum_view
 from basin_core.water_system import (WaterSource, WaterSystemConfig, SYSTEM_PRESETS,
                                      SYSTEM_ID_TO_LABEL, SYSTEM_LABEL_TO_ID, REGION_N_PRESET,
@@ -1578,7 +1578,7 @@ elif page == "Workspace":
 
     with st.container(border=True):
         st.markdown("##### 🎯 Analysis Focus & Presentation Settings")
-        st.caption("Tailors which measurements and diagnostic tools are prioritized in Step 3 Review. Does not alter mathematical calculations or export data.")
+        st.caption("Choose what to focus on first. Tailors which measurements and diagnostic tools are prioritized in Step 3 Review. Does not alter mathematical calculations or export data.")
         focus_goal_col, focus_data_col, focus_guidance_col = st.columns(3)
         run_focus_goal = focus_goal_col.selectbox(
             "What are you trying to do?", list(GOALS),
@@ -1653,7 +1653,7 @@ elif page == "Workspace":
                 with st.form("generate", border=False):
                     retention = st.slider(
                         "Retained rainfall (% of observed rainfall)", 0, 100, (35, 85), 5,
-                        help="Scales historical rainfall downwards within the window. Example: 35%–85% retained corresponds to a 15%–65% reduction from observed historical precipitation."
+                        help="Retained rainfall percentage (e.g., 70% retained = 30% reduction). Scales historical rainfall downwards within the window.",
                     )
                     extent = st.selectbox(
                         "Where reduced rainfall occurs", ["All stations", "One station", "Mixed"],
@@ -2417,6 +2417,54 @@ elif page == "Review":
                             sec3.metric("Outdoor category", f"{sim_df['served_outdoor_acft'].sum():,.0f} ac-ft")
                             st.caption("Category shares and curtailments are preset assumptions, not observed deliveries or adopted allocations.")
 
+                        # Demand-Policy Comparison (Sector Curtailment)
+                        if not simple_view and len(chosen_sys.stage_bands_pct) >= 4:
+                            with st.expander("⚖️ Demand-policy comparison (sector curtailment)", expanded=False):
+                                comp = compare_demand_curtailment_policies(
+                                    s.series,
+                                    initial_pct=init_pct,
+                                    conservation_pct=conserve_choice / 100.0,
+                                    pipeline_active=pipeline_active,
+                                    config=chosen_sys,
+                                )
+
+                                def _fmt_comp_day(d):
+                                    return f"Day {d}" if d is not None else "Not reached in window"
+
+                                def _fmt_comp_delta_day(d):
+                                    if d is None:
+                                        return "—"
+                                    return f"+{d} days" if d > 0 else (f"{d} days" if d < 0 else "0 days")
+
+                                comp_table = pd.DataFrame([
+                                    {
+                                        "Modeled Output": f"Critical band (≤{comp['crit_band_pct']:.0f}%) reached",
+                                        comp["configured_label"]: _fmt_comp_day(comp["crit_day_configured"]),
+                                        comp["flat_label"]: _fmt_comp_day(comp["crit_day_flat"]),
+                                        "Delta": _fmt_comp_delta_day(comp["crit_day_delta"]),
+                                    },
+                                    {
+                                        "Modeled Output": "Active-storage limit reached",
+                                        comp["configured_label"]: _fmt_comp_day(comp["active_limit_day_configured"]),
+                                        comp["flat_label"]: _fmt_comp_day(comp["active_limit_day_flat"]),
+                                        "Delta": _fmt_comp_delta_day(comp["active_limit_day_delta"]),
+                                    },
+                                    {
+                                        "Modeled Output": "Total unmet modeled demand",
+                                        comp["configured_label"]: f"{comp['unmet_demand_configured_acft']:,.0f} ac-ft",
+                                        comp["flat_label"]: f"{comp['unmet_demand_flat_acft']:,.0f} ac-ft",
+                                        "Delta": f"{comp['unmet_demand_delta_acft']:+,.0f} ac-ft" if comp["unmet_demand_delta_acft"] != 0 else "0 ac-ft",
+                                    },
+                                    {
+                                        "Modeled Output": "Domestic and industrial curtailed",
+                                        comp["configured_label"]: f"{comp['curtailed_domestic_configured_acft']:,.0f} / {comp['curtailed_industrial_configured_acft']:,.0f} ac-ft",
+                                        comp["flat_label"]: f"{comp['curtailed_domestic_flat_acft']:,.0f} / {comp['curtailed_industrial_flat_acft']:,.0f} ac-ft",
+                                        "Delta": f"{comp['curtailed_domestic_delta_acft']:+,.0f} / {comp['curtailed_industrial_delta_acft']:+,.0f} ac-ft",
+                                    },
+                                ])
+                                st.dataframe(comp_table, hide_index=True, width="stretch")
+                                st.caption(comp["boundary_statement"])
+
                         # Pipeline Outage Resilience Counterfactual
                         if not simple_view and pipeline_active and getattr(chosen_sys, "pipeline_capacity_mgd", 0) > 0 and chosen_sys.demand_no_pipeline_acft_day is not None:
                             sim_no_pipe = simulate_reservoir_drawdown(s.series, initial_pct=init_pct, conservation_pct=conserve_choice/100.0, pipeline_active=False, config=chosen_sys)
@@ -2558,6 +2606,7 @@ elif page == "Review":
                 shortfall_bm = f"{f['benchmark_mm']/25.4:.2f} in" if is_us else f"{f['benchmark_mm']:.1f} mm"
                 rc2.metric("Benchmark Shortfall", shortfall_bm, "Largest matched historical window")
                 rc3.metric("Composite Ranking Score", f"{s.score:.2f}", "Configured Priorities")
+                st.caption("Concurring stress frequency across eligible windows. Composite ranking score is based on the configured priorities.")
 
         with tab_edits:
             st.caption("Edits create a new scenario revision and require review again.")
