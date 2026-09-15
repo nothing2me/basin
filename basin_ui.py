@@ -1,5 +1,4 @@
 """Evidence and comparison views consuming the Workspace contract."""
-import base64
 from html import escape as html_escape
 from pathlib import Path
 import uuid
@@ -10,11 +9,6 @@ import streamlit as st
 from basin_core.evidence import KINDS, STATUSES
 
 _DIAMOND_AVATAR_PATH = Path(__file__).resolve().parent / "assets" / "basin_avatar_diamond.png"
-_DIAMOND_AVATAR_B64 = (
-    base64.b64encode(_DIAMOND_AVATAR_PATH.read_bytes()).decode("ascii")
-    if _DIAMOND_AVATAR_PATH.exists()
-    else ""
-)
 
 
 def evidence_panel(w, scenario, save):
@@ -204,7 +198,7 @@ def _clear_assistant_chat():
 
 
 def assistant_panel(w, source=None, names=None):
-    """Render the slide-out assistant panel with right-side tab, open by default."""
+    """Render the workspace-grounded analyst drawer."""
     from basin_core.assistant import run_assistant, run_tool_directly
     from basin_core.tools import TOOL_REGISTRY
     from basin_core.qwen_runtime import get_model_info, get_qwen_client
@@ -215,7 +209,7 @@ def assistant_panel(w, source=None, names=None):
 
     is_open = st.session_state.assistant_open
     tab_class = "assistant_tab_open" if is_open else "assistant_tab_closed"
-    tab_label = "▶ Close AI" if is_open else "◀ AI Assistant"
+    tab_label = "Close" if is_open else "Assistant"
     tab_key = "assistant_close_tab_btn" if is_open else "assistant_open_tab_btn"
     tab_action = _close_assistant_panel if is_open else _open_assistant_panel
 
@@ -243,37 +237,43 @@ def assistant_panel(w, source=None, names=None):
         client = get_qwen_client()
         status = client.status
         if status == "ready":
-            badge_html = f'<div class="basin-assistant-badge basin-status-success">🟢 Ready: Qwen2.5-3B ({model_info["quantization"]} · CPU)</div>'
+            status_label = "Ready"
+            status_detail = f'Uses this workspace’s data · Local model {model_info["quantization"]}'
         elif status == "model_missing":
-            badge_html = '<div class="basin-assistant-badge basin-status-info">⚪ Offline Mode: Instant Direct Tools Active</div>'
+            status_label = "Ready"
+            status_detail = "Uses this workspace’s data · Deterministic tools"
         elif status == "loading":
-            badge_html = '<div class="basin-assistant-badge basin-status-warning">🟡 Loading Qwen2.5-3B runtime...</div>'
+            status_label = "Preparing local model"
+            status_detail = "Workspace tools remain available"
         elif status == "crashed":
-            badge_html = '<div class="basin-assistant-badge basin-status-danger">🔴 Qwen runtime crashed (deterministic fallback active)</div>'
+            status_label = "Ready with fallback"
+            status_detail = "Uses this workspace’s deterministic tools"
         else:
-            badge_html = '<div class="basin-assistant-badge basin-status-info">🔵 Active: Deterministic Intent Router</div>'
+            status_label = "Ready"
+            status_detail = "Uses this workspace’s deterministic tools"
 
-        avatar_b64 = _DIAMOND_AVATAR_B64
         avatar_path = _DIAMOND_AVATAR_PATH
 
-        h_col, c_col = st.columns([4.0, 1.2])
+        h_col, c_col = st.columns([5.2, .7], vertical_alignment="center")
         with h_col:
-            if avatar_b64:
-                avatar_html = f'<img src="data:image/png;base64,{avatar_b64}" class="basin-assistant-avatar" alt="BASIN AI Avatar">'
-                st.markdown(f'<div style="display:flex;align-items:center;gap:10px;">{avatar_html}<div class="basin-assistant-title" style="margin:0;">Analyst Assistant</div></div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="basin-assistant-header">'
+                '<div class="basin-assistant-title">Analyst Assistant</div>'
+                '<div class="basin-assistant-status" role="status">'
+                '<span class="basin-assistant-status-dot" aria-hidden="true"></span>'
+                f'<span><strong>{html_escape(status_label)}</strong>'
+                f'<small>{html_escape(status_detail)}</small></span>'
+                '</div></div>',
+                unsafe_allow_html=True,
+            )
         with c_col:
             st.button(
-                "✕ Close",
+                "×",
                 key="assistant_close_x",
-                help="Close Assistant",
+                help="Close analyst assistant",
                 width="stretch",
                 on_click=_close_assistant_panel,
             )
-
-        st.markdown(badge_html, unsafe_allow_html=True)
-        st.caption("Ask about scenario profiles, compare candidates, check station stress, or test priority weights. Grounded in verified hydrologic data.")
 
         pending_query = st.session_state.pop("assistant_pending_query", None)
         if pending_query:
@@ -288,33 +288,51 @@ def assistant_panel(w, source=None, names=None):
                     st.session_state.assistant_history = new_hist
                     st.session_state.assistant_messages.append({"role": "assistant", "content": reply})
                 except Exception as ex:
-                    st.session_state.assistant_messages.append({"role": "assistant", "content": f"⚠️ Error processing query: {ex}"})
+                    st.session_state.assistant_messages.append({"role": "assistant", "content": f"I could not complete that analysis: {ex}"})
 
-        st.caption("⚡ Instant Analysis Chips (0.01s, zero LLM overhead)")
-        q1, q2, q3 = st.columns(3)
-        q4, q5, q6 = st.columns(3)
+        has_messages = bool(st.session_state.assistant_messages)
+        if not has_messages:
+            st.markdown(
+                """
+                <section class="basin-assistant-empty">
+                  <svg class="basin-assistant-mark" viewBox="0 0 64 64" role="img" aria-label="Rainfall analysis">
+                    <path d="M18 36h29a9 9 0 0 0 1-18 14 14 0 0 0-26-3 11 11 0 0 0-4 21Z"/>
+                    <path d="M24 44l-3 7M35 44l-3 7M46 44l-3 7"/>
+                  </svg>
+                  <h2>What would you like to examine?</h2>
+                  <p>Ask about scenarios, rainfall, stations, or risks using your workspace data.</p>
+                </section>
+                """,
+                unsafe_allow_html=True,
+            )
+
         direct_tool_run = None
+        direct_result_added = False
         sid = w.selected[0] if w.selected else (w.scenarios[0].id if w.scenarios else "B-001")
 
-        if q1.button("📊 Top #1 Profile", key="quick_top1", width="stretch", help="Profile top scenario"):
+        if st.button("Explain the top-ranked scenario", key="quick_top1", width="stretch", help="Profile the top-ranked scenario"):
             direct_tool_run = ("describe_scenario", {"scenario_id": sid}, f"Tell me about scenario {sid}")
-        if q2.button("⚖️ Compare Top 2", key="quick_compare", width="stretch", help="Compare top scenarios"):
+        if st.button("Compare the top two scenarios", key="quick_compare", width="stretch", help="Compare the two highest-ranked scenarios"):
             id1 = w.selected[0] if w.selected else sid
-            id2 = w.selected[1] if len(w.selected) > 1 else id1
+            ranked_ids = [scenario.id for scenario in w.scenarios]
+            id2 = w.selected[1] if len(w.selected) > 1 else next((candidate for candidate in ranked_ids if candidate != id1), id1)
             direct_tool_run = ("compare_scenarios", {"scenario_id_1": id1, "scenario_id_2": id2}, f"Compare scenario {id1} and {id2}")
-        if q3.button("⚡ Stress Concurrence", key="quick_concur", width="stretch", help="Check station stress"):
+        if st.button("Check station stress overlap", key="quick_concur", width="stretch", help="Check whether station stress signals overlap"):
             direct_tool_run = ("check_concurrence", {"scenario_id": sid}, f"Check station stress concurrence for {sid}")
-        if q4.button("🎯 Ranking Breakdown", key="quick_ranking", width="stretch", help="Explain score"):
-            direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
-        if q5.button("🌾 Crop ET Deficit", key="quick_crop_et", width="stretch", help="Crop irrigation gap"):
-            from basin_core.agronomics import calculate_crop_water_deficit
-            sc = w.get(sid)
-            c_res = calculate_crop_water_deficit(sc.series)
-            direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
-            st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
-            st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
-        if q6.button("📦 Export Readiness", key="quick_export", width="stretch", help="Check readiness"):
-            direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
+
+        with st.expander("More suggested questions", expanded=False):
+            if st.button("Explain the ranking", key="quick_ranking", width="stretch", help="Explain how the top scenario was scored"):
+                direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
+            if st.button("Estimate the crop water deficit", key="quick_crop_et", width="stretch", help="Estimate the crop irrigation gap"):
+                from basin_core.agronomics import calculate_crop_water_deficit
+                sc = w.get(sid)
+                c_res = calculate_crop_water_deficit(sc.series)
+                direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
+                st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
+                st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
+                direct_result_added = True
+            if st.button("Check export readiness", key="quick_export", width="stretch", help="Check whether this workspace is ready to export"):
+                direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
 
         if direct_tool_run:
             t_name, t_args, u_msg = direct_tool_run
@@ -322,54 +340,58 @@ def assistant_panel(w, source=None, names=None):
                 res = run_tool_directly(w, t_name, t_args)
                 st.session_state.assistant_messages.append({"role": "user", "content": u_msg})
                 st.session_state.assistant_messages.append({"role": "assistant", "content": res})
+                direct_result_added = True
             except Exception as exc:
-                st.session_state.assistant_messages.append({"role": "assistant", "content": f"⚠️ Error: {exc}"})
+                st.session_state.assistant_messages.append({"role": "assistant", "content": f"I could not complete that calculation: {exc}"})
+                direct_result_added = True
 
-        chat_box = st.container(height=380)
+        if direct_result_added:
+            st.rerun()
+
+        chat_box = st.container(height=430, border=False, key="assistant_conversation")
         with chat_box:
-            if not st.session_state.assistant_messages:
-                st.info(
-                    "**Hydrologist Assistant Ready.**\n\n"
-                    "Ask about scenario profiles, compare candidates, check station stress, "
-                    "or test priority weights.\n\n"
-                    "Every response is computed from actual workspace data."
-                )
             for msg in st.session_state.assistant_messages:
                 av = str(avatar_path) if (msg.get("role") == "assistant" and avatar_path.exists()) else None
                 with st.chat_message(msg["role"], avatar=av):
                     st.markdown(msg["content"])
 
         st.chat_input(
-            "Ask about scenarios, rainfall, or tests...",
+            "Ask about scenarios, rainfall, or evidence",
             key="assistant_chat_input",
             on_submit=_queue_assistant_query,
         )
+        st.markdown(
+            '<p class="basin-assistant-trust">Responses use this workspace’s data and reviewed calculation tools.</p>',
+            unsafe_allow_html=True,
+        )
 
-        f_col1, f_col2 = st.columns([2, 1])
-        f_col2.button(
-            "Clear chat",
+        advanced_col, clear_col = st.columns([1.35, 1], vertical_alignment="top")
+        with advanced_col:
+            with st.expander("Advanced tools", expanded=False):
+                if st.session_state.get("show_assistant_developer_tools", False):
+                    st.caption("Run a named calculation without writing a question.")
+                    tool_name = st.selectbox("Calculation", list(TOOL_REGISTRY.keys()), key="direct_tool_select")
+                    if st.button("Run calculation", key="direct_tool_run", type="primary", width="stretch"):
+                        try:
+                            prepared = direct_tool_arguments(w, tool_name)
+                            if prepared is None:
+                                st.info(f"{tool_name} needs explicit inputs. Ask in the chat, naming the station and dates, year, weight values or scenario and settings.")
+                            else:
+                                args, described = prepared
+                                tool_out = run_tool_directly(w, tool_name, args)
+                                st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}{described}"})
+                                st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
+                                st.success("Result added to the conversation.")
+                        except Exception as ex:
+                            st.error(f"Error running {tool_name}: {ex}")
+                else:
+                    st.caption("The manual calculation runner is available from Settings.")
+        clear_col.button(
+            "Clear conversation",
             key="assistant_clear_chat",
             width="stretch",
             on_click=_clear_assistant_chat,
         )
-
-        if st.session_state.get("show_assistant_developer_tools", False):
-            with st.expander("Manual calculation tools", expanded=False):
-                st.caption("Run a named calculation without writing a question.")
-                tool_name = st.selectbox("Calculation", list(TOOL_REGISTRY.keys()), key="direct_tool_select")
-                if st.button("Run calculation", key="direct_tool_run", type="primary", width="stretch"):
-                    try:
-                        prepared = direct_tool_arguments(w, tool_name)
-                        if prepared is None:
-                            st.info(f"{tool_name} needs explicit inputs. Ask in the chat, naming the station and dates, year, weight values or scenario and settings.")
-                        else:
-                            args, described = prepared
-                            tool_out = run_tool_directly(w, tool_name, args)
-                            st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}{described}"})
-                            st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
-                            st.success("Result added to the chat.")
-                    except Exception as ex:
-                        st.error(f"Error running {tool_name}: {ex}")
 
         st.html("""<script>
         (() => {

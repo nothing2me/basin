@@ -27,7 +27,10 @@ def test_embedded_drawer_chat_and_quick_queries(workspace, monkeypatch):
     app.button(key="assistant_open_tab_btn").click().run()
     assert not app.exception
     assert app.session_state.assistant_open is True
-    assert any("Offline Mode: Instant Direct Tools Active" in m.value for m in app.markdown)
+    assert any("Uses this workspace’s data" in m.value for m in app.markdown)
+    assert app.button(key="quick_top1").label == "Explain the top-ranked scenario"
+    assert app.button(key="quick_compare").label == "Compare the top two scenarios"
+    assert app.button(key="quick_concur").label == "Check station stress overlap"
     app.button(key="quick_export").click().run()
     assert not app.exception
     assert app.session_state.assistant_open is True
