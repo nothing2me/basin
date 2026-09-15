@@ -20,6 +20,8 @@ def app(tmp_path, monkeypatch):
 
     original_save = Workspace.save
     monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    import basin_core.pdf_report as pdf_report
+    monkeypatch.setattr(pdf_report, "find_browser_executable", lambda: None)
 
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=90).run()
     at.sidebar.radio[0].set_value("Workspace").run()

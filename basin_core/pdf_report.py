@@ -36,6 +36,7 @@ from basin_core.tools import (
     get_data_provenance,
 )
 from basin_core.visualizers import (
+    pareto_frontier_figure,
     stage_trigger_milestone_figure,
     storage_trajectory_figure,
 )
@@ -393,6 +394,7 @@ class ReportMetrics:
     day_base_stage4: int | None = None
     storage_chart_png_b64: str | None = None
     milestone_chart_png_b64: str | None = None
+    frontier_chart_png_b64: str | None = None
     stressed_case: dict | None = None
     stepped_policy_active: bool = False
     pipeline_reliability_pct: float | None = None
@@ -421,12 +423,18 @@ def _input_sentence(metrics: "ReportMetrics") -> str:
     return f"Tiers multiply the input rainfall: {info['summary']}. {info['hundred_percent_meaning']}"
 
 
-def _generate_report_charts(spectrum_data: dict | None, sim_base: object | None, system_config: WaterSystemConfig | None) -> tuple[str | None, str | None]:
+def _generate_report_charts(
+    spectrum_data: dict | None,
+    sim_base: object | None,
+    system_config: WaterSystemConfig | None,
+    workspace: object | None = None,
+) -> tuple[str | None, str | None, str | None]:
     """Generate static base64-encoded PNG charts via Plotly + Kaleido."""
     if spectrum_data is None or sim_base is None:
-        return None, None
+        return None, None, None
     try:
         import base64
+        import pandas as pd
         cfg = system_config or REGION_N_PRESET
         bands = tuple(cfg.stage_bands_pct) if hasattr(cfg, "stage_bands_pct") else (0.40, 0.30, 0.20, 0.15)
 
@@ -441,9 +449,41 @@ def _generate_report_charts(spectrum_data: dict | None, sim_base: object | None,
         png_ms = fig_ms.to_image(format="png", width=680, height=220)
         b64_ms = base64.b64encode(png_ms).decode("ascii")
 
-        return b64_traj, b64_ms
+        b64_frontier = None
+        if workspace is not None and hasattr(workspace, "scenarios") and workspace.scenarios:
+            try:
+                records = []
+                for s in workspace.scenarios:
+                    records.append({
+                        "ID": s.id,
+                        "Group": s.cluster,
+                        "Profile": getattr(s, "cluster_name", f"Group {s.cluster}"),
+                        "Score": round(float(getattr(s, "score", 0.0)), 2),
+                        "Days": int(s.features.get("duration_days", 30)) if hasattr(s, "features") else 30,
+                        "Onset": "Drought Window",
+                        "Deficit mm": round(float(s.features.get("deficit_mm", 0.0)), 2) if hasattr(s, "features") else 0.0,
+                        "Deficit in": round(float(s.features.get("deficit_mm", 0.0)) / 25.4, 2) if hasattr(s, "features") else 0.0,
+                        "Stations stressed together %": round(float(s.features.get("concurrence", 0.0)) * 100, 1) if hasattr(s, "features") else 0.0,
+                        "Revision": getattr(s, "revision", 1),
+                        "Status": getattr(s, "status", "unreviewed"),
+                    })
+                df_candidates = pd.DataFrame(records)
+                shortlist_ids = list(getattr(workspace, "selected", []))
+                fig_frontier = pareto_frontier_figure(df_candidates, shortlist_ids=shortlist_ids)
+                fig_frontier.update_layout(
+                    margin=dict(l=40, r=20, t=25, b=30),
+                    height=240,
+                    width=680,
+                    legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="center", x=0.5, font=dict(size=8)),
+                )
+                png_frontier = fig_frontier.to_image(format="png", width=680, height=240)
+                b64_frontier = base64.b64encode(png_frontier).decode("ascii")
+            except Exception:
+                b64_frontier = None
+
+        return b64_traj, b64_ms, b64_frontier
     except Exception:
-        return None, None
+        return None, None, None
 
 
 def _compute_stressed_comparison(series: pd.DataFrame, system_config: WaterSystemConfig | None) -> dict | None:
@@ -549,8 +589,8 @@ def build_station_completeness_table_html(workspace) -> str:
         return ""
 
 
-def build_ml_comparison_block_html(workspace) -> str:
-    """Generate dedicated ML Selection Methodology section with 3-way diversity table and silhouette context."""
+def build_ml_comparison_block_html(workspace, metrics: ReportMetrics | None = None) -> str:
+    """Generate dedicated ML Selection Methodology section with 3-way diversity table, silhouette context, and Pareto visual."""
     try:
         comp_data = comparison(workspace.scenarios, workspace.selected, seed=workspace.params.seed)
         silhouette = workspace.clustering.get("silhouette")
@@ -566,6 +606,15 @@ def build_ml_comparison_block_html(workspace) -> str:
                 <td>{r['Mean feature distance']:.3f}</td>
                 <td>{r['Mean priority score']:.1f}</td>
             </tr>
+            """
+
+        frontier_chart_html = ""
+        if metrics and metrics.frontier_chart_png_b64:
+            frontier_chart_html = f"""
+            <div style="margin: 8px 0; page-break-inside: avoid; break-inside: avoid;">
+                <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-bottom: 3px;">Figure 3: Candidate Deficit & Shortlist Distribution Across Durations (Pareto Frontier)</div>
+                <div style="text-align: center;"><img src="data:image/png;base64,{metrics.frontier_chart_png_b64}" style="width: 100%; max-width: 680px; height: auto; border: 1px solid #cbd5e1; border-radius: 4px;" alt="Pareto Frontier Shortlist Distribution Chart"></div>
+            </div>
             """
 
         return f"""
@@ -588,6 +637,7 @@ def build_ml_comparison_block_html(workspace) -> str:
                     {rows}
                 </tbody>
             </table>
+            {frontier_chart_html}
             <p style="font-size: 7.5pt; color: #475569; margin-top: 4px; line-height: 1.35;">
                 <strong>Clustering context & silhouette baseline:</strong> K-Means feature clustering yields a silhouette score of <strong>{sil_str}</strong>. In hydrologic drought spaces with mixed continuous features, silhouette values in the 0.20–0.35 range reflect weak-to-borderline cluster separation due to overlapping continuous meteorological distributions. The multi-method comparison table above serves as the direct empirical evidence for diversity-optimized scenario selection, rather than the silhouette metric alone.
             </p>
@@ -638,7 +688,7 @@ def build_tac_and_policy_block_html(metrics: ReportMetrics) -> str:
     return "\n".join(blocks)
 
 
-def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> ReportMetrics:
+def compute_report_metrics(primary_scenario, config: ExperimentConfig, workspace: object | None = None) -> ReportMetrics:
     """Run the illustrative experiment, or report why it could not be run.
 
     Shared by the HTML and vector renderers so the two paths cannot disagree about what
@@ -720,7 +770,7 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
         highest_band = "No response bands breached in window"
         highest_day = None
 
-    chart_traj_b64, chart_ms_b64 = _generate_report_charts(spectrum_data, sim_base, system)
+    chart_traj_b64, chart_ms_b64, chart_frontier_b64 = _generate_report_charts(spectrum_data, sim_base, system, workspace=workspace)
     stressed_case = _compute_stressed_comparison(series, system)
 
     sector_deliv = {}
@@ -762,6 +812,7 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
         day_base_stage4=day_b4,
         storage_chart_png_b64=chart_traj_b64,
         milestone_chart_png_b64=chart_ms_b64,
+        frontier_chart_png_b64=chart_frontier_b64,
         stressed_case=stressed_case,
         stepped_policy_active=bool(config.stepped_policy),
         pipeline_reliability_pct=config.pipeline_reliability_pct,
@@ -829,7 +880,7 @@ def _report_context(workspace, accepted: Sequence, config: ExperimentConfig):
             # Defaults are applied to the first accepted scenario; name it rather than
             # printing "Not tied to a specific scenario" beside its results.
             config = replace(config, scenario_id=primary.id, scenario_revision=getattr(primary, "revision", None))
-        return config, primary, note, compute_report_metrics(primary, config)
+        return config, primary, note, compute_report_metrics(primary, config, workspace=workspace)
 
     from basin_core.simulation import is_current, settings_from_run, validate_run, water_system_from_run
     try:
@@ -1258,7 +1309,7 @@ def render_html_report(
 
     paired_sensitivity_html = build_paired_sensitivity_block_html(metrics)
     tac_and_policy_html = build_tac_and_policy_block_html(metrics)
-    ml_methodology_html = build_ml_comparison_block_html(workspace)
+    ml_methodology_html = build_ml_comparison_block_html(workspace, metrics=metrics)
     station_completeness_html = build_station_completeness_table_html(workspace)
 
     chart_images_html = ""
@@ -2700,33 +2751,15 @@ def generate_pdf_report_with_status(
 ) -> RenderOutcome:
     """Generate the PDF report and report which renderer actually produced it.
 
-    On Windows, uses the built-in vector renderer. Elsewhere, attempts the browser
-    HTML renderer first and falls back if a browser is unavailable or fails. Both paths render the full report; the
-    returned outcome tells the caller which one actually ran, so a degraded fallback is
-    never presented to the user as an unqualified success. Writing to ``output_path`` is
-    not swallowed: a file-write failure raises and no packet may be reported as saved.
+    Attempts the browser HTML renderer first (via Chrome or Edge) and falls back if a
+    browser is unavailable or fails. Both paths render the full report; the returned outcome
+    tells the caller which one actually ran, so a degraded fallback is never presented to the
+    user as an unqualified success. Writing to ``output_path`` is not swallowed: a file-write
+    failure raises and no packet may be reported as saved.
     """
     config = resolve_config(config, initial_pct, conservation_pct)
 
-    if sys.platform == "win32":
-        # Headless-browser print-to-pdf is not exercised on Windows: it has not been
-        # verified end-to-end on the presentation laptop, and BASIN's own vector renderer
-        # already produces the complete report (verified in tests/test_report_layout.py).
-        # This is now a disclosed, explicit choice rather than a silent one; the browser
-        # path itself, including its failure handling, is implemented and tested via
-        # _render_pdf_with_status for the platforms that use it.
-        pdf_bytes = build_fallback_pdf(workspace, accepted, include_notes=include_notes, config=config)
-        outcome = RenderOutcome(
-            pdf_bytes=pdf_bytes,
-            renderer="vector_fallback",
-            degraded=False,
-            detail=(
-                "BASIN's built-in report renderer was used. On Windows (the supported "
-                "presentation platform), a system browser is not used for PDF generation."
-            ),
-        )
-    else:
-        outcome = _render_pdf_with_status(workspace, accepted, include_notes, config)
+    outcome = _render_pdf_with_status(workspace, accepted, include_notes, config)
 
     if output_path:
         out_p = Path(output_path)

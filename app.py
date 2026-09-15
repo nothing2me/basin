@@ -31,7 +31,7 @@ from basin_theme import apply_design, appearance_picker, custom_appearance, acce
 from basin_core.data import CachedSource, ROOT
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle, generate_brief, summary_record, rainfall_rows
-from basin_core.pdf_report import ExperimentConfig, generate_pdf_report_with_status, report_state_token
+from basin_core.pdf_report import ExperimentConfig, generate_pdf_report_with_status, report_state_token, render_html_report
 from basin_core.workspace import Workspace, session_dir
 from basin_core.analysis_context import (AnalysisContext, DECISION_USES, ORGANIZATION_TYPES,
                                          REGION_N_COUNTIES, SUPPLY_RELATIONSHIPS)
@@ -40,7 +40,7 @@ from basin_core.rainfall_comparison import compare_rainfall
 from basin_core.custom_data import (active_ids, digest, format_custom_source_label,
                                     format_custom_coverage_dates, CUSTOM_CATCHMENT_DISCLAIMER)
 from basin_core.document_ingestion import DOCUMENT_CATCHMENT_DISCLAIMER, DocumentState
-from basin_core.visualizers import (rainfall_reference_figure, rainfall_shortfall_figure,
+from basin_core.visualizers import (pareto_frontier_figure, rainfall_reference_figure, rainfall_shortfall_figure,
                                     stage_trigger_milestone_figure, storage_trajectory_figure,
                                     drought_anomaly_matrix_figure,
                                     shortlist_cumulative_deficit_figure,
@@ -3242,8 +3242,64 @@ elif page == "Exports":
                             key=f"dl_brief_preview_{w.id}",
                             width="stretch",
                         )
-                    with st.container(height=520):
-                        st.markdown(brief_preview_text)
+                    prev_sub1, prev_sub2, prev_sub3 = st.tabs([
+                        "📈 Visual Report Figures",
+                        "📄 Executive Briefing (.md)",
+                        "🌐 Full HTML Report Preview",
+                    ])
+                    with prev_sub1:
+                        try:
+                            lead_sc = accepted_preview[0]
+                            sys_cfg = experiment_config.system_config or REGION_N_PRESET
+                            bands = tuple(sys_cfg.stage_bands_pct) if hasattr(sys_cfg, "stage_bands_pct") else (0.40, 0.30, 0.20, 0.15)
+                            sim_lead = simulate_reservoir_drawdown(
+                                lead_sc.series,
+                                initial_pct=experiment_config.initial_pct,
+                                conservation_pct=0.0,
+                                pipeline_active=experiment_config.pipeline_active,
+                                pipeline_reliability_pct=experiment_config.pipeline_reliability_pct,
+                                stepped_policy=experiment_config.stepped_policy,
+                                config=sys_cfg,
+                            )
+                            spec_lead = simulate_stress_spectrum(
+                                lead_sc.series,
+                                tiers=experiment_config.tiers,
+                                initial_pct=experiment_config.initial_pct,
+                                conservation_pct=experiment_config.conservation_pct,
+                                pipeline_active=experiment_config.pipeline_active,
+                                pipeline_reliability_pct=experiment_config.pipeline_reliability_pct,
+                                stepped_policy=experiment_config.stepped_policy,
+                                config=sys_cfg,
+                            )
+                            bands_pct = tuple(b * 100.0 if b <= 1.0 else b for b in bands)
+
+                            st.markdown("**Figure 1: Projected Reservoir Storage Trajectory & Threshold Crossings**")
+                            st.plotly_chart(storage_trajectory_figure(sim_lead, bands), width="stretch", config={"displayModeBar": False})
+
+                            st.markdown("**Figure 2: Milestone Gantt Timeline — Response Band Crossings Across Retention Tiers**")
+                            st.plotly_chart(stage_trigger_milestone_figure(spec_lead, bands_pct), width="stretch", config={"displayModeBar": False})
+
+                            st.markdown("**Figure 3: Candidate Deficit & Shortlist Distribution Across Durations (Pareto Frontier)**")
+                            st.plotly_chart(pareto_frontier_figure(table(w), list(w.selected)), width="stretch", config={"displayModeBar": False})
+                        except Exception as err:
+                            st.info(f"Visual charts preview unavailable: {err}")
+
+                    with prev_sub2:
+                        with st.container(height=520):
+                            st.markdown(brief_preview_text)
+
+                    with prev_sub3:
+                        if st.button("🌐 Compile & View Full HTML Report", key=f"btn_render_html_prev_{w.id}"):
+                            st.session_state[f"show_html_prev_{w.id}"] = True
+                        if st.session_state.get(f"show_html_prev_{w.id}"):
+                            try:
+                                html_report = render_html_report(w, accepted_preview, include_notes=share, config=experiment_config)
+                                import streamlit.components.v1 as components
+                                components.html(html_report, height=620, scrolling=True)
+                            except Exception as err:
+                                st.info(f"HTML report preview unavailable: {err}")
+                        else:
+                            st.caption("Click above to compile and inspect the complete standalone executive brief with all tables and disclosures.")
                 else:
                     st.info("No accepted scenarios yet. In Review, inspect a scenario and choose Accept to see its report preview here.")
                     st.button("Go to Review", on_click=switch_page, args=("Review",))

@@ -311,6 +311,7 @@ def test_charts_embedded_in_html_report(approved):
     assert "data:image/png;base64" in html
     assert "Figure 1: Projected Reservoir Storage Trajectory" in html
     assert "Figure 2: Milestone Gantt Timeline" in html
+    assert "Figure 3: Candidate Deficit & Shortlist Distribution Across Durations (Pareto Frontier)" in html
 
 
 def test_ml_diversity_comparison_and_silhouette_context(approved):

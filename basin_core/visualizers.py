@@ -37,6 +37,23 @@ def rainfall_shortfall_figure(
 
     data = view.copy()
     val_col = "Deficit in" if unit == "in" and "Deficit in" in data.columns else "Deficit mm"
+    if "Group" not in data.columns:
+        data["Group"] = 0
+    if "Profile" not in data.columns:
+        data["Profile"] = data["Group"].astype(str)
+    if "Deficit in" not in data.columns:
+        data["Deficit in"] = (data["Deficit mm"] / 25.4) if "Deficit mm" in data.columns else 0.0
+    if "Deficit mm" not in data.columns:
+        data["Deficit mm"] = (data["Deficit in"] * 25.4) if "Deficit in" in data.columns else 0.0
+    if "Stations stressed together %" not in data.columns:
+        data["Stations stressed together %"] = 0.0
+    if "Score" not in data.columns:
+        data["Score"] = 0.0
+    if "Onset" not in data.columns:
+        data["Onset"] = "Drought Period"
+    if "Days" not in data.columns:
+        data["Days"] = 30
+
     unit_label = "in" if val_col == "Deficit in" else "mm"
     durations = sorted(data["Days"].unique())
     cols = min(3, len(durations))
@@ -99,7 +116,7 @@ def rainfall_shortfall_figure(
             shown.add(group)
 
         for group, points in panel.groupby("Group"):
-            color_index = int(group)
+            color_index = groups.index(group)
             add_points(points, points["Profile"].iloc[0], f"profile-{group}", dict(
                 size=8, opacity=0.8, color=palette[color_index % len(palette)],
                 symbol=symbols[color_index % len(symbols)] if colorblind else "circle",

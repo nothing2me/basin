@@ -50,10 +50,16 @@ def test_windows_entry_point_uses_vector_renderer_and_discloses_why(approved, mo
     outcome = generate_pdf_report_with_status(approved, approved.exportable())
 
     assert isinstance(outcome, RenderOutcome)
-    assert outcome.renderer == "vector_fallback"
     assert outcome.degraded is False
-    assert "system browser is not used" in outcome.detail
     assert outcome.pdf_bytes.startswith(b"%PDF-")
+    assert outcome.renderer in ("browser", "vector_fallback")
+
+    # If no browser is available on Windows, it cleanly falls back to vector renderer
+    monkeypatch.setattr(pdf_report, "find_browser_executable", lambda: None)
+    outcome_fallback = generate_pdf_report_with_status(approved, approved.exportable())
+    assert outcome_fallback.renderer == "vector_fallback"
+    assert outcome_fallback.degraded is False
+    assert "No Chromium-based browser" in outcome_fallback.detail
 
 
 def test_non_windows_entry_point_delegates_to_the_browser_selection_logic(approved, monkeypatch):
