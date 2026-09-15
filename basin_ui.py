@@ -243,15 +243,15 @@ def assistant_panel(w, source=None, names=None):
         client = get_qwen_client()
         status = client.status
         if status == "ready":
-            badge_html = f'<div class="basin-assistant-badge" style="color:#009E73">🟢 Ready: Qwen2.5-3B ({model_info["quantization"]} · CPU)</div>'
+            badge_html = f'<div class="basin-assistant-badge basin-status-success">🟢 Ready: Qwen2.5-3B ({model_info["quantization"]} · CPU)</div>'
         elif status == "model_missing":
-            badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">⚪ Offline Mode: Instant Direct Tools Active</div>'
+            badge_html = '<div class="basin-assistant-badge basin-status-info">⚪ Offline Mode: Instant Direct Tools Active</div>'
         elif status == "loading":
-            badge_html = '<div class="basin-assistant-badge" style="color:#E69F00">🟡 Loading Qwen2.5-3B runtime...</div>'
+            badge_html = '<div class="basin-assistant-badge basin-status-warning">🟡 Loading Qwen2.5-3B runtime...</div>'
         elif status == "crashed":
-            badge_html = '<div class="basin-assistant-badge" style="color:#dc2626">🔴 Qwen runtime crashed (deterministic fallback active)</div>'
+            badge_html = '<div class="basin-assistant-badge basin-status-danger">🔴 Qwen runtime crashed (deterministic fallback active)</div>'
         else:
-            badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">🔵 Active: Deterministic Intent Router</div>'
+            badge_html = '<div class="basin-assistant-badge basin-status-info">🔵 Active: Deterministic Intent Router</div>'
 
         avatar_b64 = _DIAMOND_AVATAR_B64
         avatar_path = _DIAMOND_AVATAR_PATH
@@ -353,22 +353,23 @@ def assistant_panel(w, source=None, names=None):
             on_click=_clear_assistant_chat,
         )
 
-        with st.expander("🛠️ Direct Tool Runner (Manual)", expanded=False):
-            st.caption("Select and execute any analysis tool directly without natural language processing.")
-            tool_name = st.selectbox("Select Tool", list(TOOL_REGISTRY.keys()), key="direct_tool_select")
-            if st.button("Execute Tool", key="direct_tool_run", type="primary"):
-                try:
-                    prepared = direct_tool_arguments(w, tool_name)
-                    if prepared is None:
-                        st.info(f"{tool_name} needs explicit inputs. Ask in the chat, naming the station and dates, year, weight values or scenario and settings.")
-                    else:
-                        args, described = prepared
-                        tool_out = run_tool_directly(w, tool_name, args)
-                        st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}{described}"})
-                        st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
-                        st.success("Result added to the chat.")
-                except Exception as ex:
-                    st.error(f"Error running {tool_name}: {ex}")
+        if st.session_state.get("show_assistant_developer_tools", False):
+            with st.expander("Manual calculation tools", expanded=False):
+                st.caption("Run a named calculation without writing a question.")
+                tool_name = st.selectbox("Calculation", list(TOOL_REGISTRY.keys()), key="direct_tool_select")
+                if st.button("Run calculation", key="direct_tool_run", type="primary", width="stretch"):
+                    try:
+                        prepared = direct_tool_arguments(w, tool_name)
+                        if prepared is None:
+                            st.info(f"{tool_name} needs explicit inputs. Ask in the chat, naming the station and dates, year, weight values or scenario and settings.")
+                        else:
+                            args, described = prepared
+                            tool_out = run_tool_directly(w, tool_name, args)
+                            st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}{described}"})
+                            st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
+                            st.success("Result added to the chat.")
+                    except Exception as ex:
+                        st.error(f"Error running {tool_name}: {ex}")
 
         st.html("""<script>
         (() => {

@@ -1045,20 +1045,47 @@ TUTORIAL_STEPS = [
 ]
 
 
-def start_example(source, names, force=False):
+def start_example(source, names, force=False, crisis_demo=False):
     """Open a reproducible example without approving any scenario."""
     curr_w = st.session_state.get("workspace")
     if not force and curr_w and (any(s.status == "accepted" for s in curr_w.scenarios) or curr_w.custom_uploads):
-        st.session_state.confirm_reset_example = True
+        st.session_state.confirm_reset_example = "crisis" if crisis_demo else "standard"
         return
     st.session_state.pop("confirm_reset_example", None)
     params = ScenarioParams(tuple(names), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
     workspace = Workspace(source, params, 6)
+    for report_key in (
+        "experiment_config",
+        "preview_pdf",
+        "packet",
+        "review_initial_storage",
+        "review_conservation",
+        "review_pipeline_active",
+        "storage_experiment",
+    ):
+        st.session_state.pop(report_key, None)
     st.session_state.workspace = workspace
+    st.session_state["report_workspace_id"] = workspace.id
     st.session_state.data_accepted = True
     st.session_state.scenarios_accepted = True
     st.session_state.page = "Review"
     st.session_state.inspect_id = workspace.selected[0]
+    st.session_state["crisis_demo"] = bool(crisis_demo)
+    if crisis_demo:
+        st.session_state["storage_experiment"] = True
+        st.session_state["review_initial_storage"] = "7.7% (April 2026 context)"
+        st.session_state["review_conservation"] = 0
+        st.session_state["review_pipeline_active"] = True
+        store_review_preferences(
+            workspace.id,
+            ReviewPreferences(
+                goal="storage",
+                data_source="example",
+                mode="simple",
+                configured=True,
+                dismissed=True,
+            ),
+        )
     save(workspace)
 
 
@@ -1221,10 +1248,18 @@ with top_l:
     st.session_state["unit_mode"] = "us" if u_choice.startswith("🇺🇸") else "metric"
 
 with top_c:
-    logo_file = ROOT / "assets" / "basin-logo.png"
-    if logo_file.exists():
-        logo_b64 = base64.b64encode(logo_file.read_bytes()).decode()
-        st.markdown(f'<div class="basin-top-logo-wrap"><img src="data:image/png;base64,{logo_b64}" alt="BASIN" class="basin-top-logo" /></div>', unsafe_allow_html=True)
+    dark_logo_file = ROOT / "assets" / "basin-logo.png"
+    light_logo_file = ROOT / "assets" / "basin-logo-light.png"
+    if dark_logo_file.exists():
+        dark_logo_b64 = base64.b64encode(dark_logo_file.read_bytes()).decode()
+        light_logo_b64 = base64.b64encode(light_logo_file.read_bytes()).decode() if light_logo_file.exists() else dark_logo_b64
+        st.markdown(
+            '<div class="basin-top-logo-wrap">'
+            f'<img src="data:image/png;base64,{dark_logo_b64}" alt="BASIN" class="basin-top-logo-dark" />'
+            f'<img src="data:image/png;base64,{light_logo_b64}" alt="BASIN" class="basin-top-logo-light" />'
+            '</div>',
+            unsafe_allow_html=True,
+        )
     else:
         st.markdown('<div class="basin-top-brand">BASIN</div>', unsafe_allow_html=True)
 
@@ -1296,6 +1331,12 @@ with top_r:
             st.markdown("**Appearance & Preferences**")
             appearance_picker()
             custom_appearance()
+            with st.expander("Advanced tools", expanded=False):
+                st.toggle(
+                    "Show manual assistant tools",
+                    key="show_assistant_developer_tools",
+                    help="Shows the direct calculation-tool selector inside the Analyst Assistant.",
+                )
             def _toggle_top_assistant():
                 st.session_state.assistant_open = not st.session_state.get("assistant_open", False)
 
@@ -1323,8 +1364,10 @@ if st.session_state.get("confirm_reset_example"):
     with st.container(border=True):
         st.warning("⚠️ **Active Analysis in Progress**: The current workspace contains reviewed scenarios or custom evidence. Resetting will replace this workspace.")
         col_c1, col_c2 = st.columns(2)
-        if col_c1.button("Yes, reset and load example", type="primary", key="btn_confirm_reset_yes", width="stretch"):
-            start_example(source, names, force=True)
+        pending_example = st.session_state.get("confirm_reset_example")
+        confirm_label = "Yes, load crisis demo" if pending_example == "crisis" else "Yes, reset and load example"
+        if col_c1.button(confirm_label, type="primary", key="btn_confirm_reset_yes", width="stretch"):
+            start_example(source, names, force=True, crisis_demo=pending_example == "crisis")
             st.rerun()
         if col_c2.button("Cancel, keep my current workspace", key="btn_confirm_reset_no", width="stretch"):
             st.session_state.pop("confirm_reset_example", None)
@@ -1345,6 +1388,30 @@ if page == "Data":
     with col_focus:
         render_analysis_focus_card(profile_defaults.goal)
 
+    if w is None:
+        with st.container(border=True):
+            quick_intro, guided_demo, crisis_demo = st.columns([2.2, 1, 1.25], vertical_alignment="center")
+            quick_intro.markdown(
+                "**Start with a prepared example**\n\n"
+                "Both examples remain unreviewed until you make a decision."
+            )
+            guided_demo.button(
+                "Try an example",
+                key="btn_try_example_step1",
+                on_click=start_example,
+                args=(source, names),
+                width="stretch",
+            )
+            crisis_demo.button(
+                "Load 2026 crisis demo",
+                key="btn_crisis_example_step1",
+                on_click=start_example,
+                args=(source, names, False, True),
+                type="primary",
+                width="stretch",
+                help="Starts an illustrative storage experiment from the documented April 2026 7.7% combined-storage context.",
+            )
+
     # 2. Session Restoration Dropdown
     with st.expander("📦 Restore analysis from verified .zip", expanded=False):
         st.caption("Restore and re-verify a complete previously exported BASIN `.zip` data bundle. Re-validates the SHA-256 manifest and mathematical replay on this device.")
@@ -1364,61 +1431,59 @@ if page == "Data":
                     st.rerun()
                 except Exception as err:
                     st.error(f"Bundle restoration failed: {err}")
-        if w is None:
-            st.divider()
-            st.caption("No custom bundle? Initialize with verified NOAA baseline record:")
-            st.button("Try an example", key="btn_try_example_step1", on_click=start_example, args=(source, names), width="stretch")
-
     metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
     quality = pd.DataFrame(source.manifest["quality"])
     station_table = metadata.merge(quality, on="station_id")
 
-    with tour_target("data_map"):
-        from basin_core.region_n_map import render_observation_map, load_catalog
-        render_observation_map(station_table, show_catalog=False)
+    with st.expander("Explore map and historical rainfall", expanded=curr_target == "data_map"):
+        with tour_target("data_map"):
+            from basin_core.region_n_map import render_observation_map, load_catalog
+            render_observation_map(station_table, show_catalog=False)
 
-    st.markdown("#### Historical Climatology & Observations")
-    col_ts, col_hm = st.columns(2, gap="medium")
-    with col_ts:
-        st.markdown("##### Observed Rainfall Time Series")
-        left, right = st.columns([2.5, 1.5])
-        station_view = left.multiselect("Observed rainfall", list(names), default=list(names), format_func=names.get, label_visibility="collapsed")
-        interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"], label_visibility="collapsed")
-        if station_view:
-            observations = source.select(station_view)
-            if interval == "Annual":
-                groups = observations.groupby(observations.index.year)
-                observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
-            elif interval == "Monthly":
-                groups = observations.resample("MS")
-                observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
-            is_us = st.session_state.get("unit_mode", "us") == "us"
-            plot_obs = (observed / 25.4).round(2) if is_us else observed
-            fig = go.Figure()
-            for station in plot_obs:
-                fig.add_trace(go.Scatter(x=plot_obs.index, y=plot_obs[station], name=names[station], mode="lines", connectgaps=False))
-            fig.update_yaxes(title="Precipitation · inches" if is_us else "Precipitation · mm")
-            st.plotly_chart(chart(fig, 360), width="stretch", config={"displayModeBar": False})
-            with st.expander(f"Synchronized Daily Observations ({'inches' if is_us else 'mm'})", expanded=False):
-                table_obs = (observations / 25.4).round(2) if is_us else observations.round(1)
-                st.dataframe(table_obs, width="stretch", height=220)
+        st.markdown("#### Historical rainfall")
+        col_ts, col_hm = st.columns(2, gap="medium")
+        with col_ts:
+            st.markdown("##### Rainfall over time")
+            left, right = st.columns([2.5, 1.5])
+            station_view = left.multiselect("Observed rainfall", list(names), default=list(names), format_func=names.get, label_visibility="collapsed")
+            interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"], label_visibility="collapsed")
+            if station_view:
+                observations = source.select(station_view)
+                if interval == "Annual":
+                    groups = observations.groupby(observations.index.year)
+                    observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
+                elif interval == "Monthly":
+                    groups = observations.resample("MS")
+                    observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
+                else:
+                    observed = observations
+                is_us = st.session_state.get("unit_mode", "us") == "us"
+                plot_obs = (observed / 25.4).round(2) if is_us else observed
+                fig = go.Figure()
+                for station in plot_obs:
+                    fig.add_trace(go.Scatter(x=plot_obs.index, y=plot_obs[station], name=names[station], mode="lines", connectgaps=False))
+                fig.update_yaxes(title="Precipitation · inches" if is_us else "Precipitation · mm")
+                st.plotly_chart(chart(fig, 360), width="stretch", config={"displayModeBar": False})
+                with st.expander(f"Daily values ({'inches' if is_us else 'mm'})", expanded=False):
+                    table_obs = (observations / 25.4).round(2) if is_us else observations.round(1)
+                    st.dataframe(table_obs, width="stretch", height=220)
 
-    with col_hm:
-        st.markdown("##### 35-Year Drought Anomaly Matrix (1991–2025)")
-        st.caption("Monthly departure (%) from 35-year mean. Crimson = severe drought deficits; Teal = rainfall surpluses.")
-        hm_station_choice = st.selectbox(
-            "Heatmap station perspective",
-            ["Catchment composite (All stations average)", *[f"{names[s_id]} ({s_id})" for s_id in names]],
-            label_visibility="collapsed",
-        )
-        if hm_station_choice.startswith("Catchment"):
-            hm_obs = source.select(list(names))
-            hm_title = "Catchment composite"
-        else:
-            selected_s_id = next(s_id for s_id in names if f"({s_id})" in hm_station_choice)
-            hm_obs = source.select([selected_s_id])
-            hm_title = names[selected_s_id]
-        st.plotly_chart(accessible_chart(drought_anomaly_matrix_figure(hm_obs, title_prefix=hm_title)), width="stretch", config={"displayModeBar": False})
+        with col_hm:
+            st.markdown("##### Monthly rainfall departures (1991–2025)")
+            st.caption("Difference from the 35-year monthly average. Crimson is drier; teal is wetter.")
+            hm_station_choice = st.selectbox(
+                "Heatmap station perspective",
+                ["Catchment composite (All stations average)", *[f"{names[s_id]} ({s_id})" for s_id in names]],
+                label_visibility="collapsed",
+            )
+            if hm_station_choice.startswith("Catchment"):
+                hm_obs = source.select(list(names))
+                hm_title = "Catchment composite"
+            else:
+                selected_s_id = next(s_id for s_id in names if f"({s_id})" in hm_station_choice)
+                hm_obs = source.select([selected_s_id])
+                hm_title = names[selected_s_id]
+            st.plotly_chart(accessible_chart(drought_anomaly_matrix_figure(hm_obs, title_prefix=hm_title)), width="stretch", config={"displayModeBar": False})
 
     catalog = load_catalog()
     with st.expander("Data Sources, Station Catalogs & Snapshot Metadata", expanded=False):
@@ -1771,7 +1836,7 @@ elif page == "Workspace":
         with tab_cross_compare:
             st.markdown("#### Multi-Scenario Shortlist Comparison")
             st.caption("Side-by-side analysis of all shortlisted drought candidates across cumulative rainfall deficit, reservoir drawdown trajectory, and multi-criteria performance metrics.")
-            
+
             c_sc1, c_sc2, c_sc3, c_sc4 = st.columns(4)
             shortlist_scenarios = [w.get(i) for i in w.selected]
             avg_def = sum(s.features["deficit_mm"] for s in shortlist_scenarios) / len(shortlist_scenarios) if shortlist_scenarios else 0
@@ -1822,7 +1887,7 @@ elif page == "Workspace":
             st.json({"clustering": w.clustering, "generation": w.generation, "selection_history": w.selection_history})
 
         comparison_panel(w, save)
-        
+
         def accept_shortlist():
             st.session_state.scenarios_accepted = True
             open_review(w.selected[0])
@@ -1855,6 +1920,8 @@ elif page == "Review":
             "This identifies the intended decision context; gauge suitability and local system calibration still require review."
         )
         prefs = review_preferences(w.id)
+        if st.session_state.get("crisis_demo", False):
+            st.caption("2026 crisis demo · 7.7% is the April 2026 starting-storage context; the selected rainfall sequence and resulting trajectory are illustrative.")
 
         is_editing = st.session_state.get(f"review_editing_{w.id}", False)
         if prefs.needs_setup or is_editing:
@@ -2051,10 +2118,23 @@ elif page == "Review":
                 st.button("Next scenario", disabled=not remaining,
                           on_click=open_review, args=(remaining[0] if remaining else s.id,), width="stretch")
 
+        with st.expander("Method and limitations", expanded=False):
+            st.markdown(
+                "**Catchment Weighting Disclosure:** BASIN currently weights the selected NOAA index "
+                "stations equally. This supports regional rainfall screening; it is not calibrated catchment weighting."
+            )
+            st.markdown(
+                "A historical rank describes matched windows in the available observation record. "
+                "It is not the probability of a future drought."
+            )
+
         primary_keys, secondary_keys = prefs.primary_panes(), prefs.secondary_panes()
         if simple_view and secondary_keys:
             panes = dict(zip(primary_keys, st.tabs([TAB_LABELS[key] for key in primary_keys])))
-            with st.expander(f"More tools ({len(secondary_keys)})", expanded=False):
+            with st.expander(
+                f"More tools ({len(secondary_keys)})",
+                expanded=curr_target == "review_simulation" and "storage" in secondary_keys,
+            ):
                 st.caption("Secondary tools outside active focus profile.")
                 panes.update(zip(secondary_keys, st.tabs([TAB_LABELS[key] for key in secondary_keys])))
         else:
@@ -2081,7 +2161,7 @@ elif page == "Review":
                     sys_options = list(SYSTEM_PRESETS.keys()) + ["Custom System Configuration..."]
                     active_selection = w.water_system_selection
                     selected_label = SYSTEM_ID_TO_LABEL.get(active_selection.identifier, "Custom System Configuration...")
-                    
+
                     # Rural / farm / district persona alignment
                     org_type = getattr(w.analysis_context, "organization_type", "")
                     org_name = getattr(w.analysis_context, "organization_name", "").lower()
@@ -2155,14 +2235,25 @@ elif page == "Review":
                         c_pace, c_init, c_conserve = st.columns([1, 1, 1])
                         pace_choice = c_pace.selectbox("Playback pace", ["Slow", "Medium", "Fast"])
                         pace_ms = 2500 if pace_choice == "Slow" else (800 if pace_choice == "Medium" else 150)
-                        init_choice = c_init.selectbox("Initial storage", ["48% (illustrative)", "60% (illustrative)", "35% (illustrative)"], key="review_initial_storage")
+                        initial_storage_options = [
+                            "48% (illustrative)",
+                            "60% (illustrative)",
+                            "35% (illustrative)",
+                            "7.7% (April 2026 context)",
+                        ]
+                        init_choice = c_init.selectbox("Initial storage", initial_storage_options, key="review_initial_storage")
                         conserve_choice = c_conserve.select_slider("Demand reduction", options=[0, 10, 20, 30], value=0, format_func=lambda v: f"{v}%", key="review_conservation")
                         if chosen_sys.demand_no_pipeline_acft_day is not None:
                             pipeline_active = st.checkbox("Pipeline supply available (Mary Rhodes Pipeline)", value=True, key="review_pipeline_active")
                         else:
                             pipeline_active = True
                             st.caption("ℹ️ *Pipeline import is specific to regional municipal utilities (not applicable to this storage system).*")
-                    init_pct = 0.48 if "48%" in init_choice else (0.60 if "60%" in init_choice else 0.35)
+                    init_pct = {
+                        "48% (illustrative)": 0.48,
+                        "60% (illustrative)": 0.60,
+                        "35% (illustrative)": 0.35,
+                        "7.7% (April 2026 context)": 0.077,
+                    }[init_choice]
 
                     settings = SimulationSettings(
                         initial_storage_fraction=init_pct,
@@ -2297,13 +2388,13 @@ elif page == "Review":
                         if s_crit is not None:
                             st.markdown(f'''<div class="basin-callout-card alert" style="border-left: 5px solid #dc2626;">
                                 <div class="metric-label">🔴 Decision Metric · Critical Storage Breach (≤{band_crit:.0f}%)</div>
-                                <div class="metric-val" style="color: #dc2626; font-size: 1.4rem; font-weight: 800;">Day {s_crit}</div>
+                                <div class="metric-val" style="color: var(--basin-danger-text); font-size: 1.4rem; font-weight: 800;">Day {s_crit}</div>
                                 <div class="metric-desc">Critical threshold crossed: modeled combined storage reaches or breaches the {band_crit:.0f}% emergency planning band on Day {s_crit}.</div>
                             </div>''', unsafe_allow_html=True)
                         else:
                             st.markdown(f'''<div class="basin-callout-card" style="border-left: 5px solid #16a34a;">
                                 <div class="metric-label">🟢 Decision Metric · Critical Storage Breach (≤{band_crit:.0f}%)</div>
-                                <div class="metric-val" style="color: #16a34a; font-size: 1.4rem; font-weight: 800;">Not Breached in Window</div>
+                                <div class="metric-val" style="color: var(--basin-success-text); font-size: 1.4rem; font-weight: 800;">Not Breached in Window</div>
                                 <div class="metric-desc">Modeled combined storage stays above the {band_crit:.0f}% emergency band throughout this {len(sim_df)}-day window.</div>
                             </div>''', unsafe_allow_html=True)
 
@@ -2373,7 +2464,7 @@ elif page == "Review":
                 gap_val = f"{crop_def['irrigation_gap_in']:.2f} in" if is_us else f"{crop_def['irrigation_gap_mm']:.1f} mm"
                 st.markdown(f'''<div class="basin-callout-card" style="border-left: 5px solid #087e8b;">
                     <div class="metric-label">🌾 Decision Metric · Net Irrigation Deficit</div>
-                    <div class="metric-val" style="color: #087e8b; font-size: 1.4rem; font-weight: 800;">{gap_val}</div>
+                    <div class="metric-val" style="color: var(--basin-info-text); font-size: 1.4rem; font-weight: 800;">{gap_val}</div>
                     <div class="metric-desc">Total supplemental irrigation depth required across crop cycle to prevent yield reduction.</div>
                 </div>''', unsafe_allow_html=True)
 
@@ -2410,13 +2501,13 @@ elif page == "Review":
                 if kbdi_res.burn_ban_breached:
                     st.markdown(f'''<div class="basin-callout-card alert" style="border-left: 5px solid #dc2626;">
                         <div class="metric-label">🔴 Decision Metric · Burn-Ban Trigger (KBDI ≥ 600)</div>
-                        <div class="metric-val" style="color: #dc2626; font-size: 1.4rem; font-weight: 800;">Breached on Day {kbdi_res.burn_ban_day} (Peak: {kbdi_res.peak_kbdi:.0f})</div>
+                        <div class="metric-val" style="color: var(--basin-danger-text); font-size: 1.4rem; font-weight: 800;">Breached on Day {kbdi_res.burn_ban_day} (Peak: {kbdi_res.peak_kbdi:.0f})</div>
                         <div class="metric-desc">Critical threshold crossed: severe drought and elevated wildfire ignition danger.</div>
                     </div>''', unsafe_allow_html=True)
                 else:
                     st.markdown(f'''<div class="basin-callout-card" style="border-left: 5px solid #16a34a;">
                         <div class="metric-label">🟢 Decision Metric · Burn-Ban Trigger (KBDI ≥ 600)</div>
-                        <div class="metric-val" style="color: #16a34a; font-size: 1.4rem; font-weight: 800;">Below 600 (Peak: {kbdi_res.peak_kbdi:.0f})</div>
+                        <div class="metric-val" style="color: var(--basin-success-text); font-size: 1.4rem; font-weight: 800;">Below 600 (Peak: {kbdi_res.peak_kbdi:.0f})</div>
                         <div class="metric-desc">Soil moisture remains below typical Texas county burn-ban triggers throughout the scenario.</div>
                     </div>''', unsafe_allow_html=True)
 

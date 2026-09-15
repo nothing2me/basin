@@ -9,6 +9,24 @@ import streamlit as st
 
 def apply_design():
     st.html("""<style>
+body{
+    --basin-text-strong:#182127;--basin-text:#20292E;--basin-muted:#4D5C66;
+    --basin-surface:#F3F6FA;--basin-surface-elevated:#FFFFFF;--basin-surface-soft:#E2EAF2;
+    --basin-border:#8796A0;--basin-info-text:#075985;--basin-success-text:#166534;
+    --basin-warning-text:#92400E;--basin-danger-text:#991B1B
+}
+body.basin-theme-dark{
+    --basin-text-strong:#F7FAFC;--basin-text:#E7ECEF;--basin-muted:#B6C2CA;
+    --basin-surface:#171C20;--basin-surface-elevated:#1E262C;--basin-surface-soft:#252D33;
+    --basin-border:#65737D;--basin-info-text:#7DD3FC;--basin-success-text:#86EFAC;
+    --basin-warning-text:#FCD34D;--basin-danger-text:#FCA5A5
+}
+body.basin-theme-light{
+    --basin-text-strong:#182127;--basin-text:#20292E;--basin-muted:#4D5C66;
+    --basin-surface:#F3F6FA;--basin-surface-elevated:#FFFFFF;--basin-surface-soft:#E2EAF2;
+    --basin-border:#8796A0;--basin-info-text:#075985;--basin-success-text:#166534;
+    --basin-warning-text:#92400E;--basin-danger-text:#991B1B
+}
 .block-container{padding:4.25rem 2.8rem 6.5rem;max-width:1560px}
 [data-testid="stAppDeployButton"]{display:none}
 [data-testid="stHeader"]{background:transparent}
@@ -18,18 +36,19 @@ def apply_design():
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.5rem}
 .basin-brand{margin:0 0 .65rem}
 .basin-brand img{display:block;width:min(100%,220px);height:auto;margin-bottom:.35rem;background:#20292E;padding:10px;border-radius:8px;box-sizing:border-box}
-.basin-brand small{font-size:.73rem;opacity:.85;letter-spacing:.08em;text-transform:uppercase}
-.basin-eyebrow{font-size:.67rem;font-weight:700;letter-spacing:.14em;opacity:.85;margin-top:8px}
+.basin-brand small{font-size:.73rem;color:var(--basin-muted)!important;letter-spacing:.08em;text-transform:uppercase}
+.basin-eyebrow{font-size:.67rem;font-weight:700;letter-spacing:.14em;color:var(--basin-muted)!important;margin-top:8px}
 h1,h2,h3{letter-spacing:-.025em}
 h3{font-size:1.6rem!important;font-weight:650!important}
 [data-testid="stMetric"]{border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:13px;padding:11px 14px;background:color-mix(in srgb,currentColor 2%,transparent)}
 [data-testid="stMetricValue"]{font-size:1.7rem;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.025em}
-[data-testid="stMetricLabel"]{font-size:.76rem;opacity:.78}
-[data-testid="stCaptionContainer"]{font-size:.78rem}
+[data-testid="stMetricLabel"]{font-size:.76rem;color:var(--basin-muted)!important;opacity:1}
+[data-testid="stCaptionContainer"]{font-size:.78rem;color:var(--basin-muted)!important;opacity:1}
+[data-testid="stCaptionContainer"] *{color:inherit!important}
 [data-testid="stSidebar"] [role="radiogroup"]{gap:5px}
 [data-testid="stSidebar"], [data-testid="stSidebarNav"], button[data-testid="stSidebarCollapseButton"], [data-testid="collapsedControl"]{display:none!important}
 .basin-top-brand{text-align:center;font-size:2.3rem;font-weight:900;letter-spacing:.14em;margin:0;line-height:1.1}
-.basin-top-sub{text-align:center;font-size:.75rem;letter-spacing:.16em;opacity:.7;text-transform:uppercase;margin:2px 0 0}
+.basin-top-sub{text-align:center;font-size:.75rem;letter-spacing:.16em;color:var(--basin-muted)!important;text-transform:uppercase;margin:2px 0 0}
 .basin-header-text-btn{padding:0;margin:6px 0 0;text-align:center}
 .basin-header-text-btn [data-testid="stButton"] button{
     background:transparent!important;
@@ -64,8 +83,8 @@ h3{font-size:1.6rem!important;font-weight:650!important}
 }
 .basin-nav-ready [data-testid="stButton"] button p{
     font-weight:600!important;
-    color:currentColor!important;
-    opacity:.75!important;
+    color:var(--basin-muted)!important;
+    opacity:1!important;
 }
 .basin-nav-ready [data-testid="stButton"] button:hover{
     border-bottom:3.5px solid color-mix(in srgb,currentColor 35%,transparent)!important;
@@ -75,22 +94,27 @@ h3{font-size:1.6rem!important;font-weight:650!important}
 }
 .basin-nav-locked [data-testid="stButton"] button{
     border-bottom:3.5px solid transparent!important;
-    opacity:.32!important;
+    opacity:.62!important;
     cursor:not-allowed!important;
 }
 .basin-nav-locked [data-testid="stButton"] button p{
     font-weight:500!important;
-    color:color-mix(in srgb,currentColor 45%,transparent)!important;
+    color:var(--basin-muted)!important;
 }
 .basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:4px 0;margin:0 auto}
-.basin-top-logo{height:46px;width:auto;max-width:260px;object-fit:contain;display:block;background:#20292E;padding:7px 12px;border-radius:8px;box-sizing:content-box}
+.basin-top-logo-dark{height:46px;width:auto;max-width:260px;object-fit:contain;display:block;background:#20292E;padding:7px 12px;border-radius:8px;box-sizing:content-box}
+.basin-top-logo-light{display:none;width:210px;height:60px;object-fit:cover;object-position:center 48.5%;background:transparent}
+body.basin-theme-light .basin-top-logo-dark{display:none}
+body.basin-theme-light .basin-top-logo-light{display:block}
+body.basin-theme-dark .basin-top-logo-dark{display:block}
+body.basin-theme-dark .basin-top-logo-light{display:none}
 .st-key-notes_slide_drawer{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:min(680px,94vw)!important;z-index:99995!important;transition:left .35s cubic-bezier(0.16, 1, 0.3, 1)!important;pointer-events:none!important}
 .st-key-notes_slide_drawer *{pointer-events:none!important}
 .st-key-notes_slide_drawer button, .st-key-notes_slide_drawer textarea, .st-key-notes_slide_drawer input, .st-key-notes_slide_drawer a{pointer-events:auto!important}
 body:has(.st-key-assistant_drawer) .st-key-notes_slide_drawer{left:calc((100vw - var(--basin-assistant-width, 500px))/2)!important}
 @media(max-width:950px){body:has(.st-key-assistant_drawer) .st-key-notes_slide_drawer{left:50%!important}}
-.st-key-notes_drawer_closed,.st-key-notes_drawer_panel{background:color-mix(in srgb,var(--background-color,#1a2228) 96%,#000)!important;border:1.5px solid color-mix(in srgb,currentColor 22%,transparent)!important;border-bottom:none!important;border-radius:14px 14px 0 0!important;padding:0 16px!important;box-shadow:0 -4px 20px rgba(0,0,0,.38)!important;height:520px!important;max-height:78vh!important;transform:translateY(calc(100% - 44px))!important;overflow:hidden!important;transition:transform .32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .3s ease!important;will-change:transform}
-.st-key-notes_drawer_open,.st-key-notes_drawer_panel.is-open{background:color-mix(in srgb,var(--background-color,#1a2228) 98%,#000)!important;border:1.5px solid color-mix(in srgb,currentColor 28%,transparent)!important;border-bottom:none!important;border-radius:14px 14px 0 0!important;padding:8px 20px 18px 20px!important;box-shadow:0 -8px 36px rgba(0,0,0,.55)!important;height:520px!important;max-height:78vh!important;transform:translateY(0)!important;overflow-y:auto!important;transition:transform .32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .3s ease!important;will-change:transform}
+.st-key-notes_drawer_closed,.st-key-notes_drawer_panel{background:var(--basin-surface-elevated)!important;color:var(--basin-text)!important;border:1.5px solid var(--basin-border)!important;border-bottom:none!important;border-radius:14px 14px 0 0!important;padding:0 16px!important;box-shadow:0 -4px 20px rgba(0,0,0,.25)!important;height:520px!important;max-height:78vh!important;transform:translateY(calc(100% - 44px))!important;overflow:hidden!important;transition:transform .32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .3s ease!important;will-change:transform}
+.st-key-notes_drawer_open,.st-key-notes_drawer_panel.is-open{background:var(--basin-surface-elevated)!important;color:var(--basin-text)!important;border:1.5px solid var(--basin-border)!important;border-bottom:none!important;border-radius:14px 14px 0 0!important;padding:8px 20px 18px 20px!important;box-shadow:0 -8px 36px rgba(0,0,0,.35)!important;height:520px!important;max-height:78vh!important;transform:translateY(0)!important;overflow-y:auto!important;transition:transform .32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .3s ease!important;will-change:transform}
 .st-key-notes_header_btn{display:flex!important;justify-content:center!important;align-items:center!important;width:100%!important;height:44px!important}
 .st-key-notes_header_btn button{background:transparent!important;border:none!important;font-size:.92rem!important;font-weight:750!important;letter-spacing:-.01em!important;text-align:center!important;display:flex!important;justify-content:center!important;align-items:center!important;width:100%!important;height:44px!important;padding:0 8px!important;cursor:pointer!important;box-shadow:none!important;color:currentColor!important}
 .st-key-notes_header_btn button:hover{background:color-mix(in srgb,currentColor 8%,transparent)!important;border-radius:8px!important}
@@ -105,7 +129,7 @@ body:has(.st-key-assistant_drawer) .st-key-notes_slide_drawer{left:calc((100vw -
 .st-key-review_accept_box [data-testid="stButton"] button{font-size:1.35rem!important;font-weight:800!important;min-height:3.8rem!important;padding:14px 28px!important;border-radius:12px!important;letter-spacing:.05em!important;text-transform:uppercase!important;background:#0ea5e9!important;color:#fff!important;border:none!important;box-shadow:0 4px 18px rgba(14,165,233,.35)!important;margin:10px auto!important;display:flex!important;justify-content:center!important;align-items:center!important;width:100%!important}
 .st-key-review_accept_box [data-testid="stButton"] button:hover{background:#0284c7!important;box-shadow:0 6px 24px rgba(14,165,233,.5)!important}
 .st-key-review_accept_box [data-testid="stButton"] button *{color:#fff!important}
-.basin-scenario-summary{background:color-mix(in srgb,var(--background-color,#1e262c) 92%,#fff)!important;border-left:4px solid #0ea5e9!important;color:currentColor!important;padding:14px 18px!important;border-radius:4px 10px 10px 4px!important;margin:10px 0 14px 0!important;font-size:0.95rem!important;line-height:1.55!important;font-weight:500!important;box-shadow:0 1px 3px rgba(0,0,0,0.12)!important}
+.basin-scenario-summary{background:var(--basin-surface-soft)!important;border-left:4px solid #0ea5e9!important;color:var(--basin-text)!important;padding:14px 18px!important;border-radius:4px 10px 10px 4px!important;margin:10px 0 14px 0!important;font-size:0.95rem!important;line-height:1.55!important;font-weight:500!important;box-shadow:0 1px 3px rgba(0,0,0,0.12)!important}
 body.basin-theme-bw .basin-scenario-summary{background:#111!important;border-left:4px solid #fff!important;color:#fff!important}
 .basin-callout-card{padding:14px 20px!important;border-radius:10px!important;background:color-mix(in srgb,currentColor 4%,transparent)!important;border:1px solid color-mix(in srgb,currentColor 15%,transparent)!important;margin:12px 0 14px 0!important}
 .basin-callout-card .metric-label{font-size:0.84rem!important;font-weight:700!important;letter-spacing:0.04em!important;text-transform:uppercase!important;opacity:0.82!important;margin-bottom:4px!important}
@@ -123,6 +147,8 @@ body.basin-theme-bw button[kind="secondary"] *,body.basin-theme-bw button[data-t
 body.basin-theme-bw .basin-nav-active [data-testid="stButton"] button{border-bottom:4px solid #fff!important}
 body.basin-theme-bw .basin-nav-divider{border-bottom:1.5px solid #fff!important}
 body.basin-theme-bw .basin-top-logo{filter:none!important}
+body.basin-theme-bw .basin-top-logo-dark{display:block!important;filter:none!important}
+body.basin-theme-bw .basin-top-logo-light{display:none!important}
 [data-testid="stSidebar"] [role="radiogroup"] label{border-radius:9px;padding:7px 10px;margin:0;transition:background .15s ease}
 [data-testid="stSidebar"] [role="radiogroup"] label:has([aria-checked="true"]){background:color-mix(in srgb,#356273 28%,transparent);font-weight:650}
 [data-testid="stExpander"]{border-radius:11px!important}
@@ -202,7 +228,8 @@ body:has(.st-key-assistant_drawer) .block-container,body:has(.st-key-assistant_d
         min-height:2.6rem!important;padding:.35rem!important;font-size:.72rem!important
     }
     .basin-top-logo-wrap{padding:0}
-    .basin-top-logo{height:34px;padding:5px 9px}
+    .basin-top-logo-dark{height:34px;padding:5px 9px}
+    .basin-top-logo-light{width:175px;height:48px}
     [data-testid="stHorizontalBlock"]:has(.st-key-nav_tab_Data){
         display:grid!important;grid-template-columns:1fr 1fr!important;gap:.4rem!important;margin-top:.25rem!important
     }
@@ -239,7 +266,8 @@ body:has(.st-key-assistant_drawer) .block-container,body:has(.st-key-assistant_d
     .st-key-assistant_tab_closed button p,.st-key-assistant_tab_open button p{display:none!important}
     .st-key-assistant_drawer{width:100vw!important;max-width:100vw!important;min-width:0!important;padding:3.5rem 1rem 1.5rem!important;resize:none!important}
 }
-.basin-assistant-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:650;background:color-mix(in srgb,currentColor 8%,transparent);border:1px solid color-mix(in srgb,currentColor 16%,transparent);margin-bottom:.5rem}
+.basin-assistant-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:700;background:var(--basin-surface-soft);border:1px solid var(--basin-border);margin-bottom:.5rem}
+.basin-status-info{color:var(--basin-info-text)!important}.basin-status-success{color:var(--basin-success-text)!important}.basin-status-warning{color:var(--basin-warning-text)!important}.basin-status-danger{color:var(--basin-danger-text)!important}
 .basin-assistant-avatar{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 3px 8px rgba(0,0,0,.4));flex:0 0 auto}
 .basin-assistant-title{font-size:1.55rem;font-weight:800;letter-spacing:-.03em;line-height:1.08;margin:0}
 .basin-pipeline-stepper{display:flex;align-items:center;justify-content:space-between;gap:8px;background:color-mix(in srgb,currentColor 3%,transparent);border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:12px;padding:8px 12px;margin:6px 0 16px}
@@ -250,6 +278,26 @@ body:has(.st-key-assistant_drawer) .block-container,body:has(.st-key-assistant_d
 .basin-step-status{font-size:.70rem;opacity:.75}
 .basin-step-arrow{opacity:.35;font-size:.85rem;user-select:none}
 </style>""")
+    st.html("""<script>(() => {
+const syncBasinTheme = () => {
+  const app = document.querySelector('.stApp');
+  if (!app) return;
+  const match = getComputedStyle(app).backgroundColor.match(/[0-9.]+/g);
+  if (!match || match.length < 3) return;
+  const [r, g, b] = match.slice(0, 3).map(Number);
+  const isLight = (0.2126 * r + 0.7152 * g + 0.0722 * b) > 145;
+  document.body.classList.toggle('basin-theme-light', isLight);
+  document.body.classList.toggle('basin-theme-dark', !isLight);
+};
+window.__basinThemeObserver?.disconnect();
+syncBasinTheme();
+const app = document.querySelector('.stApp');
+if (app) {
+  window.__basinThemeObserver = new MutationObserver(syncBasinTheme);
+  window.__basinThemeObserver.observe(app, {attributes:true, attributeFilter:['class','style']});
+}
+window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', syncBasinTheme);
+})();</script>""", unsafe_allow_javascript=True)
 
 
 def appearance_picker():
@@ -336,7 +384,10 @@ def custom_appearance():
     for name, value in COLOR_DEFAULTS.items():
         st.session_state.setdefault(f"appearance_{name}", value)
         st.session_state.setdefault(f"draft_{name}", st.session_state[f"appearance_{name}"])
-    with st.expander("Advanced RGB palette customization", expanded=False):
+    with st.expander("Accessibility and custom colors", expanded=False):
+        st.toggle("Color-blind mode", key="appearance_colorblind",
+                  help="Uses a consistent blue accent plus chart shapes, line styles and patterns.")
+        st.markdown("**Custom palette**")
         with st.form("appearance_colors", border=False):
             buttons, selected, sidebar = st.columns(3, gap="small")
             buttons.color_picker("Buttons", key="draft_accent")
@@ -346,14 +397,8 @@ def custom_appearance():
                 for name in COLOR_DEFAULTS:
                     st.session_state[f"appearance_{name}"] = st.session_state[f"draft_{name}"]
                 st.success("Colors applied")
-    st.toggle("Color-blind mode", key="appearance_colorblind",
-              help="Applies a consistent blue interface accent and chart colors with shapes, line styles and patterns. Turn off to restore your custom colors.")
-    bw_active = st.toggle("Black / White high-contrast", key="appearance_bw",
-                          help="Pure monochrome black and white theme.")
-    if bw_active:
-        st.html('<script>document.body.classList.add("basin-theme-bw");</script>')
-    st.button("Reset colors", on_click=reset_colors)
-    st.caption("Color choices last for this session. Light/Dark/System is saved in this browser.")
+        st.button("Reset custom colors", on_click=reset_colors, width="stretch")
+        st.caption("Custom colors last for this session. Light, Dark and System are saved in this browser.")
     enabled = st.session_state.appearance_colorblind
     accent = "#356273" if enabled else st.session_state.appearance_accent
     selection = "#0072B2" if enabled else st.session_state.appearance_selection

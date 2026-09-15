@@ -272,6 +272,23 @@ def test_first_use_example_is_reviewable_not_approved(tmp_path, monkeypatch):
     assert next(b for b in app.button if b.label == "Build verified export").disabled
 
 
+def test_crisis_demo_uses_documented_starting_context_without_approval(tmp_path, monkeypatch):
+    from basin_core.workspace import Workspace
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+
+    next(b for b in app.button if b.label == "Load 2026 crisis demo").click().run()
+
+    assert not app.exception
+    assert app.session_state.page == "Review"
+    assert app.session_state.storage_experiment is True
+    assert app.session_state.review_initial_storage == "7.7% (April 2026 context)"
+    assert abs(app.session_state.experiment_config.initial_pct - 0.077) < 1e-12
+    assert all(s.status == "unreviewed" for s in app.session_state.workspace.scenarios)
+    assert any("resulting trajectory are illustrative" in item.value for item in app.caption)
+
+
 def test_custom_colors_reset_and_accessible_charts(tmp_path, monkeypatch):
     from basin_core.workspace import Workspace
     from basin_theme import accent_foreground
@@ -300,7 +317,7 @@ def test_custom_colors_reset_and_accessible_charts(tmp_path, monkeypatch):
     app.radio(key="reservoir_sim_subview").set_value("Additional rainfall reductions").run()
     assert not app.exception
     assert app.session_state.appearance_colorblind
-    next(b for b in app.button if b.label == "Reset colors").click().run()
+    next(b for b in app.button if b.label == "Reset custom colors").click().run()
     assert not app.exception
     assert app.session_state.appearance_accent == "#356273"
     assert not app.session_state.appearance_colorblind
