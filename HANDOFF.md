@@ -2,23 +2,24 @@
 
 ## Current state
 
-Button interaction now matches each visible control. Streamlit buttons, form submit buttons, and download buttons fill their rendered containers, use a minimum 44 px target height, and route clicks from label/icon children to the button. The main content also starts below Streamlit's fixed toolbar, which had been intercepting the visible Saved Runs and Settings controls.
+The assistant drawer remains open when a quick-analysis chip is selected or a prompt is submitted with Enter. Open and close now use separate one-way callbacks and widget keys, preventing a stale toggle event from reversing the drawer state during a result update. Chat submissions are queued before rendering so the reply appears without a second UI rerun. Quick tools render their messages during the current interaction.
 
-The Scenario Builder uses a searchable station selector and one editable start/end date field. Review and assistant updates from the latest main branch remain integrated, including the diamond assistant avatar, cached fallback workspace, and multi-scenario comparison tools.
+Application buttons continue to fill their visible controls with a minimum 44 px target, and the top controls remain clear of Streamlit's fixed toolbar. The Scenario Builder uses a searchable station selector and one editable start/end date field.
 
 ## Files changed
 
-- `basin_theme.py`
+- `basin_ui.py`
+- `tests/test_embedded_assistant_ui.py`
 - `HANDOFF.md`
 
 Local modifications to `BASIN.exe` and `scripts/installer_wizard.py` predated this change and were left untouched.
 
 ## Verification
 
-- `pytest tests/test_ui_improvements.py -q`: 4 passed.
-- `python -m py_compile basin_theme.py`: passed with the verification virtual environment.
-- Browser geometry audit at `http://127.0.0.1:8516/`: all visible top controls accept clicks at their left edge, center, and right edge.
-- Browser interaction rehearsal: clicking the far-right edge of Scenario Builder opened Step 2; clicking the far-left edge of Data Dashboard returned to Step 1.
+- `pytest tests/test_embedded_assistant_ui.py tests/test_assistant_hydrologist_queries.py tests/test_ui_improvements.py -q`: 22 passed.
+- `python -m py_compile basin_ui.py`: passed.
+- `git diff --check`: passed.
+- Browser rehearsal at `http://127.0.0.1:8516/`: Top #1 Profile kept the drawer open and rendered two messages; submitting `Check export readiness` with Enter kept it open and rendered four total messages.
 
 ## Blocker
 
@@ -26,4 +27,4 @@ None.
 
 ## Next action
 
-Continue the UI polish pass from the latest main branch, preserving the full-control hit-area contract for new buttons.
+Continue UI polish from the latest main branch, keeping assistant open/close actions one-way and preserving drawer state for any new assistant controls.

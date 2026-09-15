@@ -173,6 +173,27 @@ def _get_cached_assistant_workspace(_source, station_ids_tuple):
     return Workspace(_source, params, 6)
 
 
+def _open_assistant_panel():
+    st.session_state.assistant_open = True
+
+
+def _close_assistant_panel():
+    st.session_state.assistant_open = False
+
+
+def _queue_assistant_query():
+    query = st.session_state.get("assistant_chat_input")
+    if query:
+        st.session_state.assistant_pending_query = query
+    st.session_state.assistant_open = True
+
+
+def _clear_assistant_chat():
+    st.session_state.assistant_messages = []
+    st.session_state.assistant_history = []
+    st.session_state.assistant_open = True
+
+
 def assistant_panel(w, source=None, names=None):
     """Render the slide-out assistant panel with right-side tab, open by default."""
     from basin_core.assistant import run_assistant, run_tool_directly
@@ -186,10 +207,16 @@ def assistant_panel(w, source=None, names=None):
     is_open = st.session_state.assistant_open
     tab_class = "assistant_tab_open" if is_open else "assistant_tab_closed"
     tab_label = "▶ Close AI" if is_open else "◀ AI Assistant"
+    tab_key = "assistant_close_tab_btn" if is_open else "assistant_open_tab_btn"
+    tab_action = _close_assistant_panel if is_open else _open_assistant_panel
 
     with st.container(key=tab_class):
-        if st.button(tab_label, key="assistant_tab_btn", help="Toggle BASIN AI Assistant"):
-            st.session_state.assistant_open = not is_open
+        st.button(
+            tab_label,
+            key=tab_key,
+            help="Toggle BASIN AI Assistant",
+            on_click=tab_action,
+        )
 
     if not is_open:
         return
@@ -238,14 +265,33 @@ def assistant_panel(w, source=None, names=None):
                 st.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="basin-assistant-sub">{sub_text}</div>', unsafe_allow_html=True)
         with c_col:
-            if st.button("✕ Close", key="assistant_close_x", help="Close Assistant", width="stretch"):
-                st.session_state.assistant_open = False
+            st.button(
+                "✕ Close",
+                key="assistant_close_x",
+                help="Close Assistant",
+                width="stretch",
+                on_click=_close_assistant_panel,
+            )
 
         st.markdown(badge_html, unsafe_allow_html=True)
         st.caption("Ask about scenario profiles, compare candidates, check station stress, or test priority weights. Grounded in verified hydrologic data.")
 
+        pending_query = st.session_state.pop("assistant_pending_query", None)
+        if pending_query:
+            st.session_state.assistant_messages.append({"role": "user", "content": pending_query})
+            with st.spinner("Analyzing workspace data..."):
+                try:
+                    import time
+                    t0 = time.time()
+                    reply, new_hist = run_assistant(w, pending_query, st.session_state.assistant_history)
+                    dt = time.time() - t0
+                    st.session_state["assistant_inference_seconds"] = st.session_state.get("assistant_inference_seconds", 0.0) + dt
+                    st.session_state.assistant_history = new_hist
+                    st.session_state.assistant_messages.append({"role": "assistant", "content": reply})
+                except Exception as ex:
+                    st.session_state.assistant_messages.append({"role": "assistant", "content": f"⚠️ Error processing query: {ex}"})
+
         st.caption("⚡ Instant Analysis Chips (0.01s, zero LLM overhead)")
-        preset_prompt = None
         q1, q2, q3 = st.columns(3)
         q4, q5, q6 = st.columns(3)
         direct_tool_run = None
@@ -268,7 +314,6 @@ def assistant_panel(w, source=None, names=None):
             direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
             st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
             st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
-            st.rerun()
         if q6.button("📦 Export Readiness", key="quick_export", width="stretch", help="Check readiness"):
             direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
 
@@ -278,10 +323,8 @@ def assistant_panel(w, source=None, names=None):
                 res = run_tool_directly(w, t_name, t_args)
                 st.session_state.assistant_messages.append({"role": "user", "content": u_msg})
                 st.session_state.assistant_messages.append({"role": "assistant", "content": res})
-                st.rerun()
             except Exception as exc:
                 st.session_state.assistant_messages.append({"role": "assistant", "content": f"⚠️ Error: {exc}"})
-                st.rerun()
 
         chat_box = st.container(height=380)
         with chat_box:
@@ -297,29 +340,19 @@ def assistant_panel(w, source=None, names=None):
                 with st.chat_message(msg["role"], avatar=av):
                     st.markdown(msg["content"])
 
-        user_input = st.chat_input("Ask about scenarios, rainfall, or tests...", key="assistant_chat_input")
-        active_query = preset_prompt or user_input
-
-        if active_query:
-            st.session_state.assistant_messages.append({"role": "user", "content": active_query})
-            with st.spinner("Analyzing workspace data..."):
-                try:
-                    import time
-                    t0 = time.time()
-                    reply, new_hist = run_assistant(w, active_query, st.session_state.assistant_history)
-                    dt = time.time() - t0
-                    st.session_state["assistant_inference_seconds"] = st.session_state.get("assistant_inference_seconds", 0.0) + dt
-                    st.session_state.assistant_history = new_hist
-                    st.session_state.assistant_messages.append({"role": "assistant", "content": reply})
-                except Exception as ex:
-                    st.session_state.assistant_messages.append({"role": "assistant", "content": f"⚠️ Error processing query: {ex}"})
-            st.rerun()
+        st.chat_input(
+            "Ask about scenarios, rainfall, or tests...",
+            key="assistant_chat_input",
+            on_submit=_queue_assistant_query,
+        )
 
         f_col1, f_col2 = st.columns([2, 1])
-        if f_col2.button("Clear chat", key="assistant_clear_chat", width="stretch"):
-            st.session_state.assistant_messages = []
-            st.session_state.assistant_history = []
-            st.rerun()
+        f_col2.button(
+            "Clear chat",
+            key="assistant_clear_chat",
+            width="stretch",
+            on_click=_clear_assistant_chat,
+        )
 
         with st.expander("🛠️ Direct Tool Runner (Manual)", expanded=False):
             st.caption("Select and execute any analysis tool directly without natural language processing.")
@@ -334,7 +367,7 @@ def assistant_panel(w, source=None, names=None):
                         tool_out = run_tool_directly(w, tool_name, args)
                         st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}{described}"})
                         st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
-                        st.rerun()
+                        st.success("Result added to the chat.")
                 except Exception as ex:
                     st.error(f"Error running {tool_name}: {ex}")
 
