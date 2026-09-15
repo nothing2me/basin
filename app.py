@@ -905,10 +905,10 @@ def render_bottom_nav(prev_page: str | None, next_page: str | None, next_label: 
 
 
 def personal_notes_panel(w):
+    def _toggle_notes_panel():
+        st.session_state.notes_open = not st.session_state.get("notes_open", False)
+
     st.session_state.setdefault("notes_open", False)
-    if st.session_state.get("btn_toggle_notes"):
-        st.session_state.notes_open = not st.session_state.notes_open
-        st.session_state.pop("btn_toggle_notes", None)
     is_open = st.session_state.notes_open
     current_val = w.notes if w else st.session_state.get("personal_notes", "")
     has_notes = bool(current_val.strip())
@@ -937,9 +937,13 @@ def personal_notes_panel(w):
                     header_label = "▼ Close Operator Notes" + (" ●" if has_notes else "")
                 else:
                     header_label = "Operator Notes" + (" ●" if has_notes else "")
-                if st.button(header_label, key="btn_toggle_notes", width="stretch", help="Click to expand or collapse Operator Notes"):
-                    st.session_state.notes_open = not is_open
-                    st.rerun()
+                st.button(
+                    header_label,
+                    key="btn_toggle_notes",
+                    width="stretch",
+                    help="Click to expand or collapse Operator Notes",
+                    on_click=_toggle_notes_panel,
+                )
 
             with st.container(key="notes_body_content"):
                 st.caption("Saved locally with this analysis. Included in exports only if you opt in.")
@@ -1292,10 +1296,15 @@ with top_r:
             st.markdown("**Appearance & Preferences**")
             appearance_picker()
             custom_appearance()
-            st.divider()
-            if st.button("🤖 " + ("Close AI Assistant" if st.session_state.get("assistant_open", False) else "Open AI Assistant"), key="btn_top_assistant", width="stretch"):
+            def _toggle_top_assistant():
                 st.session_state.assistant_open = not st.session_state.get("assistant_open", False)
-                st.rerun()
+
+            st.button(
+                "🤖 " + ("Close AI Assistant" if st.session_state.get("assistant_open", False) else "Open AI Assistant"),
+                key="btn_top_assistant",
+                width="stretch",
+                on_click=_toggle_top_assistant,
+            )
             st.divider()
             st.caption("Interactive walkthrough tour")
             st.button("Start tutorial", key="start_tutorial_btn", width="stretch", type="secondary", on_click=start_tutorial, args=(source, names))

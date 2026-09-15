@@ -87,12 +87,12 @@ def test_specific_city_context_survives_data_to_builder_transition(tmp_path, mon
     assert app.selectbox(key="context_org_type").value == "municipality"
     assert app.selectbox(key="context_supply").value == "unknown"
     assert app.selectbox(key="context_decision").value == "modeling_request"
-    accept = next(button for button in app.button if button.label.startswith("✅ Accept Baseline"))
+    accept = next(button for button in app.button if button.key == "nav_next_Workspace" or "Accept Baseline" in button.label)
     assert accept.disabled
     app.text_input(key="context_org_name").set_value("City of Alice").run()
     app.text_input(key="context_community").set_value("Alice service area").run()
     app.multiselect(key="context_counties").set_value(["Jim Wells"]).run()
-    accept = next(button for button in app.button if button.label.startswith("✅ Accept Baseline"))
+    accept = next(button for button in app.button if button.key == "nav_next_Workspace" or "Accept Baseline" in button.label)
     assert not accept.disabled
     accept.click().run()
     assert app.session_state.page == "Workspace"

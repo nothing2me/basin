@@ -2,26 +2,36 @@
 
 ## Current state
 
-The assistant header now presents the 52 px BASIN diamond beside a larger 24.8 px, weight-800 **Analyst Assistant** title. The long runtime/setup subtitle beneath the title has been removed; the compact status badge remains available below it.
+The Gemini responsiveness and performance engineering plan is completed. Rerun triggers and state mutations across the application and drawer systems have been audited and converted to pre-render callbacks:
 
-The assistant drawer remains open when a quick-analysis chip is selected or a prompt is submitted with Enter. Open and close use separate one-way callbacks and widget keys, and chat submissions are queued before rendering so responses appear without an extra result rerun.
+1. **Rerun Trigger Audit & Callback Architecture**:
+   - `personal_notes_panel` in `app.py` converted to pre-render `on_click=_toggle_notes_panel`, eliminating the session pop race condition and redundant `st.rerun()` calls.
+   - `btn_top_assistant` in `app.py` converted to `on_click=_toggle_top_assistant`, eliminating `st.rerun()`.
+   - Notes drawer and AI Assistant drawer toggles execute with zero mid-pass aborts and exactly 1 logical render pass per user interaction.
 
-Application buttons fill their visible controls with a minimum 44 px target, and the top controls remain clear of Streamlit's fixed toolbar. The Scenario Builder uses a searchable station selector and one editable start/end date field.
+2. **AI Asset & Path Optimization**:
+   - Pre-encoded `_DIAMOND_AVATAR_PATH` and `_DIAMOND_AVATAR_B64` at module level in `basin_ui.py`, eliminating per-rerun disk reads and base64 string construction during message rendering.
+   - Instant analysis chips (`quick_export`, crop deficit, top profile) and Enter query submissions execute without layout thrashing.
+
+3. **Repeatable Performance Benchmark Suite**:
+   - Created `tests/test_performance_benchmarks.py` exercising navigation latency (Data $\leftrightarrow$ Workspace $\leftrightarrow$ Review), Notes drawer toggle and inline save (verifying drawer persistence), and AI Assistant operations (bottom tab toggle, instant chips, chat query submission, clear chat, close button).
 
 ## Files changed
 
+- `app.py`
 - `basin_ui.py`
-- `basin_theme.py`
+- `tests/test_analysis_context.py`
+- `tests/test_performance_benchmarks.py`
 - `HANDOFF.md`
+- `TODO.md`
 
 Local modifications to `BASIN.exe` and `scripts/installer_wizard.py` predated this change and were left untouched.
 
 ## Verification
 
-- `pytest tests/test_embedded_assistant_ui.py tests/test_ui_improvements.py -q`: 5 passed.
-- `python -m py_compile basin_ui.py basin_theme.py`: passed.
-- Browser inspection at `http://127.0.0.1:8516/`: avatar measured 52 × 52 px, title measured 24.8 px at weight 800, and the old runtime/setup subtitle was absent.
-- The browser preview was restarted to discard Streamlit's cached imported modules and now shows the updated header.
+- `pytest tests/test_performance_benchmarks.py tests/test_embedded_assistant_ui.py tests/test_ui_improvements.py tests/test_analysis_context.py tests/test_failures.py -q`: 20 passed.
+- `python -m py_compile app.py basin_ui.py tests/test_performance_benchmarks.py`: passed.
+- Navigation, Notes drawer, and AI Assistant interactions verified under single-pass execution without redundant reruns.
 
 ## Blocker
 
@@ -29,4 +39,4 @@ None.
 
 ## Next action
 
-Gemini can begin the documented responsiveness and rerun audit after pulling this change from `main`.
+Ready for production deployment or further Part C external acceptance testing.

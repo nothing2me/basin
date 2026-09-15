@@ -1,11 +1,20 @@
 """Evidence and comparison views consuming the Workspace contract."""
+import base64
 from html import escape as html_escape
+from pathlib import Path
 import uuid
 
 import pandas as pd
 import streamlit as st
 
 from basin_core.evidence import KINDS, STATUSES
+
+_DIAMOND_AVATAR_PATH = Path(__file__).resolve().parent / "assets" / "basin_avatar_diamond.png"
+_DIAMOND_AVATAR_B64 = (
+    base64.b64encode(_DIAMOND_AVATAR_PATH.read_bytes()).decode("ascii")
+    if _DIAMOND_AVATAR_PATH.exists()
+    else ""
+)
 
 
 def evidence_panel(w, scenario, save):
@@ -244,12 +253,8 @@ def assistant_panel(w, source=None, names=None):
         else:
             badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">🔵 Active: Deterministic Intent Router</div>'
 
-        from pathlib import Path
-        avatar_path = Path(__file__).resolve().parent / "assets" / "basin_avatar_diamond.png"
-        avatar_b64 = ""
-        if avatar_path.exists():
-            import base64
-            avatar_b64 = base64.b64encode(avatar_path.read_bytes()).decode("ascii")
+        avatar_b64 = _DIAMOND_AVATAR_B64
+        avatar_path = _DIAMOND_AVATAR_PATH
 
         h_col, c_col = st.columns([4.0, 1.2])
         with h_col:
