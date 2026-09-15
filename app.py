@@ -63,7 +63,6 @@ if st.session_state.get("assistant_open", False):
         margin-right: {assistant_w + 10}px !important;
         max-width: calc(100% - {assistant_w + 20}px) !important;
         padding-right: 1.5rem !important;
-        transition: margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }}
     .st-key-assistant_drawer {{
         width: {assistant_w}px;

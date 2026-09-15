@@ -190,7 +190,6 @@ def assistant_panel(w, source=None, names=None):
     with st.container(key=tab_class):
         if st.button(tab_label, key="assistant_tab_btn", help="Toggle BASIN AI Assistant"):
             st.session_state.assistant_open = not is_open
-            st.rerun()
 
     if not is_open:
         return
@@ -223,14 +222,24 @@ def assistant_panel(w, source=None, names=None):
             badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">🔵 Active: Deterministic Intent Router</div>'
             sub_text = "Deterministic calculation engine · Strict templates · Read-only queries"
 
+        from pathlib import Path
+        avatar_path = Path(__file__).resolve().parent / "assets" / "basin_avatar_diamond.png"
+        avatar_b64 = ""
+        if avatar_path.exists():
+            import base64
+            avatar_b64 = base64.b64encode(avatar_path.read_bytes()).decode("ascii")
+
         h_col, c_col = st.columns([4.0, 1.2])
         with h_col:
-            st.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
+            if avatar_b64:
+                avatar_html = f'<img src="data:image/png;base64,{avatar_b64}" style="width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.35));" alt="BASIN AI Avatar">'
+                st.markdown(f'<div style="display:flex;align-items:center;gap:10px;">{avatar_html}<div class="basin-assistant-title" style="margin:0;">Analyst Assistant</div></div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="basin-assistant-sub">{sub_text}</div>', unsafe_allow_html=True)
         with c_col:
             if st.button("✕ Close", key="assistant_close_x", help="Close Assistant", width="stretch"):
                 st.session_state.assistant_open = False
-                st.rerun()
 
         st.markdown(badge_html, unsafe_allow_html=True)
         st.caption("Ask about scenario profiles, compare candidates, check station stress, or test priority weights. Grounded in verified hydrologic data.")
@@ -284,7 +293,8 @@ def assistant_panel(w, source=None, names=None):
                     "Every response is computed from actual workspace data."
                 )
             for msg in st.session_state.assistant_messages:
-                with st.chat_message(msg["role"]):
+                av = str(avatar_path) if (msg.get("role") == "assistant" and avatar_path.exists()) else None
+                with st.chat_message(msg["role"], avatar=av):
                     st.markdown(msg["content"])
 
         user_input = st.chat_input("Ask about scenarios, rainfall, or tests...", key="assistant_chat_input")
