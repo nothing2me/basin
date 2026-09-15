@@ -12,6 +12,8 @@ Provides:
 from __future__ import annotations
 
 import calendar
+from typing import Any
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -400,3 +402,285 @@ def drought_anomaly_matrix_figure(observations: pd.DataFrame, title_prefix: str 
         yaxis=dict(title="Year", dtick=1, showgrid=False),
     )
     return fig
+
+
+def shortlist_cumulative_deficit_figure(
+    workspace: Any,
+    unit: str = "in",
+    highlight_id: str | None = None,
+    show_envelope: bool = True,
+) -> go.Figure:
+    """Compare cumulative rainfall deficits across all shortlisted scenarios on a single timeline.
+
+    Plots the accumulation trajectory of meteorological drought stress (inches or mm)
+    from Day 1 to the end of each scenario, with an envelope showing the shortlist range
+    and mean trajectory.
+    """
+    fig = go.Figure()
+    if not workspace or not getattr(workspace, "selected", None):
+        fig.add_annotation(text="No shortlisted scenarios to compare", showarrow=False)
+        return fig
+
+    is_us = unit.lower() in ("in", "us", "ac-ft")
+    scale = 1.0 / 25.4 if is_us else 1.0
+    u_label = "in" if is_us else "mm"
+
+    palette = [
+        "#0ea5e9", "#f59e0b", "#10b981", "#8b5cf6",
+        "#ec4899", "#06b6d4", "#f97316", "#6366f1",
+    ]
+
+    all_series_days: dict[str, tuple[list[int], list[float]]] = {}
+    max_day = 0
+
+    for idx, s_id in enumerate(workspace.selected):
+        s = workspace.get(s_id)
+        if s is None:
+            continue
+        expected = workspace.reference.expected(s.series.index)
+        scenario_vals = s.series.to_numpy()
+        daily_deficit = np.maximum(expected - scenario_vals, 0.0).mean(axis=1) * scale
+        cum_deficit = np.cumsum(daily_deficit).tolist()
+        days = list(range(1, len(cum_deficit) + 1))
+        all_series_days[s_id] = (days, cum_deficit)
+        if days and days[-1] > max_day:
+            max_day = days[-1]
+
+    if not all_series_days:
+        fig.add_annotation(text="No valid scenario data available", showarrow=False)
+        return fig
+
+    # If requested and >= 2 scenarios, calculate and draw the envelope behind lines
+    if show_envelope and len(all_series_days) >= 2 and max_day > 0:
+        day_range = list(range(1, max_day + 1))
+        min_curve = []
+        max_curve = []
+        mean_curve = []
+        for d in day_range:
+            vals_at_d = [
+                c_vals[d - 1] for (days, c_vals) in all_series_days.values() if len(c_vals) >= d
+            ]
+            if vals_at_d:
+                min_curve.append(float(np.min(vals_at_d)))
+                max_curve.append(float(np.max(vals_at_d)))
+                mean_curve.append(float(np.mean(vals_at_d)))
+            else:
+                break
+        valid_days = day_range[:len(min_curve)]
+        if valid_days:
+            # Envelope fill (max curve down to min curve)
+            fig.add_trace(go.Scatter(
+                x=valid_days + valid_days[::-1],
+                y=max_curve + min_curve[::-1],
+                fill="toself",
+                fillcolor="rgba(14, 165, 233, 0.08)",
+                line=dict(color="rgba(255,255,255,0)"),
+                hoverinfo="skip",
+                showlegend=True,
+                name="Shortlist Range (Min–Max)",
+            ))
+            # Mean curve
+            fig.add_trace(go.Scatter(
+                x=valid_days,
+                y=mean_curve,
+                mode="lines",
+                line=dict(color="#94a3b8", width=1.8, dash="dash"),
+                name="Shortlist Average Deficit",
+                hovertemplate=f"Shortlist Average<br>Day %{{x}}: %{{y:.2f}} {u_label}<extra></extra>",
+            ))
+
+    # Add each scenario's cumulative deficit trajectory
+    for idx, s_id in enumerate(workspace.selected):
+        s = workspace.get(s_id)
+        if s_id not in all_series_days:
+            continue
+        days, cum_deficit = all_series_days[s_id]
+        color = palette[idx % len(palette)]
+        is_highlight = s_id == highlight_id
+        line_w = 3.5 if is_highlight else 2.2
+        opacity = 1.0 if (highlight_id is None or is_highlight) else 0.45
+
+        status_tag = " [Included]" if s.status == "accepted" else (" [Excluded]" if s.status == "rejected" else "")
+        hist_window = f"{s.provenance.get('source_start', '')} to {s.provenance.get('source_end', '')}"
+        rarity = f"{s.features['historical_percentile']:.0%}"
+
+        fig.add_trace(go.Scatter(
+            x=days,
+            y=cum_deficit,
+            mode="lines",
+            name=f"{s_id}{status_tag}",
+            line=dict(color=color, width=line_w),
+            opacity=opacity,
+            customdata=[[s_id, s.features['duration_days'], cum_deficit[-1], hist_window, rarity]] * len(days),
+            hovertemplate=(
+                f"<b>Scenario %{{customdata[0]}}</b><br>"
+                f"Day %{{x}} of %{{customdata[1]}}<br>"
+                f"Cumulative Deficit: <b>%{{y:.2f}} {u_label}</b><br>"
+                f"Final Deficit: %{{customdata[2]:.2f}} {u_label}<br>"
+                f"Historical Window: %{{customdata[3]}}<br>"
+                f"Historical Rarity: %{{customdata[4]}}<extra></extra>"
+            ),
+        ))
+
+    fig.update_layout(
+        height=450,
+        margin=dict(l=55, r=25, t=35, b=50),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Arial", size=12),
+        hovermode="x unified",
+        xaxis=dict(
+            title="Scenario Timeline (Elapsed Days)",
+            showgrid=True,
+            gridcolor="rgba(128,128,128,0.15)",
+            zeroline=False,
+        ),
+        yaxis=dict(
+            title=f"Cumulative Rainfall Deficit ({u_label})",
+            showgrid=True,
+            gridcolor="rgba(128,128,128,0.15)",
+            zeroline=False,
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=11),
+        ),
+    )
+    return fig
+
+
+def multi_scenario_storage_figure(
+    workspace: Any,
+    simulation_results_by_scenario: dict[str, pd.DataFrame] | None = None,
+    config: Any = None,
+    initial_pct: float = 0.48,
+    conservation_pct: float = 0.0,
+    pipeline_active: bool = True,
+    unit: str = "us",
+    highlight_id: str | None = None,
+) -> go.Figure:
+    """Overlay reservoir storage drawdown trajectories across all shortlisted scenarios.
+
+    Shows combined storage % alongside standard regulatory drought contingency stages
+    (Stage 1, Stage 2, Stage 3 Critical Reserve, and Emergency).
+    """
+    from basin_core.analysis import simulate_reservoir_drawdown, REGION_N_PRESET
+
+    fig = go.Figure()
+    if not workspace or not getattr(workspace, "selected", None):
+        fig.add_annotation(text="No shortlisted scenarios to simulate", showarrow=False)
+        return fig
+
+    cfg = config if config is not None else getattr(workspace, "water_system_config", None) or REGION_N_PRESET
+    bands = [float(v * 100 if v <= 1.0 else v) for v in cfg.stage_bands_pct]
+    band_colors = ["#059669", "#d97706", "#ea580c", "#dc2626", "#7f1d1d"]
+    bounds = [100.0, *bands, 0.0]
+
+    # Add horizontal stage background rectangles
+    for idx, (upper, lower) in enumerate(zip(bounds, bounds[1:])):
+        fig.add_hrect(
+            y0=lower, y1=upper,
+            fillcolor=band_colors[min(idx, len(band_colors) - 1)],
+            opacity=0.06,
+            line_width=0,
+            layer="below",
+        )
+
+    # Threshold horizontal reference lines
+    for idx, lvl in enumerate(bands):
+        fig.add_hline(
+            y=lvl,
+            line_dash="dot",
+            line_color="rgba(150, 150, 150, 0.6)",
+            line_width=1,
+            annotation_text=f"Stage {idx + 1} ({lvl:.0f}%)",
+            annotation_position="top left",
+            annotation_font_size=10,
+        )
+
+    palette = [
+        "#0ea5e9", "#f59e0b", "#10b981", "#8b5cf6",
+        "#ec4899", "#06b6d4", "#f97316", "#6366f1",
+    ]
+
+    sims = simulation_results_by_scenario or {}
+
+    for idx, s_id in enumerate(workspace.selected):
+        s = workspace.get(s_id)
+        if s is None:
+            continue
+
+        if s_id in sims:
+            sim_df = sims[s_id]
+        else:
+            try:
+                sim_df = simulate_reservoir_drawdown(
+                    s.series,
+                    initial_pct=initial_pct,
+                    conservation_pct=conservation_pct,
+                    pipeline_active=pipeline_active,
+                    config=cfg,
+                )
+            except Exception:
+                sim_df = None
+
+        if sim_df is None or sim_df.empty:
+            continue
+
+        color = palette[idx % len(palette)]
+        is_highlight = s_id == highlight_id
+        line_w = 3.5 if is_highlight else 2.2
+        opacity = 1.0 if (highlight_id is None or is_highlight) else 0.5
+
+        status_tag = " [Included]" if s.status == "accepted" else (" [Excluded]" if s.status == "rejected" else "")
+
+        fig.add_trace(go.Scatter(
+            x=sim_df["day"],
+            y=sim_df["combined_pct"],
+            mode="lines",
+            name=f"{s_id}{status_tag}",
+            line=dict(color=color, width=line_w),
+            opacity=opacity,
+            customdata=[[s_id, s.features['duration_days'], float(r["combined_pct"]), float(r["combined_acft"])] for _, r in sim_df.iterrows()],
+            hovertemplate=(
+                f"<b>Scenario %{{customdata[0]}}</b><br>"
+                "Day %{x}: <b>%{y:.1f}%</b> (%{customdata[3]:,.0f} ac-ft)<br>"
+                f"Duration: %{{customdata[1]}} days<extra></extra>"
+            ),
+        ))
+
+    fig.update_layout(
+        height=450,
+        margin=dict(l=55, r=25, t=35, b=50),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Arial", size=12),
+        hovermode="x unified",
+        xaxis=dict(
+            title="Simulation Timeline (Elapsed Days)",
+            showgrid=True,
+            gridcolor="rgba(128,128,128,0.15)",
+            zeroline=False,
+        ),
+        yaxis=dict(
+            title="Combined Reservoir Storage (% Capacity)",
+            range=[0, max(100.0, initial_pct * 100 + 5)],
+            showgrid=True,
+            gridcolor="rgba(128,128,128,0.15)",
+            zeroline=False,
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=11),
+        ),
+    )
+    return fig
+

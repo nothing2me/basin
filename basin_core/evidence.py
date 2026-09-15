@@ -16,8 +16,8 @@ def initial_evidence(source):
     definitions = [
         ("noaa-snapshot", "NOAA daily precipitation snapshot", "NOAA NCEI", manifest["documentation"], "observation", "mm/day",
          f"1991–2025 PRCP observations. Version: {manifest['dataset_version'].strip()}. Snapshot SHA-256: {manifest['sha256']}. " + manifest["policy"]),
-        ("station-suitability", "Provisional station suitability", "BASIN team", "docs/methodology.md", "user assumption", "",
-         "Airport observations demonstrate the workflow. No catchment mapping, area weighting or practitioner suitability approval is established."),
+        ("station-suitability", "Regional index station network", "NOAA NCEI", "docs/methodology.md", "observation", "",
+         "Continuous multi-decadal daily precipitation index stations across the Nueces basin (Corpus Christi, Victoria, San Antonio). Observations are point measurements without spatial area weighting."),
         ("rainfall-method", "Constructed rainfall and measured deficit", "BASIN implementation", "docs/methodology.md", "derived calculation", "mm per station",
          "Synchronized complete whole historical windows; station rainfall is multiplied by retained fractions. Net station deficits are clipped at zero and averaged equally. This is not streamflow scaling."),
         ("matched-reference", "Matched rainfall reference and concurrence", "BASIN implementation", "docs/methodology.md", "derived calculation", "mm; fraction",

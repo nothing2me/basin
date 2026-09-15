@@ -338,7 +338,7 @@ REGION_N_CATCHMENT_CONTRACT = CatchmentWeightingContract(
     station_weights=(
         StationWeight(station_id="USW00012924", station_name="Corpus Christi Intl AP", latitude=27.77, longitude=-97.51, weight=0.25, drainage_area_sqmi=5536.0),
         StationWeight(station_id="USW00012921", station_name="San Antonio Intl AP", latitude=29.53, longitude=-98.47, weight=0.50, drainage_area_sqmi=11073.0),
-        StationWeight(station_id="USW00012935", station_name="Victoria Regional AP", latitude=28.85, longitude=-96.92, weight=0.25, drainage_area_sqmi=5537.0),
+        StationWeight(station_id="USW00012912", station_name="Victoria Regional AP", latitude=28.85, longitude=-96.92, weight=0.25, drainage_area_sqmi=5537.0),
     ),
     upstream_gauges=("08211000", "08206900"),
 )

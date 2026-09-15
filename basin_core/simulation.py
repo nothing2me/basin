@@ -41,6 +41,8 @@ class SimulationSettings:
     conservation_fraction: float = 0.0
     pipeline_active: bool = True
     retention_fractions: tuple[float, ...] = (1.0, .8, .6, .4)
+    stepped_policy: bool = False
+    pipeline_reliability_pct: float | None = None
 
     def __post_init__(self) -> None:
         if self.baseline_kind not in ("observed_window", "scenario_revision"):
@@ -50,16 +52,29 @@ class SimulationSettings:
                 raise ValueError("Internal simulation settings require finite fractions from 0 to 1")
         if type(self.pipeline_active) is not bool:
             raise ValueError("Pipeline availability must be true or false")
+        if type(self.stepped_policy) is not bool:
+            raise ValueError("stepped_policy must be true or false")
+        if self.pipeline_reliability_pct is not None:
+            if (isinstance(self.pipeline_reliability_pct, bool)
+                    or not isinstance(self.pipeline_reliability_pct, (float, int))
+                    or not math.isfinite(self.pipeline_reliability_pct)
+                    or not 0 <= self.pipeline_reliability_pct <= 1):
+                raise ValueError("Pipeline reliability must be a finite fraction from 0 to 1")
         if not isinstance(self.retention_fractions, tuple) or not 1 <= len(self.retention_fractions) <= 12 or len(set(self.retention_fractions)) != len(self.retention_fractions):
             raise ValueError("Choose one to twelve distinct retention fractions")
 
     @classmethod
     def from_percent(cls, *, initial_storage_percent: float = 48, conservation_percent: float = 0,
                      baseline_kind: str = "scenario_revision", pipeline_active: bool = True,
-                     retention_percentages: tuple[float, ...] = (100, 80, 60, 40)) -> SimulationSettings:
+                     retention_percentages: tuple[float, ...] = (100, 80, 60, 40),
+                     stepped_policy: bool = False,
+                     pipeline_reliability_percent: float | None = None) -> SimulationSettings:
+        rel_frac = percent_fraction(pipeline_reliability_percent, "Pipeline reliability") if pipeline_reliability_percent is not None else None
         return cls(baseline_kind, percent_fraction(initial_storage_percent, "Initial storage"),
                    percent_fraction(conservation_percent, "Conservation"), pipeline_active,
-                   tuple(percent_fraction(p, "Rainfall retention") for p in retention_percentages))
+                   tuple(percent_fraction(p, "Rainfall retention") for p in retention_percentages),
+                   stepped_policy=stepped_policy,
+                   pipeline_reliability_pct=rel_frac)
 
 
 def resolve_scenario(workspace: Workspace, scenario_id: str = "", year: int | None = None,
@@ -171,10 +186,13 @@ def calculate(series: pd.DataFrame, settings: SimulationSettings,
     spec = simulate_stress_spectrum(series, tiers=settings.retention_fractions,
                                    initial_pct=settings.initial_storage_fraction,
                                    conservation_pct=settings.conservation_fraction,
-                                   pipeline_active=settings.pipeline_active, config=system)
-    reference = spec if settings.conservation_fraction == 0 else simulate_stress_spectrum(
+                                   pipeline_active=settings.pipeline_active, config=system,
+                                   stepped_policy=settings.stepped_policy,
+                                   pipeline_reliability_pct=settings.pipeline_reliability_pct)
+    reference = spec if (settings.conservation_fraction == 0 and not settings.stepped_policy) else simulate_stress_spectrum(
         series, tiers=settings.retention_fractions, initial_pct=settings.initial_storage_fraction,
-        conservation_pct=0, pipeline_active=settings.pipeline_active, config=system)
+        conservation_pct=0, pipeline_active=settings.pipeline_active, config=system,
+        stepped_policy=False, pipeline_reliability_pct=settings.pipeline_reliability_pct)
     comparisons = []
     for chosen, baseline in zip(spec["summary_table"], reference["summary_table"]):
         before, after = baseline["day_stage3_20"], chosen["day_stage3_20"]

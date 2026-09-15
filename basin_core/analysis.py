@@ -142,7 +142,10 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
                                 conservation_pct: float = 0.0, pipeline_active: bool = True,
                                 config: WaterSystemConfig | None = None,
                                 use_smooth_evap: bool = False,
-                                use_eac_scaling: bool = False) -> pd.DataFrame:
+                                use_eac_scaling: bool = False,
+                                stepped_policy: bool = False,
+                                policy_schedule: dict[int, float] | None = None,
+                                pipeline_reliability_pct: float | None = None) -> pd.DataFrame:
     """Illustrative daily water accounting, explicitly tracking unserved losses and spill."""
     if not isinstance(series, pd.DataFrame) or series.empty or not len(series.columns):
         raise ValueError("Provide a nonempty daily rainfall table")
@@ -156,6 +159,19 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
             raise ValueError(label + " must be a fraction from 0 to 1")
     if type(pipeline_active) is not bool:
         raise ValueError("Pipeline availability must be true or false")
+    if type(stepped_policy) is not bool:
+        raise ValueError("stepped_policy must be true or false")
+    if policy_schedule is not None:
+        if not isinstance(policy_schedule, dict):
+            raise ValueError("policy_schedule must be a dictionary")
+        for k, v in policy_schedule.items():
+            if isinstance(k, bool) or not isinstance(k, int) or k < 0:
+                raise ValueError("policy_schedule keys must be non-negative integers")
+            if isinstance(v, bool) or not isinstance(v, (int, float)) or not np.isfinite(v) or not 0 <= v <= 1:
+                raise ValueError("policy_schedule values must be fractions from 0 to 1")
+    if pipeline_reliability_pct is not None:
+        if isinstance(pipeline_reliability_pct, bool) or not isinstance(pipeline_reliability_pct, (int, float)) or not np.isfinite(pipeline_reliability_pct) or not 0 <= pipeline_reliability_pct <= 1:
+            raise ValueError("Pipeline reliability must be a fraction from 0 to 1")
 
     cfg = config if config is not None else REGION_N_PRESET
     cfg.validate()
@@ -169,6 +185,7 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
     summer_evap = sum(s.evap_summer_acft for s in cfg.sources)
     winter_evap = sum(s.evap_winter_acft for s in cfg.sources)
     annual_mean_daily_evap = (4.0 * summer_evap + 8.0 * winter_evap) / 12.0
+    full_surface_area_acres = sum(s.capacity_acft / 12.8 for s in cfg.sources) if cfg.sources else 0.0
 
     for step, (date, rain) in enumerate(series.mean(axis=1).items()):
         beginning = float(storage.sum())
@@ -201,17 +218,52 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
             current_fraction = max(0.0, min(1.0, beginning / total_cap))
             eac_scale = max(0.15, current_fraction ** 0.65)
             potential_evap = day_potential_evap * eac_scale
+            est_surface_area = full_surface_area_acres * eac_scale
         else:
+            eac_scale = 1.0
             potential_evap = day_potential_evap
+            est_surface_area = full_surface_area_acres
 
-        if pipeline_active or cfg.demand_no_pipeline_acft_day is None:
+        # Conditional / Tiered Pipeline Import Reliability (Item 5)
+        if pipeline_reliability_pct is not None:
+            rel = float(pipeline_reliability_pct)
+            if cfg.demand_no_pipeline_acft_day is not None:
+                pipeline_yield = max(0.0, cfg.demand_no_pipeline_acft_day - cfg.demand_acft_day)
+                dem = cfg.demand_no_pipeline_acft_day - (pipeline_yield * rel)
+            else:
+                dem = cfg.demand_acft_day
+        elif pipeline_active or cfg.demand_no_pipeline_acft_day is None:
             dem = cfg.demand_acft_day
         else:
             dem = cfg.demand_no_pipeline_acft_day
 
-        dom_base = dem * (getattr(cfg, "demand_domestic_pct", 40.0) / 100.0)
-        ind_base = dem * (getattr(cfg, "demand_industrial_pct", 50.0) / 100.0)
-        out_base = dem * (getattr(cfg, "demand_outdoor_pct", 10.0) / 100.0)
+        # Dynamic Stepped Policy Schedule (Item 1)
+        stepped_active = stepped_policy or getattr(cfg, "stepped_policy_active", False)
+        if stepped_active:
+            current_fraction = beginning / total_cap if total_cap > 0 else 0.0
+            sched = policy_schedule if policy_schedule is not None else getattr(cfg, "policy_schedule", None) or {0: 0.0, 1: 0.05, 2: 0.15, 3: 0.30, 4: 0.50}
+            if len(cfg.stage_bands_pct) >= 4:
+                b40, b30, b20, b15 = cfg.stage_bands_pct[:4]
+                curr_stage = 4 if current_fraction <= b15 else 3 if current_fraction <= b20 else 2 if current_fraction <= b30 else 1 if current_fraction <= b40 else 0
+            else:
+                curr_stage = 0
+                for b_idx, b_thresh in enumerate(sorted(cfg.stage_bands_pct, reverse=True)):
+                    if current_fraction <= b_thresh:
+                        curr_stage = b_idx + 1
+            effective_cons_pct = float(sched.get(curr_stage, conservation_pct))
+        else:
+            effective_cons_pct = conservation_pct
+
+        # Sector-Disaggregated Demand (Item 3)
+        dom_pct = getattr(cfg, "demand_domestic_pct", 40.0)
+        ind_pct = getattr(cfg, "demand_industrial_pct", 50.0)
+        out_pct = getattr(cfg, "demand_outdoor_pct", 10.0)
+        who_pct = getattr(cfg, "demand_wholesale_pct", 0.0)
+
+        dom_base = dem * (dom_pct / 100.0)
+        ind_base = dem * (ind_pct / 100.0)
+        out_base = dem * (out_pct / 100.0)
+        who_base = dem * (who_pct / 100.0)
 
         # Dynamic hierarchical stage curtailment
         if getattr(cfg, "stage_curtailment_active", False):
@@ -221,28 +273,34 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
                 dom_req = dom_base * 0.80
                 ind_req = ind_base * 0.70
                 out_req = 0.0
+                who_req = who_base * 0.75
             elif current_fraction <= band_3:
                 dom_req = dom_base * 0.90
                 ind_req = ind_base
                 out_req = 0.0
+                who_req = who_base * 0.85
             elif current_fraction <= band_2:
                 dom_req = dom_base
                 ind_req = ind_base
                 out_req = out_base * 0.50
+                who_req = who_base * 0.95
             elif current_fraction <= band_1:
                 dom_req = dom_base
                 ind_req = ind_base
                 out_req = out_base * 0.85
+                who_req = who_base
             else:
                 dom_req = dom_base
                 ind_req = ind_base
                 out_req = out_base
-            requested_demand = (dom_req + ind_req + out_req) * (1 - conservation_pct)
+                who_req = who_base
+            requested_demand = (dom_req + ind_req + out_req + who_req) * (1 - effective_cons_pct)
         else:
-            requested_demand = dem * (1 - conservation_pct)
-            dom_req = requested_demand * (getattr(cfg, "demand_domestic_pct", 40.0) / 100.0)
-            ind_req = requested_demand * (getattr(cfg, "demand_industrial_pct", 50.0) / 100.0)
-            out_req = requested_demand * (getattr(cfg, "demand_outdoor_pct", 10.0) / 100.0)
+            requested_demand = dem * (1 - effective_cons_pct)
+            dom_req = requested_demand * (dom_pct / 100.0)
+            ind_req = requested_demand * (ind_pct / 100.0)
+            out_req = requested_demand * (out_pct / 100.0)
+            who_req = requested_demand * (who_pct / 100.0)
 
         storage += inflow * caps / caps.sum()
         actual_evap = min(potential_evap, float(storage.sum()))
@@ -277,14 +335,17 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
                 served += extra
 
         # Sector delivery breakdown
-        dom_target = dom_req * (1 - conservation_pct) if getattr(cfg, "stage_curtailment_active", False) else dom_req
-        ind_target = ind_req * (1 - conservation_pct) if getattr(cfg, "stage_curtailment_active", False) else ind_req
-        out_target = out_req * (1 - conservation_pct) if getattr(cfg, "stage_curtailment_active", False) else out_req
+        dom_target = dom_req * (1 - effective_cons_pct) if getattr(cfg, "stage_curtailment_active", False) else dom_req
+        ind_target = ind_req * (1 - effective_cons_pct) if getattr(cfg, "stage_curtailment_active", False) else ind_req
+        who_target = who_req * (1 - effective_cons_pct) if getattr(cfg, "stage_curtailment_active", False) else who_req
+        out_target = out_req * (1 - effective_cons_pct) if getattr(cfg, "stage_curtailment_active", False) else out_req
 
         delivered_dom = min(dom_target, served)
         rem_served = served - delivered_dom
         delivered_ind = min(ind_target, rem_served)
         rem_served -= delivered_ind
+        delivered_who = min(who_target, rem_served)
+        rem_served -= delivered_who
         delivered_out = min(out_target, rem_served)
 
         is_day_zero = bool(available_above_dead <= 1e-6 and requested_demand > 0.0)
@@ -324,11 +385,18 @@ def simulate_reservoir_drawdown(series: pd.DataFrame, initial_pct: float = 0.48,
             "dead_storage_acft": dead_storage,
             "served_domestic_acft": delivered_dom,
             "served_industrial_acft": delivered_ind,
+            "served_wholesale_acft": delivered_who,
             "served_outdoor_acft": delivered_out,
             "curtailed_domestic_acft": max(0.0, dom_base - delivered_dom) if getattr(cfg, "stage_curtailment_active", False) else 0.0,
             "curtailed_industrial_acft": max(0.0, ind_base - delivered_ind) if getattr(cfg, "stage_curtailment_active", False) else 0.0,
+            "curtailed_wholesale_acft": max(0.0, who_base - delivered_who) if getattr(cfg, "stage_curtailment_active", False) else 0.0,
             "curtailed_outdoor_acft": max(0.0, out_base - delivered_out) if getattr(cfg, "stage_curtailment_active", False) else 0.0,
             "estuary_pass_through_acft": estuary_pass_through,
+            "effective_conservation_pct": effective_cons_pct,
+            "stepped_policy_active": stepped_active,
+            "eac_scale": round(float(eac_scale), 4),
+            "surface_area_acres": round(float(est_surface_area), 1),
+            "pipeline_reliability_pct": float(pipeline_reliability_pct) if pipeline_reliability_pct is not None else (1.0 if pipeline_active else 0.0),
         }
         for i, s in enumerate(cfg.sources):
             rec[f"source_{i}_name"] = s.name
@@ -388,7 +456,12 @@ def simulate_stress_spectrum(series: pd.DataFrame,
                              initial_pct: float = 0.48,
                              conservation_pct: float = 0.0,
                              pipeline_active: bool = True,
-                             config: WaterSystemConfig | None = None) -> dict:
+                             config: WaterSystemConfig | None = None,
+                             stepped_policy: bool = False,
+                             policy_schedule: dict[int, float] | None = None,
+                             pipeline_reliability_pct: float | None = None,
+                             use_smooth_evap: bool = False,
+                             use_eac_scaling: bool = False) -> dict:
     """Simulate reservoir storage drawdown across multiple rainfall stress tiers simultaneously.
 
     tiers: tuple of rainfall retention multipliers (e.g. 1.0 = 100%, 0.8 = 80%, 0.6 = 60%, 0.4 = 40%).
@@ -408,6 +481,11 @@ def simulate_stress_spectrum(series: pd.DataFrame,
             conservation_pct=conservation_pct,
             pipeline_active=pipeline_active,
             config=cfg,
+            use_smooth_evap=use_smooth_evap,
+            use_eac_scaling=use_eac_scaling,
+            stepped_policy=stepped_policy,
+            policy_schedule=policy_schedule,
+            pipeline_reliability_pct=pipeline_reliability_pct,
         )
         unrounded_min = float(sim_df["combined_pct"].min())
         min_pct = round(unrounded_min, 1)
@@ -424,6 +502,12 @@ def simulate_stress_spectrum(series: pd.DataFrame,
         day_dead = threshold_crossing_day(sim_df, initial_pct, dead_thresh) if dead_thresh > 0 else None
         day_zero = next((int(r["day"]) for _, r in sim_df.iterrows() if r.get("is_day_zero")), None)
         survived = bool(initial_pct * 100 > critical_thresh and unrounded_min > critical_thresh)
+
+        # 180-Day Statutory Emergency Horizon (TAC Title 30 §290.41(b)(1))
+        # Evaluates whether total active storage reaches zero / dead storage within 180 days
+        depletion_day = day_zero if day_zero is not None else day_dead
+        tac_180_day_breached = bool(depletion_day is not None and depletion_day <= 180)
+        tac_180_warning_day = max(0, depletion_day - 180) if depletion_day is not None else None
 
         row = {
             "tier_multiplier": m,
@@ -443,6 +527,17 @@ def simulate_stress_spectrum(series: pd.DataFrame,
             "survived_critical_20pct": survived,
             "status": (f"Above {critical_thresh:g}% throughout window" if survived
                        else f"At or below {critical_thresh:g}% in window"),
+            "tac_180_day_breached": tac_180_day_breached,
+            "tac_180_warning_day": tac_180_warning_day,
+            "tac_180_status": ("EMERGENCY (< 180d)" if tac_180_day_breached else (f"Depletion Day {depletion_day}" if depletion_day is not None else "Adequate (>180d)")),
+            "total_served_domestic_acft": float(sim_df["served_domestic_acft"].sum()) if "served_domestic_acft" in sim_df else 0.0,
+            "total_served_industrial_acft": float(sim_df["served_industrial_acft"].sum()) if "served_industrial_acft" in sim_df else 0.0,
+            "total_served_wholesale_acft": float(sim_df["served_wholesale_acft"].sum()) if "served_wholesale_acft" in sim_df else 0.0,
+            "total_served_outdoor_acft": float(sim_df["served_outdoor_acft"].sum()) if "served_outdoor_acft" in sim_df else 0.0,
+            "mean_surface_area_acres": float(sim_df["surface_area_acres"].mean()) if "surface_area_acres" in sim_df else 0.0,
+            "mean_eac_scale": float(sim_df["eac_scale"].mean()) if "eac_scale" in sim_df else 1.0,
+            "stepped_policy_active": bool(stepped_policy or getattr(cfg, "stepped_policy_active", False)),
+            "pipeline_reliability_pct": float(pipeline_reliability_pct) if pipeline_reliability_pct is not None else (1.0 if pipeline_active else 0.0),
         }
         summary_rows.append(row)
         tier_results[m] = {
@@ -458,5 +553,95 @@ def simulate_stress_spectrum(series: pd.DataFrame,
         "conservation_pct": round(conservation_pct * 100, 1),
         "pipeline_active": pipeline_active,
         "config": cfg,
+        "stepped_policy": bool(stepped_policy or getattr(cfg, "stepped_policy_active", False)),
+        "pipeline_reliability_pct": pipeline_reliability_pct,
     }
+
+
+def build_shortlist_scorecard(
+    workspace: Any,
+    simulation_results_by_scenario: dict[str, pd.DataFrame] | None = None,
+    config: WaterSystemConfig | None = None,
+    initial_pct: float = 0.48,
+    conservation_pct: float = 0.0,
+    pipeline_active: bool = True,
+    unit: str = "us",
+) -> pd.DataFrame:
+    """Generate a comprehensive multi-criteria comparison matrix across all shortlisted scenarios."""
+    if not workspace or not getattr(workspace, "selected", None):
+        return pd.DataFrame()
+
+    cfg = config if config is not None else getattr(workspace, "water_system_config", None) or REGION_N_PRESET
+    is_us = unit.lower() in ("us", "in", "ac-ft")
+    scale = 1.0 / 25.4 if is_us else 1.0
+    u_label = "in" if is_us else "mm"
+
+    rows = []
+    sims = simulation_results_by_scenario or {}
+
+    for s_id in workspace.selected:
+        s = workspace.get(s_id)
+        f = s.features
+
+        if s_id in sims:
+            sim_df = sims[s_id]
+        else:
+            try:
+                sim_df = simulate_reservoir_drawdown(
+                    s.series,
+                    initial_pct=initial_pct,
+                    conservation_pct=conservation_pct,
+                    pipeline_active=pipeline_active,
+                    config=cfg,
+                )
+            except Exception:
+                sim_df = None
+
+        deficit_val = f["deficit_mm"] * scale
+        duration_days = f["duration_days"]
+        rate_val = (deficit_val / (duration_days / 30.4375)) if duration_days > 0 else 0.0
+
+        day_st2 = "None"
+        day_st3 = "None"
+        end_storage = "N/A"
+        min_storage = "N/A"
+
+        if sim_df is not None and not sim_df.empty:
+            b2_day = threshold_crossing_day(sim_df, initial_pct, cfg.stage_bands_pct[1] * 100 if len(cfg.stage_bands_pct) >= 2 else 30.0)
+            b3_day = threshold_crossing_day(sim_df, initial_pct, cfg.stage_bands_pct[2] * 100 if len(cfg.stage_bands_pct) >= 3 else 20.0)
+            day_st2 = f"Day {b2_day}" if b2_day is not None else "None"
+            day_st3 = f"Day {b3_day}" if b3_day is not None else "None"
+            end_pct = float(sim_df.iloc[-1]["combined_pct"])
+            min_pct = float(sim_df["combined_pct"].min())
+            end_storage = f"{end_pct:.1f}%"
+            min_storage = f"{min_pct:.1f}%"
+
+        start_date = s.provenance.get("source_start", "N/A")
+        end_date = s.provenance.get("source_end", "N/A")
+        hist_window = f"{start_date} to {end_date}"
+
+        status_text = {
+            "accepted": "Included",
+            "rejected": "Excluded",
+            "unreviewed": "Needs review",
+        }.get(s.status, s.status)
+
+        rows.append({
+            "Scenario ID": s.id,
+            "Historical Window": hist_window,
+            "Duration (days)": duration_days,
+            f"Total Deficit ({u_label})": round(deficit_val, 2 if is_us else 1),
+            f"Deficit Rate ({u_label}/mo)": round(rate_val, 2 if is_us else 1),
+            "Station Concurrence": f"{f['concurrence'] * 100:.0f}%",
+            "Historical Rarity": f"{f['historical_percentile'] * 100:.0f}%",
+            "Stage 2 (30%) Breach": day_st2,
+            "Stage 3 (20%) Breach": day_st3,
+            "Min Storage": min_storage,
+            "End Storage": end_storage,
+            "Ranking Score": round(float(s.score), 2),
+            "Status": status_text,
+        })
+
+    return pd.DataFrame(rows)
+
 

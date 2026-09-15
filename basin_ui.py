@@ -165,6 +165,14 @@ def direct_tool_arguments(w, tool_name: str):
     return {}, ""
 
 
+@st.cache_resource(show_spinner=False)
+def _get_cached_assistant_workspace(_source, station_ids_tuple):
+    from basin_core.engine import ScenarioParams
+    from basin_core.workspace import Workspace
+    params = ScenarioParams(station_ids_tuple, (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
+    return Workspace(_source, params, 6)
+
+
 def assistant_panel(w, source=None, names=None):
     """Render the slide-out assistant panel with right-side tab, open by default."""
     from basin_core.assistant import run_assistant, run_tool_directly
@@ -187,12 +195,10 @@ def assistant_panel(w, source=None, names=None):
     if not is_open:
         return
 
-    if w is None and source is not None:
-        from basin_core.engine import ScenarioParams
-        from basin_core.workspace import Workspace
-        station_ids = list(names.keys()) if names else list(source.daily.columns)
-        params = ScenarioParams(tuple(station_ids), (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
-        w = Workspace(source, params, 6)
+    if w is None:
+        if source is not None:
+            station_ids = tuple(names.keys()) if names else tuple(source.daily.columns)
+            w = _get_cached_assistant_workspace(source, station_ids)
 
     if w is None:
         return
@@ -217,27 +223,14 @@ def assistant_panel(w, source=None, names=None):
             badge_html = '<div class="basin-assistant-badge" style="color:#0072B2">🔵 Active: Deterministic Intent Router</div>'
             sub_text = "Deterministic calculation engine · Strict templates · Read-only queries"
 
-        h_col, w_col, c_col = st.columns([3.5, 2.3, 0.6])
-        h_col.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
-        h_col.markdown(f'<div class="basin-assistant-sub">{sub_text}</div>', unsafe_allow_html=True)
-        cur_w = st.session_state.get("assistant_width", 500)
-        with w_col:
-            w_opts = [420, 520, 650, 800]
-            if hasattr(st, "segmented_control"):
-                sel_w = st.segmented_control(
-                    "Drawer Width",
-                    w_opts,
-                    default=cur_w if cur_w in w_opts else 520,
-                    format_func=lambda px: f"↔ {px}px",
-                    label_visibility="collapsed",
-                    key="assistant_width_selector"
-                )
-                if sel_w and sel_w != cur_w:
-                    st.session_state.assistant_width = sel_w
-                    st.rerun()
-        if c_col.button("✕", key="assistant_close_x", help="Close Assistant"):
-            st.session_state.assistant_open = False
-            st.rerun()
+        h_col, c_col = st.columns([4.0, 1.2])
+        with h_col:
+            st.markdown('<div class="basin-assistant-title">🤖 Analyst Assistant</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="basin-assistant-sub">{sub_text}</div>', unsafe_allow_html=True)
+        with c_col:
+            if st.button("✕ Close", key="assistant_close_x", help="Close Assistant", width="stretch"):
+                st.session_state.assistant_open = False
+                st.rerun()
 
         st.markdown(badge_html, unsafe_allow_html=True)
         st.caption("Ask about scenario profiles, compare candidates, check station stress, or test priority weights. Grounded in verified hydrologic data.")
@@ -334,4 +327,18 @@ def assistant_panel(w, source=None, names=None):
                         st.rerun()
                 except Exception as ex:
                     st.error(f"Error running {tool_name}: {ex}")
+
+        st.html("""<script>
+        (() => {
+            const drawer = document.querySelector('.st-key-assistant_drawer');
+            const closeBtn = document.querySelector('.st-key-assistant_close_x button');
+            if (drawer && closeBtn && !closeBtn._hasAssistantCloseListener) {
+                closeBtn._hasAssistantCloseListener = true;
+                closeBtn.addEventListener('click', () => {
+                    drawer.style.transform = 'translateX(100%)';
+                    drawer.style.opacity = '0';
+                });
+            }
+        })();
+        </script>""")
 

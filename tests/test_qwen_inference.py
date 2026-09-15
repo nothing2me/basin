@@ -88,7 +88,7 @@ def test_real_qwen_inference():
 
     client = QwenInferenceClient(model_path)
     try:
-        assert client.status == "ready"
+        assert client.wait_until_ready() == "ready", f"Worker error: {client.error_message}"
         messages = [
             {"role": "system", "content": "You are a concise water resource assistant."},
             {"role": "user", "content": "Name three Texas reservoirs in 5 words."},

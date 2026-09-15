@@ -85,11 +85,11 @@ GUIDANCE: dict[str, dict[str, str]] = {
 TAB_KEYS: tuple[str, ...] = ("storage", "agronomics", "rainfall", "edits", "provenance")
 
 TAB_LABELS: dict[str, str] = {
-    "storage": "💧 Storage Drawdown & Water System",
-    "agronomics": "🌾 Crop Irrigation & Wildfire Risk",
-    "rainfall": "📈 Rainfall Deficit & Historical Context",
+    "storage": "🌊 Storage Drawdown & Water System",
+    "agronomics": "🌾 Agronomics & Wildfire Risk",
+    "rainfall": "🌧️ Rainfall Deficit & Historical Context",
     "edits": "✏️ Edit Rainfall & Refine Shortlist",
-    "provenance": "📋 Source Evidence & Daily Values",
+    "provenance": "📋 Evidence & Daily Values",
 }
 
 # Which tools lead for each goal. "provenance" leads in every focus on purpose: source

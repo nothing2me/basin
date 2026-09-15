@@ -70,12 +70,15 @@ class WaterSystemConfig:
     demand_domestic_pct: float = 40.0
     demand_industrial_pct: float = 50.0
     demand_outdoor_pct: float = 10.0
+    demand_wholesale_pct: float = 0.0
     estuary_order_active: bool = False
     estuary_threshold_pct: float = 0.50
     estuary_pass_through_fraction: float = 0.35
     estuary_pass_through_cap_acft_day: float = 100.0
     pipeline_capacity_mgd: float = 0.0
     context_storage_marker_pct: float | None = None
+    stepped_policy_active: bool = False
+    pipeline_reliability_pct: float | None = None
 
     def validate(self) -> None:
         if not self.name:
@@ -108,12 +111,14 @@ class WaterSystemConfig:
             raise ValueError("dead_storage_acft must be between zero and total capacity")
         if type(self.stage_curtailment_active) is not bool or type(self.estuary_order_active) is not bool:
             raise ValueError("Curtailment and estuary switches must be true or false")
+        if type(self.stepped_policy_active) is not bool:
+            raise ValueError("stepped_policy_active switch must be true or false")
         if self.stage_curtailment_active and len(self.stage_bands_pct) < 4:
             raise ValueError("Stage curtailment requires four configured storage bands")
-        for p in (self.demand_domestic_pct, self.demand_industrial_pct, self.demand_outdoor_pct):
+        for p in (self.demand_domestic_pct, self.demand_industrial_pct, self.demand_outdoor_pct, self.demand_wholesale_pct):
             if isinstance(p, bool) or not isinstance(p, (int, float)) or not math.isfinite(p) or p < 0:
                 raise ValueError("Sector demand percentages must be non-negative numbers")
-        if abs(self.demand_domestic_pct + self.demand_industrial_pct + self.demand_outdoor_pct - 100.0) > 0.01:
+        if abs(self.demand_domestic_pct + self.demand_industrial_pct + self.demand_outdoor_pct + self.demand_wholesale_pct - 100.0) > 0.01:
             raise ValueError("Sector demand percentages must sum to 100")
         if isinstance(self.estuary_threshold_pct, bool) or not isinstance(self.estuary_threshold_pct, (int, float)) or not 0 <= self.estuary_threshold_pct <= 1:
             raise ValueError("estuary_threshold_pct must be between 0 and 1")
@@ -129,6 +134,12 @@ class WaterSystemConfig:
             raise ValueError("estuary pass-through cap must be non-negative ac-ft/day")
         if isinstance(self.pipeline_capacity_mgd, bool) or not isinstance(self.pipeline_capacity_mgd, (int, float)) or not math.isfinite(self.pipeline_capacity_mgd) or self.pipeline_capacity_mgd < 0:
             raise ValueError("pipeline_capacity_mgd must be a non-negative number")
+        if (self.pipeline_reliability_pct is not None
+                and (isinstance(self.pipeline_reliability_pct, bool)
+                     or not isinstance(self.pipeline_reliability_pct, (int, float))
+                     or not math.isfinite(self.pipeline_reliability_pct)
+                     or not 0 <= self.pipeline_reliability_pct <= 1)):
+            raise ValueError("pipeline_reliability_pct must be between 0 and 1")
         if (self.context_storage_marker_pct is not None
                 and (isinstance(self.context_storage_marker_pct, bool)
                      or not isinstance(self.context_storage_marker_pct, (int, float))
@@ -255,9 +266,16 @@ def _config_from_record(record: object) -> WaterSystemConfig:
             raise ValueError("Water source configuration has an invalid shape")
         parsed_sources.append(WaterSource(**source))
     allowed = set(WaterSystemConfig.__dataclass_fields__) - {"sources"}
-    if set(record) != allowed | {"sources"}:
+    if not (set(record) <= allowed | {"sources"}):
         raise ValueError("Water system configuration has an invalid shape")
-    values = {key: record[key] for key in allowed}
+    values = {}
+    for key, field_def in WaterSystemConfig.__dataclass_fields__.items():
+        if key == "sources":
+            continue
+        if key in record:
+            values[key] = record[key]
+        else:
+            values[key] = field_def.default
     values["sources"] = tuple(parsed_sources)
     values["stage_bands_pct"] = tuple(values["stage_bands_pct"])
     config = WaterSystemConfig(**values)

@@ -6,6 +6,7 @@ import io
 import json
 from types import SimpleNamespace
 import zipfile
+import zlib
 
 import numpy as np
 import pandas as pd
@@ -319,5 +320,5 @@ def _verify(payload):
 def verify_bundle(payload):
     try:
         return _verify(payload)
-    except (KeyError, TypeError, IndexError, AttributeError, zipfile.BadZipFile, AssertionError, OverflowError) as error:
+    except (KeyError, TypeError, IndexError, AttributeError, zipfile.BadZipFile, zlib.error, AssertionError, OverflowError) as error:
         raise ValueError(f'Malformed or inconsistent bundle: {error}') from error

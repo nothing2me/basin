@@ -7,13 +7,15 @@ import plotly.graph_objects as go
 from basin_core.data import CachedSource
 from basin_core.workspace import Workspace
 from basin_core.engine import ScenarioParams
-from basin_core.analysis import simulate_stress_spectrum, simulate_reservoir_drawdown
+from basin_core.analysis import simulate_stress_spectrum, simulate_reservoir_drawdown, build_shortlist_scorecard
 from basin_core.visualizers import (
     rainfall_reference_figure,
     rainfall_shortfall_figure,
     stage_trigger_milestone_figure,
     storage_trajectory_figure,
     drought_anomaly_matrix_figure,
+    shortlist_cumulative_deficit_figure,
+    multi_scenario_storage_figure,
 )
 
 
@@ -177,3 +179,42 @@ def test_drought_anomaly_matrix_figure(workspace):
     fig_single = drought_anomaly_matrix_figure(single_obs, title_prefix="Single station")
     assert isinstance(fig_single, go.Figure)
     assert len(fig_single.data[0].x) == 12
+
+
+def test_shortlist_cumulative_deficit_figure(workspace):
+    fig_in = shortlist_cumulative_deficit_figure(workspace, unit="in")
+    assert isinstance(fig_in, go.Figure)
+    assert fig_in.layout.yaxis.title.text == "Cumulative Rainfall Deficit (in)"
+    # Has envelope, average line, plus scenario traces
+    trace_names = [t.name for t in fig_in.data]
+    assert "Shortlist Range (Min–Max)" in trace_names
+    assert "Shortlist Average Deficit" in trace_names
+    assert any(s_id in name for name in trace_names for s_id in workspace.selected)
+
+    fig_mm = shortlist_cumulative_deficit_figure(workspace, unit="mm")
+    assert fig_mm.layout.yaxis.title.text == "Cumulative Rainfall Deficit (mm)"
+
+
+def test_multi_scenario_storage_figure(workspace):
+    fig = multi_scenario_storage_figure(workspace, initial_pct=0.48)
+    assert isinstance(fig, go.Figure)
+    assert fig.layout.yaxis.title.text == "Combined Reservoir Storage (% Capacity)"
+    # Selected scenario traces should be present
+    trace_names = [t.name for t in fig.data]
+    assert any(s_id in name for name in trace_names for s_id in workspace.selected)
+
+
+def test_build_shortlist_scorecard(workspace):
+    scorecard = build_shortlist_scorecard(workspace, unit="us")
+    assert isinstance(scorecard, pd.DataFrame)
+    assert len(scorecard) == len(workspace.selected)
+    assert "Scenario ID" in scorecard.columns
+    assert "Historical Window" in scorecard.columns
+    assert "Duration (days)" in scorecard.columns
+    assert "Total Deficit (in)" in scorecard.columns
+    assert "Station Concurrence" in scorecard.columns
+    assert "Historical Rarity" in scorecard.columns
+    assert "Stage 2 (30%) Breach" in scorecard.columns
+    assert "Stage 3 (20%) Breach" in scorecard.columns
+    assert "Ranking Score" in scorecard.columns
+

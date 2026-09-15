@@ -520,3 +520,48 @@ class Workspace:
             obj.clustering = ScenarioClusterer().fit(obj.scenarios, obj.clustering["groups"])
             obj.evidence_history.append({"at": utc_now(), "action": "migrate session 1.0 to 2.0", "review_status": "New evidence remains provisional"})
         return obj
+
+    @classmethod
+    def restore_from_bundle(cls, payload: bytes, source=None) -> tuple["Workspace", dict]:
+        """Verify an exported .zip bundle with verify_bundle and reconstruct a live Workspace."""
+        import io, json, zipfile
+        from basin_core.exporter import verify_bundle, reconstruct_audit
+        from basin_core.data import CachedSource
+        from basin_core.analysis_context import AnalysisContext
+        from basin_core.water_system import WaterSystemSelection
+
+        verification = verify_bundle(payload)
+
+        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+            raw_obs = archive.read("snapshot/observations.csv")
+            manifest = json.loads(archive.read("snapshot/manifest.json"))
+            bundle_source = source or CachedSource(raw=raw_obs, manifest=manifest)
+            audit = json.loads(archive.read("audit.json"))
+            params, reference, scenarios = reconstruct_audit(bundle_source, audit, require_export=True)
+
+            obj = cls.__new__(cls)
+            obj.source = bundle_source
+            obj.params = params
+            obj.reference = reference
+            obj.scenarios = scenarios
+            obj.legacy_warning = None
+            for field in ["id", "created_at", "weights", "selected", "generation", "clustering", "footprint", "selection_history"]:
+                setattr(obj, field, audit.get(field))
+            obj.custom_uploads = audit.get("custom_uploads", [])
+            obj.custom_originals = {}
+            obj.documents = []
+            obj.document_originals = {}
+            obj.notes = audit.get("provider_notes", "")
+            obj.simulation_runs = audit.get("simulation_runs", [])
+            obj.active_simulations = audit.get("active_simulations", {})
+            obj.simulation_reviews = audit.get("simulation_reviews", {})
+            obj.evidence = audit.get("evidence", [])
+            obj.evidence_refs = audit.get("evidence_refs", {})
+            obj.conflicts = audit.get("conflicts", [])
+            obj.evidence_history = audit.get("evidence_history", [])
+            obj.comparisons = audit.get("comparisons", [])
+            obj.water_system_selection = WaterSystemSelection.from_record(
+                audit.get("water_system_selection", WaterSystemSelection.default().record())
+            )
+            obj.analysis_context = AnalysisContext.from_record(audit.get("analysis_context"))
+            return obj, verification

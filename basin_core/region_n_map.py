@@ -107,7 +107,20 @@ def _station_trace(rows, name, color, size):
                          hovertemplate="%{text}<br>%{lat:.4f}, %{lon:.4f}<extra></extra>")
 
 
+_BASE_MAP_CACHE: dict[tuple, Any] = {}
+
+
 def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=True):
+    source_rows = stations_df.to_dict("records") if not stations_df.empty else []
+    has_custom = any(r.get("is_custom") for r in source_rows)
+    layers_tuple = tuple(sorted(LAYER_LABELS if layers is None else layers))
+    station_ids = tuple(sorted(r["station_id"] for r in source_rows if not r.get("is_custom", False)))
+
+    if not has_custom and focus is None:
+        cache_key = (station_ids, layers_tuple, use_offline)
+        if cache_key in _BASE_MAP_CACHE:
+            return _BASE_MAP_CACHE[cache_key]
+
     catalog = load_catalog()
     layers = set(LAYER_LABELS if layers is None else layers)
     imagery_source = OFFLINE_IMAGERY_URL if (use_offline and OFFLINE_TILES_DIR.exists()) else IMAGERY_URL
@@ -165,10 +178,13 @@ def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=T
                       uirevision="region-n-" + (focus["label"] if focus else "overview"),
                       legend=dict(orientation="h", y=-.02, x=0, font=dict(size=12)),
                       paper_bgcolor="rgba(0,0,0,0)")
+    if not has_custom and focus is None:
+        cache_key = (station_ids, layers_tuple, use_offline)
+        _BASE_MAP_CACHE[cache_key] = fig
     return fig
 
 
-def render_observation_map(stations_df):
+def render_observation_map(stations_df, *, show_catalog=False):
     import streamlit as st
     st.markdown("**Region N observation map**")
     try:
@@ -176,19 +192,8 @@ def render_observation_map(stations_df):
     except (OSError, ValueError) as error:
         st.error(f"The bundled Region N map catalog could not be loaded: {error}")
         return
-    st.caption("Satellite imagery · Orange outline: Region N's 11 counties. "
+    st.caption("Offline satellite imagery · Orange outline: Region N's 11 counties. "
                "Geographic layers show mapped features, not current water levels or streamflow.")
-
-    has_offline = OFFLINE_TILES_DIR.exists() and any(OFFLINE_TILES_DIR.iterdir())
-    map_source = st.radio(
-        "Satellite basemap source",
-        ["Bundled Region N satellite (offline / instant)", "Live Esri satellite (online / global)"],
-        index=0 if has_offline else 1,
-        horizontal=True,
-        help="Bundled satellite tiles cover Region N offline with zero network latency. Live Esri streams global tiles from ArcGIS Online.",
-        key="region_n_map_basemap_source",
-    )
-    use_offline = map_source.startswith("Bundled")
 
     layers = st.multiselect(
         "Visible map layers",
@@ -205,7 +210,7 @@ def render_observation_map(stations_df):
     if focus and focus["layer"] not in layers:
         layers = [*layers, focus["layer"]]
         st.caption(f"Showing {LAYER_LABELS[focus['layer']]} for the selected search result.")
-    st.plotly_chart(build_observation_map(stations_df, layers=layers, focus=focus, use_offline=use_offline), width="stretch",
+    st.plotly_chart(build_observation_map(stations_df, layers=layers, focus=focus, use_offline=True), width="stretch",
                     theme=None, config={"displayModeBar": True, "scrollZoom": True})
     st.caption("Cyan lines: streams/channels · Blue fill: lakes/ponds · Purple lines: HUC8 subbasins · "
                "White lines: counties · Orange outline: Region N")
@@ -215,33 +220,22 @@ def render_observation_map(stations_df):
                f"{len(catalog['water_stations']):,} USGS water sites · "
                f"{len(catalog['streams']['features']):,} stream/channel segments · "
                f"{len(catalog['lakes']['features']):,} lakes/ponds/reservoirs · "
-               f"{len(catalog['basins']['features'])} HUC8 subbasins. "
-               "Historical sites are included; catalog presence does not mean a site is active.")
-    if use_offline:
-        st.info("🛰️ **Offline Satellite Mode**: High-resolution satellite tiles covering Region N "
-                "(zoom levels 6–11, ~4.3 MB) are bundled locally on disk. 0 ms network delay · No internet required. "
-                "Detailed hydrography (streams & lakes) can be enabled in the layer selector above.")
-    else:
-        st.info("🌐 **Live Esri Satellite Mode**: Streaming world imagery tiles from ArcGIS Online. "
-                "White markers identify loaded rainfall sources. "
-                "Other markers provide geographic context and do not add observations to your analysis.")
-    with st.expander("Map station catalog and sources"):
-        st.caption(f"Catalog retrieved {catalog['retrieved_at'][:10]}. "
-                   "Coverage: all NOAA GHCN-Daily precipitation inventory stations and USGS NWIS "
-                   "stream, lake/reservoir and estuary sites inside the TWDB Region N boundary. "
-                   "Other networks and private gauges are not included. Station periods describe inventory "
-                   "coverage, not daily completeness. Hydrography intersects Region N and can extend beyond it; "
-                   "HUC8 subbasins are hydrologic boundaries, not county or service-area boundaries. "
-                   "Geometry is simplified to 0.0003 degrees for display; imagery is not live drought evidence.")
-        table = pd.DataFrame(catalog["rain_stations"] + catalog["water_stations"])
-        st.dataframe(table, hide_index=True, width="stretch", column_config={
-            "source_url": st.column_config.LinkColumn("Source"),
-            "first_year": st.column_config.NumberColumn("First inventory year", format="%d"),
-            "last_year": st.column_config.NumberColumn("Last inventory year", format="%d")})
-        st.download_button("Download map station catalog (CSV)", table.to_csv(index=False),
-                           file_name="region_n_map_stations.csv", mime="text/csv")
-        for key, source in catalog["sources"].items():
-            st.markdown(f"- [{LAYER_LABELS.get(key, 'Region N boundary')}]({source['url']})")
-        provenance = {key: catalog[key] for key in ("schema_version", "retrieved_at", "scope", "county_names", "sources")}
-        st.download_button("Download map provenance (JSON)", json.dumps(provenance, indent=2),
-                           file_name="region_n_map_sources.json", mime="application/json")
+               f"{len(catalog['basins']['features'])} HUC8 subbasins.")
+
+    if show_catalog:
+        with st.expander("Map station catalog and sources"):
+            st.caption(f"Catalog retrieved {catalog['retrieved_at'][:10]}. "
+                       "Coverage: all NOAA GHCN-Daily precipitation inventory stations and USGS NWIS "
+                       "stream, lake/reservoir and estuary sites inside the TWDB Region N boundary.")
+            table = pd.DataFrame(catalog["rain_stations"] + catalog["water_stations"])
+            st.dataframe(table, hide_index=True, width="stretch", column_config={
+                "source_url": st.column_config.LinkColumn("Source"),
+                "first_year": st.column_config.NumberColumn("First inventory year", format="%d"),
+                "last_year": st.column_config.NumberColumn("Last inventory year", format="%d")})
+            st.download_button("Download map station catalog (CSV)", table.to_csv(index=False),
+                               file_name="region_n_map_stations.csv", mime="text/csv")
+            for key, source in catalog["sources"].items():
+                st.markdown(f"- [{LAYER_LABELS.get(key, 'Region N boundary')}]({source['url']})")
+            provenance = {key: catalog[key] for key in ("schema_version", "retrieved_at", "scope", "county_names", "sources")}
+            st.download_button("Download map provenance (JSON)", json.dumps(provenance, indent=2),
+                               file_name="region_n_map_sources.json", mime="application/json")

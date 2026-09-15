@@ -71,6 +71,8 @@ class ExperimentConfig:
     selected: bool = False
     saved_run_id: str | None = None
     system_config: WaterSystemConfig | None = None
+    stepped_policy: bool = False
+    pipeline_reliability_pct: float | None = None
 
     def __post_init__(self) -> None:
         for label, value in (("Initial storage", self.initial_pct), ("Conservation", self.conservation_pct)):
@@ -78,6 +80,11 @@ class ExperimentConfig:
                 raise ValueError(label + " must be a fraction from 0 to 1")
         if type(self.pipeline_active) is not bool:
             raise ValueError("Pipeline availability must be true or false")
+        if type(self.stepped_policy) is not bool:
+            raise ValueError("stepped_policy must be a boolean")
+        if self.pipeline_reliability_pct is not None:
+            if not isinstance(self.pipeline_reliability_pct, (int, float)) or not (0.0 <= self.pipeline_reliability_pct <= 1.0):
+                raise ValueError("pipeline_reliability_pct must be between 0.0 and 1.0")
         tiers = tuple(float(t) for t in self.tiers)
         if not tiers or any(not math.isfinite(t) or t <= 0 for t in tiers):
             raise ValueError("Rainfall tiers must be a nonempty sequence of positive multipliers")
@@ -123,6 +130,10 @@ class ExperimentConfig:
             ("Pipeline supply", "Assumed available" if self.pipeline_active else "Assumed unavailable"),
             ("Rainfall retention tiers", self.tier_label),
         ]
+        if self.stepped_policy:
+            rows.append(("Drought Policy", "Stepped Demand Reduction (Dynamic Trigger Escalation)"))
+        if self.pipeline_reliability_pct is not None and self.pipeline_reliability_pct < 1.0:
+            rows.append(("Pipeline Reliability", f"{self.pipeline_reliability_pct * 100:.0f}% Capacity Tier ({self.pipeline_reliability_pct * 72.0:.1f} MGD)"))
         if self.system_config is not None:
             clean_name = self.system_config.name.replace("—", "-").replace("–", "-")
             rows.append(("Water system", clean_name))
@@ -139,6 +150,8 @@ class ExperimentConfig:
             "scenario_revision": self.scenario_revision,
             "selected": bool(self.selected),
             "saved_run_id": self.saved_run_id,
+            "stepped_policy": bool(self.stepped_policy),
+            "pipeline_reliability_pct": round(float(self.pipeline_reliability_pct), 4) if self.pipeline_reliability_pct is not None else None,
         }
         if self.system_config is not None:
             data["system_config"] = self.system_config.describe_assumptions()
@@ -381,6 +394,11 @@ class ReportMetrics:
     storage_chart_png_b64: str | None = None
     milestone_chart_png_b64: str | None = None
     stressed_case: dict | None = None
+    stepped_policy_active: bool = False
+    pipeline_reliability_pct: float | None = None
+    sector_deliveries: dict | None = None
+    tac_180_day_breached: bool = False
+    tac_180_warning_day: int | None = None
 
     @property
     def available(self) -> bool:
@@ -597,6 +615,29 @@ def build_paired_sensitivity_block_html(metrics: ReportMetrics) -> str:
     """
 
 
+def build_tac_and_policy_block_html(metrics: ReportMetrics) -> str:
+    """Generate regulatory TAC 180-day emergency notice and dynamic policy summary callout."""
+    if not metrics.available:
+        return ""
+    blocks = []
+    if metrics.tac_180_day_breached:
+        day_str = f"Day {metrics.tac_180_warning_day}" if metrics.tac_180_warning_day is not None else "Day 1"
+        blocks.append(f"""
+        <div class="callout" style="border-left-color: #dc2626; background: #fef2f2; margin-top: 8px;">
+            <div class="callout-title" style="color: #991b1b;">Regulatory Compliance Notice — 180-Day Emergency Horizon (TAC §290.45)</div>
+            <p><strong>Texas Administrative Code Title 30 Rule §290.45 Notification:</strong> The projected reservoir drawdown crosses into a less-than-180-day remaining supply horizon at <strong>{day_str}</strong> under current unrestricted withdrawals. Mandatory notification to the TCEQ Executive Director and initiation of emergency demand reduction measures are indicated.</p>
+        </div>
+        """)
+    if metrics.stepped_policy_active:
+        blocks.append("""
+        <div class="callout" style="border-left-color: #2563eb; background: #eff6ff; margin-top: 8px;">
+            <div class="callout-title" style="color: #1e40af;">Dynamic Policy Schedule — Stepped Trigger Escalation</div>
+            <p>Drawdown simulation utilizes continuous trigger escalation: <strong>Stage 1 (5% curtailment)</strong> at ≤40% combined storage, <strong>Stage 2 (15% curtailment)</strong> at ≤30%, <strong>Stage 3 (30% curtailment)</strong> at ≤20%, and <strong>Stage 4 Emergency (50% curtailment)</strong> at ≤15%. Demands step dynamically as storage levels decline.</p>
+        </div>
+        """)
+    return "\n".join(blocks)
+
+
 def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> ReportMetrics:
     """Run the illustrative experiment, or report why it could not be run.
 
@@ -618,6 +659,8 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
             initial_pct=config.initial_pct,
             conservation_pct=config.conservation_pct,
             pipeline_active=config.pipeline_active,
+            pipeline_reliability_pct=config.pipeline_reliability_pct,
+            stepped_policy=config.stepped_policy,
             config=config.system_config,
         )
         sim_base = simulate_reservoir_drawdown(
@@ -625,6 +668,8 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
             initial_pct=config.initial_pct,
             conservation_pct=0.0,
             pipeline_active=config.pipeline_active,
+            pipeline_reliability_pct=config.pipeline_reliability_pct,
+            stepped_policy=config.stepped_policy,
             config=config.system_config,
         )
         sim_cons = simulate_reservoir_drawdown(
@@ -632,6 +677,8 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
             initial_pct=config.initial_pct,
             conservation_pct=config.conservation_pct,
             pipeline_active=config.pipeline_active,
+            pipeline_reliability_pct=config.pipeline_reliability_pct,
+            stepped_policy=config.stepped_policy,
             config=config.system_config,
         )
     except Exception as exc:
@@ -676,6 +723,27 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
     chart_traj_b64, chart_ms_b64 = _generate_report_charts(spectrum_data, sim_base, system)
     stressed_case = _compute_stressed_comparison(series, system)
 
+    sector_deliv = {}
+    for prefix in ("served_", ""):
+        for suffix in ("domestic_acft", "industrial_acft", "wholesale_acft", "outdoor_acft"):
+            key = f"{prefix}{suffix}"
+            if key in sim_base.columns:
+                sector_deliv[key] = float(sim_base[key].sum())
+                # Also provide reverse alias (domestic_served_acft <-> served_domestic_acft)
+                if prefix == "served_":
+                    alias = f"{suffix.replace('_acft', '')}_served_acft"
+                    sector_deliv[alias] = sector_deliv[key]
+                else:
+                    alias = f"served_{key}"
+                    sector_deliv[alias] = sector_deliv[key]
+
+    tac_breached = bool(getattr(sim_base, "tac_180_day_breached", False)) or (
+        bool(sim_base.attrs.get("tac_180_day_breached", False)) if hasattr(sim_base, "attrs") else False
+    )
+    tac_warning_day = getattr(sim_base, "tac_180_warning_day", None) or (
+        sim_base.attrs.get("tac_180_warning_day") if hasattr(sim_base, "attrs") else None
+    )
+
     return ReportMetrics(
         input_rainfall=_describe_input(primary_scenario, "scenario_revision", getattr(primary_scenario, "revision", None)),
         spectrum_data=spectrum_data,
@@ -695,6 +763,11 @@ def compute_report_metrics(primary_scenario, config: ExperimentConfig) -> Report
         storage_chart_png_b64=chart_traj_b64,
         milestone_chart_png_b64=chart_ms_b64,
         stressed_case=stressed_case,
+        stepped_policy_active=bool(config.stepped_policy),
+        pipeline_reliability_pct=config.pipeline_reliability_pct,
+        sector_deliveries=sector_deliv if sector_deliv else None,
+        tac_180_day_breached=tac_breached,
+        tac_180_warning_day=tac_warning_day,
     )
 
 
@@ -731,6 +804,11 @@ def _metrics_from_saved_run(run: dict, scenario=None) -> ReportMetrics:
         day_cons_stage3=comparison.get("chosen_conservation_day_20"),
         mean_evaporation_acft=float(mean_evaporation) if mean_evaporation is not None else None,
         mean_served_demand_acft=float(mean_demand) if mean_demand is not None else None,
+        stepped_policy_active=bool(run.get("settings", {}).get("stepped_policy_active", False)),
+        pipeline_reliability_pct=run.get("settings", {}).get("pipeline_reliability_pct"),
+        sector_deliveries=run.get("results", {}).get("sector_deliveries"),
+        tac_180_day_breached=bool(run.get("results", {}).get("tac_180_day_breached", False)),
+        tac_180_warning_day=run.get("results", {}).get("tac_180_warning_day"),
     )
 
 
@@ -1179,6 +1257,7 @@ def render_html_report(
         )
 
     paired_sensitivity_html = build_paired_sensitivity_block_html(metrics)
+    tac_and_policy_html = build_tac_and_policy_block_html(metrics)
     ml_methodology_html = build_ml_comparison_block_html(workspace)
     station_completeness_html = build_station_completeness_table_html(workspace)
 
@@ -1498,6 +1577,7 @@ def render_html_report(
         </div>
 
         {paired_sensitivity_html}
+        {tac_and_policy_html}
     </div>
 
     <!-- Universal Top Banner (Follows Executive Summary Orientation) -->

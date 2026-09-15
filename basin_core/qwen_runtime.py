@@ -29,15 +29,22 @@ MODEL_SHA256 = "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d
 MODEL_BYTES = 2104932768
 
 
+_VERIFIED_MODEL_FILES: set[tuple[str, float, int]] = set()
+
+
 def verify_model_file(path: Path) -> None:
     """Verify every worker load before passing bytes to the native parser."""
+    stat = path.stat()
+    if stat.st_size != MODEL_BYTES:
+        raise ValueError("Model size does not match the application pin")
+    key = (str(path.resolve()), float(stat.st_mtime), int(stat.st_size))
+    if key in _VERIFIED_MODEL_FILES:
+        return
     with path.open("rb") as source:
-        import os
-        if os.fstat(source.fileno()).st_size != MODEL_BYTES:
-            raise ValueError("Model size does not match the application pin")
         digest = hashlib.file_digest(source, "sha256").hexdigest()
     if digest != MODEL_SHA256:
         raise ValueError("Model SHA-256 does not match the application pin")
+    _VERIFIED_MODEL_FILES.add(key)
 
 
 CONTEXT_WINDOW_TOKENS = 8192
@@ -60,8 +67,17 @@ def resolve_model_path() -> Path | None:
     return None
 
 
-def get_model_info() -> dict[str, Any]:
-    """Return model and runtime metadata without loading weights."""
+_MODEL_INFO_CACHE: dict[str, Any] | None = None
+_MODEL_INFO_TIMESTAMP: float = 0.0
+
+
+def get_model_info(force_refresh: bool = False) -> dict[str, Any]:
+    """Return model and runtime metadata without loading weights (cached for 60s)."""
+    global _MODEL_INFO_CACHE, _MODEL_INFO_TIMESTAMP
+    now = time.time()
+    if not force_refresh and _MODEL_INFO_CACHE is not None and (now - _MODEL_INFO_TIMESTAMP) < 60.0:
+        return _MODEL_INFO_CACHE
+
     model_path = resolve_model_path()
     manifest: dict[str, Any] = {}
     if MANIFEST_PATH.exists():
@@ -80,7 +96,7 @@ def get_model_info() -> dict[str, Any]:
         runtime_version = "not installed or unable to load"
         runtime_installed = False
 
-    return {
+    result = {
         "installed": runtime_installed,
         "runtime_version": runtime_version,
         "model_path": str(model_path) if model_path else None,
@@ -93,6 +109,9 @@ def get_model_info() -> dict[str, Any]:
         "context_tokens": CONTEXT_WINDOW_TOKENS,
         "max_output_tokens": MAX_OUTPUT_TOKENS,
     }
+    _MODEL_INFO_CACHE = result
+    _MODEL_INFO_TIMESTAMP = now
+    return result
 
 
 def _worker_process_main(model_path_str: str,
@@ -117,9 +136,9 @@ def _worker_process_main(model_path_str: str,
         # Initialise Llama model
         llm = Llama(
             model_path=model_path_str,
-            n_ctx=CONTEXT_WINDOW_TOKENS,
+            n_ctx=min(CONTEXT_WINDOW_TOKENS, 4096),
             n_threads=n_threads,
-            n_batch=512,
+            n_batch=128,
             verbose=False,
         )
         resp_queue.put({"type": "init_ok", "threads": n_threads})
@@ -337,25 +356,56 @@ class QwenInferenceClient:
                 if orig_spec is not None:
                     main_mod.__spec__ = orig_spec
 
-        # Wait up to 30 seconds for init response
+        # Non-blocking worker startup: worker starts in background.
+        # Do not block the UI thread waiting for model load!
         try:
-            msg = self._resp_queue.get(timeout=30.0)
+            msg = self._resp_queue.get_nowait()
             if msg.get("type") == "init_ok":
                 self._status = "ready"
             else:
                 self._status = "error"
                 self._error_message = msg.get("error", "Unknown worker init error")
         except queue.Empty:
-            self._status = "error"
-            self._error_message = "Worker process timed out during model initialization"
-            self.shutdown()
+            pass
+
+    def wait_until_ready(self, timeout: float = 30.0) -> str:
+        """Block until the background worker finishes initializing."""
+        if self._status != "loading":
+            return self.status
+        deadline = time.time() + timeout
+        while time.time() < deadline and self._status == "loading":
+            try:
+                msg = self._resp_queue.get(timeout=0.1)
+                if msg.get("type") == "init_ok":
+                    self._status = "ready"
+                else:
+                    self._status = "error"
+                    self._error_message = msg.get("error", "Unknown worker init error")
+            except queue.Empty:
+                if self._worker_process and not self._worker_process.is_alive():
+                    self._status = "crashed"
+                    self._error_message = "Worker process terminated unexpectedly"
+                    break
+        return self._status
 
     @property
     def status(self) -> str:
         """Returns 'ready', 'loading', 'error', 'model_missing', or 'busy'."""
-        if self._worker_process is not None and not self._worker_process.is_alive() and self._status == "ready":
-            self._status = "crashed"
-            self._error_message = "Worker process terminated unexpectedly"
+        if self._worker_process is not None and not self._worker_process.is_alive():
+            if self._status in ("ready", "loading"):
+                self._status = "crashed"
+                self._error_message = "Worker process terminated unexpectedly"
+            return self._status
+        if self._status == "loading":
+            try:
+                msg = self._resp_queue.get_nowait()
+                if msg.get("type") == "init_ok":
+                    self._status = "ready"
+                else:
+                    self._status = "error"
+                    self._error_message = msg.get("error", "Unknown worker init error")
+            except queue.Empty:
+                pass
         return self._status
 
     @property
@@ -375,9 +425,13 @@ class QwenInferenceClient:
                  token_callback: Callable[[str], None] | None = None) -> dict[str, Any]:
         """Send a chat completion request to the worker process and wait for response."""
         with self._lock:
+            if getattr(self, "_status", None) == "loading":
+                self.wait_until_ready(timeout=timeout)
+
             # If crashed, attempt clean restart once
             if self._worker_process is None or not self._worker_process.is_alive():
                 self._init_worker()
+                self.wait_until_ready(timeout=timeout)
                 if self.status != "ready":
                     raise RuntimeError(f"Qwen runtime unavailable: {self._error_message}")
 
