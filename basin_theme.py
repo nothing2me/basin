@@ -9,7 +9,7 @@ import streamlit as st
 
 def apply_design():
     st.html("""<style>
-.block-container{padding:1.75rem 2.8rem 6.5rem;max-width:1560px}
+.block-container{padding:4.25rem 2.8rem 6.5rem;max-width:1560px}
 [data-testid="stAppDeployButton"]{display:none}
 [data-testid="stHeader"]{background:transparent}
 [data-testid="stSidebar"]{border-right:1px solid color-mix(in srgb,currentColor 12%,transparent)}
@@ -128,7 +128,13 @@ body.basin-theme-bw .basin-top-logo{filter:none!important}
 [data-testid="stExpander"]{border-radius:11px!important}
 [data-testid="stExpander"] details summary{font-size:.86rem;padding-block:10px}
 [data-testid="stDataFrame"],[data-testid="stDataEditor"]{border-radius:11px;overflow:hidden}
-[data-testid="stButton"] button,[data-testid="stDownloadButton"] button{font-size:.86rem;font-weight:550;min-height:2.5rem}
+[data-testid="stButton"],[data-testid="stDownloadButton"],[data-testid="stFormSubmitButton"]{width:100%!important}
+[data-testid="stButton"]>button,[data-testid="stDownloadButton"]>button,[data-testid="stFormSubmitButton"]>button{
+    width:100%!important;min-width:100%!important;min-height:2.75rem!important;box-sizing:border-box!important;cursor:pointer;touch-action:manipulation
+}
+[data-testid="stButton"]>button *,[data-testid="stDownloadButton"]>button *,[data-testid="stFormSubmitButton"]>button *{pointer-events:none!important}
+[data-testid="stButton"]>button:disabled,[data-testid="stDownloadButton"]>button:disabled,[data-testid="stFormSubmitButton"]>button:disabled{cursor:not-allowed}
+[data-testid="stButton"] button,[data-testid="stDownloadButton"] button{font-size:.86rem;font-weight:550}
 [data-testid="stButton"] button[kind="primary"],[data-testid="stFormSubmitButton"] button[kind="primary"],[data-testid="stDownloadButton"] button[kind="primary"],button[data-testid="stBaseButton-primary"]{color:#fff!important}
 [data-testid="stButton"] button[kind="primary"] *,[data-testid="stFormSubmitButton"] button[kind="primary"] *,[data-testid="stDownloadButton"] button[kind="primary"] *,button[data-testid="stBaseButton-primary"] *{color:#fff!important}
 [data-tag]{background:#356273!important;color:#fff!important}
@@ -159,7 +165,7 @@ button:focus-visible,a:focus-visible{outline:2px solid currentColor!important;ou
 .basin-theme-picker button{font:inherit;font-size:.8rem;cursor:pointer;flex:1;border:1px solid color-mix(in srgb,currentColor 20%,transparent);border-radius:8px;background:transparent;color:inherit;padding:9px 4px}
 .basin-theme-picker button:hover{background:color-mix(in srgb,#356273 24%,transparent)}
 .basin-theme-status{font-size:.75rem;line-height:1.4;margin:6px 0 0;opacity:.8}
-@media(max-width:800px){.block-container{padding:1.4rem 1rem 1.5rem}.st-key-welcome{padding:20px}.welcome-title{font-size:1.65rem!important}.st-key-tutorial_guide{padding:14px}h3{font-size:1.3rem!important}}
+@media(max-width:800px){.block-container{padding:4rem 1rem 5rem}.st-key-welcome{padding:20px}.welcome-title{font-size:1.65rem!important}.st-key-tutorial_guide{padding:14px}h3{font-size:1.3rem!important}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 .st-key-assistant_drawer{position:fixed!important;top:0!important;right:0!important;width:var(--basin-assistant-width, 520px);min-width:360px;max-width:92vw;height:100vh!important;background:color-mix(in srgb,var(--background-color,#1e262c) 98%,#000)!important;border-left:2px solid color-mix(in srgb,currentColor 16%,transparent)!important;box-shadow:-8px 0 35px rgba(0,0,0,.45)!important;z-index:99998!important;padding:1.25rem 1.25rem 2rem!important;resize:horizontal!important;overflow-x:auto!important;overflow-y:auto!important;animation:basinDrawerSlideIn .4s cubic-bezier(0.2, 0.9, 0.3, 1) both!important;transition:width .25s cubic-bezier(0.2, 0.9, 0.3, 1), transform .4s cubic-bezier(0.2, 0.9, 0.3, 1)!important;will-change:transform,width}
 @keyframes basinDrawerSlideIn{0%{transform:translateX(100%);opacity:0}100%{transform:translateX(0);opacity:1}}
@@ -176,7 +182,7 @@ body:has(.st-key-assistant_drawer) .block-container,body:has(.st-key-assistant_d
 .st-key-assistant_tab_closed button,.st-key-assistant_tab_open button{border-radius:12px 0 0 12px!important;padding:18px 8px!important;writing-mode:vertical-rl!important;text-orientation:mixed!important;transform:none!important;font-size:.78rem!important;font-weight:700!important;letter-spacing:.1em!important;text-transform:uppercase!important;background:#356273!important;color:#fff!important;border:1px solid color-mix(in srgb,#fff 20%,transparent)!important;border-right:none!important;box-shadow:-4px 0 16px rgba(0,0,0,.35)!important;cursor:pointer!important;min-height:120px!important}
 .st-key-assistant_tab_closed button:hover,.st-key-assistant_tab_open button:hover{background:#2878A0!important;box-shadow:-6px 0 20px rgba(40,120,160,.45)!important}
 @media(max-width:760px){
-    .block-container,[data-testid="stMainBlockContainer"]{padding:1rem .8rem 5rem!important}
+    .block-container,[data-testid="stMainBlockContainer"]{padding:4rem .8rem 5rem!important}
     [data-testid="stHorizontalBlock"]:has(.st-key-global_unit_selector){
         display:grid!important;grid-template-columns:1fr 1fr!important;gap:.55rem!important;align-items:center!important
     }
