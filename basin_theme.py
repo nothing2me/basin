@@ -240,8 +240,8 @@ body:has(.st-key-assistant_drawer) .block-container,body:has(.st-key-assistant_d
     .st-key-assistant_drawer{width:100vw!important;max-width:100vw!important;min-width:0!important;padding:3.5rem 1rem 1.5rem!important;resize:none!important}
 }
 .basin-assistant-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-size:.73rem;font-weight:650;background:color-mix(in srgb,currentColor 8%,transparent);border:1px solid color-mix(in srgb,currentColor 16%,transparent);margin-bottom:.5rem}
-.basin-assistant-title{font-size:1.15rem;font-weight:700;letter-spacing:-.02em;margin:0 0 2px}
-.basin-assistant-sub{font-size:.78rem;opacity:.8;margin:0 0 .85rem;line-height:1.4}
+.basin-assistant-avatar{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 3px 8px rgba(0,0,0,.4));flex:0 0 auto}
+.basin-assistant-title{font-size:1.55rem;font-weight:800;letter-spacing:-.03em;line-height:1.08;margin:0}
 .basin-pipeline-stepper{display:flex;align-items:center;justify-content:space-between;gap:8px;background:color-mix(in srgb,currentColor 3%,transparent);border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:12px;padding:8px 12px;margin:6px 0 16px}
 .basin-step-card{flex:1;display:flex;flex-direction:column;padding:6px 10px;border-radius:8px;border:1px solid transparent;transition:background .12s ease}
 .basin-step-card.active{background:color-mix(in srgb,#356273 24%,transparent);border-color:color-mix(in srgb,#356273 45%,transparent)}
