@@ -1223,7 +1223,7 @@ def render_html_report(
         conc_detail = format_scenario_concurrence_detail(s, workspace)
 
         # Public summary vs private note distinction (Item 10)
-        public_summary = getattr(s, "public_summary", "") or getattr(s, "description", "")
+        public_summary = getattr(s, "public_summary", "") or getattr(s, "ai_narrative", "") or getattr(s, "description", "")
         entry_note = (s.history[-1].get("private_note") or s.history[-1].get("note")) if s.history else None
 
         if include_notes and entry_note:

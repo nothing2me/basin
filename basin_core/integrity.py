@@ -102,6 +102,9 @@ def reconstruct_record(record, reference, legacy=False):
     scenario.history = history
     scenario.cluster = record["cluster"]
     scenario.cluster_name = record.get("cluster_name", f"Group {scenario.cluster}")
+    scenario.ai_narrative = record.get("ai_narrative", "")
+    scenario.ai_draft_note = record.get("ai_draft_note", "")
+    scenario.ai_typology = record.get("ai_typology", "")
     return scenario
 
 

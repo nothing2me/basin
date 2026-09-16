@@ -75,3 +75,100 @@ def test_reservoir_summary_reports_day_zero():
     df = pd.DataFrame({"day": [1], "combined_pct": [18.0]})
     text = reservoir_summary(df, initial_pct=.20)
     assert "Day 0" in text
+
+
+def test_classify_drought_typology():
+    from basin_core.summary import classify_drought_typology
+
+    # Compound Spring-Summer Drought
+    t1 = classify_drought_typology({
+        "duration_days": 180,
+        "onset_month": 4,
+        "concurrence": 0.75,
+        "max_dry_days": 42,
+        "historical_percentile": 0.95,
+    })
+    assert t1["archetype"] == "Compound Spring-Summer Drought"
+    assert "Synchronous" in t1["spatial_pattern"]
+    assert "Critical Inflow" in t1["vulnerability"]
+    assert t1["onset_name"] == "April"
+
+    # Acute Flash Drought & Dry Run
+    t2 = classify_drought_typology({
+        "duration_days": 60,
+        "onset_month": 7,
+        "concurrence": 0.20,
+        "max_dry_days": 38,
+        "historical_percentile": 0.60,
+    })
+    assert t2["archetype"] == "Acute Flash Drought & Dry Run"
+    assert "Localized" in t2["spatial_pattern"]
+    assert t2["onset_name"] == "July"
+
+    # Chronic Multi-Year Drought
+    t3 = classify_drought_typology({
+        "duration_days": 365,
+        "onset_month": 10,
+        "concurrence": 0.45,
+        "max_dry_days": 20,
+        "historical_percentile": 0.80,
+    })
+    assert t3["archetype"] == "Chronic Multi-Year Drought"
+    assert "Regional Tributary Stress" in t3["spatial_pattern"]
+
+
+def test_generate_scenario_interpretation_and_draft_note():
+    from types import SimpleNamespace
+    from basin_core.summary import generate_scenario_interpretation, draft_engineering_review_note
+
+    fake_scenario = SimpleNamespace(
+        id="B-001",
+        features={
+            "duration_days": 180,
+            "onset_month": 4,
+            "deficit_mm": 304.8,  # 12.0 inches
+            "historical_percentile": 0.92,
+            "concurrence": 0.75,
+            "max_dry_days": 45,
+            "benchmark_n": 30,
+        }
+    )
+
+    interp = generate_scenario_interpretation(fake_scenario, workspace=None, use_llm=False)
+    assert interp["typology"] == "Compound Spring-Summer Drought"
+    assert "12.00-inch" in interp["narrative"] or "12.0" in interp["narrative"]
+    assert "synchronous basin-wide inflow failure" in interp["narrative"].lower()
+    assert "45 consecutive days" in interp["narrative"]
+    assert "Choke Canyon" in interp["narrative"]
+    assert "[Engineering Assessment]" in interp["draft_note"]
+    assert "180-day window" in interp["draft_note"]
+    assert "April onset" in interp["draft_note"]
+    assert "92%" in interp["draft_note"]
+    assert "75%" in interp["draft_note"]
+
+    draft = draft_engineering_review_note(fake_scenario)
+    assert "[Engineering Assessment]" in draft
+    assert "45-day dry spell" in draft
+
+
+def test_attach_scenario_ai_interpretations():
+    from types import SimpleNamespace
+    from basin_core.summary import attach_scenario_ai_interpretations
+
+    s1 = SimpleNamespace(
+        id="B-002",
+        features={
+            "duration_days": 90,
+            "onset_month": 5,
+            "deficit_mm": 150.0,
+            "historical_percentile": 0.75,
+            "concurrence": 0.50,
+            "max_dry_days": 25,
+            "benchmark_n": 20,
+        }
+    )
+    attach_scenario_ai_interpretations([s1], workspace=None, use_llm=False)
+    assert hasattr(s1, "ai_narrative") and len(s1.ai_narrative) > 50
+    assert hasattr(s1, "ai_draft_note") and "[Engineering Assessment]" in s1.ai_draft_note
+    assert hasattr(s1, "ai_typology") and s1.ai_typology
+

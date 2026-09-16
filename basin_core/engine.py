@@ -210,6 +210,9 @@ class Scenario:
         self.cluster_name = "Unassigned"
         self.score = 0.0
         self.components: dict = {}
+        self.ai_narrative: str = ""
+        self.ai_draft_note: str = ""
+        self.ai_typology: str = ""
 
     def digest(self) -> str:
         return rainfall_digest(self.series)
@@ -238,6 +241,9 @@ class Scenario:
         self.series, self.features = updated, features
         self.revision += 1
         self.status, self.approved_revision = "unreviewed", None
+        self.ai_narrative = ""
+        self.ai_draft_note = ""
+        self.ai_typology = ""
         self.history.append({"action": "replace" if replacement is not None else "scale", "factor": factor,
                              "revision": self.revision, "at": utc_now(), "previous_sha256": prior,
                              "series_sha256": self.digest(), "private_note": note,
@@ -249,6 +255,9 @@ class Scenario:
                   "approved_revision": self.approved_revision, "features": self.features,
                   "cluster": self.cluster, "cluster_name": getattr(self, "cluster_name", f"Group {self.cluster}"),
                   "score": self.score, "components": self.components,
+                  "ai_narrative": getattr(self, "ai_narrative", ""),
+                  "ai_draft_note": getattr(self, "ai_draft_note", ""),
+                  "ai_typology": getattr(self, "ai_typology", ""),
                   "provenance": self.provenance, "history": history, "series_sha256": self.digest()}
         if include_series:
             result["dates"] = self.series.index.strftime("%Y-%m-%d").tolist()

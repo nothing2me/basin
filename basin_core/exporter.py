@@ -171,9 +171,14 @@ def generate_brief(workspace, accepted):
 
 
 def summary_record(s):
-    return {'scenario_id': s.id, 'revision': s.revision, 'priority_score': s.score,
-            'modeling_scope': 'HISTORICAL_PRECIP_DEFICIT_ONLY — NOT_A_YIELD_FORECAST',
-            **{k: v for k, v in s.features.items() if not isinstance(v, dict)}}
+    record = {'scenario_id': s.id, 'revision': s.revision, 'priority_score': s.score,
+              'modeling_scope': 'HISTORICAL_PRECIP_DEFICIT_ONLY — NOT_A_YIELD_FORECAST',
+              **{k: v for k, v in s.features.items() if not isinstance(v, dict)}}
+    if getattr(s, "ai_typology", ""):
+        record["ai_typology"] = s.ai_typology
+    if getattr(s, "ai_narrative", ""):
+        record["ai_narrative"] = s.ai_narrative
+    return record
 
 
 def rainfall_rows(s):

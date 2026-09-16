@@ -21,7 +21,8 @@ from basin_core.simulation import SimulationSettings, describe_input_rainfall, o
 from basin_core.water_system import (WaterSource, WaterSystemConfig, SYSTEM_PRESETS,
                                      SYSTEM_ID_TO_LABEL, SYSTEM_LABEL_TO_ID, REGION_N_PRESET,
                                      DEFAULT_WATER_SYSTEM_ID)
-from basin_core.summary import scenario_summary, reservoir_summary, format_rainfall_dual_explanation
+from basin_core.summary import (scenario_summary, reservoir_summary, format_rainfall_dual_explanation,
+                                 draft_engineering_review_note, attach_scenario_ai_interpretations)
 from basin_core.review_preferences import (DATA_SOURCES, GOALS, GUIDANCE, GUIDED_TAB_NOTES,
                                            PRESENTATION_MODES,
                                            TAB_LABELS, ReviewPreferences, load_preferences,
@@ -2317,6 +2318,8 @@ elif page == "Review":
         st.session_state.inspect_id = selected_id
         s = w.get(selected_id)
         f = s.features
+        if not getattr(s, "ai_narrative", ""):
+            attach_scenario_ai_interpretations([s], w)
         is_us = st.session_state.get("unit_mode", "us") == "us"
         unit_arg = "in" if is_us else "mm"
 
@@ -2353,7 +2356,13 @@ elif page == "Review":
             c_sc4.metric("Longest Dry Run", dry_val, "< 1 mm/day")
 
             with st.container(border=True):
-                st.markdown("**Hydrologic Context & Construction**")
+                typology = getattr(s, "ai_typology", "") or "Compound Multi-Season Drought"
+                st.markdown(f"**🤖 AI Operational Interpretation · {typology}**")
+                narrative = getattr(s, "ai_narrative", "")
+                if narrative:
+                    st.markdown(narrative)
+                st.markdown("---")
+                st.markdown("**Factual Construction & Climatological Baseline**")
                 st.markdown(f"• **Precipitation Baseline:** {construction}" + (" (Includes later rainfall edits; see revision history.)" if rainfall_edits else ""))
                 st.markdown(f"• **Climatological Reference:** Net rainfall deficit equals or exceeds **{pct_val}** of {f['benchmark_n']} matched historical windows with the same duration and starting month (1991–2020 NOAA reference baseline).")
                 st.markdown(f"• **Spatial Scope:** Direct observations from NOAA index stations (Corpus Christi, Victoria, San Antonio) weighted equally across the regional basin.")
@@ -2373,8 +2382,27 @@ elif page == "Review":
                              (c['left_id'] in attached or c['right_id'] in attached)]
                 for conflict in conflicts:
                     st.warning("Unresolved evidence issue: " + conflict['disagreement'])
-                note = st.text_area("Review note", key=f"note_{s.id}_{w.id}", height=90,
-                                    help="Record why you are including or excluding this revision. Notes are private unless explicitly included during export.")
+                note_key = f"note_{s.id}_{w.id}"
+                draft_note = getattr(s, "ai_draft_note", "")
+                if note_key not in st.session_state:
+                    prior_note = None
+                    if s.history:
+                        for ev in reversed(s.history):
+                            if ev.get("private_note"):
+                                prior_note = ev["private_note"]
+                                break
+                    if prior_note:
+                        st.session_state[note_key] = prior_note
+                    elif draft_note:
+                        st.session_state[note_key] = draft_note
+
+                note = st.text_area("Review note", key=note_key, height=100,
+                                    help="Record why you are including or excluding this revision. Pre-filled with the attached AI engineering draft note. Notes are private unless explicitly included during export.")
+                if draft_note and st.session_state.get(note_key) != draft_note:
+                    if st.button("↺ Reset note to initial AI draft", key=f"btn_reset_draft_{s.id}_{w.id}",
+                                 help="Revert the review note back to the automated AI engineering draft note"):
+                        st.session_state[note_key] = draft_note
+                        st.rerun()
                 st.caption("Inclusion records your choice of rainfall content. It does not certify hydrologic validity or approve the storage experiment.")
                 if s.id not in w.selected:
                     st.info("This candidate is outside the shortlist. Use Edit Rainfall & Refine Shortlist below to replace an entry first.")

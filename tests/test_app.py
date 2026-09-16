@@ -322,3 +322,31 @@ def test_custom_colors_reset_and_accessible_charts(tmp_path, monkeypatch):
     assert app.session_state.appearance_accent == "#356273"
     assert not app.session_state.appearance_colorblind
     assert before == [(s.id, s.score, s.status) for s in workspace.scenarios]
+
+
+def test_ai_scenario_reviewer_prefilled_draft_and_narrative(tmp_path, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    from basin_core.workspace import Workspace
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    next(b for b in app.button if b.label == "Try an example").click().run()
+    assert not app.exception
+    assert app.session_state.page == "Review"
+
+    # Verify AI narrative is rendered
+    assert any("AI Operational Interpretation" in m.value for m in app.markdown)
+
+    # Verify Review note is pre-populated with the AI draft note
+    review_area = next(t for t in app.text_area if t.label == "Review note")
+    assert "[Engineering Assessment]" in review_area.value
+
+    # Verify we can accept with the pre-filled note directly
+    inspected = app.session_state.inspect_id
+    next(b for b in app.button if b.label == "Include").click().run()
+    assert not app.exception
+    assert app.session_state.workspace.get(inspected).status == "accepted"
+    last_event = app.session_state.workspace.get(inspected).history[-1]
+    assert "[Engineering Assessment]" in last_event["private_note"]
+
