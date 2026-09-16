@@ -305,7 +305,7 @@ def assistant_panel(w, source=None, names=None):
                 except Exception as ex:
                     st.session_state.assistant_messages.append({"role": "assistant", "content": f"I could not complete that analysis: {ex}"})
 
-        chat_box = st.container(height=390, border=True, key="assistant_conversation")
+        chat_box = st.container(height=520, border=True, key="assistant_conversation")
         with chat_box:
             if not st.session_state.assistant_messages:
                 diamond_img = (
@@ -328,31 +328,47 @@ def assistant_panel(w, source=None, names=None):
                 with st.chat_message(msg["role"], avatar=av):
                     st.markdown(msg["content"])
 
+            st.chat_input(
+                "Ask about scenarios, rainfall, or evidence",
+                key="assistant_chat_input",
+                on_submit=_queue_assistant_query,
+            )
+
         direct_tool_run = None
         direct_result_added = False
         sid = w.selected[0] if w.selected else (w.scenarios[0].id if w.scenarios else "B-001")
 
-        if st.button("Explain the top-ranked scenario", key="quick_top1", width="stretch", help="Profile the top-ranked scenario"):
-            direct_tool_run = ("describe_scenario", {"scenario_id": sid}, f"Tell me about scenario {sid}")
-        if st.button("Compare the top two scenarios", key="quick_compare", width="stretch", help="Compare the two highest-ranked scenarios"):
-            id1 = w.selected[0] if w.selected else sid
-            ranked_ids = [scenario.id for scenario in w.scenarios]
-            id2 = w.selected[1] if len(w.selected) > 1 else next((candidate for candidate in ranked_ids if candidate != id1), id1)
-            direct_tool_run = ("compare_scenarios", {"scenario_id_1": id1, "scenario_id_2": id2}, f"Compare scenario {id1} and {id2}")
-        if st.button("Check station stress overlap", key="quick_concur", width="stretch", help="Check whether station stress signals overlap"):
-            direct_tool_run = ("check_concurrence", {"scenario_id": sid}, f"Check station stress concurrence for {sid}")
-        if st.button("Explain the ranking", key="quick_ranking", width="stretch", help="Explain how the top scenario was scored"):
-            direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
-        if st.button("Estimate the crop water deficit", key="quick_crop_et", width="stretch", help="Estimate the crop irrigation gap"):
-            from basin_core.agronomics import calculate_crop_water_deficit
-            sc = w.get(sid)
-            c_res = calculate_crop_water_deficit(sc.series)
-            direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
-            st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
-            st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
-            direct_result_added = True
-        if st.button("Check export readiness", key="quick_export", width="stretch", help="Check whether this workspace is ready to export"):
-            direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
+        suggestion_bar = st.container(key="assistant_suggestions")
+        with suggestion_bar:
+            st.markdown('<p class="basin-suggested-label">Suggested questions</p>', unsafe_allow_html=True)
+            quick_one, quick_two, quick_three, quick_four, quick_five, quick_six = st.columns(6, gap="small")
+            with quick_one:
+                if st.button("Top scenario", key="quick_top1", width="stretch", help="Explain the top-ranked scenario"):
+                    direct_tool_run = ("describe_scenario", {"scenario_id": sid}, f"Tell me about scenario {sid}")
+            with quick_two:
+                if st.button("Compare", key="quick_compare", width="stretch", help="Compare the two highest-ranked scenarios"):
+                    id1 = w.selected[0] if w.selected else sid
+                    ranked_ids = [scenario.id for scenario in w.scenarios]
+                    id2 = w.selected[1] if len(w.selected) > 1 else next((candidate for candidate in ranked_ids if candidate != id1), id1)
+                    direct_tool_run = ("compare_scenarios", {"scenario_id_1": id1, "scenario_id_2": id2}, f"Compare scenario {id1} and {id2}")
+            with quick_three:
+                if st.button("Stress", key="quick_concur", width="stretch", help="Check station stress overlap"):
+                    direct_tool_run = ("check_concurrence", {"scenario_id": sid}, f"Check station stress concurrence for {sid}")
+            with quick_four:
+                if st.button("Ranking", key="quick_ranking", width="stretch", help="Explain how the top scenario was scored"):
+                    direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
+            with quick_five:
+                if st.button("Crop deficit", key="quick_crop_et", width="stretch", help="Estimate the crop water deficit"):
+                    from basin_core.agronomics import calculate_crop_water_deficit
+                    sc = w.get(sid)
+                    c_res = calculate_crop_water_deficit(sc.series)
+                    direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
+                    st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
+                    st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
+                    direct_result_added = True
+            with quick_six:
+                if st.button("Export", key="quick_export", width="stretch", help="Check export readiness"):
+                    direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
 
         if direct_tool_run:
             t_name, t_args, u_msg = direct_tool_run
@@ -368,15 +384,22 @@ def assistant_panel(w, source=None, names=None):
         if direct_result_added:
             st.rerun()
 
-        st.chat_input(
-            "Ask about scenarios, rainfall, or evidence",
-            key="assistant_chat_input",
-            on_submit=_queue_assistant_query,
-        )
-        st.markdown(
-            '<p class="basin-assistant-trust">Responses use this workspace’s data and reviewed calculation tools.</p>',
-            unsafe_allow_html=True,
-        )
+        with suggestion_bar:
+            footer_note, footer_clear = st.columns([6, 1], gap="small", vertical_alignment="center")
+            with footer_note:
+                st.markdown(
+                    '<p class="basin-assistant-trust">Responses use this workspace’s data and reviewed calculation tools.</p>',
+                    unsafe_allow_html=True,
+                )
+            with footer_clear:
+                if st.session_state.assistant_messages:
+                    st.button(
+                        "Clear",
+                        key="assistant_clear_chat",
+                        width="stretch",
+                        help="Clear conversation",
+                        on_click=_clear_assistant_chat,
+                    )
 
         if st.session_state.get("show_assistant_developer_tools", False):
             st.markdown("**Manual calculation tools**")
@@ -395,13 +418,6 @@ def assistant_panel(w, source=None, names=None):
                         st.success("Result added to the conversation.")
                 except Exception as ex:
                     st.error(f"Error running {tool_name}: {ex}")
-
-        st.button(
-            "Clear conversation",
-            key="assistant_clear_chat",
-            width="stretch",
-            on_click=_clear_assistant_chat,
-        )
 
         st.html("""<script>
         (() => {
