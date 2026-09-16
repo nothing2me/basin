@@ -94,7 +94,7 @@ def _geometry_layer(key):
         for f in load_catalog()[key]["features"]]}
 
 
-def _station_trace(rows, name, color, size):
+def _station_trace(rows, name, color, size, *, emoji=None):
     hover = []
     for row in rows:
         period = (f"PRCP inventory: {row['first_year']}–{row['last_year']}<br>"
@@ -102,22 +102,47 @@ def _station_trace(rows, name, color, size):
         hover.append(f"<b>{escape(str(row['name']))}</b><br>{escape(str(row['station_id']))}<br>"
                      f"{escape(row.get('variable', 'Rainfall'))}<br>{period}"
                      f"{escape(row.get('map_role', 'Map catalog only; observations not loaded'))}")
-    return go.Scattermap(lon=[r["longitude"] for r in rows], lat=[r["latitude"] for r in rows],
-                         text=hover, mode="markers", name=name, marker=dict(color=color, size=size),
-                         hovertemplate="%{text}<br>%{lat:.4f}, %{lon:.4f}<extra></extra>")
+    if emoji:
+        trace_name = f"{emoji} {name}"
+        return go.Scattermap(
+            lon=[r["longitude"] for r in rows],
+            lat=[r["latitude"] for r in rows],
+            text=[emoji] * len(rows),
+            customdata=hover,
+            mode="text",
+            name=trace_name,
+            textfont=dict(size=max(13, int(size * 1.35))),
+            hovertemplate="%{customdata}<br>%{lat:.4f}, %{lon:.4f}<extra></extra>",
+        )
+    return go.Scattermap(
+        lon=[r["longitude"] for r in rows],
+        lat=[r["latitude"] for r in rows],
+        text=hover,
+        mode="markers",
+        name=name,
+        marker=dict(color=color, size=size),
+        hovertemplate="%{text}<br>%{lat:.4f}, %{lon:.4f}<extra></extra>",
+    )
 
 
 _BASE_MAP_CACHE: dict[tuple, Any] = {}
 
 
-def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=True):
+def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=True, marker_style="dots", custom_colors=None):
     source_rows = stations_df.to_dict("records") if not stations_df.empty else []
     has_custom = any(r.get("is_custom") for r in source_rows)
     layers_tuple = tuple(sorted(LAYER_LABELS if layers is None else layers))
     station_ids = tuple(sorted(r["station_id"] for r in source_rows if not r.get("is_custom", False)))
+    
+    is_emoji = (marker_style == "emoji" or "emoji" in str(marker_style).lower())
+    colors_tuple = tuple(sorted(custom_colors.items())) if custom_colors else ()
+
+    active_colors = dict(COLORS)
+    if custom_colors:
+        active_colors.update(custom_colors)
 
     if not has_custom and focus is None:
-        cache_key = (station_ids, layers_tuple, use_offline)
+        cache_key = (station_ids, layers_tuple, use_offline, is_emoji, colors_tuple)
         if cache_key in _BASE_MAP_CACHE:
             return _BASE_MAP_CACHE[cache_key]
 
@@ -142,24 +167,45 @@ def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=T
         if key not in layers:
             continue
         map_layers.append(dict(below="traces", sourcetype="geojson", source=_geometry_layer(key),
-                               type="fill" if key == "lakes" else "line", color=COLORS[key],
+                               type="fill" if key == "lakes" else "line", color=active_colors[key],
                                opacity={"lakes": .38, "streams": .4, "basins": .7, "counties": .5}[key],
                                line=dict(width=1.5 if key == "basins" else .6)))
     map_layers.append(dict(below="traces", sourcetype="geojson", source=_geometry_layer("region"),
-                           type="line", color="#ffac47", line=dict(width=3)))
+                           type="line", color=active_colors.get("region", "#ffac47"), line=dict(width=3)))
     fig = go.Figure()
     source_rows = stations_df.to_dict("records") if not stations_df.empty else []
     source_ids = {r["station_id"] for r in source_rows if not r.get("is_custom", False)}
+    
+    emojis = {
+        "rain_stations": "🌧️",
+        "water_stations": "💧",
+        "loaded_source": "🎯",
+        "custom_source": "⭐",
+    }
     for key in ("rain_stations", "water_stations"):
         if key in layers:
             rows = [r for r in catalog[key] if key != "rain_stations" or r["station_id"] not in source_ids]
-            fig.add_trace(_station_trace(rows, LAYER_LABELS[key], COLORS[key], 7 if key == "rain_stations" else 9))
+            fig.add_trace(_station_trace(
+                rows,
+                LAYER_LABELS[key],
+                active_colors[key],
+                9 if key == "rain_stations" else 11,
+                emoji=emojis[key] if is_emoji else None,
+            ))
     for custom in (False, True):
         rows = [dict(r, map_role="User-entered analysis source" if custom else "Loaded rainfall analysis source")
                 for r in source_rows if bool(r.get("is_custom", False)) == custom]
         if rows:
-            fig.add_trace(_station_trace(rows, "User-entered source" if custom else "Loaded rainfall source",
-                                         "#ffac47" if custom else "#ffffff", 16))
+            role_name = "User-entered source" if custom else "Loaded rainfall source"
+            emoji_char = (emojis["custom_source"] if custom else emojis["loaded_source"]) if is_emoji else None
+            role_color = active_colors.get("custom_source", "#ffac47") if custom else active_colors.get("loaded_source", "#ffffff")
+            fig.add_trace(_station_trace(
+                rows,
+                role_name,
+                role_color,
+                18,
+                emoji=emoji_char,
+            ))
     if focus:
         fig.add_trace(go.Scattermap(lon=[focus["lon"]], lat=[focus["lat"]], mode="markers+text",
                                    marker=dict(size=22, color="#ff654f", opacity=.8),
@@ -195,10 +241,20 @@ def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=T
                                center=dict(lon=center_lon, lat=center_lat),
                                zoom=zoom_level),
                       uirevision="region-n-" + (focus["label"] if focus else "overview"),
-                      legend=dict(orientation="h", y=-.02, x=0, font=dict(size=12)),
+                      legend=dict(
+                          orientation="h",
+                          y=-0.04,
+                          x=0,
+                          font=dict(size=14.5, color="#FFFFFF"),
+                          itemsizing="constant",
+                          itemwidth=30,
+                          bgcolor="rgba(15, 23, 42, 0.82)",
+                          bordercolor="rgba(255, 255, 255, 0.18)",
+                          borderwidth=1,
+                      ),
                       paper_bgcolor="rgba(0,0,0,0)")
     if not has_custom and focus is None:
-        cache_key = (station_ids, layers_tuple, use_offline)
+        cache_key = (station_ids, layers_tuple, use_offline, is_emoji, colors_tuple)
         _BASE_MAP_CACHE[cache_key] = fig
     return fig
 
@@ -215,7 +271,7 @@ def render_observation_map(stations_df, *, show_catalog=False):
                "Geographic layers show mapped features, not current water levels or streamflow.")
 
     has_offline = OFFLINE_TILES_DIR.exists() and any(OFFLINE_TILES_DIR.iterdir())
-    col_m1, col_m2 = st.columns([3.2, 1.8], gap="medium")
+    col_m1, col_m2, col_m3 = st.columns([2.2, 1.4, 1.4], gap="medium")
     with col_m1:
         layers = st.multiselect(
             "Visible map layers",
@@ -227,24 +283,72 @@ def render_observation_map(stations_df, *, show_catalog=False):
     with col_m2:
         map_mode = st.radio(
             "Satellite imagery source",
-            ["Live Esri (global / online)", "Bundled cache (offline / local)"] if has_offline else ["Live Esri (global / online)"],
+            ["Live Esri (online)", "Bundled (offline)"] if has_offline else ["Live Esri (online)"],
             index=0,
             horizontal=True,
-            help="Live Esri streams high-resolution satellite imagery for any region worldwide from ArcGIS Online. Bundled cache operates fully offline from local storage without network latency.",
+            help="Live Esri streams high-resolution satellite imagery for any region worldwide from ArcGIS Online. Bundled operates fully offline from local storage without network latency.",
             key="observation_map_basemap_mode",
         )
+    with col_m3:
+        marker_style_choice = st.radio(
+            "Marker style",
+            ["● Colored dots", "🌧️ Emojis"],
+            index=0,
+            horizontal=True,
+            help="Switch between classic colored circular points or visual hydrology emojis (🌧️ for rainfall stations, 💧 for water sites, 🎯 for loaded analysis stations).",
+            key="observation_map_marker_style",
+        )
     use_offline = map_mode.startswith("Bundled")
+    marker_style = "emoji" if "emoji" in marker_style_choice.lower() else "dots"
 
-    entries = search_catalog()
-    selected = st.selectbox("Find a station, county, stream, lake or subbasin", range(len(entries)),
-                            index=None, placeholder="Search by name or station ID…",
-                            format_func=lambda i: entries[i]["label"], key="observation_map_search")
+    col_search, col_colors = st.columns([3.8, 1.2], gap="small", vertical_alignment="bottom")
+    with col_search:
+        entries = search_catalog()
+        selected = st.selectbox("Find a station, county, stream, lake or subbasin", range(len(entries)),
+                                index=None, placeholder="Search by name or station ID…",
+                                format_func=lambda i: entries[i]["label"], key="observation_map_search")
+    
+    custom_colors = {}
+    with col_colors:
+        with st.popover("🎨 Custom colors", help="Customize marker and layer colors for high-contrast projectors or colorblind readability"):
+            st.markdown("**Map Layer & Marker Colors**")
+            st.caption("Adjust colors to match high-contrast presentation needs or colorblind accessibility.")
+            c_rain = st.color_picker("NOAA rainfall stations", value=st.session_state.get("map_c_rain", COLORS["rain_stations"]), key="map_c_rain")
+            c_water = st.color_picker("USGS water sites", value=st.session_state.get("map_c_water", COLORS["water_stations"]), key="map_c_water")
+            c_loaded = st.color_picker("Loaded source station", value=st.session_state.get("map_c_loaded", "#ffffff"), key="map_c_loaded")
+            c_streams = st.color_picker("Streams & channels", value=st.session_state.get("map_c_streams", COLORS["streams"]), key="map_c_streams")
+            c_lakes = st.color_picker("Lakes & reservoirs", value=st.session_state.get("map_c_lakes", COLORS["lakes"]), key="map_c_lakes")
+            c_basins = st.color_picker("Subbasin boundaries", value=st.session_state.get("map_c_basins", COLORS["basins"]), key="map_c_basins")
+            custom_colors = {
+                "rain_stations": c_rain,
+                "water_stations": c_water,
+                "loaded_source": c_loaded,
+                "streams": c_streams,
+                "lakes": c_lakes,
+                "basins": c_basins,
+            }
+            if st.button("Reset colors to defaults", key="btn_reset_map_colors", width="stretch"):
+                for k in ("map_c_rain", "map_c_water", "map_c_loaded", "map_c_streams", "map_c_lakes", "map_c_basins"):
+                    st.session_state.pop(k, None)
+                st.rerun()
+
     focus = entries[selected] if selected is not None else None
     if focus and focus["layer"] not in layers:
         layers = [*layers, focus["layer"]]
         st.caption(f"Showing {LAYER_LABELS[focus['layer']]} for the selected search result.")
-    st.plotly_chart(build_observation_map(stations_df, layers=layers, focus=focus, use_offline=use_offline), width="stretch",
-                    theme=None, config={"displayModeBar": True, "scrollZoom": True})
+    st.plotly_chart(
+        build_observation_map(
+            stations_df,
+            layers=layers,
+            focus=focus,
+            use_offline=use_offline,
+            marker_style=marker_style,
+            custom_colors=custom_colors,
+        ),
+        width="stretch",
+        theme=None,
+        config={"displayModeBar": True, "scrollZoom": True},
+    )
     st.caption("Cyan lines: streams/channels · Blue fill: lakes/ponds · Purple lines: HUC8 subbasins · "
                "White lines: counties · Orange outline: Region N")
     if focus:
