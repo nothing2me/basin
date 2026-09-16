@@ -97,7 +97,7 @@ class CachedSource:
         new_daily = self.daily.copy()
         custom_series = series.copy()
         custom_series.index = parsed_index
-        custom_series = custom_series[~custom_series.index.duplicated(keep="first")].sort_index()
+        custom_series = custom_series[~custom_series.index.duplicated(keep="first")].sort_index().round(2)
         new_daily[station_id] = custom_series.reindex(new_daily.index)
 
         # Prepare custom station daily rows for snapshot CSV
