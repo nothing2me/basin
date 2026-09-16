@@ -6,7 +6,7 @@
 [![Offline: 100% Air-Gapped](https://img.shields.io/badge/Execution-100%25%20Offline-10B981.svg)](https://nothing2me.github.io/basin/)
 [![Competition: Finalist](https://img.shields.io/badge/Zoho%20Hackathon-Finalist%202026-F59E0B.svg)](https://nothing2me.github.io/basin/)
 
-> **100% On-Device, Tamper-Evident Hydrologic Screening and Drought Scenario Intelligence for Rural Communities.**
+> **100% On-Device, Tamper-Evident Hydrologic Screening and Drought Scenario Intelligence for Regional Water Authorities, Municipalities, and River Basins.**
 
 🌐 **Official Showcase Website & Technical Documentation:** [https://nothing2me.github.io/basin/](https://nothing2me.github.io/basin/)
 
@@ -14,7 +14,7 @@
 
 ## ⚡ Quick Start: 1-Click Desktop Installer (Recommended)
 
-For water district managers, rural municipal staff, and city council members who want to run BASIN immediately without installing Python, Git, or developer tools:
+For municipal water managers, regional utility planners, consulting hydrologists, and council members who want to run BASIN immediately without installing Python, Git, or developer tools:
 
 1. Download **[Setup-BASIN.exe (v1.0.0)](https://github.com/nothing2me/basin/releases)** (~191 MB standalone installer).
 2. Double-click to run the setup wizard. It installs directly to your local user profile (`%LOCALAPPDATA%\Programs\BASIN`) and requires **zero administrator privileges**.
@@ -56,7 +56,7 @@ In mid-April 2026, the primary surface reservoirs supplying half a million peopl
 
 ### The Problem:
 * **The 2015 State Model Freeze:** The official Texas Water Availability Model (WAM) was granted a state budget variance freezing its hydrologic dataset at **December 31, 2015**. Official state models were legally and technically blind to the recent decade-long mega-drought.
-* **The $50k / 6-Month Consulting Barrier:** Small municipal water providers and rural Water Control & Improvement Districts (WCIDs) facing emergency drought cannot afford \$50,000 to \$100,000 and 6 months for engineering consulting firms to scope preliminary scenarios.
+* **The $50k / 6-Month Consulting Barrier:** Municipal utilities, regional water planning groups, and Water Control & Improvement Districts (WCIDs) facing drought stress cannot afford \$50,000 to \$100,000 and 6 months of consulting turnaround just to scope preliminary what-if scenarios.
 * **Fragile Spreadsheets:** Ad-hoc Excel spreadsheets lack spatial correlation, break easily, and provide zero audit trail.
 
 **BASIN fills this void.** It provides an **Agile L0/L1 Screening & Verification Layer** that turns 35 years of raw weather observations into diverse, defensible drought stress scenarios and verified engineering handoffs in **5 minutes**.
