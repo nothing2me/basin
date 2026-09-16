@@ -18,6 +18,7 @@ ROOT_RUNTIME_FILES = [
     "app.py",
     "basin_theme.py",
     "basin_ui.py",
+    "Download AI Model.cmd",
     "README.md",
     "LICENSE",
     "requirements.txt",
@@ -27,6 +28,7 @@ RUNTIME_SUPPORT_FILES = [
     "docs/methodology.md",
     "docs/export_schema.md",
     "scripts/replay_bundle.py",
+    "scripts/fetch_model.py",
     "models/manifest.json",
 ]
 
