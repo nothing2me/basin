@@ -27,6 +27,16 @@ def test_assistant_drawer_is_tall_with_visible_shortcuts():
     assert "st.chat_input(" not in chat_box_body
 
 
+def test_chat_message_avatar_inset_and_green_theme():
+    theme_source = (ROOT / "basin_theme.py").read_text(encoding="utf-8")
+    assert "--basin-user-avatar-bg:#23856d" in theme_source
+    assert '[data-testid="stChatMessageAvatarUser"]{background-color:var(--basin-user-avatar-bg,#23856d)!important;' in theme_source
+    assert 'padding-left:14px!important' in theme_source
+    assert 'padding-left:0!important' not in theme_source
+    assert '[data-testid="stChatMessage"] [data-testid^="stChatMessageAvatar"]' in theme_source
+
+
+
 def test_embedded_drawer_chat_query(workspace, monkeypatch):
     def no_network(*args, **kwargs):
         raise AssertionError("Assistant attempted a network connection")
