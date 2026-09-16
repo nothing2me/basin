@@ -1686,54 +1686,55 @@ if page == "Data":
     quality = pd.DataFrame(source.manifest["quality"])
     station_table = metadata.merge(quality, on="station_id")
 
-    with tour_target("data_map"):
-        from basin_core.region_n_map import render_observation_map, load_catalog
-        render_observation_map(station_table, show_catalog=False)
+    with st.expander("Explore map and historical rainfall", expanded=curr_target == "data_map"):
+        with tour_target("data_map"):
+            from basin_core.region_n_map import render_observation_map, load_catalog
+            render_observation_map(station_table, show_catalog=False)
 
-    st.markdown("#### Historical rainfall")
-    col_ts, col_hm = st.columns(2, gap="medium")
-    with col_ts:
-        st.markdown("##### Rainfall over time")
-        left, right = st.columns([2.5, 1.5])
-        station_view = left.multiselect("Observed rainfall", list(names), default=list(names), format_func=names.get, label_visibility="collapsed")
-        interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"], label_visibility="collapsed")
-        if station_view:
-            observations = source.select(station_view)
-            if interval == "Annual":
-                groups = observations.groupby(observations.index.year)
-                observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
-            elif interval == "Monthly":
-                groups = observations.resample("MS")
-                observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
+        st.markdown("#### Historical rainfall")
+        col_ts, col_hm = st.columns(2, gap="medium")
+        with col_ts:
+            st.markdown("##### Rainfall over time")
+            left, right = st.columns([2.5, 1.5])
+            station_view = left.multiselect("Observed rainfall", list(names), default=list(names), format_func=names.get, label_visibility="collapsed")
+            interval = right.selectbox("Interval", ["Annual", "Monthly", "Daily"], label_visibility="collapsed")
+            if station_view:
+                observations = source.select(station_view)
+                if interval == "Annual":
+                    groups = observations.groupby(observations.index.year)
+                    observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
+                elif interval == "Monthly":
+                    groups = observations.resample("MS")
+                    observed = groups.sum().where(groups.count().eq(groups.size(), axis=0))
+                else:
+                    observed = observations
+                is_us = st.session_state.get("unit_mode", "us") == "us"
+                plot_obs = (observed / 25.4).round(2) if is_us else observed
+                fig = go.Figure()
+                for station in plot_obs:
+                    fig.add_trace(go.Scatter(x=plot_obs.index, y=plot_obs[station], name=names[station], mode="lines", connectgaps=False))
+                fig.update_yaxes(title="Precipitation · inches" if is_us else "Precipitation · mm")
+                st.plotly_chart(chart(fig, 360), width="stretch", config={"displayModeBar": False})
+                with st.expander(f"Daily values ({'inches' if is_us else 'mm'})", expanded=False):
+                    table_obs = (observations / 25.4).round(2) if is_us else observations.round(1)
+                    st.dataframe(table_obs, width="stretch", height=220)
+
+        with col_hm:
+            st.markdown("##### Monthly rainfall departures (1991–2025)")
+            st.caption("Difference from the 35-year monthly average. Crimson is drier; teal is wetter.")
+            hm_station_choice = st.selectbox(
+                "Heatmap station perspective",
+                ["Catchment composite (All stations average)", *[f"{names[s_id]} ({s_id})" for s_id in names]],
+                label_visibility="collapsed",
+            )
+            if hm_station_choice.startswith("Catchment"):
+                hm_obs = source.select(list(names))
+                hm_title = "Catchment composite"
             else:
-                observed = observations
-            is_us = st.session_state.get("unit_mode", "us") == "us"
-            plot_obs = (observed / 25.4).round(2) if is_us else observed
-            fig = go.Figure()
-            for station in plot_obs:
-                fig.add_trace(go.Scatter(x=plot_obs.index, y=plot_obs[station], name=names[station], mode="lines", connectgaps=False))
-            fig.update_yaxes(title="Precipitation · inches" if is_us else "Precipitation · mm")
-            st.plotly_chart(chart(fig, 360), width="stretch", config={"displayModeBar": False})
-            with st.expander(f"Daily values ({'inches' if is_us else 'mm'})", expanded=False):
-                table_obs = (observations / 25.4).round(2) if is_us else observations.round(1)
-                st.dataframe(table_obs, width="stretch", height=220)
-
-    with col_hm:
-        st.markdown("##### Monthly rainfall departures (1991–2025)")
-        st.caption("Difference from the 35-year monthly average. Crimson is drier; teal is wetter.")
-        hm_station_choice = st.selectbox(
-            "Heatmap station perspective",
-            ["Catchment composite (All stations average)", *[f"{names[s_id]} ({s_id})" for s_id in names]],
-            label_visibility="collapsed",
-        )
-        if hm_station_choice.startswith("Catchment"):
-            hm_obs = source.select(list(names))
-            hm_title = "Catchment composite"
-        else:
-            selected_s_id = next(s_id for s_id in names if f"({s_id})" in hm_station_choice)
-            hm_obs = source.select([selected_s_id])
-            hm_title = names[selected_s_id]
-        st.plotly_chart(accessible_chart(drought_anomaly_matrix_figure(hm_obs, title_prefix=hm_title)), width="stretch", config={"displayModeBar": False})
+                selected_s_id = next(s_id for s_id in names if f"({s_id})" in hm_station_choice)
+                hm_obs = source.select([selected_s_id])
+                hm_title = names[selected_s_id]
+            st.plotly_chart(accessible_chart(drought_anomaly_matrix_figure(hm_obs, title_prefix=hm_title)), width="stretch", config={"displayModeBar": False})
 
     catalog = load_catalog()
     with st.expander("Data Sources, Station Catalogs & Snapshot Metadata", expanded=False):
