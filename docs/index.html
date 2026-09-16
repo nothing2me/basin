@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BASIN — On-Device Hydrologic Screening & Decision Workbench</title>
+  <meta name="description" content="100% On-Device, Tamper-Evident Hydrologic Screening and Drought Scenario Intelligence for Rural Communities.">
+  <link rel="icon" href="../assets/basin.ico" type="image/x-icon">
+  <style>
+    :root {
+      --bg-primary: #0a0f1d;
+      --bg-secondary: #111827;
+      --bg-card: #1f293d;
+      --bg-card-hover: #27354f;
+      --accent-cyan: #38bdf8;
+      --accent-blue: #0284c7;
+      --accent-teal: #14b8a6;
+      --accent-amber: #f59e0b;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --border-accent: rgba(56, 189, 248, 0.3);
+      --code-bg: #0d1322;
+      --radius: 12px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    a:hover {
+      color: #7dd3fc;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Top Nav */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 15, 29, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 0;
+    }
+
+    .nav-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      fill: var(--accent-cyan);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .nav-links a:hover {
+      color: #fff;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      color: #000;
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+      color: #000;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border-color);
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-lg {
+      padding: 14px 28px;
+      font-size: 1.1rem;
+      border-radius: 10px;
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 90px 0 60px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(10, 15, 29, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid var(--border-accent);
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      color: var(--accent-cyan);
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .badge-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      max-width: 780px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+
+    .hero-meta span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Preview Mockup Card */
+    .preview-card {
+      margin: 40px auto 0;
+      max-width: 1040px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
+
+    .preview-header {
+      background: #1e293b;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green { background: #10b981; }
+
+    .preview-body {
+      padding: 30px;
+      background: linear-gradient(180deg, #0f172a 0%, #090e1a 100%);
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 24px;
+      text-align: left;
+    }
+
+    .metric-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .metric-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .metric-val {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .metric-sub {
+      font-size: 0.85rem;
+      color: #f87171;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Section Styling */
+    section {
+      padding: 80px 0;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 50px;
+    }
+
+    .section-tag {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-cyan);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .section-header h2 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      margin-bottom: 14px;
+    }
+
+    .section-header p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+    }
+
+    /* Feature Cards Grid */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 30px;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .feature-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-accent);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-cyan);
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    .feature-card p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Installer Spotlight Section */
+    .spotlight-box {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 1px solid var(--border-accent);
+      border-radius: 20px;
+      padding: 50px;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .spotlight-text h3 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .spotlight-steps {
+      margin: 24px 0 32px;
+      list-style: none;
+    }
+
+    .spotlight-steps li {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 14px;
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+
+    .step-num {
+      width: 26px;
+      height: 26px;
+      background: var(--accent-blue);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.8rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* Technical Docs Accordion / Tabs */
+    .docs-container {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 40px;
+    }
+
+    .doc-block {
+      margin-bottom: 36px;
+      padding-bottom: 36px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .doc-block:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .doc-block h3 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .doc-block p, .doc-block li {
+      color: var(--text-muted);
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+
+    .code-box {
+      background: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: #38bdf8;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+
+    .math-card {
+      background: rgba(255, 255, 255, 0.02);
+      border-left: 4px solid var(--accent-cyan);
+      padding: 16px 20px;
+      margin: 16px 0;
+      font-family: var(--font-mono);
+      color: #e2e8f0;
+      font-size: 0.95rem;
+    }
+
+    /* Comparison Table */
+    .comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .comp-table th, .comp-table td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.95rem;
+    }
+
+    .comp-table th {
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .comp-table td {
+      color: var(--text-muted);
+    }
+
+    .check-yes { color: #34d399; font-weight: 700; }
+    .check-no { color: #f87171; }
+
+    /* Footer */
+    footer {
+      padding: 60px 0 40px;
+      border-top: 1px solid var(--border-color);
+      background: #080c17;
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .hero h1 { font-size: 2.5rem; }
+      .spotlight-box { grid-template-columns: 1fr; }
+      .preview-body { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header>
+    <div class="container nav-wrapper">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24">
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+        </svg>
+        <span>BASIN</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#features">Capabilities</a></li>
+        <li><a href="#installer">1-Click Install</a></li>
+        <li><a href="#technical-docs">Technical Specs</a></li>
+        <li><a href="https://github.com/nothing2me/basin" target="_blank">GitHub</a></li>
+      </ul>
+      <a href="https://github.com/nothing2me/basin/releases" class="btn btn-primary" target="_blank">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+        Download .EXE (191 MB)
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero" id="overview">
+    <div class="container">
+      <div class="badge-pill">
+        <span class="badge-pulse"></span>
+        Finalist • Zoho "From The Ground Up" AI Hackathon 2026
+      </div>
+      <h1>100% On-Device Hydrologic Screening<br>for Water-Stressed Communities</h1>
+      <p>
+        An agile, privacy-first decision workbench built for rural water districts, municipal councils, and consulting hydrologists. Evaluate multi-basin drought stress, test industrial curtailment, and export tamper-evident reports in 5 minutes.
+      </p>
+      <div class="hero-actions">
+        <a href="https://github.com/nothing2me/basin/releases" class="btn btn-primary btn-lg" target="_blank">
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+          Download Setup-BASIN.exe (v1.0.0)
+        </a>
+        <a href="#technical-docs" class="btn btn-secondary btn-lg">
+          Explore Technical Specs
+        </a>
+      </div>
+      <div class="hero-meta">
+        <span>✓ 100% Air-Gapped / Offline</span>
+        <span>✓ Zero Cloud Telemetry</span>
+        <span>✓ No Python or Git Required</span>
+        <span>✓ MIT Open Source</span>
+      </div>
+
+      <!-- Preview Mockup -->
+      <div class="preview-card">
+        <div class="preview-header">
+          <div class="dot dot-red"></div>
+          <div class="dot dot-yellow"></div>
+          <div class="dot dot-green"></div>
+          <span style="font-size: 0.8rem; color: var(--text-dim); margin-left: 8px;">BASIN Desktop — Region N Water Supply Screening (Offline Mode)</span>
+        </div>
+        <div class="preview-body">
+          <div>
+            <div style="margin-bottom: 20px;">
+              <span style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 700;">LIVE SCREENING WORKBENCH</span>
+              <h4 style="font-size: 1.4rem; color: #fff; margin-top: 4px;">Scenario B-002: Concurrent Basin Deficit</h4>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 6px;">180-day synchronized window across Corpus Christi, Victoria & San Antonio. Retained rainfall: 60%.</p>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div class="metric-box">
+                <div class="metric-label">Stage 4 Breach</div>
+                <div class="metric-val" style="color: #f87171;">74 Days</div>
+                <div class="metric-sub">Critical emergency threshold</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Pump Cavitation</div>
+                <div class="metric-val" style="color: #fbbf24;">118 Days</div>
+                <div class="metric-sub">75k Ac-Ft physical dead pool</div>
+              </div>
+            </div>
+          </div>
+          <div class="metric-box" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div class="metric-label">Policy Intervention Test</div>
+              <div style="font-size: 1.1rem; font-weight: 700; color: #fff; margin: 8px 0;">Mandatory 30% Industrial Curtailment</div>
+              <p style="font-size: 0.85rem; color: var(--text-muted);">Simulating curtailment of heavy industrial users under Fair Water Charter Amendment.</p>
+            </div>
+            <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid var(--border-accent); border-radius: 8px; padding: 12px; margin-top: 16px;">
+              <div style="font-size: 0.8rem; color: var(--accent-cyan); font-weight: 700;">RESERVOIR EXTENSION GAIN</div>
+              <div style="font-size: 1.6rem; font-weight: 800; color: #38bdf8;">+92 Days</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Pushes intake pump failure past winter recharge</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem & Context Section -->
+  <section id="problem">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">The 2026 Crisis</div>
+        <h2>Why South Texas Reached the Brink</h2>
+        <p>Across 25 years and five consecutive State Water Plans, Texas planners never projected a municipal water shortage in the 2020s. Here is why the crisis happened.</p>
+      </div>
+      <div class="grid-3">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/></svg>
+          </div>
+          <h3>7.7% Reservoir Capacity</h3>
+          <p>In mid-April 2026, Lake Corpus Christi and Choke Canyon plummeted to 7.7%, breaching the 75,000 acre-foot safe-yield reserve where intake pumps cavitate and gravity flow fails.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h6zM5 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H5z"/></svg>
+          </div>
+          <h3>The 2015 State Model Freeze</h3>
+          <p>Official Texas Water Availability Models (WAM) were granted a budget variance freezing hydrology at 2015. State tools were legally and technically blind to the recent decade-long mega-drought.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.94-.8-2.131-1.718H4z"/></svg>
+          </div>
+          <h3>The $50k Industry Barrier</h3>
+          <p>Rural Water Control Districts (WCIDs) facing emergency drought can't wait 6 months and pay $50,000 for consulting models, while un-audited Excel sheets invite catastrophic formula errors.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Core Capabilities -->
+  <section id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Core Capabilities</div>
+        <h2>Engineered for Transparent Decision-Making</h2>
+        <p>A deterministic screening engine paired with explainable machine learning and cryptographic audit trails.</p>
+      </div>
+      <div class="grid-3">
+        <div class="feature-card">
+          <h3>Deterministic Scenario Engine</h3>
+          <p>Resamples synchronized multi-station historical windows (NOAA GHCN-Daily 1991–2025). Zero synthetic rain; zero fabricated days. Scales precipitation while strictly maintaining spatial concurrence.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Unsupervised K-Means AI</h3>
+          <p>Maps 300 candidate droughts into an 8-dimensional hydrologic feature space (deficit, duration, concurrence, summer timing, dry-spell runs). Clusters candidates into 6 non-redundant archetypes.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Mass-Conserving Simulation</h3>
+          <p>Simulates multi-reservoir storage drawdowns, evaporation, and municipal intake cavitation with strict physical mass conservation (numerical error |Error| < 10⁻⁶ Ac-Ft).</p>
+        </div>
+        <div class="feature-card">
+          <h3>Demand Equity Modeling</h3>
+          <p>Test policy interventions: evaluate the controversial Drought Surcharge Exemption Fee (DSEF) vs. mandatory industrial curtailment vs. residential Stage 3 restrictions.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Crop & Wildfire Interoperability</h3>
+          <p>Computes daily crop evapotranspiration (ETc = ETo × Kc) across South Texas cash crops (cotton, sorghum, corn) and tracks deep soil moisture via Keetch-Byram Drought Index (KBDI).</p>
+        </div>
+        <div class="feature-card">
+          <h3>Cryptographic Audit Trail</h3>
+          <p>Every edit, multiplier, and conflict disposition invalidates previous approvals and compiles into a verifiable .zip bundle with SHA-256 manifests and publication-ready PDF briefs.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Installer Spotlight Section -->
+  <section id="installer">
+    <div class="container">
+      <div class="spotlight-box">
+        <div class="spotlight-text">
+          <div class="section-tag">Zero-Friction Distribution</div>
+          <h3>The 1-Click Offline Installer</h3>
+          <p style="color: var(--text-muted); font-size: 1.05rem;">
+            Rural water operators shouldn't need a computer science degree to evaluate drought risk. We compiled the entire BASIN stack into a single, standalone 191 MB native Windows setup wizard.
+          </p>
+          <ul class="spotlight-steps">
+            <li>
+              <div class="step-num">1</div>
+              <div><strong>Download & Double-Click:</strong> Run <code>Setup-BASIN.exe</code>. No Python, no Git, and no command line required.</div>
+            </li>
+            <li>
+              <div class="step-num">2</div>
+              <div><strong>Zero Admin Privileges:</strong> Installs cleanly to <code>%LOCALAPPDATA%\Programs\BASIN</code> without IT firewall blockers.</div>
+            </li>
+            <li>
+              <div class="step-num">3</div>
+              <div><strong>Launches in Native Window:</strong> Opens immediately in an accelerated WebView2 desktop window with 35 years of NOAA data pre-indexed.</div>
+            </li>
+          </ul>
+          <a href="https://github.com/nothing2me/basin/releases" class="btn btn-primary btn-lg" target="_blank">
+            Download Setup-BASIN.exe (191 MB)
+          </a>
+        </div>
+        <div>
+          <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+              <span style="font-weight: 700; color: #fff;">Setup-BASIN.exe Spec</span>
+              <span style="font-size: 0.8rem; color: var(--accent-cyan); font-family: var(--font-mono);">v1.0.0-PROD</span>
+            </div>
+            <div style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.8;">
+              <div>• <strong>Payload:</strong> Isolated CPython 3.12 + Wheelhouse</div>
+              <div>• <strong>Climate DB:</strong> 38,352 Verified NOAA Station Rows</div>
+              <div>• <strong>Interface:</strong> Native WebView2 + Streamlit Engine</div>
+              <div>• <strong>Size:</strong> 191.3 MB (Self-Extracting Archive)</div>
+              <div>• <strong>Dependencies:</strong> 0 External Internet Calls</div>
+              <div>• <strong>License:</strong> MIT Open Source</div>
+            </div>
+            <div class="code-box" style="margin-top: 20px; font-size: 0.8rem;">
+              SHA-256: e8d4f291...38bdf8 (Verified)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Technical Documentation & Explanation Section -->
+  <section id="technical-docs">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Engineering Documentation</div>
+        <h2>Technical Specifications & Architecture</h2>
+        <p>Transparent equations, data pipelines, and scientific boundary definitions for hydrologists and technical judges.</p>
+      </div>
+
+      <div class="docs-container">
+        <!-- System Pipeline -->
+        <div class="doc-block">
+          <h3>
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/></svg>
+            1. End-to-End Data Pipeline Architecture
+          </h3>
+          <p>BASIN operates as a strictly bounded L0/L1 screening pipeline that bridges observational meteorology and formal hydrologic reservoir yield modeling:</p>
+          <div class="code-box">
+[NOAA GHCN-Daily Snapshot 1991–2025] ──► [Synchronized Window Resampling (PCG64)]
+                                                │
+                                                ▼
+[8D Feature Vectorization] ──────────────► [Local K-Means Clustering (k=6)]
+                                                │
+                                                ▼
+[Shortlist Exemplar Selection] ──────────► [Mass-Conserving Storage Simulation]
+                                                │
+                                                ▼
+[Cryptographic Replay Verifier] ─────────► [PDF Executive Brief & Verified ZIP]
+          </div>
+        </div>
+
+        <!-- 8D Hydrologic Space -->
+        <div class="doc-block">
+          <h3>2. Mathematical Formulation: 8D Hydrologic Clustering</h3>
+          <p>Rather than cherry-picking arbitrary worst cases, candidate drought windows are projected into an 8-dimensional normalized hydrologic feature space \(\mathbf{x}_i \in \mathbb{R}^8\) before unsupervised grouping:</p>
+          <div class="math-card">
+            x_i = [ Deficit / E[Rain], Duration / 365, Concurrence, SummerFraction, MaxDrySpell / 365, PeakSeasonRatio, StationSkew, VolumetricSeverity ]
+          </div>
+          <p>
+            A deterministic K-Means model partitions the 300 candidates into \(k=6\) archetypes (e.g., acute summer flash drought, chronic multi-year drying, localized sub-basin drop). The cluster exemplar nearest each centroid \(\mu_k\) is selected for the shortlist.
+          </p>
+        </div>
+
+        <!-- Water Balance -->
+        <div class="doc-block">
+          <h3>3. Mass-Conserving Reservoir Balance Equation</h3>
+          <p>Storage drawdown simulations strictly enforce discrete daily mass conservation across the multi-reservoir network:</p>
+          <div class="math-card">
+            S_{t} = S_{t-1} + I_t(R_t) - E_t(S_{t-1}) - D_t(\text{policy}) - \text{Spill}_t
+          </div>
+          <p>Where \(S_t\) is storage volume, \(I_t\) is inflow driven by stressed rainfall \(R_t\), \(E_t\) is net lake-surface evaporation, and \(D_t\) is sector-curtailed municipal/industrial demand. Simulations enforce: \(\sum |\text{Error}| < 10^{-6}\) acre-feet.</p>
+        </div>
+
+        <!-- Dual AI Subsystem -->
+        <div class="doc-block">
+          <h3>4. Dual AI Subsystem & Zero-Hallucination Assistant</h3>
+          <p>BASIN decouples conversational natural language processing from hydrologic calculation:</p>
+          <ul style="margin: 14px 0 0 24px; line-height: 1.8;">
+            <li><strong>The Core Statistical AI:</strong> Unsupervised Scikit-Learn K-Means grouping over the 8D feature space.</li>
+            <li><strong>The Interface Assistant:</strong> An embedded, SHA-256 pinned local model (<strong>Qwen-2.5-3B-Instruct GGUF</strong>) running on CPU with AVX2 acceleration via <code>llama-cpp-python</code>.</li>
+            <li><strong>Deterministic Tool Binding:</strong> The language model never computes numbers. It maps user queries into <strong>13 registered Python calculation tools</strong> (e.g., <code>explain_ranking</code>, <code>check_concurrence</code>, <code>run_sensitivity</code>) with strict parameter validation.</li>
+          </ul>
+        </div>
+
+        <!-- Legal & PE Boundary -->
+        <div class="doc-block">
+          <h3>5. Texas Engineering Practice Act (§ 1001) Compliance</h3>
+          <p>Under Texas law, un-licensed software cannot issue binding water plan adequacy certifications. BASIN is engineered around strict scientific contracts:</p>
+          <div class="math-card">
+            Contract Status: Output contains NO statutory "safe/unsafe" verdict fields.
+            Output Class: Agile L0/L1 Screening Workbench for licensed P.E. review.
+          </div>
+          <p>All reports explicitly document input assumptions, airport station proxy boundaries, and reserve limits, serving as an auditable technical handoff directly ingestible into Texas WAM Run 3 and USACE HEC-ResSim.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Competition Differentiator Table -->
+  <section id="comparison">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Comparison</div>
+        <h2>How BASIN Compares to Existing Alternatives</h2>
+        <p>Bridging the gap between multi-million dollar engineering models and fragile spreadsheets.</p>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th>Evaluation Metric</th>
+              <th>Enterprise Simulators (WAM / HEC-ResSim)</th>
+              <th>Ad-Hoc Spreadsheets</th>
+              <th>BASIN (Our Solution)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Turnaround Time</strong></td>
+              <td>3 to 6 Months</td>
+              <td>1 to 3 Weeks</td>
+              <td class="check-yes">Under 5 Minutes</td>
+            </tr>
+            <tr>
+              <td><strong>Deployment Cost</strong></td>
+              <td>$50,000 – $100,000</td>
+              <td>Free</td>
+              <td class="check-yes">100% Free & Open Source</td>
+            </tr>
+            <tr>
+              <td><strong>Data Currency</strong></td>
+              <td>Frozen at 2015 Hydrology</td>
+              <td>Manual copy-pasting</td>
+              <td class="check-yes">1991–2025 NOAA GHCN-Daily</td>
+            </tr>
+            <tr>
+              <td><strong>Auditability & Provenance</strong></td>
+              <td>Formal consulting reports</td>
+              <td class="check-no">Zero audit trail / Fragile formulas</td>
+              <td class="check-yes">Cryptographic SHA-256 Manifest</td>
+            </tr>
+            <tr>
+              <td><strong>Cloud / Telemetry Footprint</strong></td>
+              <td>Proprietary server licenses</td>
+              <td>Local</td>
+              <td class="check-yes">100% Air-Gapped / Zero Cloud</td>
+            </tr>
+            <tr>
+              <td><strong>Ease of Use for Rural Districts</strong></td>
+              <td>Requires Ph.D. Hydrologist</td>
+              <td>Prone to breaking</td>
+              <td class="check-yes">1-Click Windows Setup Wizard</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-links">
+        <a href="https://github.com/nothing2me/basin" target="_blank">GitHub Repository</a>
+        <a href="https://github.com/nothing2me/basin/releases" target="_blank">Releases & Installer</a>
+        <a href="https://github.com/nothing2me/basin/blob/main/LICENSE" target="_blank">MIT License</a>
+        <a href="https://github.com/nothing2me/basin/blob/main/docs/methodology.md" target="_blank">Methodology</a>
+      </div>
+      <p style="margin-bottom: 8px;">
+        <strong>Team NoMiMo:</strong> Noah Wilborn • Mohammed Asad Khan • Misha Stegall
+      </p>
+      <p style="margin-bottom: 16px;">
+        Texas A&M University–Corpus Christi • Finalist in Zoho's <em>From The Ground Up AI Hackathon 2026</em>
+      </p>
+      <p style="font-size: 0.8rem; color: #4b5563;">
+        Disclaimer: BASIN is an agile L0/L1 screening workbench designed for decision-support and technical handoff. It does not replace statutory water rights accounting or licensed professional engineering analysis.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
