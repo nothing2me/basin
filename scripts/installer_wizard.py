@@ -6,6 +6,7 @@ Can run as a GUI wizard or headless with --silent / /S.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import os
 import subprocess
 import sys
@@ -22,6 +23,38 @@ if sys.stderr is None:
     sys.stderr = open(os.devnull, "w", encoding="utf-8")
 
 DEFAULT_INSTALL_DIR = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))) / "Programs" / "BASIN"
+
+
+def run_native_fallback():
+    """Install with Win32 dialogs when tkinter is unavailable in the frozen build."""
+    user32 = ctypes.windll.user32
+    message = (
+        "Install BASIN Drought Scenario Workbench?\n\n"
+        f"Destination:\n{DEFAULT_INSTALL_DIR}\n\n"
+        "The installer includes its own Python runtime and works offline."
+    )
+    # MB_OKCANCEL | MB_ICONINFORMATION
+    if user32.MessageBoxW(0, message, "BASIN Setup", 0x41) != 1:
+        return
+
+    try:
+        perform_install(DEFAULT_INSTALL_DIR)
+    except Exception as exc:
+        user32.MessageBoxW(
+            0,
+            f"BASIN could not be installed:\n\n{exc}",
+            "BASIN Setup Error",
+            0x10,  # MB_ICONERROR
+        )
+        raise
+
+    user32.MessageBoxW(
+        0,
+        f"BASIN was installed successfully to:\n\n{DEFAULT_INSTALL_DIR}",
+        "BASIN Setup Complete",
+        0x40,  # MB_ICONINFORMATION
+    )
+    subprocess.Popen([str(DEFAULT_INSTALL_DIR / "BASIN.exe")], cwd=str(DEFAULT_INSTALL_DIR))
 
 
 def get_payload_path() -> Path:
@@ -84,7 +117,13 @@ def register_uninstaller(install_dir: Path):
         print(f"[WARN] Failed to write registry uninstaller: {ex}", flush=True)
 
 
-def perform_install(install_dir: Path, desktop_shortcut: bool = True, startmenu_shortcut: bool = True, progress_cb=None):
+def perform_install(
+    install_dir: Path,
+    desktop_shortcut: bool = True,
+    startmenu_shortcut: bool = True,
+    progress_cb=None,
+    register_app: bool = True,
+):
     """Extract payload archive and configure shortcuts and uninstaller."""
     payload_zip = get_payload_path()
     install_dir.mkdir(parents=True, exist_ok=True)
@@ -115,7 +154,8 @@ def perform_install(install_dir: Path, desktop_shortcut: bool = True, startmenu_
         programs_dir = appdata_dir / "Microsoft" / "Windows" / "Start Menu" / "Programs"
         create_shortcut(exe_path, programs_dir / "BASIN Drought Workbench.lnk", icon_path, install_dir)
 
-    register_uninstaller(install_dir)
+    if register_app:
+        register_uninstaller(install_dir)
 
     if progress_cb:
         progress_cb(100, "Installation complete.")
@@ -278,10 +318,20 @@ def main():
             target_dir = Path(sys.argv[idx + 1])
 
     if is_silent:
-        perform_install(target_dir)
+        no_shortcuts = "--no-shortcuts" in sys.argv
+        no_register = "--no-register" in sys.argv
+        perform_install(
+            target_dir,
+            desktop_shortcut=not no_shortcuts,
+            startmenu_shortcut=not no_shortcuts,
+            register_app=not no_register,
+        )
         sys.exit(0)
 
-    run_gui()
+    try:
+        run_gui()
+    except (ImportError, ModuleNotFoundError):
+        run_native_fallback()
 
 
 if __name__ == "__main__":

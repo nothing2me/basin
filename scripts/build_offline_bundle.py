@@ -14,6 +14,22 @@ BUNDLE_DIR = DIST_DIR / "BASIN"
 RUNTIME_DIR = BUNDLE_DIR / "runtime"
 PAYLOAD_ZIP = DIST_DIR / "basin_payload.zip"
 
+ROOT_RUNTIME_FILES = [
+    "app.py",
+    "basin_theme.py",
+    "basin_ui.py",
+    "README.md",
+    "LICENSE",
+    "requirements.txt",
+]
+RUNTIME_DIRECTORIES = ["basin_core", "assets", "data", ".streamlit", "static"]
+RUNTIME_SUPPORT_FILES = [
+    "docs/methodology.md",
+    "docs/export_schema.md",
+    "scripts/replay_bundle.py",
+    "models/manifest.json",
+]
+
 
 def log(msg: str):
     print(f"[OFFLINE-BUILD] {msg}", flush=True)
@@ -93,6 +109,7 @@ def copy_runtime():
 def copy_application_files():
     """Copy application scripts, assets, data, and configs into BUNDLE_DIR."""
     log(f"Copying application files into {BUNDLE_DIR}...")
+    BUNDLE_DIR.mkdir(parents=True, exist_ok=True)
     
     # 1. Native launcher BASIN.exe
     launcher_exe = ROOT / "BASIN.exe"
@@ -102,12 +119,15 @@ def copy_application_files():
         build_exe()
     shutil.copy2(launcher_exe, BUNDLE_DIR / "BASIN.exe")
 
-    # 2. Root Python scripts
-    for pyfile in ["app.py", "basin_theme.py", "basin_ui.py"]:
-        shutil.copy2(ROOT / pyfile, BUNDLE_DIR / pyfile)
+    # 2. Root files used by the app and its reproducibility manifest.
+    for relative in ROOT_RUNTIME_FILES:
+        src = ROOT / relative
+        if not src.is_file():
+            raise FileNotFoundError(f"Required BASIN runtime file missing: {src}")
+        shutil.copy2(src, BUNDLE_DIR / relative)
 
     # 3. Directories
-    for d in ["basin_core", "assets", "data", ".streamlit", "static"]:
+    for d in RUNTIME_DIRECTORIES:
         src = ROOT / d
         dst = BUNDLE_DIR / d
         if src.exists():
@@ -115,11 +135,16 @@ def copy_application_files():
                 shutil.rmtree(dst, ignore_errors=True)
             shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
-    # 4. Readme and license
-    for doc in ["README.md", "LICENSE"]:
-        src = ROOT / doc
-        if src.exists():
-            shutil.copy2(src, BUNDLE_DIR / doc)
+    # 4. Support files loaded at runtime by downloads, verified exports, and
+    # optional-model provenance checks. Keep this allowlist explicit so private
+    # working documents and model weights are never swept into the installer.
+    for relative in RUNTIME_SUPPORT_FILES:
+        src = ROOT / relative
+        if not src.is_file():
+            raise FileNotFoundError(f"Required BASIN support file missing: {src}")
+        dst = BUNDLE_DIR / relative
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
 
     # 5. Create uninstall.bat
     uninstall_bat = BUNDLE_DIR / "uninstall.bat"
