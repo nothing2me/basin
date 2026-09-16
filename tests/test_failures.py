@@ -76,6 +76,9 @@ def test_evidence_conflict_ui_workflow(tmp_path, monkeypatch):
     assert restored.conflicts == w.conflicts
     for identifier in w.selected:
         next(s for s in app.selectbox if s.label == "Scenario").set_value(identifier).run()
+        next(t for t in app.text_area if t.label == "Review note").set_value(
+            "Reviewed rainfall source and selected this scenario for handoff."
+        ).run()
         next(b for b in app.button if b.label == "Include").click().run()
     app.sidebar.radio[0].set_value("Exports").run()
     assert any("unresolved evidence" in e.value for e in app.warning)

@@ -95,6 +95,7 @@ def test_custom_gauge_session_save_and_reload(base_source, tmp_path):
     workspace = Workspace(aug_source, params, size=3)
     assert len(workspace.scenarios) == 10
     assert workspace.reference.stations == ["FARM_GAUGE"]
+    assert workspace.has_custom_data is True
     
     # Save the session
     session_file = workspace.save(tmp_path)
@@ -176,3 +177,19 @@ def test_custom_gauge_export_bundle_and_verify(base_source):
     report = verify_bundle(bundle_bytes)
     assert report["verified"] is True
     assert report["scenarios_replayed"] == 3
+
+
+def test_custom_source_without_comparison_record_still_requires_consent(base_source):
+    dates = pd.date_range("2020-01-01", "2022-12-31")
+    aug_source = base_source.with_custom_station(
+        "CONSENT_GAUGE", "Consent Gauge", pd.Series(1.5, index=dates)
+    )
+    workspace = Workspace(
+        aug_source,
+        ScenarioParams(stations=("CONSENT_GAUGE",), durations=(90,), months=(1, 4), candidates=10, seed=42),
+        size=3,
+    )
+    assert workspace.custom_uploads == []
+    assert workspace.has_custom_data is True
+    with pytest.raises(ValueError, match="Explicit consent"):
+        workspace.record(include_custom=False)

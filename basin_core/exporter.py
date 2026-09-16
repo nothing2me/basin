@@ -62,6 +62,13 @@ def text_cell(value):
     return str(value).replace('|', '\\|').replace('\n', ' ').replace('\r', ' ').replace('<', '&lt;').replace('>', '&gt;')
 
 
+def review_decision_mode(scenario) -> str:
+    for event in reversed(getattr(scenario, "history", [])):
+        if event.get("action") == "accepted" and event.get("revision") == scenario.revision:
+            return event.get("decision_mode", "individual")
+    return "individual"
+
+
 def generate_brief(workspace, accepted):
     total = sum(workspace.weights.values())
     context = getattr(workspace, "analysis_context", None)
@@ -87,11 +94,11 @@ def generate_brief(workspace, accepted):
     lines += [f'- {k.title()}: {v / total:.1%} (raw weight {v})' for k, v in workspace.weights.items()]
     lines += ['', 'Approval applies to rainfall content; current weights may differ from weights at approval. The shortlist changes only on an explicit rebuild or manual swap.', '',
               '## Accepted rainfall revisions', '',
-              '| Scenario | Revision | Days | Net deficit (mm/station) | Net Deficit (in) | Station stress fraction | Reference n | Source window |',
-              '|---|---|---|---|---|---|---|---|']
+              '| Scenario | Revision | Decision mode | Days | Net deficit (mm/station) | Net Deficit (in) | Station stress fraction | Reference n | Source window |',
+              '|---|---|---|---|---|---|---|---|---|']
     for s in accepted:
         f, p = s.features, s.provenance
-        lines.append(f"| {s.id} | {s.revision} | {f['duration_days']} | {f['deficit_mm']:.2f} | {f['deficit_mm']/25.4:.2f} | {f['concurrence']:.1%} | {f['benchmark_n']} | {p['source_start']} – {p['source_end']} |")
+        lines.append(f"| {s.id} | {s.revision} | {review_decision_mode(s)} | {f['duration_days']} | {f['deficit_mm']:.2f} | {f['deficit_mm']/25.4:.2f} | {f['concurrence']:.1%} | {f['benchmark_n']} | {p['source_start']} – {p['source_end']} |")
     lines.append('')
     for s in accepted:
         lines.append(f"Evidence for {s.id}: " + ', '.join(workspace.evidence_refs[s.id]))
@@ -171,14 +178,10 @@ def generate_brief(workspace, accepted):
 
 
 def summary_record(s):
-    record = {'scenario_id': s.id, 'revision': s.revision, 'priority_score': s.score,
-              'modeling_scope': 'HISTORICAL_PRECIP_DEFICIT_ONLY — NOT_A_YIELD_FORECAST',
-              **{k: v for k, v in s.features.items() if not isinstance(v, dict)}}
-    if getattr(s, "ai_typology", ""):
-        record["ai_typology"] = s.ai_typology
-    if getattr(s, "ai_narrative", ""):
-        record["ai_narrative"] = s.ai_narrative
-    return record
+    return {'scenario_id': s.id, 'revision': s.revision, 'priority_score': s.score,
+            'decision_mode': review_decision_mode(s),
+            'modeling_scope': 'HISTORICAL_PRECIP_DEFICIT_ONLY — NOT_A_YIELD_FORECAST',
+            **{k: v for k, v in s.features.items() if not isinstance(v, dict)}}
 
 
 def rainfall_rows(s):
@@ -301,6 +304,19 @@ def _verify(payload):
         # historical layout; all numerical fields still undergo the same replay.
         if manifest['schema_version'] in ('2.0', '2.1') and 'modeling_scope' not in summary.columns:
             expected_summary = [{k: v for k, v in row.items() if k != 'modeling_scope'} for row in expected_summary]
+        # Decision mode became a public, non-sensitive audit field after the original
+        # 2.x packet layouts. Its absence identifies an older packet; current exports
+        # always include it.
+        if 'decision_mode' not in summary.columns:
+            expected_summary = [{k: v for k, v in row.items() if k != 'decision_mode'} for row in expected_summary]
+        # A short-lived build appended generated narrative columns. Preserve the ability
+        # to verify those already-created packets without emitting the columns again.
+        if {'ai_typology', 'ai_narrative'} <= set(summary.columns):
+            expected_summary = [
+                {**row, 'ai_typology': getattr(s, 'ai_typology', ''),
+                 'ai_narrative': getattr(s, 'ai_narrative', '')}
+                for row, s in zip(expected_summary, accepted)
+            ]
         if len(summary) != len(accepted) or list(summary.columns) != list(expected_summary[0]):
             raise ValueError('Shortlist summary inventory mismatch')
         for row, wanted in zip(summary.to_dict('records'), expected_summary): compare_values(row, wanted, 'Shortlist summary')

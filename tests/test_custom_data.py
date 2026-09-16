@@ -26,7 +26,7 @@ def attach(w, raw=RAW, **changes):
 
 def accept_all(w):
     for identifier in w.selected:
-        w.get(identifier).review(True)
+        w.get(identifier).review(True, "Test acceptance rationale")
 
 
 def test_save_restore_originals_and_comparison(workspace, tmp_path):

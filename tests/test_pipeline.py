@@ -206,13 +206,13 @@ def test_custom_replacement_and_atomic_invalid_edit(workspace):
     workspace.edit(s.id, "custom replacement", replacement=replacement)
     assert s.revision == 2 and s.status == "unreviewed"
     for identifier in workspace.selected:
-        workspace.get(identifier).review(True)
+        workspace.get(identifier).review(True, "Test acceptance rationale")
     assert verify_bundle(export_bundle(workspace))["verified"]
 
 
 def test_cannot_mutate_approved_rainfall(workspace):
     for identifier in workspace.selected:
-        workspace.get(identifier).review(True)
+        workspace.get(identifier).review(True, "Test acceptance rationale")
     workspace.get(workspace.selected[0]).series.iloc[0, 0] += 1
     with pytest.raises(ValueError, match="changed"):
         export_bundle(workspace)
@@ -237,7 +237,7 @@ def test_offline_pipeline(source, monkeypatch):
     monkeypatch.setattr(socket, "create_connection", forbidden)
     w = Workspace(source, ScenarioParams(tuple(source.daily.columns), candidates=10), size=3)
     for identifier in w.selected:
-        w.get(identifier).review(True)
+        w.get(identifier).review(True, "Test acceptance rationale")
     assert verify_bundle(export_bundle(w))["verified"]
 
 

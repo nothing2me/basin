@@ -78,6 +78,9 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert not app.exception
     for identifier in list(w.selected):
         next(s for s in app.selectbox if s.label == "Scenario").set_value(identifier).run()
+        next(t for t in app.text_area if t.label == "Review note").set_value(
+            f"Reviewed rainfall source and selected scenario {identifier} for handoff."
+        ).run()
         next(b for b in app.button if b.label == "Include").click().run()
         assert not app.exception
     app.sidebar.radio[0].set_value("Exports").run()
@@ -165,6 +168,10 @@ def test_bottom_nav_syncs_sidebar_radio(tmp_path, monkeypatch):
 
     # Review each current revision and advance through the remaining shortlist.
     for index in range(len(app.session_state.workspace.selected)):
+        current_id = app.session_state.inspect_id
+        next(t for t in app.text_area if t.label == "Review note").set_value(
+            f"Reviewed rainfall source and selected scenario {current_id} for handoff."
+        ).run()
         next(b for b in app.button if b.label == "Include").click().run()
         if index + 1 < len(app.session_state.workspace.selected):
             before_id = app.session_state.inspect_id
@@ -324,7 +331,7 @@ def test_custom_colors_reset_and_accessible_charts(tmp_path, monkeypatch):
     assert before == [(s.id, s.score, s.status) for s in workspace.scenarios]
 
 
-def test_ai_scenario_reviewer_prefilled_draft_and_narrative(tmp_path, monkeypatch):
+def test_review_uses_rainfall_summary_and_requires_human_note(tmp_path, monkeypatch):
     from streamlit.testing.v1 import AppTest
     from basin_core.workspace import Workspace
     original_save = Workspace.save
@@ -335,18 +342,80 @@ def test_ai_scenario_reviewer_prefilled_draft_and_narrative(tmp_path, monkeypatc
     assert not app.exception
     assert app.session_state.page == "Review"
 
-    # Verify AI narrative is rendered
-    assert any("AI Operational Interpretation" in m.value for m in app.markdown)
+    assert any("Rainfall Screening Summary" in m.value for m in app.markdown)
+    assert not any("AI Operational Interpretation" in m.value for m in app.markdown)
 
-    # Verify Review note is pre-populated with the AI draft note
     review_area = next(t for t in app.text_area if t.label == "Review note")
-    assert "[Engineering Assessment]" in review_area.value
+    assert review_area.value == ""
+    assert next(b for b in app.button if b.label == "Include").disabled
 
-    # Verify we can accept with the pre-filled note directly
     inspected = app.session_state.inspect_id
+    review_area.set_value("Selected for hydrologist review because the source window and station coverage match the screening question.").run()
     next(b for b in app.button if b.label == "Include").click().run()
     assert not app.exception
     assert app.session_state.workspace.get(inspected).status == "accepted"
     last_event = app.session_state.workspace.get(inspected).history[-1]
-    assert "[Engineering Assessment]" in last_event["private_note"]
+    assert last_event["private_note"].startswith("Selected for hydrologist review")
+    assert "Engineering Assessment" not in last_event["private_note"]
+
+
+def test_batch_accept_requires_and_records_specific_rationale(tmp_path, monkeypatch):
+    from basin_core.workspace import Workspace
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    next(b for b in app.button if b.label == "Try an example").click().run()
+    app.sidebar.radio[0].set_value("Exports").run()
+
+    batch_button = next(b for b in app.button if "Accept all shortlisted" in b.label)
+    assert batch_button.disabled
+    rationale = next(t for t in app.text_input if t.label == "Batch review rationale")
+    rationale.set_value("All six source windows answer the same documented screening question.").run()
+    batch_button = next(b for b in app.button if "Accept all shortlisted" in b.label)
+    assert not batch_button.disabled
+    batch_button.click().run()
+
+    workspace = app.session_state.workspace
+    for scenario_id in workspace.selected:
+        event = workspace.get(scenario_id).history[-1]
+        assert event["private_note"].startswith("included by batch decision:")
+        assert event["decision_mode"] == "batch"
+
+
+def test_activated_gauge_gets_consent_control_without_comparison_record(tmp_path, monkeypatch):
+    import pandas as pd
+    from basin_core.data import CachedSource
+    from basin_core.engine import ScenarioParams
+    from basin_core.workspace import Workspace
+
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    base = CachedSource()
+    custom = base.with_custom_station(
+        "LOCAL_UI_CONSENT",
+        "UI Consent Gauge",
+        pd.Series(1.5, index=pd.date_range("2020-01-01", "2022-12-31")),
+    )
+    workspace = Workspace(
+        custom,
+        ScenarioParams(("LOCAL_UI_CONSENT",), (90,), (1, 4), candidates=10, seed=42),
+        size=3,
+    )
+    for scenario_id in workspace.selected:
+        workspace.get(scenario_id).review(True, "Reviewed local-gauge rainfall for recipient handoff.")
+    assert workspace.custom_uploads == [] and workspace.has_custom_data
+
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    app.session_state.workspace = workspace
+    app.session_state.custom_source = custom
+    app.run()
+    app.sidebar.radio[0].set_value("Exports").run()
+
+    consent = next(c for c in app.checkbox if c.label.startswith("Include custom numerical inputs"))
+    build = next(b for b in app.button if b.label == "Build verified export")
+    assert build.disabled
+    consent.check().run()
+    build = next(b for b in app.button if b.label == "Build verified export")
+    assert not build.disabled
 

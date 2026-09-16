@@ -255,3 +255,13 @@ def test_non_pdf_browser_output_is_not_offered_as_success(approved, monkeypatch)
     outcome = render_with_status(approved, approved.exportable())
     assert outcome.degraded and outcome.renderer == "vector_fallback"
     assert outcome.pdf_bytes.startswith(b"%PDF-")
+
+
+def test_static_chart_timeout_returns_control(monkeypatch):
+    pdf_report._plotly_png_from_json.cache_clear()
+
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], kwargs.get("timeout", 0))
+
+    monkeypatch.setattr(pdf_report.subprocess, "run", timeout)
+    assert pdf_report._plotly_png_from_json("{}", 100, 100) is None

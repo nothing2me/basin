@@ -193,54 +193,35 @@ MONTH_NAMES = {
 
 
 def classify_drought_typology(features: dict) -> dict[str, str]:
-    """Classify the hydrologic drought typology from physical scenario features."""
+    """Describe a rainfall pattern without inferring hydrologic consequences."""
     duration = features.get("duration_days", 90)
     onset = features.get("onset_month", 4)
     concurrence = features.get("concurrence", 0.0)
-    dry_spell = features.get("max_dry_days", 0)
     percentile = features.get("historical_percentile", 0.5)
 
-    # Typology Archetype
     if duration <= 90:
-        if dry_spell >= 35:
-            archetype = "Acute Flash Drought & Dry Run"
-        else:
-            archetype = "Seasonal Pulse Deficit"
+        archetype = "Short rainfall-stress window"
     elif duration <= 210:
-        if onset in (4, 5, 6):
-            archetype = "Compound Spring-Summer Drought"
-        elif onset in (7, 8, 9):
-            archetype = "Acute Summer Heatwave Drought"
-        else:
-            archetype = "Multi-Season Catchment Deficit"
+        archetype = "Seasonal rainfall-stress window"
+    elif duration < 365:
+        archetype = "Multi-season rainfall-stress window"
     else:
-        archetype = "Chronic Multi-Year Drought"
+        archetype = "Extended rainfall-stress window"
 
-    # Primary Loss Driver
-    if onset in (5, 6, 7, 8) or features.get("high_priority_season_fraction", 0.0) > 0.5:
-        primary_driver = "Evaporative Drawdown & Baseflow Starvation"
-    elif onset in (3, 4, 5):
-        primary_driver = "Spring Inflow & Storage Refill Failure"
-    elif onset in (9, 10, 11):
-        primary_driver = "Fall Baseflow Recession & Soil Desiccation"
-    else:
-        primary_driver = "Winter Baseflow Suppression"
-
-    # Spatial Pattern
+    primary_driver = "Observed rainfall shortfall in the selected source window"
     if concurrence >= 0.65:
-        spatial_pattern = "Synchronous Basin-Wide Inflow Failure"
+        spatial_pattern = "Selected stations frequently stressed together"
     elif concurrence >= 0.35:
-        spatial_pattern = "Regional Tributary Stress"
+        spatial_pattern = "Selected stations sometimes stressed together"
     else:
-        spatial_pattern = "Localized Coastal Runoff Disconnect"
+        spatial_pattern = "Limited selected-station concurrence"
 
-    # Inflow Vulnerability Tag
-    if percentile >= 0.90 and concurrence >= 0.50:
-        vulnerability = "Critical Inflow Starvation"
+    if percentile >= 0.90:
+        vulnerability = "High relative rainfall shortfall"
     elif percentile >= 0.75:
-        vulnerability = "Elevated Regional Drawdown"
+        vulnerability = "Elevated relative rainfall shortfall"
     else:
-        vulnerability = "Moderate Operational Stress"
+        vulnerability = "Moderate relative rainfall shortfall"
 
     return {
         "archetype": archetype,
@@ -252,114 +233,42 @@ def classify_drought_typology(features: dict) -> dict[str, str]:
 
 
 def draft_engineering_review_note(scenario, workspace=None) -> str:
-    """Format an audit-grade, professional engineering review note for the scenario."""
+    """Return a factual review prompt, never a substitute for a human decision."""
     f = getattr(scenario, "features", {})
     duration = f.get("duration_days", 90)
     deficit_mm = f.get("deficit_mm", 0.0)
     deficit_in = deficit_mm / 25.4
     pct = f.get("historical_percentile", 0.0) * 100
     conc = f.get("concurrence", 0.0) * 100
-    dry_spell = f.get("max_dry_days", 0)
-    typo = classify_drought_typology(f)
-    onset_name = typo["onset_name"]
-
-    system_name = "regional storage"
-    if workspace is not None:
-        wss = getattr(workspace, "water_system_selection", None)
-        if wss and hasattr(wss, "config") and hasattr(wss.config, "name"):
-            system_name = wss.config.name
-
-    lines = [
-        f"[Engineering Assessment] Shortlisted as representative {typo['archetype'].lower()}.",
-        f"• Physical profile: {duration}-day window ({onset_name} onset) with {deficit_in:.2f} in ({deficit_mm:.1f} mm) basin shortfall (≥{pct:.0f}% historical severity) and {conc:.0f}% station concurrence.",
-        f"• Catchment impact: {dry_spell}-day dry spell suppresses tributary baseflow into upstream storage under {system_name}, coinciding with {typo['primary_driver'].lower()}.",
-        f"• Modeling intent: Hand off to hydrologic modeling (HEC-HMS / Texas WAM) to evaluate storage resilience and conservation trigger timing under {typo['spatial_pattern'].lower()}."
-    ]
-    return "\n".join(lines)
+    return (
+        "[Generated rainfall facts — replace with the reviewer's own rationale] "
+        f"{duration}-day window; {deficit_in:.2f} in ({deficit_mm:.1f} mm) average selected-station shortfall; "
+        f"matched-window rank {pct:.0f}%; selected-station concurrence {conc:.0f}%. "
+        "State whether the source gauges are suitable and why this pattern should or should not proceed to professional modeling."
+    )
 
 
 def generate_scenario_interpretation(scenario, workspace=None, use_llm: bool = True) -> dict:
-    """Generate plain-language operational narrative explaining the scenario outside raw numbers."""
-    import logging
-    logger = logging.getLogger(__name__)
+    """Generate an evidence-bounded rainfall summary.
 
+    ``use_llm`` remains as a compatibility argument for callers saved against
+    the earlier API. It is intentionally ignored: generated model prose is not
+    part of the verified scenario or human review record.
+    """
     f = getattr(scenario, "features", {})
-    duration = f.get("duration_days", 90)
-    deficit_mm = f.get("deficit_mm", 0.0)
-    deficit_in = deficit_mm / 25.4
-    pct = f.get("historical_percentile", 0.0) * 100
-    conc = f.get("concurrence", 0.0) * 100
-    dry_spell = f.get("max_dry_days", 0)
     typo = classify_drought_typology(f)
-    onset_name = typo["onset_name"]
-
-    system_name = "Choke Canyon Reservoir + Lake Corpus Christi"
-    if workspace is not None:
-        wss = getattr(workspace, "water_system_selection", None)
-        if wss and hasattr(wss, "config") and hasattr(wss.config, "name"):
-            system_name = wss.config.name
-
-    # Deterministic grounded narrative paragraphs explaining physical/operational meaning
-    p1 = (
-        f"This scenario represents a **{typo['archetype'].lower()}** beginning in **{onset_name}** spanning {duration} days. "
-        f"Outside of the raw {deficit_in:.2f}-inch rainfall shortfall, the critical physical dynamic is **{typo['spatial_pattern'].lower()}**: "
-        f"with **{conc:.0f}% station concurrence**, rainfall suppression is synchronized across the upper Nueces/Frio headwaters (San Antonio/Victoria) "
-        f"and the coastal bend (Corpus Christi). Rather than isolated dry patches, tributary streamflows are starved simultaneously, "
-        f"preventing regional runoff from reaching mainstem reservoir pools."
+    narrative = scenario_summary(f)
+    provenance = getattr(scenario, "provenance", {})
+    source_start, source_end = provenance.get("source_start"), provenance.get("source_end")
+    if source_start and source_end:
+        narrative += (
+            f" The constructed input uses the historical source window {source_start} to {source_end}; "
+            "those dates label the source record and are not a forecast."
+        )
+    narrative += (
+        " Rainfall alone does not establish streamflow, soil moisture, reservoir response, "
+        "legal restrictions, or catchment suitability."
     )
-
-    if dry_spell >= 30:
-        dry_text = f"An extended dry spell of **{dry_spell} consecutive days** (< 1 mm/day) desiccates the soil mantle into an impermeable crust, impairing future infiltration efficiency and exacerbating agricultural drought."
-    else:
-        dry_text = f"Intermittent low-volume precipitation events punctuate the record, but remain insufficient to satisfy soil moisture deficits or generate measurable reservoir inflow."
-
-    p2 = (
-        f"From an operational water management perspective, the primary risk driver is **{typo['primary_driver'].lower()}**. "
-        f"Because this shortfall intersects peak summer evaporation demand (often exceeding 0.35 inches/day in South Texas), "
-        f"combined storage under **{system_name}** faces accelerated drawdown without inflow replenishment. {dry_text} "
-        f"Screening this scenario ensures water planners and hydrologists evaluate whether municipal conservation triggers (Stage 2 / Stage 3) "
-        f"must be enacted earlier to protect critical reserves against compound tributary failure."
-    )
-
-    narrative = f"{p1}\n\n{p2}"
-    engine_used = "deterministic"
-
-    # Optional local Qwen refinement if runtime is ready
-    if use_llm:
-        try:
-            from basin_core.qwen_runtime import get_qwen_client
-            client = get_qwen_client()
-            if getattr(client, "status", None) == "ready":
-                messages = [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are the BASIN Senior Hydrologist. Synthesize a concise 2-paragraph operational and hydrologic interpretation "
-                            "of the provided rainfall drought scenario. Explain what this scenario means physically and operationally outside the raw numbers: "
-                            "focus on seasonal timing, tributary inflow starvation, evaporative drawdown, and reservoir risk. Do not hallucinate or change numbers."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Scenario: {getattr(scenario, 'id', 'B-001')}\n"
-                            f"Duration: {duration} days, Onset: {onset_name}\n"
-                            f"Net Shortfall: {deficit_in:.2f} in ({deficit_mm:.1f} mm), Historical Percentile: {pct:.0f}%\n"
-                            f"Concurrence: {conc:.0f}%, Longest Dry Run: {dry_spell} days\n"
-                            f"Typology: {typo['archetype']}, Spatial Pattern: {typo['spatial_pattern']}\n"
-                            f"Primary Loss Driver: {typo['primary_driver']}, Water System: {system_name}"
-                        )
-                    }
-                ]
-                resp = client.generate(messages, temperature=0.2, max_tokens=350, timeout=5.0)
-                content = resp.get("content", "").strip()
-                if content and not resp.get("cancelled") and len(content) > 100:
-                    narrative = content
-                    engine_used = "qwen"
-        except Exception as ex:
-            logger.debug("Qwen inference skipped for scenario narrative: %s", ex)
-
-    draft_note = draft_engineering_review_note(scenario, workspace)
 
     return {
         "typology": typo["archetype"],
@@ -367,17 +276,17 @@ def generate_scenario_interpretation(scenario, workspace=None, use_llm: bool = T
         "spatial_pattern": typo["spatial_pattern"],
         "vulnerability": typo["vulnerability"],
         "narrative": narrative,
-        "draft_note": draft_note,
-        "engine": engine_used,
+        "draft_note": "",
+        "engine": "deterministic-rainfall-summary-v1",
     }
 
 
 def attach_scenario_ai_interpretations(scenarios: list, workspace=None, use_llm: bool = True) -> None:
-    """Attach AI operational narratives and draft engineering notes to scenarios."""
+    """Compatibility helper for explicit, deterministic rainfall summaries."""
     for s in scenarios:
         if not getattr(s, "ai_narrative", ""):
             interp = generate_scenario_interpretation(s, workspace, use_llm=use_llm)
             s.ai_narrative = interp["narrative"]
-            s.ai_draft_note = interp["draft_note"]
+            s.ai_draft_note = ""
             s.ai_typology = interp["typology"]
 

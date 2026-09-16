@@ -27,7 +27,7 @@ def rewrite_bundle(payload, mutate):
 @pytest.fixture
 def approved(workspace):
     for identifier in workspace.selected:
-        workspace.get(identifier).review(True)
+        workspace.get(identifier).review(True, "Test acceptance rationale")
     return workspace
 
 

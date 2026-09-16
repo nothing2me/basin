@@ -66,8 +66,6 @@ class Workspace:
         self.simulation_reviews = {}
         self.water_system_selection = WaterSystemSelection.default()
         self.analysis_context = analysis_context or AnalysisContext.region_wide()
-        from basin_core.summary import attach_scenario_ai_interpretations
-        attach_scenario_ai_interpretations([s for s in self.scenarios if s.id in self.selected], self)
         elapsed = time.perf_counter() - wall
         self.footprint = {"wall_seconds": elapsed, "cpu_seconds": time.process_time() - cpu,
                           "process_rss_mib_at_end": psutil.Process().memory_info().rss / 1024**2,
@@ -81,11 +79,22 @@ class Workspace:
     def get(self, identifier):
         for scenario in self.scenarios:
             if scenario.id == identifier:
-                if not getattr(scenario, "ai_narrative", ""):
-                    from basin_core.summary import attach_scenario_ai_interpretations
-                    attach_scenario_ai_interpretations([scenario], self)
                 return scenario
         raise ValueError(f"Unknown scenario: {identifier}")
+
+    @property
+    def has_custom_data(self) -> bool:
+        """Whether this run depends on any user-supplied numerical source.
+
+        Activated gauges live in the source manifest even when the separate
+        comparison/evidence workflow was never used, so ``custom_uploads``
+        alone is not a sufficient privacy or export gate.
+        """
+        custom_stations = any(
+            station.get("custom")
+            for station in self.source.manifest.get("stations", [])
+        )
+        return bool(getattr(self, "custom_uploads", [])) or custom_stations
 
     def run_simulation(self, identifier: str, settings: SimulationSettings) -> dict:
         from basin_core.simulation import create_run
@@ -363,8 +372,6 @@ class Workspace:
     def rebuild_shortlist(self):
         self.selected = shortlist([s for s in self.scenarios if s.status != "rejected"], min(len(self.selected), sum(s.status != "rejected" for s in self.scenarios)))
         self.selection_history.append({"at": utc_now(), "action": "rebuild", "weights": self.weights.copy(), "selected": self.selected.copy(), "reasons": self._selection_reasons()})
-        from basin_core.summary import attach_scenario_ai_interpretations
-        attach_scenario_ai_interpretations([s for s in self.scenarios if s.id in self.selected], self)
 
     def _selection_reasons(self):
         eligible = sorted([s for s in self.scenarios if s.status != "rejected"], key=lambda s: (-s.score, s.id))
@@ -388,14 +395,10 @@ class Workspace:
             raise ValueError("Choose an eligible candidate outside the shortlist")
         self.selected[self.selected.index(old)] = new
         self.selection_history.append({"at": utc_now(), "action": "manual swap", "old": old, "new": new, "selected": self.selected.copy()})
-        from basin_core.summary import attach_scenario_ai_interpretations
-        attach_scenario_ai_interpretations([self.get(new)], self)
 
     def edit(self, identifier, note, factor=None, replacement=None):
         scenario = self.get(identifier)
         scenario.edit(self.reference, note, factor, replacement)
-        from basin_core.summary import attach_scenario_ai_interpretations
-        attach_scenario_ai_interpretations([scenario], self)
         # Preserve cluster stability across single-scenario edits:
         # Untouched scenarios retain their cluster assignments and group profiles;
         # the edited scenario retains its cluster identity to prevent global label flipping.
@@ -428,7 +431,7 @@ class Workspace:
     def record(self, include_notes=False, include_series=False, include_custom=False):
         validate_evidence(self.evidence, self.evidence_refs, self.conflicts, [s.id for s in self.scenarios])
         custom_stations = [s for s in self.source.manifest.get("stations", []) if s.get("custom")]
-        has_custom = bool(self.custom_uploads) or bool(custom_stations)
+        has_custom = self.has_custom_data
         if has_custom and not include_custom:
             raise ValueError("Explicit consent is required to include custom numerical data and source metadata")
         validate_records(self.custom_uploads, self.source)

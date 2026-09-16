@@ -21,8 +21,7 @@ from basin_core.simulation import SimulationSettings, describe_input_rainfall, o
 from basin_core.water_system import (WaterSource, WaterSystemConfig, SYSTEM_PRESETS,
                                      SYSTEM_ID_TO_LABEL, SYSTEM_LABEL_TO_ID, REGION_N_PRESET,
                                      DEFAULT_WATER_SYSTEM_ID)
-from basin_core.summary import (scenario_summary, reservoir_summary, format_rainfall_dual_explanation,
-                                 draft_engineering_review_note, attach_scenario_ai_interpretations)
+from basin_core.summary import scenario_summary, reservoir_summary, format_rainfall_dual_explanation
 from basin_core.review_preferences import (DATA_SOURCES, GOALS, GUIDANCE, GUIDED_TAB_NOTES,
                                            PRESENTATION_MODES,
                                            TAB_LABELS, ReviewPreferences, load_preferences,
@@ -1301,7 +1300,7 @@ TUTORIAL_STEPS = [
 def start_example(source, names, force=False, crisis_demo=False):
     """Open a reproducible example without approving any scenario."""
     curr_w = st.session_state.get("workspace")
-    if not force and curr_w and (any(s.status == "accepted" for s in curr_w.scenarios) or curr_w.custom_uploads):
+    if not force and curr_w and (any(s.status == "accepted" for s in curr_w.scenarios) or curr_w.has_custom_data):
         st.session_state.confirm_reset_example = "crisis" if crisis_demo else "standard"
         return
     st.session_state.pop("confirm_reset_example", None)
@@ -2318,8 +2317,6 @@ elif page == "Review":
         st.session_state.inspect_id = selected_id
         s = w.get(selected_id)
         f = s.features
-        if not getattr(s, "ai_narrative", ""):
-            attach_scenario_ai_interpretations([s], w)
         is_us = st.session_state.get("unit_mode", "us") == "us"
         unit_arg = "in" if is_us else "mm"
 
@@ -2356,11 +2353,8 @@ elif page == "Review":
             c_sc4.metric("Longest Dry Run", dry_val, "< 1 mm/day")
 
             with st.container(border=True):
-                typology = getattr(s, "ai_typology", "") or "Compound Multi-Season Drought"
-                st.markdown(f"**🤖 AI Operational Interpretation · {typology}**")
-                narrative = getattr(s, "ai_narrative", "")
-                if narrative:
-                    st.markdown(narrative)
+                st.markdown("**Rainfall Screening Summary**")
+                st.markdown(scenario_summary(f, names, unit_system=st.session_state.get("unit_mode", "us")))
                 st.markdown("---")
                 st.markdown("**Factual Construction & Climatological Baseline**")
                 st.markdown(f"• **Precipitation Baseline:** {construction}" + (" (Includes later rainfall edits; see revision history.)" if rainfall_edits else ""))
@@ -2383,7 +2377,6 @@ elif page == "Review":
                 for conflict in conflicts:
                     st.warning("Unresolved evidence issue: " + conflict['disagreement'])
                 note_key = f"note_{s.id}_{w.id}"
-                draft_note = getattr(s, "ai_draft_note", "")
                 if note_key not in st.session_state:
                     prior_note = None
                     if s.history:
@@ -2393,29 +2386,27 @@ elif page == "Review":
                                 break
                     if prior_note:
                         st.session_state[note_key] = prior_note
-                    elif draft_note:
-                        st.session_state[note_key] = draft_note
+                    else:
+                        st.session_state[note_key] = ""
 
                 note = st.text_area("Review note", key=note_key, height=100,
-                                    help="Record why you are including or excluding this revision. Pre-filled with the attached AI engineering draft note. Notes are private unless explicitly included during export.")
-                if draft_note and st.session_state.get(note_key) != draft_note:
-                    if st.button("↺ Reset note to initial AI draft", key=f"btn_reset_draft_{s.id}_{w.id}",
-                                 help="Revert the review note back to the automated AI engineering draft note"):
-                        st.session_state[note_key] = draft_note
-                        st.rerun()
+                                    help="Record your own reason for including or excluding this revision. Notes are private unless explicitly included during export.")
+                valid_review_note = len(note.strip()) >= 20
+                if not valid_review_note:
+                    st.caption("Add at least 20 characters of your own rationale to enable Include or Exclude.")
                 st.caption("Inclusion records your choice of rainfall content. It does not certify hydrologic validity or approve the storage experiment.")
                 if s.id not in w.selected:
                     st.info("This candidate is outside the shortlist. Use Edit Rainfall & Refine Shortlist below to replace an entry first.")
                 include_col, exclude_col = st.columns(2)
                 with include_col:
                     if st.button("Include", key=f"btn_accept_{s.id}_{s.revision}",
-                                 type="primary", width="stretch", disabled=s.id not in w.selected,
+                                 type="primary", width="stretch", disabled=s.id not in w.selected or not valid_review_note,
                                  help="Include this revision in the handoff."):
                         s.review(True, note)
                         save(w)
                         st.rerun()
                 with exclude_col:
-                    if st.button("Exclude", key=f"btn_reject_{s.id}_{s.revision}", width="stretch", disabled=s.id not in w.selected,
+                    if st.button("Exclude", key=f"btn_reject_{s.id}_{s.revision}", width="stretch", disabled=s.id not in w.selected or not valid_review_note,
                                  help="Exclude this revision from the handoff."):
                         try:
                             s.review(False, note)
@@ -2423,14 +2414,6 @@ elif page == "Review":
                             st.rerun()
                         except ValueError as error:
                             st.error(str(error))
-                if not simple_view:
-                    if st.button("⚡ Batch Action: Accept All", key=f"btn_batch_accept_shortlist_{w.id}",
-                                 help="Batch-accept all current shortlist scenarios with a standard review note", width="stretch", disabled=s.id not in w.selected):
-                        batch_note = note.strip() or "Accepted during holistic shortlist review."
-                        for sid in w.selected:
-                            w.get(sid).review(True, batch_note)
-                        save(w)
-                        st.rerun()
                 remaining = [i for i in pending if i != s.id]
                 st.button("Next scenario", disabled=not remaining,
                           on_click=open_review, args=(remaining[0] if remaining else s.id,), width="stretch")
@@ -3073,9 +3056,12 @@ elif page == "Exports":
             st.markdown("#### 1. Export Controls & Verification")
             share = st.checkbox("Include provider notes and free-text review notes", value=False, key=f"share_notes_{w.id}")
             share_custom = False
-            if w.custom_uploads:
+            if w.has_custom_data:
                 st.warning("This analysis contains custom evidence. Replay requires all saved normalized upload versions, station/location/source metadata and suitability rationale.")
-                share_custom = st.checkbox("Include custom numerical inputs and source metadata in this replayable export", key="custom_export_" + digest(w.custom_uploads))
+                share_custom = st.checkbox(
+                    "Include custom numerical inputs and source metadata in this replayable export",
+                    key="custom_export_" + digest({"uploads": w.custom_uploads, "snapshot": w.source.manifest.get("sha256")}),
+                )
 
             def report_token(accepted_scenarios):
                 return report_state_token({"id": w.id, "content": digest(w.record(share, include_custom=True))}, accepted_scenarios, share, share_custom, experiment_config)
@@ -3098,14 +3084,15 @@ elif page == "Exports":
                     col_a, col_b = st.columns([1, 1])
                     batch_rationale = col_a.text_input(
                         "Batch review rationale",
-                        value="Batch-accepted for comparative screening during initial review",
+                        value="",
                         key="input_batch_rationale",
-                        help="Recorded in audit log for transparency that these scenarios were accepted as a batch rather than individually examined."
+                        help="Explain why one decision applies to this entire shortlist (minimum 20 characters). The audit identifies this as a batch decision."
                     )
-                    if col_a.button("✅ Accept all shortlisted with batch decision", key="btn_accept_all_for_export", type="primary"):
+                    valid_batch_rationale = len(batch_rationale.strip()) >= 20
+                    if col_a.button("✅ Accept all shortlisted with batch decision", key="btn_accept_all_for_export", type="primary", disabled=not valid_batch_rationale):
                         note = f"included by batch decision: {batch_rationale.strip()}"
                         for s in unreviewed:
-                            s.review(True, note)
+                            s.review(True, note, decision_mode="batch")
                         save(w)
                         st.success("All shortlisted candidates included by batch decision.")
                         st.rerun()
@@ -3116,9 +3103,9 @@ elif page == "Exports":
             with tour_target("export_panel"):
                 if not ready:
                     st.warning("⚠️ **Export locked:** Review decisions required before generating verified bundle. Use '✅ Accept all shortlisted with batch decision' above or review each scenario individually.")
-                elif bool(w.custom_uploads) and not share_custom:
+                elif w.has_custom_data and not share_custom:
                     st.warning("⚠️ **Custom Evidence Consent Required:** Check 'Include custom numerical inputs and source metadata' above to enable verified export.")
-                if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (bool(w.custom_uploads) and not share_custom)):
+                if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (w.has_custom_data and not share_custom)):
                     try:
                         payload = export_bundle(w, share, include_custom=share_custom)
                         report = verify_bundle(payload)
@@ -3192,7 +3179,7 @@ elif page == "Exports":
 
             packet_fresh = bool(
                 packet
-                and (not w.custom_uploads or share_custom)
+                and (not w.has_custom_data or share_custom)
                 and packet.get("custom", False) == share_custom
                 and packet.get("share") == share
                 and packet.get("config") == experiment_config.fingerprint()

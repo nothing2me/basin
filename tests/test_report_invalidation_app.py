@@ -32,6 +32,9 @@ def app(tmp_path, monkeypatch):
     at.segmented_control(key=f"review_mode_{workspace.id}").set_value("advanced").run()
     for identifier in list(workspace.selected):
         next(s for s in at.selectbox if s.label == "Scenario").set_value(identifier).run()
+        next(t for t in at.text_area if t.label == "Review note").set_value(
+            f"Reviewed rainfall source and selected scenario {identifier} for handoff."
+        ).run()
         next(b for b in at.button if b.label == "Include").click().run()
     at.sidebar.radio[0].set_value("Exports").run()
     assert not at.exception

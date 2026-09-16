@@ -217,13 +217,16 @@ class Scenario:
     def digest(self) -> str:
         return rainfall_digest(self.series)
 
-    def review(self, accept: bool, note: str = ""):
-        if not accept and not note.strip():
-            raise ValueError("Add a reason so the rejection can be understood later")
+    def review(self, accept: bool, note: str = "", decision_mode: str = "individual"):
+        if not note.strip():
+            raise ValueError("Add a reason so the review decision can be understood later")
+        if decision_mode not in {"individual", "batch"}:
+            raise ValueError("Review decision mode must be individual or batch")
         self.status = "accepted" if accept else "rejected"
         self.approved_revision = self.revision if accept else None
         self.history.append({"action": self.status, "revision": self.revision, "at": utc_now(),
-                             "series_sha256": self.digest(), "private_note": note})
+                             "series_sha256": self.digest(), "decision_mode": decision_mode,
+                             "private_note": note})
 
     def edit(self, reference: Reference, note: str, factor: float | None = None, replacement: pd.DataFrame | None = None):
         if not note.strip():
@@ -255,9 +258,6 @@ class Scenario:
                   "approved_revision": self.approved_revision, "features": self.features,
                   "cluster": self.cluster, "cluster_name": getattr(self, "cluster_name", f"Group {self.cluster}"),
                   "score": self.score, "components": self.components,
-                  "ai_narrative": getattr(self, "ai_narrative", ""),
-                  "ai_draft_note": getattr(self, "ai_draft_note", ""),
-                  "ai_typology": getattr(self, "ai_typology", ""),
                   "provenance": self.provenance, "history": history, "series_sha256": self.digest()}
         if include_series:
             result["dates"] = self.series.index.strftime("%Y-%m-%d").tolist()

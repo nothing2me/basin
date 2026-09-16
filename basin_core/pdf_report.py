@@ -10,6 +10,7 @@ Features dual-tier presentation:
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+from functools import lru_cache
 from html import escape
 import json
 import math
@@ -40,9 +41,11 @@ from basin_core.visualizers import (
     stage_trigger_milestone_figure,
     storage_trajectory_figure,
 )
+from basin_core.summary import scenario_summary
 from basin_core.water_system import WaterSystemConfig, REGION_N_PRESET
 
 UNAVAILABLE = "Not available"
+PLOTLY_IMAGE_TIMEOUT_S = 8
 
 # BASIN's documented defaults. These are the values the simulator itself defaults to, so a
 # report generated without a Review experiment reports the model's own starting point
@@ -423,6 +426,37 @@ def _input_sentence(metrics: "ReportMetrics") -> str:
     return f"Tiers multiply the input rainfall: {info['summary']}. {info['hundred_percent_meaning']}"
 
 
+@lru_cache(maxsize=24)
+def _plotly_png_from_json(figure_json: str, width: int, height: int) -> bytes | None:
+    """Render one Plotly figure in a killable subprocess with a hard deadline."""
+    script = (
+        "import sys; import plotly.io as pio; "
+        "fig=pio.from_json(sys.stdin.read()); "
+        "sys.stdout.buffer.write(fig.to_image(format='png', width=int(sys.argv[1]), height=int(sys.argv[2])))"
+    )
+    kwargs = {}
+    if os.name == "nt":
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", script, str(width), str(height)],
+            input=figure_json.encode("utf-8"),
+            capture_output=True,
+            timeout=PLOTLY_IMAGE_TIMEOUT_S,
+            check=False,
+            **kwargs,
+        )
+    except Exception:
+        return None
+    if result.returncode != 0 or not getattr(result, "stdout", b"").startswith(b"\x89PNG\r\n\x1a\n"):
+        return None
+    return result.stdout
+
+
+def _bounded_plotly_image(fig, width: int, height: int) -> bytes | None:
+    return _plotly_png_from_json(fig.to_json(), width, height)
+
+
 def _generate_report_charts(
     spectrum_data: dict | None,
     sim_base: object | None,
@@ -440,14 +474,16 @@ def _generate_report_charts(
 
         fig_traj = storage_trajectory_figure(sim_base, bands)
         fig_traj.update_layout(margin=dict(l=40, r=20, t=25, b=30), height=230, width=680)
-        png_traj = fig_traj.to_image(format="png", width=680, height=230)
-        b64_traj = base64.b64encode(png_traj).decode("ascii")
+        png_traj = _bounded_plotly_image(fig_traj, 680, 230)
+        if png_traj is None:
+            return None, None, None
+        b64_traj = base64.b64encode(png_traj).decode("ascii") if png_traj else None
 
         bands_pct = tuple(b * 100.0 if b <= 1.0 else b for b in bands)
         fig_ms = stage_trigger_milestone_figure(spectrum_data, bands_pct)
         fig_ms.update_layout(margin=dict(l=40, r=20, t=25, b=30), height=220, width=680)
-        png_ms = fig_ms.to_image(format="png", width=680, height=220)
-        b64_ms = base64.b64encode(png_ms).decode("ascii")
+        png_ms = _bounded_plotly_image(fig_ms, 680, 220)
+        b64_ms = base64.b64encode(png_ms).decode("ascii") if png_ms else None
 
         b64_frontier = None
         if workspace is not None and hasattr(workspace, "scenarios") and workspace.scenarios:
@@ -476,8 +512,8 @@ def _generate_report_charts(
                     width=680,
                     legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="center", x=0.5, font=dict(size=8)),
                 )
-                png_frontier = fig_frontier.to_image(format="png", width=680, height=240)
-                b64_frontier = base64.b64encode(png_frontier).decode("ascii")
+                png_frontier = _bounded_plotly_image(fig_frontier, 680, 240)
+                b64_frontier = base64.b64encode(png_frontier).decode("ascii") if png_frontier else None
             except Exception:
                 b64_frontier = None
 
@@ -1223,13 +1259,16 @@ def render_html_report(
         conc_detail = format_scenario_concurrence_detail(s, workspace)
 
         # Public summary vs private note distinction (Item 10)
-        public_summary = getattr(s, "public_summary", "") or getattr(s, "ai_narrative", "") or getattr(s, "description", "")
-        entry_note = (s.history[-1].get("private_note") or s.history[-1].get("note")) if s.history else None
+        public_summary = getattr(s, "public_summary", "") or scenario_summary(s.features).replace("**", "")
+        review_event = s.history[-1] if s.history else {}
+        entry_note = review_event.get("private_note") or review_event.get("note")
+        decision_mode = review_event.get("decision_mode", "individual")
+        mode_label = "Batch decision" if decision_mode == "batch" else "Individual review"
 
         if include_notes and entry_note:
-            note_display = f'<div class="text-sm italic" style="color: #0f172a; margin-top: 3px;"><strong>Private review note (consented export):</strong> {escape(entry_note)}</div>'
+            note_display = f'<div class="text-sm italic" style="color: #0f172a; margin-top: 3px;"><strong>{mode_label}.</strong> <strong>Private review note (consented export):</strong> {escape(entry_note)}</div>'
         elif entry_note:
-            note_display = '<div class="text-sm italic" style="color: #64748b; margin-top: 3px;">Review note recorded (omitted: export privacy setting excludes private notes)</div>'
+            note_display = f'<div class="text-sm italic" style="color: #64748b; margin-top: 3px;">{mode_label}; rationale recorded locally (omitted: export privacy setting excludes private notes)</div>'
         else:
             note_display = '<div class="text-sm italic" style="color: #64748b; margin-top: 3px;">No review note recorded.</div>'
 
@@ -2383,11 +2422,13 @@ def build_fallback_pdf(
     for index, scenario in enumerate(accepted):
         prov = getattr(scenario, "provenance", {}) or {}
         feat = getattr(scenario, "features", {}) or {}
-        entry_note = (scenario.history[-1].get("private_note") or scenario.history[-1].get("note")) if getattr(scenario, "history", None) else None
+        review_event = scenario.history[-1] if getattr(scenario, "history", None) else {}
+        entry_note = review_event.get("private_note") or review_event.get("note")
+        mode_label = "Batch decision" if review_event.get("decision_mode") == "batch" else "Individual review"
         if include_notes and entry_note:
-            note = f"Private note (consented export): {str(entry_note)}"
+            note = f"{mode_label}; private note (consented export): {str(entry_note)}"
         elif entry_note:
-            note = "Review recorded (private note omitted per export privacy)"
+            note = f"{mode_label}; rationale omitted per export privacy"
         else:
             note = "Accepted candidate scenario"
 
@@ -2759,7 +2800,15 @@ def generate_pdf_report_with_status(
     """
     config = resolve_config(config, initial_pct, conservation_pct)
 
-    outcome = _render_pdf_with_status(workspace, accepted, include_notes, config)
+    if sys.platform == "win32" and find_browser_executable():
+        outcome = RenderOutcome(
+            pdf_bytes=build_fallback_pdf(workspace, accepted, include_notes=include_notes, config=config),
+            renderer="vector_fallback",
+            degraded=False,
+            detail="Windows uses BASIN's bounded built-in report renderer for reliable local export.",
+        )
+    else:
+        outcome = _render_pdf_with_status(workspace, accepted, include_notes, config)
 
     if output_path:
         out_p = Path(output_path)
