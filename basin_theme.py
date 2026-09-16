@@ -375,8 +375,6 @@ body.basin-theme-dark .basin-assistant-status-dot{background:#64d69b!important;b
 .basin-assistant-status strong{display:block!important;color:var(--basin-success-text, #166534)!important;font-size:.75rem!important;font-weight:700!important}
 body.basin-theme-dark .basin-assistant-status strong{color:#7fe0ad!important}
 .basin-assistant-status small{display:block!important;margin-top:2px!important;color:var(--basin-muted, #4D5C66)!important;font-size:.7rem!important;font-weight:500!important}
-.st-key-assistant_close_x button{width:34px!important;height:34px!important;min-height:34px!important;border-radius:8px!important;padding:0!important;font-size:1.3rem!important;font-weight:400!important;border:1.5px solid var(--basin-border, #8796A0)!important;background:var(--basin-surface, #F3F6FA)!important;color:var(--basin-text-strong, #182127)!important}
-.st-key-assistant_close_x button:hover{background:var(--basin-surface-soft, #E2EAF2)!important;border-color:#2b7a9e!important;color:var(--basin-text-strong, #182127)!important}
 .basin-assistant-header-avatar{width:36px!important;height:36px!important;object-fit:contain!important;flex:0 0 36px!important;border-radius:6px!important}
 .basin-assistant-empty{text-align:center;padding:24px 16px 18px;max-width:390px;margin:0 auto}
 .basin-assistant-mark{width:190px!important;height:190px!important;margin:0 auto 16px!important;display:block!important;object-fit:contain!important;filter:drop-shadow(0 4px 18px rgba(0,0,0,0.18))!important}
@@ -392,7 +390,7 @@ body.basin-theme-dark .basin-assistant-status strong{color:#7fe0ad!important}
 .st-key-quick_export button::before{content:"📦";font-size:1.15rem;margin:0}
 .st-key-quick_top1 button::after,.st-key-quick_compare button::after,.st-key-quick_concur button::after,.st-key-quick_ranking button::after,.st-key-quick_crop_et button::after,.st-key-quick_export button::after{display:none!important;content:""!important}
 .st-key-quick_top1 button:hover,.st-key-quick_compare button:hover,.st-key-quick_concur button:hover,.st-key-quick_ranking button:hover,.st-key-quick_crop_et button:hover,.st-key-quick_export button:hover{border-color:#2b7a9e!important;background:var(--basin-surface-soft, #E2EAF2)!important;transform:translateY(-1px)!important}
-.st-key-quick_top1 button:focus-visible,.st-key-quick_compare button:focus-visible,.st-key-quick_concur button:focus-visible,.st-key-quick_ranking button:focus-visible,.st-key-quick_crop_et button:focus-visible,.st-key-quick_export button:focus-visible,.st-key-assistant_close_x button:focus-visible{outline:2px solid #2b7a9e!important;outline-offset:2px!important}
+.st-key-quick_top1 button:focus-visible,.st-key-quick_compare button:focus-visible,.st-key-quick_concur button:focus-visible,.st-key-quick_ranking button:focus-visible,.st-key-quick_crop_et button:focus-visible,.st-key-quick_export button:focus-visible{outline:2px solid #2b7a9e!important;outline-offset:2px!important}
 .st-key-assistant_conversation{min-height:520px!important;margin-top:10px!important;margin-bottom:12px!important;padding:0!important}
 .st-key-assistant_conversation [data-testid="stVerticalBlockBorderWrapper"]{min-height:520px!important;border:1.5px solid var(--basin-border, #8796A0)!important;border-radius:12px!important;background:var(--basin-surface, #F3F6FA)!important;padding:12px 14px!important;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05)!important}
 @media (max-height:850px){
@@ -477,9 +475,7 @@ if (!window.__basinDrawerControllerAttached) {
       document.body.classList.add('basin-assistant-open');
     } else if (
       btn.closest('.st-key-assistant_tab_open') ||
-      btn.closest('.st-key-assistant_close_x') ||
-      btn.getAttribute('data-testid') === 'stBaseButton-assistant_close_tab_btn' ||
-      btn.getAttribute('data-testid') === 'stBaseButton-assistant_close_x'
+      btn.getAttribute('data-testid') === 'stBaseButton-assistant_close_tab_btn'
     ) {
       document.body.classList.remove('basin-assistant-open');
     } else if (
@@ -494,8 +490,8 @@ if (!window.__basinDrawerControllerAttached) {
     if (e.key === 'Escape') {
       if (document.body.classList.contains('basin-assistant-open')) {
         document.body.classList.remove('basin-assistant-open');
-        const closeX = document.querySelector('.st-key-assistant_close_x button');
-        if (closeX) closeX.click();
+        const closeTab = document.querySelector('.st-key-assistant_close_tab_btn button');
+        if (closeTab) closeTab.click();
       }
       if (document.body.classList.contains('basin-notes-open')) {
         document.body.classList.remove('basin-notes-open');

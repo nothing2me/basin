@@ -141,9 +141,9 @@ def test_assistant_drawer_interactions(workspace, offline_assistant, monkeypatch
     assert app.session_state.assistant_open is True
     assert len(app.session_state.assistant_messages) == 0
 
-    # 5. Close assistant via drawer X button
+    # 5. Close assistant via drawer tab Close button
     t0 = time.perf_counter()
-    app.button(key="assistant_close_x").click().run()
+    app.button(key="assistant_close_tab_btn").click().run()
     close_ms = (time.perf_counter() - t0) * 1000
     assert not app.exception
     assert app.session_state.assistant_open is False

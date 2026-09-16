@@ -263,34 +263,24 @@ def assistant_panel(w, source=None, names=None):
         avatar_path = _DIAMOND_AVATAR_PATH
         avatar_b64 = _DIAMOND_AVATAR_B64
 
-        h_col, c_col = st.columns([5.2, .7], vertical_alignment="center")
-        with h_col:
-            avatar_html = (
-                f'<img src="data:image/png;base64,{avatar_b64}" class="basin-assistant-header-avatar" alt="BASIN AI" />'
-                if avatar_b64
-                else ''
-            )
-            st.markdown(
-                '<div class="basin-assistant-header">'
-                '<div style="display:flex;align-items:center;gap:12px;">'
-                f'{avatar_html}'
-                '<div>'
-                '<div class="basin-assistant-title" style="margin:0;">Analyst Assistant</div>'
-                '<div class="basin-assistant-status" role="status">'
-                '<span class="basin-assistant-status-dot" aria-hidden="true"></span>'
-                f'<span><strong>{html_escape(status_label)}</strong>'
-                f'<small>{html_escape(status_detail)}</small></span>'
-                '</div></div></div></div>',
-                unsafe_allow_html=True,
-            )
-        with c_col:
-            st.button(
-                "×",
-                key="assistant_close_x",
-                help="Close analyst assistant",
-                width="stretch",
-                on_click=_close_assistant_panel,
-            )
+        avatar_html = (
+            f'<img src="data:image/png;base64,{avatar_b64}" class="basin-assistant-header-avatar" alt="BASIN AI" />'
+            if avatar_b64
+            else ''
+        )
+        st.markdown(
+            '<div class="basin-assistant-header">'
+            '<div style="display:flex;align-items:center;gap:12px;">'
+            f'{avatar_html}'
+            '<div>'
+            '<div class="basin-assistant-title" style="margin:0;">Analyst Assistant</div>'
+            '<div class="basin-assistant-status" role="status">'
+            '<span class="basin-assistant-status-dot" aria-hidden="true"></span>'
+            f'<span><strong>{html_escape(status_label)}</strong>'
+            f'<small>{html_escape(status_detail)}</small></span>'
+            '</div></div></div></div>',
+            unsafe_allow_html=True,
+        )
 
         pending_query = st.session_state.pop("assistant_pending_query", None)
         if pending_query:
@@ -439,17 +429,5 @@ def assistant_panel(w, source=None, names=None):
                 except Exception as ex:
                     st.error(f"Error running {tool_name}: {ex}")
 
-        st.html("""<script>
-        (() => {
-            const drawer = document.querySelector('.st-key-assistant_drawer');
-            const closeBtn = document.querySelector('.st-key-assistant_close_x button');
-            if (drawer && closeBtn && !closeBtn._hasAssistantCloseListener) {
-                closeBtn._hasAssistantCloseListener = true;
-                closeBtn.addEventListener('click', () => {
-                    drawer.style.transform = 'translateX(100%)';
-                    drawer.style.opacity = '0';
-                });
-            }
-        })();
-        </script>""")
+
 
