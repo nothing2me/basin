@@ -8,7 +8,13 @@ import streamlit as st
 
 from basin_core.evidence import KINDS, STATUSES
 
+import base64
 _DIAMOND_AVATAR_PATH = Path(__file__).resolve().parent / "assets" / "basin_avatar_diamond.png"
+_DIAMOND_AVATAR_B64 = (
+    base64.b64encode(_DIAMOND_AVATAR_PATH.read_bytes()).decode("ascii")
+    if _DIAMOND_AVATAR_PATH.exists()
+    else ""
+)
 
 
 def evidence_panel(w, scenario, save):
@@ -253,17 +259,26 @@ def assistant_panel(w, source=None, names=None):
             status_detail = "Uses this workspace’s deterministic tools"
 
         avatar_path = _DIAMOND_AVATAR_PATH
+        avatar_b64 = _DIAMOND_AVATAR_B64
 
         h_col, c_col = st.columns([5.2, .7], vertical_alignment="center")
         with h_col:
+            avatar_html = (
+                f'<img src="data:image/png;base64,{avatar_b64}" class="basin-assistant-header-avatar" alt="BASIN AI" />'
+                if avatar_b64
+                else ''
+            )
             st.markdown(
                 '<div class="basin-assistant-header">'
-                '<div class="basin-assistant-title">Analyst Assistant</div>'
+                '<div style="display:flex;align-items:center;gap:12px;">'
+                f'{avatar_html}'
+                '<div>'
+                '<div class="basin-assistant-title" style="margin:0;">Analyst Assistant</div>'
                 '<div class="basin-assistant-status" role="status">'
                 '<span class="basin-assistant-status-dot" aria-hidden="true"></span>'
                 f'<span><strong>{html_escape(status_label)}</strong>'
                 f'<small>{html_escape(status_detail)}</small></span>'
-                '</div></div>',
+                '</div></div></div></div>',
                 unsafe_allow_html=True,
             )
         with c_col:
@@ -290,21 +305,28 @@ def assistant_panel(w, source=None, names=None):
                 except Exception as ex:
                     st.session_state.assistant_messages.append({"role": "assistant", "content": f"I could not complete that analysis: {ex}"})
 
-        has_messages = bool(st.session_state.assistant_messages)
-        if not has_messages:
-            st.markdown(
-                """
-                <section class="basin-assistant-empty">
-                  <svg class="basin-assistant-mark" viewBox="0 0 64 64" role="img" aria-label="Rainfall analysis">
-                    <path d="M18 36h29a9 9 0 0 0 1-18 14 14 0 0 0-26-3 11 11 0 0 0-4 21Z"/>
-                    <path d="M24 44l-3 7M35 44l-3 7M46 44l-3 7"/>
-                  </svg>
-                  <h2>What would you like to examine?</h2>
-                  <p>Ask about scenarios, rainfall, stations, or risks using your workspace data.</p>
-                </section>
-                """,
-                unsafe_allow_html=True,
-            )
+        chat_box = st.container(height=390, border=True, key="assistant_conversation")
+        with chat_box:
+            if not st.session_state.assistant_messages:
+                diamond_img = (
+                    f'<img src="data:image/png;base64,{avatar_b64}" class="basin-assistant-mark" alt="BASIN Diamond Logo" />'
+                    if avatar_b64
+                    else '<div class="basin-assistant-mark" style="font-size:3.5rem;text-align:center;">💎</div>'
+                )
+                st.markdown(
+                    f"""
+                    <section class="basin-assistant-empty">
+                      {diamond_img}
+                      <h2>What would you like to examine?</h2>
+                      <p>Ask about scenarios, rainfall, stations, or risks using your workspace data.</p>
+                    </section>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            for msg in st.session_state.assistant_messages:
+                av = str(avatar_path) if (msg.get("role") == "assistant" and avatar_path.exists()) else None
+                with st.chat_message(msg["role"], avatar=av):
+                    st.markdown(msg["content"])
 
         direct_tool_run = None
         direct_result_added = False
@@ -319,20 +341,18 @@ def assistant_panel(w, source=None, names=None):
             direct_tool_run = ("compare_scenarios", {"scenario_id_1": id1, "scenario_id_2": id2}, f"Compare scenario {id1} and {id2}")
         if st.button("Check station stress overlap", key="quick_concur", width="stretch", help="Check whether station stress signals overlap"):
             direct_tool_run = ("check_concurrence", {"scenario_id": sid}, f"Check station stress concurrence for {sid}")
-
-        with st.expander("More suggested questions", expanded=False):
-            if st.button("Explain the ranking", key="quick_ranking", width="stretch", help="Explain how the top scenario was scored"):
-                direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
-            if st.button("Estimate the crop water deficit", key="quick_crop_et", width="stretch", help="Estimate the crop irrigation gap"):
-                from basin_core.agronomics import calculate_crop_water_deficit
-                sc = w.get(sid)
-                c_res = calculate_crop_water_deficit(sc.series)
-                direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
-                st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
-                st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
-                direct_result_added = True
-            if st.button("Check export readiness", key="quick_export", width="stretch", help="Check whether this workspace is ready to export"):
-                direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
+        if st.button("Explain the ranking", key="quick_ranking", width="stretch", help="Explain how the top scenario was scored"):
+            direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
+        if st.button("Estimate the crop water deficit", key="quick_crop_et", width="stretch", help="Estimate the crop irrigation gap"):
+            from basin_core.agronomics import calculate_crop_water_deficit
+            sc = w.get(sid)
+            c_res = calculate_crop_water_deficit(sc.series)
+            direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
+            st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
+            st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
+            direct_result_added = True
+        if st.button("Check export readiness", key="quick_export", width="stretch", help="Check whether this workspace is ready to export"):
+            direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
 
         if direct_tool_run:
             t_name, t_args, u_msg = direct_tool_run
@@ -348,13 +368,6 @@ def assistant_panel(w, source=None, names=None):
         if direct_result_added:
             st.rerun()
 
-        chat_box = st.container(height=430, border=False, key="assistant_conversation")
-        with chat_box:
-            for msg in st.session_state.assistant_messages:
-                av = str(avatar_path) if (msg.get("role") == "assistant" and avatar_path.exists()) else None
-                with st.chat_message(msg["role"], avatar=av):
-                    st.markdown(msg["content"])
-
         st.chat_input(
             "Ask about scenarios, rainfall, or evidence",
             key="assistant_chat_input",
@@ -365,28 +378,25 @@ def assistant_panel(w, source=None, names=None):
             unsafe_allow_html=True,
         )
 
-        advanced_col, clear_col = st.columns([1.35, 1], vertical_alignment="top")
-        with advanced_col:
-            with st.expander("Advanced tools", expanded=False):
-                if st.session_state.get("show_assistant_developer_tools", False):
-                    st.caption("Run a named calculation without writing a question.")
-                    tool_name = st.selectbox("Calculation", list(TOOL_REGISTRY.keys()), key="direct_tool_select")
-                    if st.button("Run calculation", key="direct_tool_run", type="primary", width="stretch"):
-                        try:
-                            prepared = direct_tool_arguments(w, tool_name)
-                            if prepared is None:
-                                st.info(f"{tool_name} needs explicit inputs. Ask in the chat, naming the station and dates, year, weight values or scenario and settings.")
-                            else:
-                                args, described = prepared
-                                tool_out = run_tool_directly(w, tool_name, args)
-                                st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}{described}"})
-                                st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
-                                st.success("Result added to the conversation.")
-                        except Exception as ex:
-                            st.error(f"Error running {tool_name}: {ex}")
-                else:
-                    st.caption("The manual calculation runner is available from Settings.")
-        clear_col.button(
+        if st.session_state.get("show_assistant_developer_tools", False):
+            st.markdown("**Manual calculation tools**")
+            st.caption("Run a named calculation without writing a question.")
+            tool_name = st.selectbox("Calculation", list(TOOL_REGISTRY.keys()), key="direct_tool_select")
+            if st.button("Run calculation", key="direct_tool_run", type="primary", width="stretch"):
+                try:
+                    prepared = direct_tool_arguments(w, tool_name)
+                    if prepared is None:
+                        st.info(f"{tool_name} needs explicit inputs. Ask in the chat, naming the station and dates, year, weight values or scenario and settings.")
+                    else:
+                        args, described = prepared
+                        tool_out = run_tool_directly(w, tool_name, args)
+                        st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}{described}"})
+                        st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
+                        st.success("Result added to the conversation.")
+                except Exception as ex:
+                    st.error(f"Error running {tool_name}: {ex}")
+
+        st.button(
             "Clear conversation",
             key="assistant_clear_chat",
             width="stretch",

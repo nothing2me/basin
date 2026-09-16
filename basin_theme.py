@@ -28,7 +28,7 @@ body.basin-theme-light{
     --basin-warning-text:#92400E;--basin-danger-text:#991B1B
 }
 .block-container{padding:4.25rem 2.8rem 6.5rem;max-width:1560px}
-[data-testid="stAppDeployButton"]{display:none}
+[data-testid="stAppDeployButton"], #MainMenu, [data-testid="stMainMenuButton"], .stDeployButton{display:none!important}
 [data-testid="stHeader"]{background:transparent}
 [data-testid="stSidebar"]{border-right:1px solid color-mix(in srgb,currentColor 12%,transparent)}
 [data-testid="stSidebarUserContent"]{padding-top:.25rem!important}
@@ -187,10 +187,17 @@ button:focus-visible,a:focus-visible{outline:2px solid currentColor!important;ou
 .tutorial-location,.tutorial-target-label{font-size:.75rem;font-weight:650;opacity:.85;line-height:1.4}
 .tutorial-anchor{scroll-margin-top:5rem}
 .st-key-tutorial_guide a{color:inherit;text-decoration-color:currentColor;text-underline-offset:3px}
-.basin-theme-picker{display:flex;gap:6px}
-.basin-theme-picker button{font:inherit;font-size:.8rem;cursor:pointer;flex:1;border:1px solid color-mix(in srgb,currentColor 20%,transparent);border-radius:8px;background:transparent;color:inherit;padding:9px 4px}
-.basin-theme-picker button:hover{background:color-mix(in srgb,#356273 24%,transparent)}
-.basin-theme-status{font-size:.75rem;line-height:1.4;margin:6px 0 0;opacity:.8}
+.basin-theme-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:2px 0 10px;border-bottom:1px solid color-mix(in srgb,currentColor 20%,transparent)}
+.basin-theme-picker button{font:inherit;cursor:pointer;border:0;border-radius:10px;background:transparent;color:inherit;padding:9px 5px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1.1}
+.basin-theme-picker button:hover,.basin-theme-picker button:focus-visible{background:color-mix(in srgb,currentColor 12%,transparent)}
+.basin-theme-icon{font-size:1.45rem;line-height:1;font-weight:500}
+.basin-theme-label{font-size:.78rem;font-weight:560}
+.basin-theme-status{font-size:.72rem;line-height:1.35;margin:5px 0 0;opacity:.8}
+div[data-testid="stPopoverBody"]:has(.basin-theme-picker){min-width:310px!important;max-width:340px!important;padding:14px 12px!important;border-radius:10px!important}
+div[data-testid="stPopoverBody"]:has(.basin-theme-picker) [data-testid="stExpander"]{border:0!important;border-top:1px solid color-mix(in srgb,currentColor 20%,transparent)!important;border-radius:0!important;margin:0!important}
+div[data-testid="stPopoverBody"]:has(.basin-theme-picker) [data-testid="stExpander"] details summary{padding:12px 3px!important;font-size:.84rem!important;font-weight:560!important}
+.st-key-home_map_card,.st-key-home_upload_card,.st-key-home_rainfall_card,.st-key-home_sources_card{background:color-mix(in srgb,currentColor 2.5%,transparent)!important;border-color:color-mix(in srgb,currentColor 20%,transparent)!important;border-radius:14px!important}
+.st-key-home_map_card,.st-key-home_upload_card{height:100%!important}
 @media(max-width:800px){.block-container{padding:4rem 1rem 5rem}.st-key-welcome{padding:20px}.welcome-title{font-size:1.65rem!important}.st-key-tutorial_guide{padding:14px}h3{font-size:1.3rem!important}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 .st-key-assistant_drawer{position:fixed!important;top:0!important;right:0!important;width:var(--basin-assistant-width, 520px);min-width:380px;max-width:92vw;height:100vh!important;background:color-mix(in srgb,var(--background-color,#182229) 97%,#071116)!important;border-left:1px solid color-mix(in srgb,currentColor 16%,transparent)!important;box-shadow:-14px 0 42px rgba(3,10,14,.28)!important;z-index:99998!important;padding:1.45rem 1.4rem 1.75rem!important;resize:horizontal!important;overflow-x:hidden!important;overflow-y:auto!important;animation:basinDrawerSlideIn .32s cubic-bezier(0.2, 0.9, 0.3, 1) both!important;transition:width .22s cubic-bezier(0.2, 0.9, 0.3, 1),transform .32s cubic-bezier(0.2, 0.9, 0.3, 1)!important;will-change:transform,width}
@@ -274,18 +281,23 @@ body:has(.st-key-assistant_drawer) .block-container,body:has(.st-key-assistant_d
 .basin-assistant-status small{display:block;margin-top:2px;color:color-mix(in srgb,currentColor 68%,transparent);font-size:.7rem;font-weight:450}
 .st-key-assistant_close_x button{width:34px!important;height:34px!important;min-height:34px!important;border-radius:8px!important;padding:0!important;font-size:1.3rem!important;font-weight:350!important;border:1px solid color-mix(in srgb,currentColor 22%,transparent)!important;background:transparent!important;color:inherit!important}
 .st-key-assistant_close_x button:hover{background:color-mix(in srgb,currentColor 7%,transparent)!important;border-color:color-mix(in srgb,#40a6d9 55%,currentColor)!important}
-.basin-assistant-empty{text-align:center;padding:38px 20px 25px;max-width:390px;margin:0 auto}
-.basin-assistant-mark{width:50px;height:50px;margin:0 auto 19px;fill:none;stroke:#4ca6d5;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
-.basin-assistant-empty h2{font-size:1.25rem!important;line-height:1.28!important;letter-spacing:-.02em!important;margin:0 0 9px!important;font-weight:680!important}
+.basin-assistant-header-avatar{width:36px!important;height:36px!important;object-fit:contain!important;flex:0 0 36px!important;border-radius:6px!important}
+.basin-assistant-empty{text-align:center;padding:24px 16px 18px;max-width:390px;margin:0 auto}
+.basin-assistant-mark{width:120px!important;height:120px!important;margin:0 auto 16px!important;display:block!important;object-fit:contain!important;filter:drop-shadow(0 4px 18px rgba(0,0,0,0.28))!important}
+.basin-assistant-empty h2{font-size:1.25rem!important;line-height:1.28!important;letter-spacing:-.02em!important;margin:0 0 8px!important;font-weight:680!important}
 .basin-assistant-empty p{font-size:.84rem;line-height:1.55;margin:0;color:color-mix(in srgb,currentColor 66%,transparent)}
-.st-key-quick_top1 button,.st-key-quick_compare button,.st-key-quick_concur button{min-height:52px!important;justify-content:flex-start!important;text-align:left!important;padding:10px 15px!important;margin-bottom:2px!important;border-radius:8px!important;border:1px solid color-mix(in srgb,currentColor 18%,transparent)!important;background:color-mix(in srgb,currentColor 2.5%,transparent)!important;box-shadow:none!important;font-size:.84rem!important;font-weight:620!important;position:relative!important}
-.st-key-quick_top1 button::after,.st-key-quick_compare button::after,.st-key-quick_concur button::after{content:"→";position:absolute;right:15px;font-size:1rem;font-weight:400;color:#55acd8}
-.st-key-quick_top1 button:hover,.st-key-quick_compare button:hover,.st-key-quick_concur button:hover{border-color:color-mix(in srgb,#42a8d8 58%,currentColor)!important;background:color-mix(in srgb,#2878a0 10%,transparent)!important;transform:translateY(-1px)}
-.st-key-quick_top1 button:focus-visible,.st-key-quick_compare button:focus-visible,.st-key-quick_concur button:focus-visible,.st-key-assistant_close_x button:focus-visible{outline:2px solid #56b4df!important;outline-offset:2px!important}
-.st-key-assistant_drawer [data-testid="stExpander"]{border-color:color-mix(in srgb,currentColor 16%,transparent)!important;border-radius:8px!important;box-shadow:none!important;background:transparent!important}
-.st-key-assistant_drawer [data-testid="stExpander"] summary{font-size:.78rem!important;color:color-mix(in srgb,currentColor 78%,transparent)!important}
-.st-key-assistant_conversation{min-height:130px;margin-top:12px;padding:4px 0!important;border-top:1px solid color-mix(in srgb,currentColor 10%,transparent)}
-.st-key-assistant_conversation [data-testid="stVerticalBlockBorderWrapper"]{border:none!important;background:transparent!important}
+.st-key-quick_top1 button,.st-key-quick_compare button,.st-key-quick_concur button,.st-key-quick_ranking button,.st-key-quick_crop_et button,.st-key-quick_export button{width:100%!important;min-height:48px!important;justify-content:flex-start!important;text-align:left!important;padding:10px 18px!important;margin-bottom:5px!important;border-radius:8px!important;border:1px solid color-mix(in srgb,currentColor 16%,transparent)!important;background:color-mix(in srgb,currentColor 2.5%,transparent)!important;box-shadow:none!important;font-size:.85rem!important;font-weight:620!important;position:relative!important;display:flex!important;align-items:center!important;transition:background .15s ease,border-color .15s ease,transform .12s ease!important}
+.st-key-quick_top1 button::before{content:"📊 ";font-size:1.15rem;margin-right:12px}
+.st-key-quick_compare button::before{content:"⚖️ ";font-size:1.15rem;margin-right:12px}
+.st-key-quick_concur button::before{content:"⚡ ";font-size:1.15rem;margin-right:12px}
+.st-key-quick_ranking button::before{content:"🎯 ";font-size:1.15rem;margin-right:12px}
+.st-key-quick_crop_et button::before{content:"🌾 ";font-size:1.15rem;margin-right:12px}
+.st-key-quick_export button::before{content:"📦 ";font-size:1.15rem;margin-right:12px}
+.st-key-quick_top1 button::after,.st-key-quick_compare button::after,.st-key-quick_concur button::after,.st-key-quick_ranking button::after,.st-key-quick_crop_et button::after,.st-key-quick_export button::after{content:"→";position:absolute;right:18px;font-size:1.1rem;font-weight:400;color:#55acd8}
+.st-key-quick_top1 button:hover,.st-key-quick_compare button:hover,.st-key-quick_concur button:hover,.st-key-quick_ranking button:hover,.st-key-quick_crop_et button:hover,.st-key-quick_export button:hover{border-color:color-mix(in srgb,#42a8d8 58%,currentColor)!important;background:color-mix(in srgb,#2878a0 10%,transparent)!important;transform:translateY(-1px)}
+.st-key-quick_top1 button:focus-visible,.st-key-quick_compare button:focus-visible,.st-key-quick_concur button:focus-visible,.st-key-quick_ranking button:focus-visible,.st-key-quick_crop_et button:focus-visible,.st-key-quick_export button:focus-visible,.st-key-assistant_close_x button:focus-visible{outline:2px solid #56b4df!important;outline-offset:2px!important}
+.st-key-assistant_conversation{min-height:180px;margin-top:10px!important;margin-bottom:12px!important;padding:0!important}
+.st-key-assistant_conversation [data-testid="stVerticalBlockBorderWrapper"]{border:1px solid color-mix(in srgb,currentColor 15%,transparent)!important;border-radius:12px!important;background:color-mix(in srgb,currentColor 2.5%,transparent)!important;padding:12px 14px!important;box-shadow:inset 0 1px 3px rgba(0,0,0,0.06)!important}
 .st-key-assistant_drawer [data-testid="stChatInput"]{border:1px solid color-mix(in srgb,currentColor 22%,transparent)!important;border-radius:8px!important;background:color-mix(in srgb,currentColor 4%,transparent)!important;box-shadow:none!important}
 .st-key-assistant_drawer [data-testid="stChatInput"]:focus-within{border-color:#4ba8d6!important;box-shadow:0 0 0 2px color-mix(in srgb,#4ba8d6 14%,transparent)!important}
 .basin-assistant-trust{font-size:.68rem;line-height:1.45;text-align:center;color:color-mix(in srgb,currentColor 55%,transparent);margin:7px 0 13px}
@@ -326,10 +338,9 @@ def appearance_picker():
     # plus the high-contrast Black/White theme.
     st.html("""
 <div class="basin-theme-picker" aria-label="Appearance">
- <button type="button" data-basin-theme="Light">Light</button>
- <button type="button" data-basin-theme="Dark">Dark</button>
- <button type="button" data-basin-theme="System">System</button>
- <button type="button" data-basin-theme="BW">Black/White</button>
+ <button type="button" data-basin-theme="System"><span class="basin-theme-icon" aria-hidden="true">◐</span><span class="basin-theme-label">System</span></button>
+ <button type="button" data-basin-theme="Light"><span class="basin-theme-icon" aria-hidden="true">☀</span><span class="basin-theme-label">Light</span></button>
+ <button type="button" data-basin-theme="Dark"><span class="basin-theme-icon" aria-hidden="true">☾</span><span class="basin-theme-label">Dark</span></button>
 </div>
 <p class="basin-theme-status" role="status" aria-live="polite"></p>
 <script>
@@ -343,12 +354,6 @@ def appearance_picker():
  root.querySelectorAll('[data-basin-theme]').forEach(button => {
    button.addEventListener('click', () => {
      const name = button.dataset.basinTheme;
-     if (name === 'BW') {
-       const isBW = document.body.classList.toggle('basin-theme-bw');
-       localStorage.setItem('basin-bw-theme', isBW ? 'true' : 'false');
-       status.textContent = isBW ? 'Black / White high-contrast theme active.' : 'Black / White theme removed.';
-       return;
-     }
      document.body.classList.remove('basin-theme-bw');
      localStorage.removeItem('basin-bw-theme');
      const menuButton = document.querySelector('[data-testid="stMainMenuButton"]');
@@ -408,6 +413,8 @@ def custom_appearance():
     with st.expander("Accessibility and custom colors", expanded=False):
         st.toggle("Color-blind mode", key="appearance_colorblind",
                   help="Uses a consistent blue accent plus chart shapes, line styles and patterns.")
+        st.toggle("Black/white high contrast", key="appearance_bw",
+                  help="Uses a strict black-and-white presentation with stronger borders.")
         st.markdown("**Custom palette**")
         with st.form("appearance_colors", border=False):
             buttons, selected, sidebar = st.columns(3, gap="small")
@@ -421,11 +428,16 @@ def custom_appearance():
         st.button("Reset custom colors", on_click=reset_colors, width="stretch")
         st.caption("Custom colors last for this session. Light, Dark and System are saved in this browser.")
     enabled = st.session_state.appearance_colorblind
+    bw_enabled = st.session_state.appearance_bw
     accent = "#356273" if enabled else st.session_state.appearance_accent
     selection = "#0072B2" if enabled else st.session_state.appearance_selection
     sidebar = "#6088A5" if enabled else st.session_state.appearance_sidebar
     foreground = accent_foreground(accent)
     selected_text = accent_foreground(selection)
+    st.html(
+        f"<script>document.body.classList.toggle('basin-theme-bw', {str(bw_enabled).lower()});</script>",
+        unsafe_allow_javascript=True,
+    )
     st.html(f"""<style>
 button[kind="primary"],button[data-testid="stBaseButton-primary"] {{background:{accent}!important;border-color:{accent}!important;color:{foreground}!important}}
 button[kind="primary"] *,button[data-testid="stBaseButton-primary"] * {{color:{foreground}!important}}

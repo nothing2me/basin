@@ -1583,12 +1583,11 @@ with top_r:
             st.markdown("**Appearance & Preferences**")
             appearance_picker()
             custom_appearance()
-            with st.expander("Advanced tools", expanded=False):
-                st.toggle(
-                    "Show manual assistant tools",
-                    key="show_assistant_developer_tools",
-                    help="Shows the direct calculation-tool selector inside the Analyst Assistant.",
-                )
+            st.toggle(
+                "Show manual assistant tools",
+                key="show_assistant_developer_tools",
+                help="Shows the direct calculation-tool selector inside the Analyst Assistant.",
+            )
             def _toggle_top_assistant():
                 st.session_state.assistant_open = not st.session_state.get("assistant_open", False)
 
