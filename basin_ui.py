@@ -337,11 +337,30 @@ def assistant_panel(w, source=None, names=None):
         suggestion_bar = st.container(key="assistant_suggestions")
         with suggestion_bar:
             st.chat_input(
-                "Ask about scenarios, rainfall, or evidence",
+                "Ask about scenarios, tools, or South Texas water planning...",
                 key="assistant_chat_input",
                 on_submit=_queue_assistant_query,
             )
-            st.markdown('<p class="basin-suggested-label">Suggested questions</p>', unsafe_allow_html=True)
+            st.markdown('<p class="basin-suggested-label">💡 Platform & Guidance Shortcuts</p>', unsafe_allow_html=True)
+            help_col1, help_col2, help_col3, help_col4 = st.columns(4, gap="small")
+            with help_col1:
+                if st.button("🛠️ Other tools", key="quick_other_tools", width="stretch", help="See all independent analysis tools in BASIN"):
+                    st.session_state.assistant_pending_query = "What other tools can I use besides the tutorial?"
+                    st.rerun()
+            with help_col2:
+                if st.button("🧭 Next step", key="quick_next_step", width="stretch", help="Get context-aware advice on what to do next"):
+                    st.session_state.assistant_pending_query = "What should I do next?"
+                    st.rerun()
+            with help_col3:
+                if st.button("💡 In simple terms", key="quick_simple_terms", width="stretch", help="Plain-English explanation of BASIN"):
+                    st.session_state.assistant_pending_query = "Explain what BASIN does in simple terms"
+                    st.rerun()
+            with help_col4:
+                if st.button("💬 Ask custom Q", key="quick_custom_q", width="stretch", help="Ask custom questions about water and drought"):
+                    st.session_state.assistant_pending_query = "Can I ask a custom question about water planning?"
+                    st.rerun()
+
+            st.markdown('<p class="basin-suggested-label">Suggested questions · Scenario calculations</p>', unsafe_allow_html=True)
             quick_one, quick_two, quick_three, quick_four, quick_five, quick_six = st.columns(6, gap="small")
             with quick_one:
                 if st.button("Top scenario", key="quick_top1", width="stretch", help="Explain the top-ranked scenario"):

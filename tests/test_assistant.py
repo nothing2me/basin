@@ -266,3 +266,47 @@ def test_invalid_tool_inputs(workspace):
 
     with pytest.raises(ValueError):
         run_sensitivity(workspace, severity=0, duration=0, concurrence=0, season=0)
+
+
+def test_common_user_inquiries_routing(workspace):
+    """Test routing for common real-world user queries such as tutorial confusion and orientation."""
+    # 1. Tutorial confusion and other tools
+    q1 = "the tutorial doesnt make sense, are there any other tools?"
+    r1 = semantic_query_route(workspace, q1)
+    assert "Beyond the Tutorial" in r1
+    assert "Combined Reservoir Stress Simulator" in r1
+    assert "Start tutorial" not in r1  # Must not repeat the tutorial suggestion
+
+    # 2. Plain English explanation
+    q2 = "im not sure how this works"
+    r2 = semantic_query_route(workspace, q2)
+    assert "BASIN in Plain English" in r2
+    assert "flight simulator for water planning" in r2
+
+    # 3. Dynamic next steps
+    q3 = "what should i do next"
+    r3 = semantic_query_route(workspace, q3)
+    assert "Next Step:" in r3
+
+    # 4. Export locked explainer
+    q4 = "why is export locked"
+    r4 = semantic_query_route(workspace, q4)
+    assert "Why the Export Button is Locked" in r4
+    assert "Accept all shortlisted with batch decision" in r4
+
+    # 5. All tools summary
+    q5 = "what are all the tools in basin"
+    r5 = semantic_query_route(workspace, q5)
+    assert "Summary of All Analytical Tools in BASIN" in r5
+    assert "Combined Reservoir Simulator" in r5
+
+    # 6. Custom data upload guide
+    q6 = "can i upload my own data"
+    r6 = semantic_query_route(workspace, q6)
+    assert "Upload & Use Your Own Rain Gauge Data" in r6
+
+    # 7. Custom question welcome
+    q7 = "can i ask a custom question"
+    r7 = semantic_query_route(workspace, q7)
+    assert "Ask Me Any Water, Drought, or Engineering Question" in r7
+

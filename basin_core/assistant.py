@@ -1080,8 +1080,178 @@ DOMAIN_TOPICS: dict[str, str] = {
         "- **What it calculates**: Estimates net atmospheric irrigation shortfall: \\(\\text{Deficit} = \\text{ET}_c - P\\), where \\(\\text{ET}_c\\) is crop evapotranspiration under standard reference demand and \\(P\\) is scenario rainfall.\n"
         "- **Regional Crops**: Evaluates dominant South Texas crops (grain sorghum and upland cotton) during warm-season growth stages.\n"
         "- **No Yield Guarantees**: This is an illustrative atmospheric demand calculation, not a safe-yield guarantee or a scheduled farm irrigation prescription."
+    ),
+    "tutorial_confusing_alternative": (
+        "### 🛠️ Beyond the Tutorial: All Independent Tools in BASIN\n\n"
+        "No problem at all! The guided tour is just one way to look at the interface. You do **not** need the tutorial to use BASIN.\n\n"
+        "Here is what BASIN actually does, and the independent tools you can use right now:\n\n"
+        "#### 1. 🌊 Combined Reservoir Stress Simulator (Most Popular)\n"
+        "- **Where**: Go to **Step 3: Review Selections**, open any scenario, and toggle **'Explore storage under assumed conditions'**.\n"
+        "- **What it does**: Simulates daily lake storage levels for the Choke Canyon + Lake Corpus Christi system under severe dry conditions.\n"
+        "- **What you can see**: Exact projected dates when reservoirs hit Stage 1 (40%), Stage 2 (30%), Stage 3 (20%), and Dead Pool (75,000 ac-ft).\n"
+        "- **Direct shortcut**: You can ask me right here: `Test reservoir at 38% storage with 15% conservation`.\n\n"
+        "#### 2. 🗺️ 35-Year Rainfall Anomaly Heatmaps & Map\n"
+        "- **Where**: On **Step 1: Data Dashboard**, scroll down to *Monthly rainfall departures*.\n"
+        "- **What it does**: Visualizes monthly rain anomalies across South Texas from 1991 to 2025. Crimson squares show extreme historical droughts (like 2011 and 2024); teal shows wet recovery years.\n\n"
+        "#### 3. 📤 Custom Rain Gauge Upload\n"
+        "- **Where**: On **Step 1: Data Dashboard**, expand *Data Sources, Station Catalogs & Snapshot Metadata* → click the **Upload Custom Catchment CSV** tab.\n"
+        "- **What it does**: Lets you test your own utility's rain gauge records against the regional NOAA baseline.\n\n"
+        "#### 4. ⚖️ Multi-Criteria Scenario Generator & Shortlist Engine\n"
+        "- **Where**: On **Step 2: Scenario Builder**.\n"
+        "- **What it does**: Uses 4 adjustable priority weights (Severity, Duration, Concurrence, and Summer timing) plus K-Means clustering to filter hundreds of raw weather sequences down to 6 distinct, diverse drought candidates.\n\n"
+        "#### 5. 🔥 KBDI Wildfire Index & 🌾 Crop Water Shortfall\n"
+        "- **Where**: On **Step 3: Review Selections** under the *Agronomic & Wildfire Stress* tab.\n"
+        "- **What it does**: Calculates daily Keetch-Byram Drought Index (KBDI ≥ 600 burn ban thresholds) and sorghum/cotton crop irrigation deficits.\n\n"
+        "#### 6. 📄 Standalone Verified Executive Brief (PDF & HTML)\n"
+        "- **Where**: On **Step 4: Export**.\n"
+        "- **What it does**: Once you accept candidates, compiles a publication-ready PDF brief and interactive HTML brief with complete audit signatures for city councils and hydrologists.\n\n"
+        "💡 **Quick Recommendation**: On **Step 1**, click **'Try an example'** or **'Load 2026 crisis demo'** to populate real data immediately without configuring anything!"
+    ),
+    "all_tools_summary": (
+        "### 🧰 Summary of All Analytical Tools in BASIN\n\n"
+        "BASIN provides a complete suite of specialized engineering and planning tools:\n\n"
+        "| Tool | Location | Key Function |\n"
+        "| :--- | :--- | :--- |\n"
+        "| **Observation Map & Station Registry** | Step 1 | Interactive satellite GIS map of NOAA continuous stations across South Texas |\n"
+        "| **Monthly Anomaly Heatmap** | Step 1 | 35-year historical departure matrix (1991–2025) showing historical wet/dry cycles |\n"
+        "| **Custom Gauge Uploader** | Step 1 | Upload local rain gauge CSVs with automated gap-filling and quality validation |\n"
+        "| **Shortlist Generation Engine** | Step 2 | Multi-criteria priority ranking & K-Means clustering to extract top 6 candidates |\n"
+        "| **Combined Reservoir Simulator** | Step 3 | Mass-balance drawdown simulation for Choke Canyon & Lake Corpus Christi |\n"
+        "| **Milestone Gantt Timeline** | Step 3 | Countdown days and projected dates until drought trigger band crossings |\n"
+        "| **KBDI Wildfire Index Calculator** | Step 3 | Soil moisture and deep organic fuel dryness tracking for county burn ban evaluation |\n"
+        "| **Agronomic Crop Water Deficit** | Step 3 | Net atmospheric irrigation deficit calculation for regional sorghum and cotton |\n"
+        "| **Verified Handoff Bundle Generator** | Step 4 | SHA-256 signed audit ZIP package, PDF Executive Brief, and Excel workbook |\n"
+        "| **Analyst AI Assistant** | Right Tab | Natural-language query router and direct scenario calculation engine |\n\n"
+        "Ask me about any specific tool (e.g., *'Tell me about the reservoir simulator'* or *'How does the heatmap work?'*) to learn more!"
+    ),
+    "plain_english_orientation": (
+        "### 💡 BASIN in Plain English: What This Is & How It Works\n\n"
+        "Think of BASIN as a **'flight simulator for water planning'**.\n\n"
+        "Instead of waiting for a severe drought to strike and hoping reservoir reserves hold up, BASIN lets water managers, utility directors, and municipal councils test 'what-if' dry-weather scenarios against 35 years of real South Texas weather history.\n\n"
+        "#### 🚀 The 3-Minute Quickstart (The Easiest Way to Begin):\n"
+        "1. **Load Data**: On **Step 1: Data Dashboard**, click **'Try an example'**. This instantly loads 6 diverse historical drought candidates so you don't have to configure anything.\n"
+        "2. **Simulate Water Levels**: Click **Step 3: Review Selections** in the top navigation bar. Toggle **'Explore storage under assumed conditions'** to see how lake storage draws down over time.\n"
+        "3. **Approve & Export**: Click **'Accept'** on the scenario you want to plan for, then go to **Step 4: Export** to download your verified PDF brief for your board or council.\n\n"
+        "#### 🗺️ The 4 Stages at a Glance:\n"
+        "- **Step 1: Data Dashboard** — See 35 years of NOAA rainfall records (1991–2025).\n"
+        "- **Step 2: Scenario Builder** — Choose your priorities (e.g. chronic multi-year drought vs. acute summer heat).\n"
+        "- **Step 3: Review Selections** — Check reservoir storage, crop deficits, and fire risk.\n"
+        "- **Step 4: Export** — Generate signed PDF briefs and replayable data bundles.\n\n"
+        "💬 *You can also ask me specific questions anytime, such as: 'Explain B-042', 'What is concurrence?', or 'Test reservoir at 35%'!*"
+    ),
+    "export_locked_explainer": (
+        "### 🔒 Why the Export Button is Locked (and How to Unlock It)\n\n"
+        "BASIN is an engineering decision-support tool, so it includes an **Accountability Gate**: it will never let an unreviewed or unverified scenario be exported into an official council briefing.\n\n"
+        "#### How to unlock the Export button in seconds:\n"
+        "1. Go to **Step 3: Review Selections**.\n"
+        "2. Ensure all shortlisted scenarios have been evaluated.\n"
+        "3. **Fastest shortcut**: Click the green button at the top:\n"
+        "   👉 **'✅ Accept all shortlisted with batch decision'**\n"
+        "4. Return to **Step 4: Export**. The **'Build verified export'** button will turn blue and unlock immediately!\n\n"
+        "*(Note: If you uploaded custom rain gauge data, also check the 'Include custom numerical inputs' consent box on Step 4).*"
+    ),
+    "custom_data_guide": (
+        "### 📤 How to Upload & Use Your Own Rain Gauge Data\n\n"
+        "You can supplement the regional NOAA baseline with your utility's or district's own precipitation records:\n\n"
+        "1. **Navigate**: Go to **Step 1: Data Dashboard**.\n"
+        "2. **Open the Tab**: Scroll down and click to expand **'Data Sources, Station Catalogs & Snapshot Metadata'**.\n"
+        "3. **Select Tab**: Click the **'Upload Custom Catchment CSV (Optional)'** tab.\n"
+        "4. **Format Requirements**:\n"
+        "   - CSV format with headers: `date` (`YYYY-MM-DD`) and `precipitation` (in inches or mm).\n"
+        "   - Download the pre-formatted CSV template directly from that tab for an exact sample.\n"
+        "5. **Validation**: BASIN checks data completeness, flags missing days, and calculates trace precipitation before allowing ingestion.\n"
+        "6. **Export Consent**: When exporting on Step 4, you can choose whether to include your custom gauge data in the portable bundle."
+    ),
+    "metric_definitions_faq": (
+        "### 📐 Key BASIN Metrics Explained in Plain English\n\n"
+        "- **Deficit (Shortfall)**: The total missing rainfall compared to average historical conditions over the same timeframe, measured in millimeters (mm) or inches (in).\n"
+        "- **Station Concurrence (%)**: The percentage of regional index weather stations (Corpus Christi, Victoria, San Antonio) that suffered drought simultaneously. 100% concurrence means widespread regional drought.\n"
+        "- **Historical Percentile**: How rare the drought sequence is compared to 35 years of observations. A 95th percentile scenario is more severe than 95% of all historical dry spells.\n"
+        "- **Score**: A composite multi-criteria ranking based on the weights you set on Step 2 (Severity, Duration, Concurrence, and Summer Timing). Highest score ranks #1.\n"
+        "- **Combined Storage (%)**: The collective water volume stored in Choke Canyon Reservoir and Lake Corpus Christi relative to their combined conservation capacity (963,600 ac-ft).\n"
+        "- **Stage 3 Critical Shortage (20% or 35%)**: Key policy triggers where municipal lawn watering is prohibited and industrial/irrigation curtailments become mandatory."
+    ),
+    "custom_questions_welcome": (
+        "### 💬 Ask Me Any Water, Drought, or Engineering Question!\n\n"
+        "Yes! You can ask me custom questions about South Texas hydrology, drought contingency planning, reservoir management, and how to use this tool.\n\n"
+        "Here are some examples of what you can ask:\n"
+        "- **Hydrology & Reservoirs**: *'What happens when reservoirs hit dead pool?'*, *'How does Lake Texana pipeline supply Corpus Christi?'*, *'What causes high station concurrence?'*\n"
+        "- **Drought Policy**: *'What are the mandatory restrictions in Stage 3?'*, *'How should rural water supply corporations prepare for multi-year drought?'*\n"
+        "- **Tool Calculations**: *'Tell me about scenario B-042'*, *'Compare B-001 and B-012'*, *'Test reservoir at 30% storage'*, *'Explain ranking for B-001'*\n"
+        "- **Platform Guidance**: *'What should I do next?'*, *'Why is export locked?'*, *'How do I upload custom data?'*\n\n"
+        "Feel free to type your question below!"
     )
 }
+
+
+def _render_next_steps_guide(workspace) -> str:
+    """Provide intelligent, dynamic next-step guidance based on active workspace state."""
+    if workspace is None:
+        return (
+            "### 🧭 Next Step: Start an Analysis Run\n\n"
+            "You do not have an active analysis loaded yet. Here is the easiest way to begin:\n\n"
+            "1. **Fastest start**: Go to **Step 1: Data Dashboard** and click **'Try an example'** (loads 6 diverse drought scenarios instantly).\n"
+            "2. **Crisis stress test**: Click **'Load 2026 crisis demo'** to see reservoir drawdown under severe historic drought conditions.\n"
+            "3. **Custom generation**: Go to **Step 2: Scenario Builder**, choose your drought parameters, and click **'Create rainfall scenarios'**."
+        )
+
+    scenarios = getattr(workspace, "scenarios", [])
+    selected_ids = getattr(workspace, "selected", [])
+    if not scenarios:
+        return (
+            "### 🧭 Next Step: Generate Rainfall Scenarios\n\n"
+            "Your observation baseline is active, but you haven't generated candidate scenarios yet:\n\n"
+            "1. Navigate to **Step 2: Scenario Builder** (in the top navigation bar).\n"
+            "2. Choose a **Community Priority Preset** (e.g., *Crop stress* or *Reservoir risk*).\n"
+            "3. Click **'Create rainfall scenarios'** to screen hundreds of historical sequences into a 6-candidate shortlist."
+        )
+
+    shortlisted = [workspace.get(sid) for sid in selected_ids if any(s.id == sid for s in scenarios)]
+    reviewed_count = sum(1 for s in shortlisted if s.status in ("accepted", "rejected"))
+    accepted_count = sum(1 for s in shortlisted if s.status == "accepted")
+    total_shortlisted = len(shortlisted)
+
+    if reviewed_count == 0:
+        first_id = shortlisted[0].id if shortlisted else "B-001"
+        return (
+            f"### 🧭 Next Step: Evaluate Shortlisted Candidates\n\n"
+            f"You have **{total_shortlisted} candidate scenarios** shortlisted and waiting for review:\n\n"
+            f"1. Navigate to **Step 3: Review Selections**.\n"
+            f"2. Inspect candidate **{first_id}**: look at the deficit curve, and toggle *'Explore storage under assumed conditions'* to test reservoir drawdown.\n"
+            f"3. Record your reviewer observations and click **'Accept'** or **'Reject'**.\n\n"
+            f"⚡ *Quick shortcut: If you want to accept the full shortlist in one click, click **'✅ Accept all shortlisted with batch decision'** at the top of Step 3.*"
+        )
+    elif reviewed_count < total_shortlisted:
+        unreviewed = [s.id for s in shortlisted if s.status == "unreviewed"]
+        return (
+            f"### 🧭 Next Step: Complete Scenario Review\n\n"
+            f"You're making progress! You have reviewed **{reviewed_count} of {total_shortlisted}** candidates ({accepted_count} accepted).\n\n"
+            f"To finish and unlock your export deliverables:\n"
+            f"1. On **Step 3: Review Selections**, review the remaining candidate(s): **{', '.join(unreviewed)}**.\n"
+            f"2. Or, click **'✅ Accept all shortlisted with batch decision'** to approve all remaining candidates at once.\n"
+            f"3. Once all candidates are evaluated, proceed to **Step 4: Export**."
+        )
+    elif accepted_count == 0:
+        return (
+            "### 🧭 Next Step: Accept at Least One Scenario\n\n"
+            "All candidates have been reviewed, but **none are currently accepted** (all are rejected).\n\n"
+            "An export package requires at least one accepted scenario to generate an executive brief:\n"
+            "1. Return to **Step 3: Review Selections**.\n"
+            "2. Select the candidate that best represents the drought conditions you need to plan for.\n"
+            "3. Click **'Accept'**, then proceed to **Step 4: Export**."
+        )
+    else:
+        return (
+            f"### 🧭 Next Step: Build & Download Verified Deliverables\n\n"
+            f"🎉 **Your review is complete!** You have **{accepted_count} accepted scenario(s)** ready for handoff.\n\n"
+            f"1. Navigate to **Step 4: Export** in the top navigation bar.\n"
+            f"2. Click **'Build verified export'** to compile your audit package.\n"
+            f"3. Download your deliverables:\n"
+            f"   - **Executive Technical Brief (PDF)**: Formatted presentation brief for City Councils and regional boards.\n"
+            f"   - **Verified Data Bundle (ZIP)**: SHA-256 cryptographically verified audit package with raw daily CSVs and replay metadata.\n"
+            f"   - **HTML Brief**: Click *'Compile & View Full HTML Report'* to preview the standalone brief directly in your browser."
+        )
+
 
 def _render_workspace_summary(workspace) -> str:
     """Render a comprehensive overview of the loaded run and shortlisted scenarios."""
@@ -1369,6 +1539,126 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
     if not id_matches and any(k in p for k in ["step 4", "step four", "export tab", "how to export", "export bundle", "export packet", "how do i export", "download pdf", "download zip", "export deliverables"]):
         return DOMAIN_TOPICS["step_4_guide"]
+
+    # 1. Tutorial Confusion & Alternative Tools (e.g. "the tutorial doesnt make sense, are there any other tools?")
+    is_tutorial_confusion = (
+        not id_matches
+        and (
+            any(k in p for k in [
+                "tutorial doesnt make sense", "tutorial doesn't make sense", "tutorial make sense",
+                "tutorial makes no sense", "tutorial is confusing", "confused by the tutorial",
+                "don't understand the tutorial", "dont understand the tutorial", "tutorial is too complicated",
+                "skip the tutorial", "skip tutorial", "bypass tutorial", "other than the tutorial",
+                "besides the tutorial", "hate the tutorial", "tutorial failed"
+            ])
+            or (
+                "tutorial" in p
+                and any(k in p for k in ["sense", "confus", "other tool", "another tool", "alternative", "dont understand", "don't understand", "lost", "stuck"])
+            )
+            or (
+                any(k in p for k in ["are there any other tools", "are there other tools", "what other tools", "other tools available", "any other tools"])
+            )
+        )
+    )
+    if is_tutorial_confusion:
+        return DOMAIN_TOPICS["tutorial_confusing_alternative"]
+
+    # 2. All Tools Summary / Feature Discovery
+    is_tools_summary = (
+        not id_matches
+        and any(k in p for k in [
+            "what tools can i use", "what are all the tools", "all the tools", "list of tools",
+            "what tools are available", "what features does basin have", "what else can this app do",
+            "what else can this tool do", "what else can basin do", "available tools", "tool overview",
+            "list all features", "features of basin", "capabilities of basin", "what features"
+        ])
+    )
+    if is_tools_summary:
+        return DOMAIN_TOPICS["all_tools_summary"]
+
+    # 3. Next Steps / "What should I do next? / How do I finish?"
+    is_next_step = (
+        not id_matches
+        and any(k in p for k in [
+            "what should i do next", "what do i do next", "what is my next step", "what is the next step",
+            "what's next", "whats next", "where do i go next", "what to do next", "what now",
+            "how do i finish", "how to finish", "am i done", "am i finished", "is my analysis complete",
+            "what is the next action", "next step"
+        ])
+    )
+    if is_next_step:
+        return _render_next_steps_guide(workspace)
+
+    # 4. Export Locked / Cannot Export
+    is_export_locked = (
+        not id_matches
+        and any(k in p for k in [
+            "why is export locked", "why is the export button locked", "export is locked",
+            "why is export disabled", "export is disabled", "cannot export", "can't export", "cant export",
+            "why cant i export", "why can't i export", "export button grayed out", "export button disabled",
+            "how to unlock export", "unlock export", "why can't i download", "why cant i download"
+        ])
+    )
+    if is_export_locked:
+        return DOMAIN_TOPICS["export_locked_explainer"]
+
+    # 5. Plain English Orientation / "I'm not sure how this works / What is this?"
+    is_plain_english = (
+        not id_matches
+        and (
+            any(k in p for k in [
+                "im not sure how this works", "i'm not sure how this works", "not sure how this works",
+                "i don't understand how this works", "dont understand how this works",
+                "i don't know how this works", "dont know how this works",
+                "what is this website", "what is this app", "what is this tool", "what is this platform",
+                "what is basin", "what does basin do", "what is the purpose of this",
+                "explain in simple terms", "explain simply", "explain like i'm 5", "explain like im 5",
+                "eli5", "plain english explanation", "simple explanation", "what am i supposed to do",
+                "what am i doing here", "what is the point of this"
+            ])
+            or (
+                p.strip() in ["what is this", "what is this?", "how does this work", "how does this work?"]
+            )
+        )
+    )
+    if is_plain_english:
+        return DOMAIN_TOPICS["plain_english_orientation"]
+
+    # 6. Custom Data Upload Questions
+    is_custom_upload = (
+        not id_matches
+        and any(k in p for k in [
+            "can i upload my own data", "upload my own data", "upload custom data", "upload custom rainfall",
+            "how to upload data", "how do i upload", "use my own rain gauge", "own rain gauge",
+            "custom gauge", "custom csv", "upload csv", "own data"
+        ])
+    )
+    if is_custom_upload:
+        return DOMAIN_TOPICS["custom_data_guide"]
+
+    # 7. Metric Definitions FAQ
+    is_metric_def = (
+        not id_matches
+        and any(k in p for k in [
+            "what do the numbers mean", "what do these metrics mean", "metric definitions",
+            "what does deficit mean", "what is deficit", "what is shortfall",
+            "what is historical percentile", "explain percentile", "difference between inches and mm",
+            "inches or mm", "what does score mean"
+        ])
+    )
+    if is_metric_def:
+        return DOMAIN_TOPICS["metric_definitions_faq"]
+
+    # 8. Custom Questions Welcome / Ask Anything
+    is_custom_welcome = (
+        not id_matches
+        and any(k in p for k in [
+            "can i ask a custom question", "custom question", "can i ask you anything",
+            "ask anything", "what questions can i ask", "can you answer anything"
+        ])
+    )
+    if is_custom_welcome:
+        return DOMAIN_TOPICS["custom_questions_welcome"]
 
     # General Workflow, Getting Started, Website Orientation, or "Confused"
     is_workflow_guide = (
