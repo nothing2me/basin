@@ -994,6 +994,93 @@ DOMAIN_TOPICS: dict[str, str] = {
         "**Summer Timing, Evaporation, and Demand**\n\n"
         "A summer-onset rainfall shortfall may coincide with higher evaporation and water demand, which makes timing useful for scenario screening. BASIN includes a visible seasonality feature in ranking so users can choose how much that timing affects the shortlist.\n\n"
         "The rainfall workflow does not calculate lake evaporation or municipal demand. The optional storage experiment uses configured assumptions and does not prove that one seasonal scenario depletes storage at a particular multiple of another. Quantifying that effect requires current evaporation, demand, inflow, and operating data in a calibrated model."
+    ),
+    "greetings": (
+        "**Hello! I am your BASIN Hydrologist Assistant.**\n\n"
+        "I am an embedded decision-support specialist designed to help municipal planners and rural-serving water providers evaluate drought vulnerability.\n\n"
+        "### How I can help you:\n"
+        "- **Learn how to use BASIN**: Ask `How do I use this tool?` or `Explain Step 2`.\n"
+        "- **Understand hydrologic concepts**: Ask `What is concurrence?`, `What is KBDI?`, or `Is this a forecast?`.\n"
+        "- **Analyze scenarios**: Ask `Tell me about scenario B-001`, `Compare B-001 and B-002`, or `Explain ranking for B-001`.\n"
+        "- **Test reservoir sensitivity**: Ask `Test reservoir at 38% storage with 15% conservation`.\n"
+        "- **Check data & export**: Ask `Where does this data come from?` or `Check export readiness`.\n\n"
+        "💡 *Tip: If you are new to the workspace, click **'Tour'** in the top navigation bar for an interactive tour, or click any of the quick-action buttons above!*"
+    ),
+    "workflow_guide": (
+        "### 🗺️ BASIN 4-Step Screening Workflow Guide\n\n"
+        "BASIN is a decision-support workbench that helps rural-serving water providers and hydrologists screen rainfall records and stress-test drought contingency plans.\n\n"
+        "#### **Step 1: Data Dashboard (Baseline & Catchment)**\n"
+        "- Inspect the 1991–2025 continuous NOAA index precipitation records (Corpus Christi, Victoria, San Antonio).\n"
+        "- *(Optional)* Upload and observe your own local catchment rain gauge CSV to augment the baseline.\n"
+        "- Choose your **Analysis Focus** (Storage Stress, Agronomics, Regulatory Handoff, or Comparison).\n\n"
+        "#### **Step 2: Scenarios (Rainfall Screening)**\n"
+        "- Set your **Community Priority Presets** (*Crop stress*, *Reservoir risk*, *Chronic drought*, *Widespread deficit*) and fine-tune priority weights.\n"
+        "- Choose your generation mode: **Variations of Single Window** or **Multi-Year Historical Search**.\n"
+        "- Click **'Create rainfall scenarios'** to generate candidates and an automated diverse shortlist.\n\n"
+        "#### **Step 3: Review (Engineering Due Diligence)**\n"
+        "- Inspect shortlisted candidate profiles: cumulative deficit curves, uncalibrated reservoir drawdown simulations, and crop water demand.\n"
+        "- Record your provider notes and mark scenarios as **Accepted** or **Rejected**.\n\n"
+        "#### **Step 4: Exports (Hydrologist Handoff)**\n"
+        "- Verify the **Export Readiness** checklist (all shortlisted scenarios reviewed).\n"
+        "- Grant privacy consent if including local gauge data.\n"
+        "- Download the self-contained **Verified Data Bundle (.zip)** and printable **Executive Technical Brief (.pdf)** for your consulting hydrologist.\n\n"
+        "---\n"
+        "💡 **If you ever get confused:**\n"
+        "- Click **'Tour'** in the top navigation bar for a step-by-step UI walkthrough.\n"
+        "- Click **'Load Example Run'** (Seed 22) on Step 1 to explore a fully pre-loaded demonstration run."
+    ),
+    "step_1_guide": (
+        "### 📊 Guide to Step 1: Data Dashboard\n\n"
+        "The Data Dashboard is where you establish your empirical observation baseline:\n"
+        "- **Continuous NOAA Records**: View synchronized daily precipitation spanning 1991–2025 across regional NOAA stations.\n"
+        "- **Custom Local Gauges**: In the bottom metadata expander (*Upload Custom Catchment CSV*), upload daily precipitation records for local rain gauges.\n"
+        "- **Analysis Focus**: Select your primary decision objective (*Storage Stress*, *Agronomics*, *Regulatory Handoff*, or *Comparison*) to tailor metrics across subsequent steps.\n"
+        "- **Saved Runs**: Reopen saved workspace runs or restore from a verified `.zip` bundle.\n\n"
+        "👉 *Next step: When your baseline is ready, click **'Step 2: Scenarios'** in the top navigation.*"
+    ),
+    "step_2_guide": (
+        "### 🌧️ Guide to Step 2: Scenarios & Shortlist Generation\n\n"
+        "Step 2 generates and shortlists drought candidates based on your priorities:\n"
+        "- **Community Priority Presets & Weights**: Select an operational preset (*Crop stress*, *Reservoir risk*, *Chronic drought*, *Widespread deficit*) or adjust slider weights (Severity, Duration, Concurrence, Seasonality). These rank candidates directly into your shortlist.\n"
+        "- **Generation Modes**:\n"
+        "  - *Variations of Historical Window*: Scales precipitation downwards within a specific historical interval (e.g. 2024 drought sequence).\n"
+        "  - *Multi-Year Historical Search*: Empirically screens multi-season dry periods across distinct years (1991–2025) and onset months.\n"
+        "- **Clustering (K-Means)**: Groups candidate sequences by statistical features to deliver a diverse shortlist without duplicate 'clones'.\n\n"
+        "👉 *Next step: Click **'Create rainfall scenarios'**, then proceed to **'Step 3: Review'**.*"
+    ),
+    "step_3_guide": (
+        "### 🔍 Guide to Step 3: Scenario Review\n\n"
+        "Step 3 is where you evaluate candidates and build an audit trail:\n"
+        "- **Inspect Shortlisted Scenarios**: Review candidate shortfall, duration, station concurrence, and historical percentile.\n"
+        "- **Key Charts**:\n"
+        "  - *Rainfall Deficit Curve*: Cumulative shortfall vs. historical average.\n"
+        "  - *Combined Storage Simulation*: Illustrative mass-balance trajectory showing response band crossings (Stage 1 @ 40%, Stage 2 @ 30%, Stage 3 @ 20%).\n"
+        "  - *Crop Water Deficit*: Net atmospheric irrigation deficit for regional sorghum and cotton.\n"
+        "- **Decision Trail**: Record engineering reviewer notes and mark each candidate as **Accepted** or **Rejected**. A completed review is required before export.\n\n"
+        "👉 *Next step: Once all candidates are reviewed, proceed to **'Step 4: Exports'**.*"
+    ),
+    "step_4_guide": (
+        "### 📦 Guide to Step 4: Exports & Deliverables\n\n"
+        "Step 4 compiles the verified handoff packet for hydrologists and councils:\n"
+        "- **Readiness Checklist**: Confirms that all shortlisted scenarios have an approved or rejected decision with notes.\n"
+        "- **Privacy & Local Data Consent**: If local rain gauge data is used, check the consent box to include it in the portable export bundle.\n"
+        "- **Deliverables**:\n"
+        "  - **Executive Technical Brief (PDF)**: Clean, publication-ready summary with decision rationale, figures, and limitations.\n"
+        "  - **Verified Data Bundle (ZIP)**: Replayable archive with exact raw CSV data, scenario definitions, review decisions, and SHA-256 manifest.\n"
+        "  - **Excel Audit Workbook (XLSX)**: Complete tabular data for external modeling (HEC-HMS, WAM, spreadsheets)."
+    ),
+    "kbdi_faq": (
+        "### 🔥 Hydrologic Index: Keetch-Byram Drought Index (KBDI)\n\n"
+        "- **What it is**: KBDI is a continuous mathematical index measuring soil moisture deficit and deep organic matter dryness, ranging from 0 (saturated) to 800 (extreme drought).\n"
+        "- **Illustrative Stress Marker (≥600)**: In South Texas, KBDI ≥ 600 indicates severe fuel dryness where wildfire danger escalates and county burn bans are commonly considered.\n"
+        "- **Crossing vs. Peak Day**: BASIN identifies both the **first day** the sequence crosses 600 and the **peak day** of maximum dry-spell intensity.\n"
+        "- **Official Authority**: BASIN calculates KBDI under fixed reference temperature assumptions for screening. Official burn bans and ratings are declared exclusively by county authorities and the **Texas A&M Forest Service**."
+    ),
+    "crop_deficit_faq": (
+        "### 🌾 Agronomic Metric: Illustrative Crop Water Deficit\n\n"
+        "- **What it calculates**: Estimates net atmospheric irrigation shortfall: \\(\\text{Deficit} = \\text{ET}_c - P\\), where \\(\\text{ET}_c\\) is crop evapotranspiration under standard reference demand and \\(P\\) is scenario rainfall.\n"
+        "- **Regional Crops**: Evaluates dominant South Texas crops (grain sorghum and upland cotton) during warm-season growth stages.\n"
+        "- **No Yield Guarantees**: This is an illustrative atmospheric demand calculation, not a safe-yield guarantee or a scheduled farm irrigation prescription."
     )
 }
 
@@ -1259,7 +1346,54 @@ def semantic_query_route(workspace, prompt: str) -> str:
             res = compare_scenarios(workspace, workspace.selected[0], workspace.selected[1])
             return render_tool_result("compare_scenarios", res)
 
-    # 9. Domain Hydrologic & Rural Council FAQ
+    # 9. Conversational, Workflow & Educational Guides
+    is_greeting = (
+        not id_matches
+        and any(p == k or p.startswith(k + " ") or p.endswith(" " + k) or p == k + "!" or p == k + "?" for k in [
+            "hello", "hi", "hey", "greetings", "good morning", "good afternoon", "good evening",
+            "who are you", "what can you do", "introduce yourself", "help me"
+        ])
+        and not any(k in p for k in ["scenario", "rainfall", "storage", "station", "deficit"])
+    )
+    if is_greeting:
+        return DOMAIN_TOPICS["greetings"]
+
+    # Step-specific guides
+    if not id_matches and any(k in p for k in ["step 1", "step one", "data dashboard", "load data", "custom gauge", "upload csv", "how to load data"]):
+        return DOMAIN_TOPICS["step_1_guide"]
+
+    if not id_matches and any(k in p for k in ["step 2", "step two", "how to build scenarios", "how to generate scenarios", "how to create scenarios", "how do i build scenarios", "priority weights", "how to make scenarios"]):
+        return DOMAIN_TOPICS["step_2_guide"]
+
+    if not id_matches and any(k in p for k in ["step 3", "step three", "review tab", "how to review", "how do i review", "review process", "reviewing scenarios", "how to accept", "how to reject"]):
+        return DOMAIN_TOPICS["step_3_guide"]
+
+    if not id_matches and any(k in p for k in ["step 4", "step four", "export tab", "how to export", "export bundle", "export packet", "how do i export", "download pdf", "download zip", "export deliverables"]):
+        return DOMAIN_TOPICS["step_4_guide"]
+
+    # General Workflow, Getting Started, or "Confused"
+    is_workflow_guide = (
+        not id_matches
+        and any(k in p for k in [
+            "how do i use", "how to use", "how does this work", "how does basin work",
+            "getting started", "where do i start", "what do i do", "walkthrough", "tutorial",
+            "confused", "i am lost", "i'm lost", "help with this tool", "explain the tool",
+            "workflow", "how the tool works", "user guide", "instructions", "overview of basin",
+            "how is the user supposed to learn", "how do users learn"
+        ])
+    )
+    if is_workflow_guide:
+        return DOMAIN_TOPICS["workflow_guide"]
+
+    # KBDI Wildfire Index
+    if not id_matches and any(k in p for k in ["kbdi", "keetch-byram", "keetch byram", "burn ban", "fire danger", "wildfire"]):
+        return DOMAIN_TOPICS["kbdi_faq"]
+
+    # Crop Water Deficit
+    if not id_matches and any(k in p for k in ["crop deficit", "crop water", "irrigation deficit", "crop demand"]):
+        return DOMAIN_TOPICS["crop_deficit_faq"]
+
+    # 10. Domain Hydrologic & Rural Council FAQ
     is_concurrence_faq = (
         any(k in p for k in [
             "what is concurrence", "what does concurrence mean", "explain concurrence",
@@ -1429,7 +1563,7 @@ def semantic_query_route(workspace, prompt: str) -> str:
             return render_tool_result("get_data_provenance", res)
 
         # Route 13: Describe scenario
-        if any(k in p for k in ["scenario", "tell me about", "deficit", "describe", "profile"]) or id_matches:
+        if id_matches or ("scenario" in p and any(k in p for k in ["tell me about", "describe", "profile", "metrics", "details"])):
             if not id_matches:
                 return need_ids(1, "describe")
             res = describe_scenario(workspace, id_matches[0])
@@ -1437,8 +1571,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
         return (
             "**BASIN Analyst Assistant**\n\n"
-            "I am a read-only decision-support tool. I only answer questions using verified, "
-            "deterministic workspace calculations, and cannot provide speculative commentary or forecasts.\n\n"
+            "I am a read-only decision-support tool. I answer questions using verified, "
+            "deterministic workspace calculations, and provide guidance on the BASIN workflow.\n\n"
             f"{TOOL_LIST_HELP}"
         )
     except ValueError as err:
@@ -1450,10 +1584,21 @@ def semantic_query_route(workspace, prompt: str) -> str:
 def select_candidate_tools(query: str, max_tools: int = 3) -> list[dict[str, Any]]:
     """Select the most query-relevant tool schemas to keep prompt size small and fast on CPU."""
     q = query.lower()
+
+    # Informational, workflow, or greeting queries do not require tool calls
+    if any(k in q for k in [
+        "how to", "how do i", "how does", "what is basin", "getting started", "where do i start",
+        "what do i do", "walkthrough", "tutorial", "confused", "i am lost", "i'm lost",
+        "help", "guide", "workflow", "step 1", "step 2", "step 3", "step 4",
+        "data dashboard", "review tab", "export tab", "how to review", "how to export",
+        "hello", "hi", "hey", "who are you", "what can you do", "introduce yourself"
+    ]):
+        return []
+
     matches = []
 
     keywords = {
-        "describe_scenario": ["scenario", "profile", "tell me about", "describe", "b-", "cand"],
+        "describe_scenario": ["scenario", "profile", "b-", "cand"],
         "compare_scenarios": ["compare", "difference", "vs", "versus", "between"],
         "explain_ranking": ["rank", "score", "why is", "position", "leader", "order"],
         "check_concurrence": ["concurrence", "stress", "spatial", "simultaneous", "all stations"],
@@ -1475,15 +1620,8 @@ def select_candidate_tools(query: str, max_tools: int = 3) -> list[dict[str, Any
     matches.sort(key=lambda x: x[0], reverse=True)
     selected = [t for _, t in matches[:max_tools]]
 
-    names_present = {t["function"]["name"] for t in selected}
-    for default_name in ("describe_scenario", "compare_scenarios", "explain_ranking"):
-        if len(selected) >= max_tools:
-            break
-        if default_name not in names_present:
-            found = next((t for t in TOOL_SCHEMAS if t["function"]["name"] == default_name), None)
-            if found:
-                selected.append(found)
-                names_present.add(default_name)
+    if not matches:
+        return []
 
     return selected
 
