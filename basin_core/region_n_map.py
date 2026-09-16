@@ -125,7 +125,7 @@ def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=T
     layers = set(LAYER_LABELS if layers is None else layers)
     imagery_source = OFFLINE_IMAGERY_URL if (use_offline and OFFLINE_TILES_DIR.exists()) else IMAGERY_URL
     attribution = (
-        "Tiles © Esri (Bundled Region N Satellite Cache)"
+        "Tiles © Esri (Bundled Satellite Cache)"
         if imagery_source == OFFLINE_IMAGERY_URL
         else "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
     )
@@ -134,10 +134,9 @@ def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=T
         sourcetype="raster",
         source=[imagery_source],
         sourceattribution=attribution,
+        minzoom=0,
+        maxzoom=18,
     )
-    if imagery_source == OFFLINE_IMAGERY_URL:
-        raster_layer["minzoom"] = 6
-        raster_layer["maxzoom"] = 11
     map_layers = [raster_layer]
     for key in ("lakes", "streams", "basins", "counties"):
         if key not in layers:
@@ -170,11 +169,31 @@ def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=T
     if not fig.data:
         fig.add_trace(go.Scattermap(lon=[None], lat=[None], showlegend=False))
     west, south, east, north = catalog["bounds"]
+    if focus:
+        center_lon, center_lat = focus["lon"], focus["lat"]
+        zoom_level = 9
+    elif source_rows and (has_custom or any(
+        r.get("longitude", 0) < west or r.get("longitude", 0) > east or
+        r.get("latitude", 0) < south or r.get("latitude", 0) > north
+        for r in source_rows
+    )):
+        valid_lons = [r["longitude"] for r in source_rows if "longitude" in r]
+        valid_lats = [r["latitude"] for r in source_rows if "latitude" in r]
+        if valid_lons and valid_lats:
+            center_lon = sum(valid_lons) / len(valid_lons)
+            center_lat = sum(valid_lats) / len(valid_lats)
+            zoom_level = 8
+        else:
+            center_lon, center_lat = (west + east) / 2, (south + north) / 2
+            zoom_level = 7
+    else:
+        center_lon, center_lat = (west + east) / 2, (south + north) / 2
+        zoom_level = 7
+
     fig.update_layout(height=620, margin=dict(l=0, r=0, t=0, b=0),
                       map=dict(style="white-bg", layers=map_layers,
-                               center=dict(lon=focus["lon"] if focus else (west + east) / 2,
-                                           lat=focus["lat"] if focus else (south + north) / 2),
-                               zoom=9 if focus else 7),
+                               center=dict(lon=center_lon, lat=center_lat),
+                               zoom=zoom_level),
                       uirevision="region-n-" + (focus["label"] if focus else "overview"),
                       legend=dict(orientation="h", y=-.02, x=0, font=dict(size=12)),
                       paper_bgcolor="rgba(0,0,0,0)")
@@ -192,16 +211,30 @@ def render_observation_map(stations_df, *, show_catalog=False):
     except (OSError, ValueError) as error:
         st.error(f"The bundled Region N map catalog could not be loaded: {error}")
         return
-    st.caption("Offline satellite imagery · Orange outline: Region N's 11 counties. "
+    st.caption("Satellite observation map · Orange outline: Region N's 11 counties. "
                "Geographic layers show mapped features, not current water levels or streamflow.")
 
-    layers = st.multiselect(
-        "Visible map layers",
-        list(LAYER_LABELS),
-        default=DEFAULT_FAST_LAYERS,
-        format_func=LAYER_LABELS.get,
-        key="observation_map_layers",
-    )
+    has_offline = OFFLINE_TILES_DIR.exists() and any(OFFLINE_TILES_DIR.iterdir())
+    col_m1, col_m2 = st.columns([3.2, 1.8], gap="medium")
+    with col_m1:
+        layers = st.multiselect(
+            "Visible map layers",
+            list(LAYER_LABELS),
+            default=DEFAULT_FAST_LAYERS,
+            format_func=LAYER_LABELS.get,
+            key="observation_map_layers",
+        )
+    with col_m2:
+        map_mode = st.radio(
+            "Satellite imagery source",
+            ["Live Esri (global / online)", "Bundled cache (offline / local)"] if has_offline else ["Live Esri (global / online)"],
+            index=0,
+            horizontal=True,
+            help="Live Esri streams high-resolution satellite imagery for any region worldwide from ArcGIS Online. Bundled cache operates fully offline from local storage without network latency.",
+            key="observation_map_basemap_mode",
+        )
+    use_offline = map_mode.startswith("Bundled")
+
     entries = search_catalog()
     selected = st.selectbox("Find a station, county, stream, lake or subbasin", range(len(entries)),
                             index=None, placeholder="Search by name or station ID…",
@@ -210,7 +243,7 @@ def render_observation_map(stations_df, *, show_catalog=False):
     if focus and focus["layer"] not in layers:
         layers = [*layers, focus["layer"]]
         st.caption(f"Showing {LAYER_LABELS[focus['layer']]} for the selected search result.")
-    st.plotly_chart(build_observation_map(stations_df, layers=layers, focus=focus, use_offline=True), width="stretch",
+    st.plotly_chart(build_observation_map(stations_df, layers=layers, focus=focus, use_offline=use_offline), width="stretch",
                     theme=None, config={"displayModeBar": True, "scrollZoom": True})
     st.caption("Cyan lines: streams/channels · Blue fill: lakes/ponds · Purple lines: HUC8 subbasins · "
                "White lines: counties · Orange outline: Region N")
