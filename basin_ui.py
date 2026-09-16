@@ -227,8 +227,10 @@ def assistant_panel(w, source=None, names=None):
             on_click=tab_action,
         )
 
-    if not is_open:
-        return
+    if is_open:
+        st.html("<script>document.body.classList.add('basin-assistant-open');</script>", unsafe_allow_javascript=True)
+    else:
+        st.html("<script>document.body.classList.remove('basin-assistant-open');</script>", unsafe_allow_javascript=True)
 
     if w is None:
         if source is not None:

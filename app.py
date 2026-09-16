@@ -58,40 +58,45 @@ st.html(f"""<style>
     --basin-notes-height: {notes_h}px;
 }}
 </style>""")
-if st.session_state.get("assistant_open", False):
-    st.html(f"""<style>
-    .block-container, [data-testid="stMainBlockContainer"] {{
-        margin-right: {assistant_w + 10}px !important;
-        max-width: calc(100% - {assistant_w + 20}px) !important;
-        padding-right: 1.5rem !important;
+st.html(f"""<style>
+.block-container, [data-testid="stMainBlockContainer"] {{
+    transition: margin-right 0.32s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}}
+body.basin-assistant-open .block-container, body.basin-assistant-open [data-testid="stMainBlockContainer"] {{
+    margin-right: {assistant_w + 10}px !important;
+    max-width: calc(100% - {assistant_w + 20}px) !important;
+    padding-right: 1.5rem !important;
+}}
+.st-key-assistant_drawer {{
+    width: {assistant_w}px !important;
+    min-width: 360px;
+    max-width: 90vw;
+    resize: horizontal;
+}}
+body.basin-assistant-open .st-key-assistant_tab_closed,
+body.basin-assistant-open .st-key-assistant_tab_open {{
+    right: {assistant_w}px !important;
+}}
+body.basin-assistant-open .st-key-notes_slide_drawer {{
+    left: calc((100vw - {assistant_w + 10}px)/2) !important;
+    transition: left 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}}
+@media(max-width: 950px) {{
+    body.basin-assistant-open .block-container, body.basin-assistant-open [data-testid="stMainBlockContainer"] {{
+        margin-right: 0 !important;
+        max-width: 100% !important;
     }}
     .st-key-assistant_drawer {{
-        width: {assistant_w}px;
-        min-width: 360px;
-        max-width: 90vw;
-        resize: horizontal;
+        width: 92vw !important;
     }}
-    .st-key-assistant_tab_open {{
-        right: {assistant_w}px !important;
-        transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    }}
-    body:has(.st-key-assistant_drawer) .st-key-notes_slide_drawer {{
-        left: calc((100vw - {assistant_w + 10}px)/2) !important;
-        transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    }}
-    @media(max-width: 950px) {{
-        .block-container, [data-testid="stMainBlockContainer"] {{
-            margin-right: 0 !important;
-            max-width: 100% !important;
-        }}
-        .st-key-assistant_drawer {{
-            width: 92vw !important;
-        }}
-        .st-key-assistant_tab_open {{
-            right: 92vw !important;
-        }}
-    }}
-    </style>""")
+}}
+</style>
+<script>
+(() => {{
+    const isOpen = {str(st.session_state.get("assistant_open", False)).lower()};
+    document.body.classList.toggle('basin-assistant-open', isOpen);
+}})();
+</script>""")
 
 
 @st.cache_resource
@@ -1165,22 +1170,12 @@ def personal_notes_panel(w):
     current_val = w.notes if w else st.session_state.get("personal_notes", "")
     has_notes = bool(current_val.strip())
 
-    if is_open:
-        st.html("""<style>
-        .st-key-notes_drawer_panel {
-            transform: translateY(0) !important;
-            overflow-y: auto !important;
-            box-shadow: 0 -8px 36px rgba(0,0,0,.55) !important;
-        }
-        </style>""")
-    else:
-        st.html("""<style>
-        .st-key-notes_drawer_panel {
-            transform: translateY(calc(100% - 44px)) !important;
-            overflow: hidden !important;
-            box-shadow: 0 -4px 20px rgba(0,0,0,.38) !important;
-        }
-        </style>""")
+    st.html(f"""<script>
+    (() => {{
+        const isOpen = {str(is_open).lower()};
+        document.body.classList.toggle('basin-notes-open', isOpen);
+    }})();
+    </script>""", unsafe_allow_javascript=True)
 
     with st.container(key="notes_slide_drawer"):
         with st.container(key="notes_drawer_panel"):
@@ -1213,26 +1208,6 @@ def personal_notes_panel(w):
                     if st.button("Save notes", key=f"btn_save_notes_{w.id if w else 'default'}", width="stretch", type="primary"):
                         on_notes_change()
                         st.success("Notes saved locally")
-
-    st.html("""<script>
-    (() => {
-        const root = document.querySelector('.st-key-notes_slide_drawer');
-        if (!root) return;
-        const panel = root.querySelector('.st-key-notes_drawer_panel');
-        if (!panel) return;
-        const btn = root.querySelector('.st-key-notes_header_btn button');
-        if (btn && !btn._hasNotesSlideListener) {
-            btn._hasNotesSlideListener = true;
-            btn.addEventListener('click', () => {
-                if (panel.style.transform === 'translateY(0px)') {
-                    panel.style.transform = 'translateY(calc(100% - 44px))';
-                } else {
-                    panel.style.transform = 'translateY(0)';
-                }
-            });
-        }
-    })();
-    </script>""")
 
 
 TUTORIAL_STEPS = [
