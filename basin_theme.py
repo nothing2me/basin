@@ -104,13 +104,14 @@ h3{font-size:1.6rem!important;font-weight:650!important}
     font-weight:500!important;
     color:var(--basin-muted)!important;
 }
-.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:2px 0;margin:0 auto;text-align:center}
-.basin-top-logo-dark{height:54px;width:auto;max-width:280px;object-fit:contain;display:block;background:#1e293b;border:1px solid rgba(255,255,255,0.08);padding:6px 20px;border-radius:10px;box-sizing:content-box;box-shadow:0 2px 6px rgba(0,0,0,0.18)}
-.basin-top-logo-light{display:none;height:54px;width:auto;max-width:280px;object-fit:contain;background:#e2e8f0;border:1px solid rgba(0,0,0,0.08);padding:6px 20px;border-radius:10px;box-sizing:content-box;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
-body.basin-theme-light .basin-top-logo-dark{display:none}
-body.basin-theme-light .basin-top-logo-light{display:block}
-body.basin-theme-dark .basin-top-logo-dark{display:block}
-body.basin-theme-dark .basin-top-logo-light{display:none}
+.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:0;margin:-12px auto -6px auto;text-align:center}
+[data-testid="stMarkdownContainer"]:has(.basin-top-logo-wrap), [data-testid="stMarkdownContainer"]:has(.basin-top-logo-wrap) p{margin:0!important;padding:0!important}
+.basin-top-logo-dark{height:68px;width:auto;max-width:330px;object-fit:contain;display:block;background:#1e293b;border:1px solid rgba(255,255,255,0.10);padding:6px 24px;border-radius:12px;box-sizing:content-box;box-shadow:0 3px 10px rgba(0,0,0,0.22)}
+.basin-top-logo-light{display:none;height:68px;width:auto;max-width:330px;object-fit:contain;background:#e2e8f0;border:1px solid rgba(0,0,0,0.10);padding:6px 24px;border-radius:12px;box-sizing:content-box;box-shadow:0 3px 10px rgba(0,0,0,0.08)}
+body.basin-theme-light .basin-top-logo-dark{display:none!important}
+body.basin-theme-light .basin-top-logo-light{display:block!important}
+body.basin-theme-dark .basin-top-logo-dark{display:block!important}
+body.basin-theme-dark .basin-top-logo-light{display:none!important}
 
 /* Tactile smooth micro-interactions on clicks & hovers (0ms loading time overhead) */
 [data-testid="stButton"] button, [data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-primary"], [role="tab"], .stSelectbox div[data-baseweb="select"] {

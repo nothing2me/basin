@@ -1474,7 +1474,7 @@ with st.sidebar:
                     index=0, format_func=PAGE_LABELS.get, label_visibility="collapsed")
 
 # Centered Brand Header with Top-Right Utilities and Top-Left Unit Selector
-top_l, top_c, top_r = st.columns([1.2, 1.8, 1.2])
+top_l, top_c, top_r = st.columns([1.2, 1.8, 1.2], vertical_alignment="center")
 
 with top_l:
     u_choice = st.selectbox(
