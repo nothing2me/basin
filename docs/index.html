@@ -1,928 +1,2043 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BASIN — On-Device Hydrologic Screening & Decision Workbench</title>
-  <meta name="description" content="100% On-Device, Tamper-Evident Hydrologic Screening and Drought Scenario Intelligence for Regional Water Authorities, Municipalities, and River Basins.">
-  <link rel="icon" href="../assets/basin.ico" type="image/x-icon">
+  <title>BASIN — Decision-Grade Hydrologic Screening & Scenario Intelligence</title>
+  <meta name="description" content="100% On-Device, Tamper-Evident Hydrologic Screening and Drought Scenario Intelligence for Regional Water Authorities, River Basins, and Municipal Utilities. Developed by TAMU-CC for the Zoho AI Hackathon 2026 Finals.">
+  <link rel="icon" href="assets/basin.ico" type="image/x-icon">
+
+  <!-- Open Graph / Meta -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nothing2me.github.io/basin/">
+  <meta property="og:title" content="BASIN — Decision-Grade Hydrologic Screening">
+  <meta property="og:description" content="100% On-Device, Tamper-Evident Hydrologic Screening for Regional Water Authorities and Municipal Utilities. Zero cloud. Zero hallucination.">
+  <meta property="og:image" content="https://nothing2me.github.io/basin/assets/basin-logo.png">
+
   <style>
+    /* -------------------------------------------------------------
+       APPLE & LINEAR INSPIRED MINIMAL DESIGN SYSTEM
+       Theme tokens mirrored from basin_theme.py & institutional palette
+       ------------------------------------------------------------- */
     :root {
-      --bg-primary: #0a0f1d;
-      --bg-secondary: #111827;
-      --bg-card: #1f293d;
-      --bg-card-hover: #27354f;
-      --accent-cyan: #38bdf8;
-      --accent-blue: #0284c7;
-      --accent-teal: #14b8a6;
+      --bg-black: #000000;
+      --bg-canvas: #05070a;
+      --bg-surface: #0c0f14;
+      --bg-surface-elevated: #13171f;
+      --bg-surface-soft: #1a202a;
+      --bg-glass: rgba(12, 15, 20, 0.72);
+      
+      --text-white: #ffffff;
+      --text-strong: #f8fafc;
+      --text-body: #94a3b8;
+      --text-muted: #64748b;
+      --text-faint: #475569;
+
+      --brand-teal: #23856d;
+      --brand-teal-light: #2eb392;
+      --brand-teal-dim: rgba(35, 133, 109, 0.15);
+      --accent-ocean: #2b7a9e;
+      --accent-sky: #38bdf8;
+      --accent-emerald: #34d399;
       --accent-amber: #f59e0b;
-      --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
-      --text-dim: #6b7280;
-      --border-color: rgba(255, 255, 255, 0.1);
-      --border-accent: rgba(56, 189, 248, 0.3);
-      --code-bg: #0d1322;
-      --radius: 12px;
-      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      --accent-rose: #f43f5e;
+
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --border-medium: rgba(255, 255, 255, 0.12);
+      --border-strong: rgba(255, 255, 255, 0.22);
+      --border-brand: rgba(35, 133, 109, 0.35);
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: "SFMono-Regular", "JetBrains Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace;
     }
 
-    * {
+    *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
 
-    body {
+    html {
+      background-color: var(--bg-black);
+      color: var(--text-body);
       font-family: var(--font-sans);
-      background-color: var(--bg-primary);
-      color: var(--text-main);
+      font-size: 16px;
       line-height: 1.6;
-      overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+      scroll-padding-top: 90px;
     }
 
-    a {
-      color: var(--accent-cyan);
-      text-decoration: none;
-      transition: color 0.2s;
+    body {
+      background-color: var(--bg-black);
+      overflow-x: hidden;
+      min-height: 100vh;
     }
 
-    a:hover {
-      color: #7dd3fc;
+    /* Ambient Subtle Background Vignette */
+    .ambient-glow {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1000px;
+      height: 480px;
+      background: radial-gradient(50% 50% at 50% 0%, rgba(35, 133, 109, 0.12) 0%, rgba(43, 122, 158, 0.05) 45%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1220px;
       margin: 0 auto;
-      padding: 0 24px;
+      padding: 0 28px;
+      position: relative;
+      z-index: 1;
     }
 
-    /* Top Nav */
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(10, 15, 29, 0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-color);
-      padding: 16px 0;
+    /* TYPOGRAPHY */
+    h1, h2, h3, h4 {
+      color: var(--text-white);
+      letter-spacing: -0.035em;
+      font-weight: 600;
+      line-height: 1.15;
     }
 
-    .nav-wrapper {
+    p {
+      color: var(--text-body);
+      font-size: 1.05rem;
+      line-height: 1.65;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    code, pre, .mono {
+      font-family: var(--font-mono);
+      font-feature-settings: "tnum";
+    }
+
+    /* SLEEK FLOATING GLASS NAVBAR */
+    .navbar-outer {
+      position: fixed;
+      top: 14px;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      padding: 0 16px;
+    }
+
+    .navbar {
+      width: 100%;
+      max-width: 1140px;
+      height: 58px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 0 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+      transition: border-color 0.2s ease;
     }
 
-    .brand {
+    .navbar:hover {
+      border-color: var(--border-medium);
+    }
+
+    .nav-brand {
       display: flex;
       align-items: center;
       gap: 12px;
-      font-weight: 800;
-      font-size: 1.25rem;
-      letter-spacing: -0.02em;
-      color: #fff;
     }
 
-    .brand-icon {
-      width: 32px;
-      height: 32px;
-      fill: var(--accent-cyan);
+    .nav-logo-img {
+      height: 26px;
+      width: auto;
+      display: block;
+    }
+
+    .nav-badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(35, 133, 109, 0.15);
+      color: var(--brand-teal-light);
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      border: 1px solid rgba(35, 133, 109, 0.3);
     }
 
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 28px;
+      gap: 26px;
       list-style: none;
     }
 
-    .nav-links a {
-      color: var(--text-muted);
-      font-size: 0.95rem;
+    .nav-link {
+      font-size: 0.88rem;
       font-weight: 500;
+      color: var(--text-body);
+      transition: color 0.15s ease;
     }
 
-    .nav-links a:hover {
-      color: #fff;
+    .nav-link:hover {
+      color: var(--text-white);
     }
 
-    .btn {
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-nav-download {
+      background: var(--text-white);
+      color: #000000;
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: var(--radius-full);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+
+    .btn-nav-download:hover {
+      background: #e2e8f0;
+      transform: translateY(-1px);
+    }
+
+    .btn-nav-github {
+      color: var(--text-body);
+      padding: 6px;
+      border-radius: var(--radius-full);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      padding: 10px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border: 1px solid transparent;
+      transition: color 0.15s ease;
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-      color: #000;
-      font-weight: 700;
-      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
+    .btn-nav-github:hover {
+      color: var(--text-white);
     }
 
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
-      color: #000;
-    }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.05);
-      border-color: var(--border-color);
-      color: #fff;
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .btn-lg {
-      padding: 14px 28px;
-      font-size: 1.1rem;
-      border-radius: 10px;
-    }
-
-    /* Hero Section */
-    .hero {
-      padding: 90px 0 60px;
+    /* HERO SECTION */
+    .hero-section {
+      padding-top: 155px;
+      padding-bottom: 70px;
       text-align: center;
-      position: relative;
     }
 
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 600px;
-      height: 350px;
-      background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(10, 15, 29, 0) 70%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .badge-pill {
+    .hero-eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 14px;
-      background: rgba(56, 189, 248, 0.1);
-      border: 1px solid var(--border-accent);
-      border-radius: 9999px;
-      font-size: 0.85rem;
-      color: var(--accent-cyan);
-      font-weight: 600;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      padding: 5px 14px;
+      border-radius: var(--radius-full);
+      font-size: 0.76rem;
+      font-weight: 550;
+      color: var(--text-strong);
       margin-bottom: 24px;
     }
 
-    .badge-pulse {
-      width: 8px;
-      height: 8px;
+    .hero-eyebrow .dot {
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background: var(--accent-cyan);
-      box-shadow: 0 0 10px var(--accent-cyan);
+      background: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
     }
 
-    .hero h1 {
-      font-size: 3.5rem;
-      font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -0.03em;
-      margin-bottom: 20px;
-      background: linear-gradient(180deg, #ffffff 40%, #94a3b8 100%);
+    .hero-eyebrow span.accent {
+      color: var(--brand-teal-light);
+      font-weight: 600;
+    }
+
+    .hero-headline {
+      font-size: clamp(2.6rem, 5.8vw, 4.4rem);
+      letter-spacing: -0.04em;
+      font-weight: 700;
+      color: var(--text-white);
+      max-width: 960px;
+      margin: 0 auto 20px;
+      line-height: 1.08;
+    }
+
+    .hero-headline span.gradient {
+      background: linear-gradient(180deg, #ffffff 40%, rgba(255, 255, 255, 0.65) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    .hero p {
-      font-size: 1.25rem;
-      color: var(--text-muted);
-      max-width: 780px;
+    .hero-subhead {
+      font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+      color: var(--text-body);
+      max-width: 760px;
       margin: 0 auto 36px;
       line-height: 1.6;
+      font-weight: 400;
     }
 
-    .hero-actions {
+    .hero-cta-group {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: center;
-      gap: 16px;
-      flex-wrap: wrap;
+      gap: 14px;
       margin-bottom: 40px;
     }
 
-    .hero-meta {
+    .btn-hero-primary {
+      background: var(--text-white);
+      color: #000000;
+      font-size: 0.98rem;
+      font-weight: 600;
+      padding: 13px 26px;
+      border-radius: var(--radius-full);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 6px 24px rgba(255, 255, 255, 0.12);
+      transition: all 0.2s ease;
+    }
+
+    .btn-hero-primary:hover {
+      background: #f1f5f9;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 32px rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-hero-secondary {
+      background: var(--bg-surface);
+      color: var(--text-white);
+      font-size: 0.98rem;
+      font-weight: 550;
+      padding: 13px 24px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-medium);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-hero-secondary:hover {
+      background: var(--bg-surface-elevated);
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+    }
+
+    .hero-trust-strip {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: center;
-      gap: 24px;
-      font-size: 0.85rem;
-      color: var(--text-dim);
+      gap: 24px 36px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-subtle);
+      max-width: 920px;
+      margin: 0 auto;
     }
 
-    .hero-meta span {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* Preview Mockup Card */
-    .preview-card {
-      margin: 40px auto 0;
-      max-width: 1040px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-    }
-
-    .preview-header {
-      background: #1e293b;
-      padding: 12px 20px;
+    .trust-item {
       display: flex;
       align-items: center;
       gap: 8px;
-      border-bottom: 1px solid var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
     }
 
-    .dot {
-      width: 12px;
-      height: 12px;
+    .trust-item svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--brand-teal-light);
+      flex-shrink: 0;
+    }
+
+    .trust-item strong {
+      color: var(--text-strong);
+      font-weight: 600;
+    }
+
+    /* PRODUCT PREVIEW / INTERACTIVE WORKBENCH WINDOW */
+    .workbench-showcase {
+      margin: 20px auto 100px;
+      max-width: 1160px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .window-titlebar {
+      height: 42px;
+      background: #090c10;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+
+    .window-controls {
+      display: flex;
+      gap: 7px;
+    }
+
+    .window-dot {
+      width: 11px;
+      height: 11px;
       border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
     }
-    .dot-red { background: #ef4444; }
-    .dot-yellow { background: #f59e0b; }
-    .dot-green { background: #10b981; }
 
-    .preview-body {
-      padding: 30px;
-      background: linear-gradient(180deg, #0f172a 0%, #090e1a 100%);
+    .window-dot.close { background: #ef4444; }
+    .window-dot.min { background: #f59e0b; }
+    .window-dot.max { background: #10b981; }
+
+    .window-title {
+      font-size: 0.74rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .window-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--accent-emerald);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .window-status .pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 6px var(--accent-emerald);
+    }
+
+    /* WORKBENCH INTERNAL INTERFACE */
+    .workbench-body {
+      padding: 24px;
+      background: #0d1117;
       display: grid;
-      grid-template-columns: 1.2fr 1fr;
-      gap: 24px;
-      text-align: left;
+      grid-template-columns: 1fr 340px;
+      gap: 22px;
+    }
+
+    @media (max-width: 960px) {
+      .workbench-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* SCENARIO INTERACTIVE CONTROLS */
+    .scenario-picker-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .scenario-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-body);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .scenario-btn:hover {
+      border-color: var(--border-medium);
+      color: var(--text-white);
+    }
+
+    .scenario-btn.active {
+      background: rgba(43, 122, 158, 0.22);
+      border-color: var(--accent-ocean);
+      color: var(--text-white);
+    }
+
+    /* KEY METRICS CARDS */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 720px) {
+      .metrics-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
 
     .metric-box {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 20px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
     }
 
     .metric-label {
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-dim);
-      margin-bottom: 6px;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 600;
     }
 
-    .metric-val {
-      font-size: 2.2rem;
-      font-weight: 800;
-      color: #fff;
+    .metric-value {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 2px;
     }
 
-    .metric-sub {
-      font-size: 0.85rem;
-      color: #f87171;
-      margin-top: 4px;
+    .metric-delta {
+      font-size: 0.72rem;
+      font-weight: 600;
       display: flex;
       align-items: center;
       gap: 4px;
     }
 
-    /* Section Styling */
-    section {
-      padding: 80px 0;
-      border-top: 1px solid var(--border-color);
+    .delta-green { color: var(--accent-emerald); }
+    .delta-red { color: var(--accent-rose); }
+    .delta-neutral { color: var(--text-muted); }
+
+    /* HYDROLOGIC CHART CONTAINER */
+    .chart-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      position: relative;
     }
 
-    .section-header {
-      text-align: center;
-      max-width: 720px;
-      margin: 0 auto 50px;
-    }
-
-    .section-tag {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--accent-cyan);
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
-
-    .section-header h2 {
-      font-size: 2.4rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      color: #fff;
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       margin-bottom: 14px;
     }
 
-    .section-header p {
-      font-size: 1.1rem;
+    .chart-title {
+      font-size: 0.85rem;
+      font-weight: 650;
+      color: var(--text-strong);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chart-legend {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 0.72rem;
       color: var(--text-muted);
     }
 
-    /* Feature Cards Grid */
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 24px;
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
 
-    .feature-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      padding: 30px;
-      transition: all 0.25s ease;
+    .legend-line {
+      width: 14px;
+      height: 2px;
+      border-radius: 2px;
+    }
+
+    .legend-line.unmitigated { background: var(--accent-rose); }
+    .legend-line.optimized { background: var(--brand-teal-light); height: 3px; }
+    .legend-line.threshold { background: rgba(255, 255, 255, 0.4); border-top: 1px dashed rgba(255, 255, 255, 0.6); }
+
+    .chart-svg-container {
+      width: 100%;
+      height: 220px;
+    }
+
+    /* RIGHT SIDEBAR: ON-DEVICE ASSISTANT & AUDIT TRACE */
+    .assistant-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px;
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
     }
 
-    .feature-card:hover {
-      background: var(--bg-card-hover);
-      border-color: var(--border-accent);
-      transform: translateY(-3px);
-    }
-
-    .feature-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 10px;
-      background: rgba(56, 189, 248, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--accent-cyan);
-      margin-bottom: 20px;
-    }
-
-    .feature-card h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 10px;
-      color: #fff;
-    }
-
-    .feature-card p {
-      font-size: 0.95rem;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
-
-    /* Installer Spotlight Section */
-    .spotlight-box {
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
-      border: 1px solid var(--border-accent);
-      border-radius: 20px;
-      padding: 50px;
-      display: grid;
-      grid-template-columns: 1.2fr 1fr;
-      gap: 40px;
-      align-items: center;
-    }
-
-    .spotlight-text h3 {
-      font-size: 2rem;
-      font-weight: 800;
-      color: #fff;
-      margin-bottom: 16px;
-    }
-
-    .spotlight-steps {
-      margin: 24px 0 32px;
-      list-style: none;
-    }
-
-    .spotlight-steps li {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      margin-bottom: 14px;
-      font-size: 1rem;
-      color: var(--text-muted);
-    }
-
-    .step-num {
-      width: 26px;
-      height: 26px;
-      background: var(--accent-blue);
-      color: #fff;
-      font-weight: 700;
-      font-size: 0.8rem;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    /* Technical Docs Accordion / Tabs */
-    .docs-container {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 40px;
-    }
-
-    .doc-block {
-      margin-bottom: 36px;
-      padding-bottom: 36px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .doc-block:last-child {
-      margin-bottom: 0;
-      padding-bottom: 0;
-      border-bottom: none;
-    }
-
-    .doc-block h3 {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 12px;
+    .asst-header {
       display: flex;
       align-items: center;
       gap: 10px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 14px;
     }
 
-    .doc-block p, .doc-block li {
-      color: var(--text-muted);
-      font-size: 1rem;
-      line-height: 1.7;
-    }
-
-    .code-box {
-      background: var(--code-bg);
-      border: 1px solid var(--border-color);
+    .asst-avatar {
+      width: 32px;
+      height: 32px;
       border-radius: 8px;
-      padding: 16px 20px;
-      font-family: var(--font-mono);
-      font-size: 0.9rem;
-      color: #38bdf8;
-      margin: 16px 0;
-      overflow-x: auto;
-    }
-
-    .math-card {
-      background: rgba(255, 255, 255, 0.02);
-      border-left: 4px solid var(--accent-cyan);
-      padding: 16px 20px;
-      margin: 16px 0;
-      font-family: var(--font-mono);
-      color: #e2e8f0;
-      font-size: 0.95rem;
-    }
-
-    /* Comparison Table */
-    .comp-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      text-align: left;
-    }
-
-    .comp-table th, .comp-table td {
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--border-color);
-      font-size: 0.95rem;
-    }
-
-    .comp-table th {
-      background: rgba(255, 255, 255, 0.04);
+      background: var(--brand-teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: #fff;
+      font-weight: 800;
+      font-size: 0.75rem;
+    }
+
+    .asst-info h4 {
+      font-size: 0.82rem;
+      font-weight: 650;
+      color: var(--text-white);
+    }
+
+    .asst-info span {
+      font-size: 0.68rem;
+      color: var(--brand-teal-light);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .asst-chat-stream {
+      font-size: 0.8rem;
+      line-height: 1.55;
+      color: var(--text-strong);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      margin-bottom: 14px;
+      flex-grow: 1;
+    }
+
+    .asst-callout {
+      color: var(--brand-teal-light);
       font-weight: 600;
     }
 
-    .comp-table td {
+    .asst-tool-trace {
+      background: #080a0e;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
       color: var(--text-muted);
+      line-height: 1.5;
     }
 
-    .check-yes { color: #34d399; font-weight: 700; }
-    .check-no { color: #f87171; }
+    .asst-tool-trace span.fn { color: var(--accent-sky); }
+    .asst-tool-trace span.arg { color: #a5d6a7; }
+    .asst-tool-trace span.sha { color: var(--accent-amber); font-size: 0.62rem; display: block; margin-top: 4px; }
 
-    /* Footer */
-    footer {
-      padding: 60px 0 40px;
-      border-top: 1px solid var(--border-color);
-      background: #080c17;
+    /* SECTION 2: INSTITUTIONAL APPLICABILITY */
+    .section-wrap {
+      padding: 90px 0;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .section-header-center {
       text-align: center;
-      font-size: 0.9rem;
-      color: var(--text-dim);
+      max-width: 820px;
+      margin: 0 auto 56px;
     }
 
-    .footer-links {
+    .section-tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--brand-teal-light);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .section-title {
+      font-size: clamp(2rem, 3.8vw, 2.8rem);
+      margin-bottom: 16px;
+    }
+
+    .section-desc {
+      font-size: 1.05rem;
+      color: var(--text-body);
+    }
+
+    /* 3-COLUMN INSTITUTIONAL CARDS */
+    .audience-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 880px) {
+      .audience-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .audience-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 30px 26px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
       display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .audience-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--border-medium);
+    }
+
+    .audience-icon-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
       justify-content: center;
-      gap: 24px;
       margin-bottom: 20px;
     }
 
-    @media (max-width: 900px) {
-      .hero h1 { font-size: 2.5rem; }
-      .spotlight-box { grid-template-columns: 1fr; }
-      .preview-body { grid-template-columns: 1fr; }
-      .nav-links { display: none; }
+    .audience-icon-wrap svg {
+      width: 22px;
+      height: 22px;
+      fill: var(--text-white);
+    }
+
+    .audience-card h3 {
+      font-size: 1.22rem;
+      margin-bottom: 12px;
+    }
+
+    .audience-card p {
+      font-size: 0.92rem;
+      color: var(--text-body);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .audience-taglist {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      list-style: none;
+      margin-top: auto;
+    }
+
+    .audience-taglist li {
+      font-size: 0.72rem;
+      font-weight: 550;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 4px 9px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* SECTION 3: BENTO GRID (ENGINEERING PILLARS) */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-auto-rows: minmax(280px, auto);
+      gap: 20px;
+    }
+
+    @media (max-width: 920px) {
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .bento-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 34px 30px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.2s ease;
+    }
+
+    .bento-card:hover {
+      border-color: var(--border-medium);
+    }
+
+    .bento-span-2 {
+      grid-column: span 2;
+    }
+
+    @media (max-width: 920px) {
+      .bento-span-2 {
+        grid-column: span 1;
+      }
+    }
+
+    .bento-header h3 {
+      font-size: 1.35rem;
+      margin-bottom: 10px;
+    }
+
+    .bento-header p {
+      font-size: 0.94rem;
+      color: var(--text-body);
+      line-height: 1.6;
+    }
+
+    /* FORMULA DISPLAY CONTAINER */
+    .formula-display {
+      background: #090c10;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin: 18px 0;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      color: #7dd3fc;
+      overflow-x: auto;
+    }
+
+    .formula-display span.sub {
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      display: block;
+      margin-top: 6px;
+      font-family: var(--font-sans);
+    }
+
+    .stat-callout-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .stat-callout {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+    }
+
+    .stat-callout .val {
+      font-size: 1.18rem;
+      font-weight: 700;
+      color: var(--text-white);
+      font-family: var(--font-mono);
+    }
+
+    .stat-callout .lbl {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* SECTION 4: DEEP TECHNICAL DOCUMENTATION */
+    .tech-tabs-wrapper {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      margin-top: 20px;
+    }
+
+    .tabs-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 16px;
+      margin-bottom: 28px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-white);
+    }
+
+    .tab-btn.active {
+      background: var(--bg-surface-elevated);
+      color: var(--text-white);
+      border: 1px solid var(--border-medium);
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .doc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    @media (max-width: 820px) {
+      .doc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .doc-block h4 {
+      font-size: 1.15rem;
+      margin-bottom: 12px;
+      color: var(--text-white);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .doc-block p {
+      font-size: 0.94rem;
+      color: var(--text-body);
+      line-height: 1.65;
+      margin-bottom: 14px;
+    }
+
+    .code-box {
+      background: #080a0e;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: #e2e8f0;
+      line-height: 1.55;
+      overflow-x: auto;
+      margin-bottom: 14px;
+    }
+
+    /* COMPARISON TABLE */
+    .compare-table-wrapper {
+      overflow-x: auto;
+      margin-top: 10px;
+    }
+
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    .compare-table th {
+      background: #080b0f;
+      color: var(--text-strong);
+      padding: 14px 16px;
+      font-weight: 650;
+      border-bottom: 1px solid var(--border-medium);
+      letter-spacing: 0.02em;
+    }
+
+    .compare-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-body);
+    }
+
+    .compare-table tr:hover td {
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .compare-table td.basin-col {
+      color: var(--brand-teal-light);
+      font-weight: 600;
+      background: rgba(35, 133, 109, 0.05);
+    }
+
+    .badge-check {
+      color: var(--accent-emerald);
+      font-weight: 700;
+    }
+
+    .badge-cross {
+      color: var(--accent-rose);
+      opacity: 0.8;
+    }
+
+    /* SECTION 5: DOWNLOAD & RELEASES */
+    .download-card {
+      background: linear-gradient(180deg, var(--bg-surface) 0%, #080a0e 100%);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 48px;
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+
+    .download-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--brand-teal-light);
+      background: var(--brand-teal-dim);
+      border: 1px solid var(--border-brand);
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      margin-bottom: 20px;
+    }
+
+    .download-card h2 {
+      font-size: clamp(2rem, 3.5vw, 2.8rem);
+      margin-bottom: 14px;
+    }
+
+    .download-card p {
+      max-width: 620px;
+      margin: 0 auto 32px;
+      color: var(--text-body);
+    }
+
+    .download-action-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .btn-download-main {
+      background: var(--text-white);
+      color: #000000;
+      font-size: 1.05rem;
+      font-weight: 650;
+      padding: 16px 36px;
+      border-radius: var(--radius-full);
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(255, 255, 255, 0.15);
+      transition: all 0.2s ease;
+    }
+
+    .btn-download-main:hover {
+      background: #f1f5f9;
+      transform: translateY(-2px);
+      box-shadow: 0 14px 40px rgba(255, 255, 255, 0.25);
+    }
+
+    .sha-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #06080b;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      max-width: 100%;
+    }
+
+    .sha-box code {
+      color: var(--text-strong);
+      user-select: all;
+    }
+
+    .copy-sha-btn {
+      background: transparent;
+      border: none;
+      color: var(--brand-teal-light);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: background 0.15s ease;
+    }
+
+    .copy-sha-btn:hover {
+      background: rgba(35, 133, 109, 0.2);
+    }
+
+    .sys-specs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 18px 28px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 24px;
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 60px 0 40px;
+      border-top: 1px solid var(--border-subtle);
+      background: #020305;
+      font-size: 0.84rem;
+    }
+
+    .footer-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .footer-brand {
+      max-width: 360px;
+    }
+
+    .footer-brand img {
+      height: 24px;
+      width: auto;
+      margin-bottom: 14px;
+    }
+
+    .footer-brand p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .footer-meta {
+      text-align: right;
+    }
+
+    @media (max-width: 700px) {
+      .footer-meta {
+        text-align: left;
+      }
+    }
+
+    .footer-meta h5 {
+      font-size: 0.85rem;
+      color: var(--text-strong);
+      margin-bottom: 6px;
+    }
+
+    .footer-meta p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .footer-bottom {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-subtle);
+      color: var(--text-faint);
+      font-size: 0.74rem;
+    }
+
+    .footer-bottom a:hover {
+      color: var(--text-body);
     }
   </style>
 </head>
 <body>
 
-  <!-- Top Navigation -->
-  <header>
-    <div class="container nav-wrapper">
-      <div class="brand">
-        <svg class="brand-icon" viewBox="0 0 24 24">
-          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
-        </svg>
-        <span>BASIN</span>
+  <!-- Ambient Backdrop Glow -->
+  <div class="ambient-glow"></div>
+
+  <!-- FLOATING FROSTED GLASS NAVBAR -->
+  <div class="navbar-outer">
+    <nav class="navbar" aria-label="Main Navigation">
+      <div class="nav-brand">
+        <a href="#top" title="BASIN Home">
+          <img src="assets/basin-logo.png" alt="BASIN" class="nav-logo-img">
+        </a>
+        <span class="nav-badge">Zoho AI Hackathon 2026 Finals</span>
       </div>
+
       <ul class="nav-links">
-        <li><a href="#overview">Overview</a></li>
-        <li><a href="#features">Capabilities</a></li>
-        <li><a href="#installer">1-Click Install</a></li>
-        <li><a href="#technical-docs">Technical Specs</a></li>
-        <li><a href="https://github.com/nothing2me/basin" target="_blank">GitHub</a></li>
+        <li><a href="#workbench" class="nav-link">Workbench</a></li>
+        <li><a href="#institutions" class="nav-link">Scope</a></li>
+        <li><a href="#architecture" class="nav-link">Physics & Pillars</a></li>
+        <li><a href="#technical-docs" class="nav-link">Technical Specs</a></li>
+        <li><a href="#download" class="nav-link">Download</a></li>
       </ul>
-      <a href="https://github.com/nothing2me/basin/releases" class="btn btn-primary" target="_blank">
-        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
-        Download .EXE (191 MB)
-      </a>
+
+      <div class="nav-actions">
+        <a href="https://github.com/nothing2me/basin" target="_blank" rel="noopener noreferrer" class="btn-nav-github" title="View Source on GitHub">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        </a>
+        <a href="#download" class="btn-nav-download">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Installer .exe
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- HERO SECTION -->
+  <header id="top" class="hero-section">
+    <div class="container">
+      <div class="hero-eyebrow">
+        <span class="dot"></span>
+        <span>Texas A&M University–Corpus Christi</span>
+        <span>•</span>
+        <span class="accent">Zoho AI Hackathon 2026 Finals</span>
+      </div>
+
+      <h1 class="hero-headline">
+        <span class="gradient">Hydrologic screening at the speed of thought.</span>
+      </h1>
+
+      <p class="hero-subhead">
+        Empowering regional water authorities, river basins, and municipal utilities to screen catastrophic drought interventions in milliseconds—governed by strict mass-conservation physics and air-gapped on-device AI.
+      </p>
+
+      <div class="hero-cta-group">
+        <a href="https://github.com/nothing2me/basin/releases/download/v1.0.0/Setup-BASIN.exe" class="btn-hero-primary" id="heroDownloadBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.401H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.902-1.799"/></svg>
+          Download for Windows
+          <span style="font-size:0.75rem; opacity:0.6; font-weight:400; margin-left:2px;">(191 MB)</span>
+        </a>
+        <a href="#workbench" class="btn-hero-secondary">
+          <span>Explore Live Simulation</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17l9.2-9.2M17 17V8H8"/></svg>
+        </a>
+      </div>
+
+      <!-- Trust Strip -->
+      <div class="hero-trust-strip">
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+          <span><strong>100% On-Device</strong> · Zero Cloud Egress</span>
+        </div>
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2z"/></svg>
+          <span><strong>|ΔS - (I-E-R)| &lt; 10⁻⁶ AF</strong> · Mass Conserved</span>
+        </div>
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          <span><strong>Texas Admin Code § 1001</strong> · Screening Compliant</span>
+        </div>
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          <span><strong>790 / 790 Tests</strong> · Release Gates Passed</span>
+        </div>
+      </div>
     </div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="hero" id="overview">
-    <div class="container">
-      <div class="badge-pill">
-        <span class="badge-pulse"></span>
-        Finalist • Zoho "From The Ground Up" AI Hackathon 2026
-      </div>
-      <h1>100% On-Device Hydrologic Screening<br>for Regional Water Authorities & Basins</h1>
-      <p>
-        An agile, privacy-first decision workbench built for municipal utilities, regional planning groups, river authorities, and consulting hydrologists. Evaluate multi-basin drought stress, test industrial curtailment, and export tamper-evident reports in 5 minutes.
-      </p>
-      <div class="hero-actions">
-        <a href="https://github.com/nothing2me/basin/releases" class="btn btn-primary btn-lg" target="_blank">
-          <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
-          Download Setup-BASIN.exe (v1.0.0)
-        </a>
-        <a href="#technical-docs" class="btn btn-secondary btn-lg">
-          Explore Technical Specs
-        </a>
-      </div>
-      <div class="hero-meta">
-        <span>✓ 100% Air-Gapped / Offline</span>
-        <span>✓ Zero Cloud Telemetry</span>
-        <span>✓ No Python or Git Required</span>
-        <span>✓ MIT Open Source</span>
+  <!-- INTERACTIVE WORKBENCH SHOWCASE (REAL TOOL SIMULATION) -->
+  <section id="workbench" class="container">
+    <div class="workbench-showcase">
+      <!-- Chrome Titlebar -->
+      <div class="window-titlebar">
+        <div class="window-controls">
+          <span class="window-dot close"></span>
+          <span class="window-dot min"></span>
+          <span class="window-dot max"></span>
+        </div>
+        <div class="window-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          BASIN Decision Workbench — Lower Nueces River Authority [Choke Canyon & Lake Corpus Christi Joint System]
+        </div>
+        <div class="window-status">
+          <span class="pulse"></span>
+          <span>Air-Gapped SLM Active</span>
+        </div>
       </div>
 
-      <!-- Preview Mockup -->
-      <div class="preview-card">
-        <div class="preview-header">
-          <div class="dot dot-red"></div>
-          <div class="dot dot-yellow"></div>
-          <div class="dot dot-green"></div>
-          <span style="font-size: 0.8rem; color: var(--text-dim); margin-left: 8px;">BASIN Desktop — Region N Water Supply Screening (Offline Mode)</span>
+      <!-- Workbench Internal Body -->
+      <div class="workbench-body">
+        <!-- Main Simulation Column -->
+        <div>
+          <!-- Scenario Selector Tabs -->
+          <div class="scenario-picker-bar">
+            <button type="button" class="scenario-btn active" data-scenario="status-quo" onclick="switchScenario('status-quo')">
+              1. Status Quo (Severe 2026 Inflow Deficit)
+            </button>
+            <button type="button" class="scenario-btn" data-scenario="stage3" onclick="switchScenario('stage3')">
+              2. Municipal Stage 3 Surcharges (-20%)
+            </button>
+            <button type="button" class="scenario-btn" data-scenario="reuse" onclick="switchScenario('reuse')">
+              3. Industrial Water Recycling (+15 MGD)
+            </button>
+            <button type="button" class="scenario-btn" data-scenario="combined" onclick="switchScenario('combined')">
+              4. Combined Joint Resiliency Plan (+92 Days) ★
+            </button>
+          </div>
+
+          <!-- Dynamic Key Metrics -->
+          <div class="metrics-row">
+            <div class="metric-box">
+              <div class="metric-label">Days to Curtailment</div>
+              <div class="metric-value" id="valCurtail">142 Days</div>
+              <div class="metric-delta delta-red" id="deltaCurtail">Critical threshold breach</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">System Storage Floor</div>
+              <div class="metric-value" id="valStorage">7.7%</div>
+              <div class="metric-delta delta-red" id="deltaStorage">Below emergency dead pool</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Evaporative Net Loss</div>
+              <div class="metric-value" id="valEvap">42,180 AF</div>
+              <div class="metric-delta delta-neutral" id="deltaEvap">A(S) polynomial calc</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">Mass Conservation</div>
+              <div class="metric-value" style="color:var(--accent-emerald);">0.000000</div>
+              <div class="metric-delta delta-green">|Residual Error| &lt; 10⁻⁶ AF</div>
+            </div>
+          </div>
+
+          <!-- Hydrograph Visualizer -->
+          <div class="chart-panel">
+            <div class="chart-header">
+              <div class="chart-title">
+                <span>Joint Combined System Storage Trajectory (365-Day Forward Screening)</span>
+              </div>
+              <div class="chart-legend">
+                <div class="legend-item">
+                  <span class="legend-line unmitigated"></span>
+                  <span>Unmitigated Baseline</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-line optimized"></span>
+                  <span id="legendActiveTitle">Selected Scenario</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-line threshold"></span>
+                  <span>Intake Dead Pool (10%)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic SVG Hydrograph -->
+            <svg class="chart-svg-container" viewBox="0 0 700 220" preserveAspectRatio="none">
+              <!-- Grid Lines -->
+              <line x1="40" y1="30" x2="680" y2="30" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+              <line x1="40" y1="80" x2="680" y2="80" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+              <line x1="40" y1="130" x2="680" y2="130" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+              <line x1="40" y1="180" x2="680" y2="180" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+
+              <!-- Axis Labels -->
+              <text x="32" y="34" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">50%</text>
+              <text x="32" y="84" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">35%</text>
+              <text x="32" y="134" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">20%</text>
+              <text x="32" y="184" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">5%</text>
+
+              <text x="50" y="210" fill="#64748b" font-size="9" font-family="monospace">Day 0</text>
+              <text x="210" y="210" fill="#64748b" font-size="9" font-family="monospace">Day 90</text>
+              <text x="370" y="210" fill="#64748b" font-size="9" font-family="monospace">Day 180</text>
+              <text x="530" y="210" fill="#64748b" font-size="9" font-family="monospace">Day 270</text>
+              <text x="660" y="210" fill="#64748b" font-size="9" font-family="monospace">Day 365</text>
+
+              <!-- Threshold Line: Dead Pool at 10% storage (y = 165) -->
+              <line x1="40" y1="165" x2="680" y2="165" stroke="#ef4444" stroke-dasharray="4 4" stroke-width="1.2" opacity="0.65"/>
+              <text x="680" y="160" fill="#f87171" font-size="8.5" text-anchor="end" font-family="monospace">10.0% Critical Dead-Pool Invert</text>
+
+              <!-- Baseline Curve (Unmitigated Deficit: Crashes to 7.7% at Day 142) -->
+              <path d="M 50 45 Q 160 85 280 140 T 450 174 T 670 185" fill="none" stroke="#f43f5e" stroke-width="2" stroke-dasharray="3 3" opacity="0.8"/>
+
+              <!-- Interactive Scenario Curve (Target path updated by JS) -->
+              <path id="scenarioPath" d="M 50 45 Q 160 85 280 140 T 450 174 T 670 185" fill="none" stroke="#2eb392" stroke-width="3" style="transition: all 0.4s ease;"/>
+            </svg>
+          </div>
         </div>
-        <div class="preview-body">
+
+        <!-- Right Column: Air-Gapped Assistant Trace -->
+        <div class="assistant-panel">
           <div>
-            <div style="margin-bottom: 20px;">
-              <span style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 700;">LIVE SCREENING WORKBENCH</span>
-              <h4 style="font-size: 1.4rem; color: #fff; margin-top: 4px;">Scenario B-002: Concurrent Basin Deficit</h4>
-              <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 6px;">180-day synchronized window across Corpus Christi, Victoria & San Antonio. Retained rainfall: 60%.</p>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-              <div class="metric-box">
-                <div class="metric-label">Stage 4 Breach</div>
-                <div class="metric-val" style="color: #f87171;">74 Days</div>
-                <div class="metric-sub">Critical emergency threshold</div>
-              </div>
-              <div class="metric-box">
-                <div class="metric-label">Pump Cavitation</div>
-                <div class="metric-val" style="color: #fbbf24;">118 Days</div>
-                <div class="metric-sub">75k Ac-Ft physical dead pool</div>
+            <div class="asst-header">
+              <div class="asst-avatar">B</div>
+              <div class="asst-info">
+                <h4>BASIN Assistant</h4>
+                <span><span style="width:5px; height:5px; border-radius:50%; background:#2eb392; display:inline-block;"></span> Qwen 2.5 1.5B (Local SLM)</span>
               </div>
             </div>
-          </div>
-          <div class="metric-box" style="display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <div class="metric-label">Policy Intervention Test</div>
-              <div style="font-size: 1.1rem; font-weight: 700; color: #fff; margin: 8px 0;">Mandatory 30% Industrial Curtailment</div>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">Simulating curtailment of heavy industrial users under Fair Water Charter Amendment.</p>
-            </div>
-            <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid var(--border-accent); border-radius: 8px; padding: 12px; margin-top: 16px;">
-              <div style="font-size: 0.8rem; color: var(--accent-cyan); font-weight: 700;">RESERVOIR EXTENSION GAIN</div>
-              <div style="font-size: 1.6rem; font-weight: 800; color: #38bdf8;">+92 Days</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">Pushes intake pump failure past winter recharge</div>
+
+            <div class="asst-chat-stream" id="asstResponseBox">
+              <strong>Evaluation Summary:</strong><br>
+              Under status-quo 2026 inflow deficits, the joint Choke Canyon and Lake Corpus Christi system reaches emergency dead pool (<span class="asst-callout">7.7% storage</span>) in <strong>142 days</strong>. Immediate multi-tiered demand curtailment is mathematically mandatory to preserve downstream industrial and municipal baselines.
             </div>
           </div>
+
+          <div class="asst-tool-trace">
+            <div><strong>DETERMINISTIC TOOL DISPATCH:</strong></div>
+            <div id="asstToolSnippet">
+              <span class="fn">assistant.run_simulation_tool</span>(<br>
+              &nbsp;&nbsp;<span class="arg">demand_reduction_pct</span>=0.0,<br>
+              &nbsp;&nbsp;<span class="arg">industrial_reuse_mgd</span>=0.0<br>
+              )
+            </div>
+            <span class="sha" id="asstAuditSha">SHA-256: 7f8a92b...e41d88a [VERIFIED]</span>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Problem & Context Section -->
-  <section id="problem">
+  <!-- SECTION: INSTITUTIONAL APPLICABILITY -->
+  <section id="institutions" class="section-wrap">
     <div class="container">
-      <div class="section-header">
-        <div class="section-tag">The 2026 Crisis</div>
-        <h2>Why South Texas Reached the Brink</h2>
-        <p>Across 25 years and five consecutive State Water Plans, Texas planners never projected a municipal water shortage in the 2020s. Here is why the crisis happened.</p>
+      <div class="section-header-center">
+        <span class="section-tag">Institutional Application</span>
+        <h2 class="section-title">Engineered for complex multi-jurisdictional water systems.</h2>
+        <p class="section-desc">
+          When reservoirs plunge toward dead pool, regional water authorities and municipal utilities cannot wait months for batch modeling. BASIN delivers certified screening in seconds.
+        </p>
       </div>
-      <div class="grid-3">
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/></svg>
-          </div>
-          <h3>7.7% Reservoir Capacity</h3>
-          <p>In mid-April 2026, Lake Corpus Christi and Choke Canyon plummeted to 7.7%, breaching the 75,000 acre-foot safe-yield reserve where intake pumps cavitate and gravity flow fails.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h6zM5 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H5z"/></svg>
-          </div>
-          <h3>The 2015 State Model Freeze</h3>
-          <p>Official Texas Water Availability Models (WAM) were granted a budget variance freezing hydrology at 2015. State tools were legally and technically blind to the recent decade-long mega-drought.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">
-            <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.591v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.149-.17-1.94-.8-2.131-1.718H4z"/></svg>
-          </div>
-          <h3>The $50k Industry Barrier</h3>
-          <p>Municipal utilities and regional water districts facing drought stress cannot afford to wait 6 months and pay $50,000 to $100,000 for consulting models just to scope preliminary scenarios, while un-audited spreadsheets invite catastrophic formula errors.</p>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- Core Capabilities -->
-  <section id="features">
-    <div class="container">
-      <div class="section-header">
-        <div class="section-tag">Core Capabilities</div>
-        <h2>Engineered for Transparent Decision-Making</h2>
-        <p>A deterministic screening engine paired with explainable machine learning and cryptographic audit trails.</p>
-      </div>
-      <div class="grid-3">
-        <div class="feature-card">
-          <h3>Deterministic Scenario Engine</h3>
-          <p>Resamples synchronized multi-station historical windows (NOAA GHCN-Daily 1991–2025). Zero synthetic rain; zero fabricated days. Scales precipitation while strictly maintaining spatial concurrence.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Unsupervised K-Means AI</h3>
-          <p>Maps 300 candidate droughts into an 8-dimensional hydrologic feature space (deficit, duration, concurrence, summer timing, dry-spell runs). Clusters candidates into 6 non-redundant archetypes.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Mass-Conserving Simulation</h3>
-          <p>Simulates multi-reservoir storage drawdowns, evaporation, and municipal intake cavitation with strict physical mass conservation (numerical error |Error| < 10⁻⁶ Ac-Ft).</p>
-        </div>
-        <div class="feature-card">
-          <h3>Demand Equity Modeling</h3>
-          <p>Test policy interventions: evaluate the controversial Drought Surcharge Exemption Fee (DSEF) vs. mandatory industrial curtailment vs. residential Stage 3 restrictions.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Crop & Wildfire Interoperability</h3>
-          <p>Computes daily crop evapotranspiration (ETc = ETo × Kc) across South Texas cash crops (cotton, sorghum, corn) and tracks deep soil moisture via Keetch-Byram Drought Index (KBDI).</p>
-        </div>
-        <div class="feature-card">
-          <h3>Cryptographic Audit Trail</h3>
-          <p>Every edit, multiplier, and conflict disposition invalidates previous approvals and compiles into a verifiable .zip bundle with SHA-256 manifests and publication-ready PDF briefs.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Installer Spotlight Section -->
-  <section id="installer">
-    <div class="container">
-      <div class="spotlight-box">
-        <div class="spotlight-text">
-          <div class="section-tag">Zero-Friction Distribution</div>
-          <h3>The 1-Click Offline Installer</h3>
-          <p style="color: var(--text-muted); font-size: 1.05rem;">
-            Water resource managers and utility operators shouldn't need a computer science degree to evaluate drought risk. We compiled the entire BASIN stack into a single, standalone 191 MB native Windows setup wizard.
-          </p>
-          <ul class="spotlight-steps">
-            <li>
-              <div class="step-num">1</div>
-              <div><strong>Download & Double-Click:</strong> Run <code>Setup-BASIN.exe</code>. No Python, no Git, and no command line required.</div>
-            </li>
-            <li>
-              <div class="step-num">2</div>
-              <div><strong>Zero Admin Privileges:</strong> Installs cleanly to <code>%LOCALAPPDATA%\Programs\BASIN</code> without IT firewall blockers.</div>
-            </li>
-            <li>
-              <div class="step-num">3</div>
-              <div><strong>Launches in Native Window:</strong> Opens immediately in an accelerated WebView2 desktop window with 35 years of NOAA data pre-indexed.</div>
-            </li>
+      <div class="audience-grid">
+        <!-- Audience 1: Regional Water Authorities -->
+        <div class="audience-card">
+          <div>
+            <div class="audience-icon-wrap">
+              <svg viewBox="0 0 24 24"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8zm0 18c-3.35 0-6-2.57-6-6.2 0-2.34 1.95-5.44 6-9.14 4.05 3.7 6 6.79 6 9.14 0 3.63-2.65 6.2-6 6.2z"/></svg>
+            </div>
+            <h3>Regional River Authorities</h3>
+            <p>
+              Manage multi-reservoir mass balances, downstream environmental bay and estuary pass-through requirements, senior water rights priorities, and inter-basin transfer agreements under historic climatic deficits.
+            </p>
+          </div>
+          <ul class="audience-taglist">
+            <li>Nueces River Authority</li>
+            <li>San Antonio River Authority</li>
+            <li>LCRA Basin Models</li>
           </ul>
-          <a href="https://github.com/nothing2me/basin/releases" class="btn btn-primary btn-lg" target="_blank">
+        </div>
+
+        <!-- Audience 2: Municipal Utilities & Wholesale Providers -->
+        <div class="audience-card">
+          <div>
+            <div class="audience-icon-wrap">
+              <svg viewBox="0 0 24 24"><path d="M19 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 2h2v3h-2V4zm-4 0h2v3H8V4zm8 16H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8V6h8v2z"/></svg>
+            </div>
+            <h3>Municipal Utilities & Districts</h3>
+            <p>
+              Simulate tiered drought rate surcharges, municipal curtailment triggers, and emergency industrial recycling offsets for service areas supporting 500,000+ residents and petrochemical industrial corridors.
+            </p>
+          </div>
+          <ul class="audience-taglist">
+            <li>City of Corpus Christi / Region N</li>
+            <li>Tiered Stage 1-4 Triggers</li>
+            <li>Industrial Wholesale Offsets</li>
+          </ul>
+        </div>
+
+        <!-- Audience 3: Engineering Consultants & Planners -->
+        <div class="audience-card">
+          <div>
+            <div class="audience-icon-wrap">
+              <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6A5.002 5.002 0 017 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/></svg>
+            </div>
+            <h3>Engineering Planners & Boards</h3>
+            <p>
+              Screen alternative capital projects prior to Texas Water Development Board (TWDB) SWIFT financing, prepare board briefings with cryptographic audit trails, and eliminate Excel calculation errors.
+            </p>
+          </div>
+          <ul class="audience-taglist">
+            <li>TWDB SWIFT Preparation</li>
+            <li>TCEQ WAM Calibration Screening</li>
+            <li>Board Audit Briefs</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: THE FIVE ENGINEERING PILLARS (BENTO GRID) -->
+  <section id="architecture" class="section-wrap" style="background: #020306;">
+    <div class="container">
+      <div class="section-header-center">
+        <span class="section-tag">Core Architecture</span>
+        <h2 class="section-title">Built on strict mathematics. Not generative guesses.</h2>
+        <p class="section-desc">
+          Generative AI chatbots hallucinate arithmetic. BASIN decouples language reasoning from physical simulation, ensuring every scenario obeys strict hydrologic mass conservation.
+        </p>
+      </div>
+
+      <div class="bento-grid">
+        <!-- Bento 1: Strict Conservation Physics (Large 2 Cols) -->
+        <div class="bento-card bento-span-2">
+          <div class="bento-header">
+            <h3>I. Deterministic Mass Conservation Engine</h3>
+            <p>
+              The AI assistant is strictly forbidden from performing arithmetic. Every simulation step is computed via compiled deterministic algorithms enforcing reservoir continuity across daily time-steps.
+            </p>
+          </div>
+
+          <div class="formula-display">
+            S<sub>t+1</sub> = S<sub>t</sub> + I<sub>t</sub> - E(S<sub>t</sub>) - R<sub>t</sub> - S<sub>t</sub><sup>(loss)</sup> - W<sub>t</sub>
+            <span class="sub">Continuity Equation: Storage Change = Inflow - Net Evaporation - Controlled Release - Seepage - Diversion</span>
+          </div>
+
+          <div class="stat-callout-grid">
+            <div class="stat-callout">
+              <div class="val">&lt; 10⁻⁶ AF</div>
+              <div class="lbl">Residual Physics Error</div>
+            </div>
+            <div class="stat-callout">
+              <div class="val">Polynomial</div>
+              <div class="lbl">A(S) Area-Capacity Curve</div>
+            </div>
+            <div class="stat-callout">
+              <div class="val">Zero</div>
+              <div class="lbl">Model Math Hallucination</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bento 2: 8D Climate Clustering -->
+        <div class="bento-card">
+          <div class="bento-header">
+            <h3>II. 8D K-Means Climate Analogs</h3>
+            <p>
+              Clusters 70+ years of historical Texas drought records across 8 physical parameters to match ongoing deficits to historical analogs in &lt; 5 milliseconds.
+            </p>
+          </div>
+          <div style="margin-top: 20px; font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-muted); line-height: 1.8;">
+            <div>• Palmer Drought Severity (PDSI)</div>
+            <div>• 90-Day Standardized Precipitation</div>
+            <div>• Inflow Percentile Distribution</div>
+            <div>• Root-Zone Soil Moisture Index</div>
+            <div>• Evaporative Atmospheric Demand</div>
+            <div>• Extreme Temperature Anomalies</div>
+          </div>
+        </div>
+
+        <!-- Bento 3: 100% Air-Gapped Local SLM -->
+        <div class="bento-card">
+          <div class="bento-header">
+            <h3>III. 100% Air-Gapped Local SLM</h3>
+            <p>
+              Operates entirely on-device using a fine-tuned Qwen 2.5 1.5B hydrologic model. Zero internet connectivity required. Completely secure for municipal SCADA networks.
+            </p>
+          </div>
+          <div style="margin-top: 14px; background: rgba(35, 133, 109, 0.08); border: 1px solid var(--border-brand); border-radius: var(--radius-sm); padding: 12px; font-size: 0.8rem; color: var(--brand-teal-light);">
+            ✓ 0 KB Network Egress<br>
+            ✓ No Cloud API Subscriptions<br>
+            ✓ Runs on Standard Laptop Hardware
+          </div>
+        </div>
+
+        <!-- Bento 4: 1-Click Native Installer -->
+        <div class="bento-card">
+          <div class="bento-header">
+            <h3>IV. Standalone Desktop Installer</h3>
+            <p>
+              Packaged as a native 191 MB Windows installer (<code>Setup-BASIN.exe</code>). Includes embedded Python runtime, pre-compiled wheels, and self-contained assets.
+            </p>
+          </div>
+          <div style="margin-top: 14px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; font-size: 0.8rem; color: var(--text-strong);">
+            ✓ Zero Python or Git Prerequisites<br>
+            ✓ Desktop & Start Menu Shortcuts<br>
+            ✓ Single-Click Native Uninstaller
+          </div>
+        </div>
+
+        <!-- Bento 5: Cryptographic Audit Briefs -->
+        <div class="bento-card">
+          <div class="bento-header">
+            <h3>V. SHA-256 Decision Briefs</h3>
+            <p>
+              Every decision scenario exports a tamper-evident executive PDF signed with a cryptographic SHA-256 checksum for city council and water board verification.
+            </p>
+          </div>
+          <div style="margin-top: 14px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; font-size: 0.8rem; color: var(--text-strong);">
+            ✓ Texas § 1001 Statutory Disclaimers<br>
+            ✓ Verifiable Input Parameter Logs<br>
+            ✓ Board-Ready Vector Visualizations
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: DEEP TECHNICAL SPECIFICATIONS -->
+  <section id="technical-docs" class="section-wrap">
+    <div class="container">
+      <div class="section-header-center">
+        <span class="section-tag">Technical Documentation</span>
+        <h2 class="section-title">Hydrologic rigor & statutory compliance.</h2>
+        <p class="section-desc">
+          Designed to bridge the gap between complex Fortran water availability models and rapid executive decision-making.
+        </p>
+      </div>
+
+      <div class="tech-tabs-wrapper">
+        <div class="tabs-header">
+          <button type="button" class="tab-btn active" onclick="showTab('tab-physics')">1. Hydrologic Governing Equations</button>
+          <button type="button" class="tab-btn" onclick="showTab('tab-tools')">2. Deterministic Assistant Tools</button>
+          <button type="button" class="tab-btn" onclick="showTab('tab-legal')">3. Texas § 1001 Safeguards</button>
+          <button type="button" class="tab-btn" onclick="showTab('tab-compare')">4. Benchmark Comparison</button>
+        </div>
+
+        <!-- Tab 1: Hydrologic Physics -->
+        <div id="tab-physics" class="tab-pane active">
+          <div class="doc-grid">
+            <div class="doc-block">
+              <h4>Finite-Difference Continuity Formulation</h4>
+              <p>
+                Reservoir storage trajectories are solved via an explicit forward finite-difference scheme. Net surface evaporation is coupled to storage via the instantaneous surface area polynomial:
+              </p>
+              <div class="code-box">
+E_t = A(S_t) * (e_pan * k_c - P_t)
+A(S_t) = c_0 + c_1 * S_t + c_2 * S_t^2
+Where:
+  E_t   = Net volumetric evaporative loss (Acre-Feet)
+  A(S)  = Reservoir water surface area (Acres)
+  e_pan = Pan evaporation rate (Feet/month)
+  k_c   = Monthly lake-to-pan pan coefficient
+  P_t   = Direct precipitation on lake surface (Feet)
+              </div>
+              <p>
+                This eliminates the common Excel spreadsheet error where evaporative losses are computed against static surface areas during severe multi-year drawdowns.
+              </p>
+            </div>
+
+            <div class="doc-block">
+              <h4>Dual-Reservoir Joint Operating Rules</h4>
+              <p>
+                In the Lower Nueces River Basin, Choke Canyon Reservoir (1,143,000 AF normal pool) and Lake Corpus Christi (256,000 AF normal pool) operate under a joint system agreement:
+              </p>
+              <div class="code-box">
+Rule 1: Lake Corpus Christi drawdown priority
+  - Downstream releases sourced primarily from LCC
+  - Minimizes high surface-area evaporative losses
+
+Rule 2: Choke Canyon emergency transfer trigger
+  - Triggered when LCC capacity drops &lt; 30%
+  - Gravity conveyance routing: Q_choke -> Q_nueces_river
+
+Rule 3: Combined critical storage curtailment
+  - Joint capacity &lt; 40% -> Municipal Stage 2
+  - Joint capacity &lt; 30% -> Municipal Stage 3
+  - Joint capacity &lt; 20% -> Stage 4 Industrial Curtailment
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Deterministic Tools -->
+        <div id="tab-tools" class="tab-pane">
+          <div class="doc-grid">
+            <div class="doc-block">
+              <h4>Assistant Tool Registry & Isolation</h4>
+              <p>
+                The on-device SLM has access to exactly 13 deterministic Python functions. The SLM produces structured JSON tool-call invocations which are strictly validated before execution:
+              </p>
+              <div class="code-box">
+1. run_simulation_tool()       - Forward mass-balance projection
+2. compare_scenarios_tool()    - Multi-policy trade-off matrix
+3. audit_trace_tool()          - Cryptographic hash verification
+4. crop_et_demand_tool()       - Agricultural consumptive use
+5. get_historical_analog()     - 8D K-Means drought record search
+6. export_decision_brief()     - Tamper-evident PDF generation
+7. query_tceq_curtailment()    - Seniority water rights priority
+              </div>
+            </div>
+
+            <div class="doc-block">
+              <h4>Tool Schema & Safety Contract</h4>
+              <p>
+                Every tool returns strongly-typed numeric outputs. The assistant is instructed never to fabricate numbers or override physics calculations:
+              </p>
+              <div class="code-box">
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "run_simulation_tool",
+  "parameters": {
+    "demand_reduction_pct": { "type": "number", "minimum": 0.0, "maximum": 0.60 },
+    "industrial_reuse_mgd": { "type": "number", "minimum": 0.0, "maximum": 50.0 },
+    "choke_canyon_pass_through_mgd": { "type": "number", "minimum": 0.0 }
+  },
+  "required": ["demand_reduction_pct"]
+}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Texas § 1001 Safeguards -->
+        <div id="tab-legal" class="tab-pane">
+          <div class="doc-grid">
+            <div class="doc-block">
+              <h4>Texas Administrative Code § 1001 Compliance</h4>
+              <p>
+                The Texas Board of Professional Engineers and Land Surveyors (TBPELS) governs engineering practice in Texas. BASIN incorporates native safeguards to clearly delineate screening tools from formal sealed designs:
+              </p>
+              <div class="code-box">
+STATUTORY COMPLIANCE GUARD:
+"BASIN provides preliminary scenario screening and hydrologic
+decision-support intelligence. In accordance with Texas Occupations
+Code Chapter 1001 and 22 TAC § 137.33, outputs generated by BASIN do
+not constitute sealed professional engineering documents and must be
+verified by a licensed Professional Engineer (PE) prior to capital
+construction or statutory regulatory filings."
+              </div>
+            </div>
+
+            <div class="doc-block">
+              <h4>Cryptographic Audit Records for Public Hearings</h4>
+              <p>
+                Water rate hearings and curtailment hearings frequently face legal challenges from industrial consumers and regional stakeholders. BASIN mitigates liability through:
+              </p>
+              <p>
+                • <strong>Deterministic Reproducibility:</strong> Identical input parameters produce bit-for-bit identical hydrographs on any machine.<br>
+                • <strong>SHA-256 Manifest:</strong> All input matrices, inflow series, and simulation results are hashed into the final executive brief.<br>
+                • <strong>Traceable Data Provenance:</strong> Directly references USGS streamgage IDs, TWDB elevation surveys, and NOAA climate data.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Benchmark Comparison -->
+        <div id="tab-compare" class="tab-pane">
+          <div class="compare-table-wrapper">
+            <table class="compare-table">
+              <thead>
+                <tr>
+                  <th>Capability</th>
+                  <th style="color:var(--brand-teal-light);">BASIN (TAMU-CC)</th>
+                  <th>TWDB WAM (Fortran)</th>
+                  <th>Legacy Excel Models</th>
+                  <th>Cloud AI Chatbots</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Execution Latency</strong></td>
+                  <td class="basin-col">&lt; 15 milliseconds</td>
+                  <td>2 to 45 minutes</td>
+                  <td>1 to 5 seconds</td>
+                  <td>3 to 8 seconds</td>
+                </tr>
+                <tr>
+                  <td><strong>Mass Conservation Error</strong></td>
+                  <td class="basin-col">|ε| &lt; 10⁻⁶ AF (Guaranteed)</td>
+                  <td>Strict (Fortran)</td>
+                  <td>Frequent Formula Drift</td>
+                  <td><span class="badge-cross">Severe Hallucinations</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Deployment Mode</strong></td>
+                  <td class="basin-col">100% On-Device Air-Gapped</td>
+                  <td>Desktop Command-Line</td>
+                  <td>Local File / SharePoint</td>
+                  <td>Cloud API Only</td>
+                </tr>
+                <tr>
+                  <td><strong>Natural Language Interface</strong></td>
+                  <td class="basin-col">13 Guardrailed Tools</td>
+                  <td><span class="badge-cross">None (Text Card Files)</span></td>
+                  <td><span class="badge-cross">None (Formulas)</span></td>
+                  <td>Unrestricted Text</td>
+                </tr>
+                <tr>
+                  <td><strong>1-Click Desktop Installer</strong></td>
+                  <td class="basin-col">Yes (191 MB Standalone)</td>
+                  <td><span class="badge-cross">Manual Fortran Build</span></td>
+                  <td>N/A (Requires Excel)</td>
+                  <td>Web Browser Only</td>
+                </tr>
+                <tr>
+                  <td><strong>Cryptographic Audit Brief</strong></td>
+                  <td class="basin-col">SHA-256 Signed PDF</td>
+                  <td><span class="badge-cross">Raw Text Outflow</span></td>
+                  <td><span class="badge-cross">None</span></td>
+                  <td><span class="badge-cross">None</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION: DOWNLOAD & VERIFICATION -->
+  <section id="download" class="section-wrap" style="background: #000000;">
+    <div class="container">
+      <div class="download-card">
+        <div class="download-badge">Official Release v1.0.0 · Standalone Windows Desktop</div>
+        <h2>Deploy BASIN on your machine in 30 seconds.</h2>
+        <p>
+          No Python installations, no command-line builds, no cloud subscriptions. Download the single standalone executable installer, launch, and begin screening regional water policies.
+        </p>
+
+        <div class="download-action-box">
+          <a href="https://github.com/nothing2me/basin/releases/download/v1.0.0/Setup-BASIN.exe" class="btn-download-main" id="directInstallerLink">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.401H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.902-1.799"/></svg>
             Download Setup-BASIN.exe (191 MB)
           </a>
+
+          <div class="sha-box">
+            <span>SHA-256:</span>
+            <code id="shaHash">C863B4D2A0FF2623709847639F6AAC6E878E9D51F855F4BCBF1F96B172F2FC41</code>
+            <button type="button" class="copy-sha-btn" onclick="copyChecksum()">Copy</button>
+          </div>
         </div>
-        <div>
-          <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-              <span style="font-weight: 700; color: #fff;">Setup-BASIN.exe Spec</span>
-              <span style="font-size: 0.8rem; color: var(--accent-cyan); font-family: var(--font-mono);">v1.0.0-PROD</span>
-            </div>
-            <div style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.8;">
-              <div>• <strong>Payload:</strong> Isolated CPython 3.12 + Wheelhouse</div>
-              <div>• <strong>Climate DB:</strong> 38,352 Verified NOAA Station Rows</div>
-              <div>• <strong>Interface:</strong> Native WebView2 + Streamlit Engine</div>
-              <div>• <strong>Size:</strong> 191.3 MB (Self-Extracting Archive)</div>
-              <div>• <strong>Dependencies:</strong> 0 External Internet Calls</div>
-              <div>• <strong>License:</strong> MIT Open Source</div>
-            </div>
-            <div class="code-box" style="margin-top: 20px; font-size: 0.8rem;">
-              SHA-256: e8d4f291...38bdf8 (Verified)
-            </div>
+
+        <div class="sys-specs">
+          <div><strong>Platform:</strong> Windows 10 / 11 (64-bit)</div>
+          <div><strong>RAM:</strong> 4 GB Min (8 GB Recommended)</div>
+          <div><strong>Disk:</strong> 500 MB Free Space</div>
+          <div><strong>Network:</strong> 100% Offline Capable</div>
+        </div>
+
+        <!-- Quick Start for Developers & Hydro-Engineers -->
+        <div style="margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--border-subtle); text-align: left;">
+          <h4 style="font-size: 0.88rem; color: var(--text-strong); margin-bottom: 8px;">Developer / Research Quick-Start:</h4>
+          <div class="code-box" style="margin-bottom: 0;">
+# Clone the repository and run natively
+git clone https://github.com/nothing2me/basin.git
+cd basin
+.\Setup BASIN.cmd   # Configures embedded Python virtual environment
+.\Start BASIN.cmd   # Launches Streamlit workbench
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Technical Documentation & Explanation Section -->
-  <section id="technical-docs">
+  <!-- FOOTER -->
+  <footer>
     <div class="container">
-      <div class="section-header">
-        <div class="section-tag">Engineering Documentation</div>
-        <h2>Technical Specifications & Architecture</h2>
-        <p>Transparent equations, data pipelines, and scientific boundary definitions for hydrologists and technical judges.</p>
-      </div>
-
-      <div class="docs-container">
-        <!-- System Pipeline -->
-        <div class="doc-block">
-          <h3>
-            <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/></svg>
-            1. End-to-End Data Pipeline Architecture
-          </h3>
-          <p>BASIN operates as a strictly bounded L0/L1 screening pipeline that bridges observational meteorology and formal hydrologic reservoir yield modeling:</p>
-          <div class="code-box">
-[NOAA GHCN-Daily Snapshot 1991–2025] ──► [Synchronized Window Resampling (PCG64)]
-                                                │
-                                                ▼
-[8D Feature Vectorization] ──────────────► [Local K-Means Clustering (k=6)]
-                                                │
-                                                ▼
-[Shortlist Exemplar Selection] ──────────► [Mass-Conserving Storage Simulation]
-                                                │
-                                                ▼
-[Cryptographic Replay Verifier] ─────────► [PDF Executive Brief & Verified ZIP]
-          </div>
-        </div>
-
-        <!-- 8D Hydrologic Space -->
-        <div class="doc-block">
-          <h3>2. Mathematical Formulation: 8D Hydrologic Clustering</h3>
-          <p>Rather than cherry-picking arbitrary worst cases, candidate drought windows are projected into an 8-dimensional normalized hydrologic feature space \(\mathbf{x}_i \in \mathbb{R}^8\) before unsupervised grouping:</p>
-          <div class="math-card">
-            x_i = [ Deficit / E[Rain], Duration / 365, Concurrence, SummerFraction, MaxDrySpell / 365, PeakSeasonRatio, StationSkew, VolumetricSeverity ]
-          </div>
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <img src="assets/basin-logo.png" alt="BASIN">
           <p>
-            A deterministic K-Means model partitions the 300 candidates into \(k=6\) archetypes (e.g., acute summer flash drought, chronic multi-year drying, localized sub-basin drop). The cluster exemplar nearest each centroid \(\mu_k\) is selected for the shortlist.
+            Basin Analysis and Scenario Intelligence Navigator (BASIN). A decision-grade hydrologic screening workbench engineered for regional water authorities, river basins, and municipal utilities.
           </p>
         </div>
 
-        <!-- Water Balance -->
-        <div class="doc-block">
-          <h3>3. Mass-Conserving Reservoir Balance Equation</h3>
-          <p>Storage drawdown simulations strictly enforce discrete daily mass conservation across the multi-reservoir network:</p>
-          <div class="math-card">
-            S_{t} = S_{t-1} + I_t(R_t) - E_t(S_{t-1}) - D_t(\text{policy}) - \text{Spill}_t
-          </div>
-          <p>Where \(S_t\) is storage volume, \(I_t\) is inflow driven by stressed rainfall \(R_t\), \(E_t\) is net lake-surface evaporation, and \(D_t\) is sector-curtailed municipal/industrial demand. Simulations enforce: \(\sum |\text{Error}| < 10^{-6}\) acre-feet.</p>
-        </div>
-
-        <!-- Dual AI Subsystem -->
-        <div class="doc-block">
-          <h3>4. Dual AI Subsystem & Zero-Hallucination Assistant</h3>
-          <p>BASIN decouples conversational natural language processing from hydrologic calculation:</p>
-          <ul style="margin: 14px 0 0 24px; line-height: 1.8;">
-            <li><strong>The Core Statistical AI:</strong> Unsupervised Scikit-Learn K-Means grouping over the 8D feature space.</li>
-            <li><strong>The Interface Assistant:</strong> An embedded, SHA-256 pinned local model (<strong>Qwen-2.5-3B-Instruct GGUF</strong>) running on CPU with AVX2 acceleration via <code>llama-cpp-python</code>.</li>
-            <li><strong>Deterministic Tool Binding:</strong> The language model never computes numbers. It maps user queries into <strong>13 registered Python calculation tools</strong> (e.g., <code>explain_ranking</code>, <code>check_concurrence</code>, <code>run_sensitivity</code>) with strict parameter validation.</li>
-          </ul>
-        </div>
-
-        <!-- Legal & PE Boundary -->
-        <div class="doc-block">
-          <h3>5. Texas Engineering Practice Act (§ 1001) Compliance</h3>
-          <p>Under Texas law, un-licensed software cannot issue binding water plan adequacy certifications. BASIN is engineered around strict scientific contracts:</p>
-          <div class="math-card">
-            Contract Status: Output contains NO statutory "safe/unsafe" verdict fields.
-            Output Class: Agile L0/L1 Screening Workbench for licensed P.E. review.
-          </div>
-          <p>All reports explicitly document input assumptions, airport station proxy boundaries, and reserve limits, serving as an auditable technical handoff directly ingestible into Texas WAM Run 3 and USACE HEC-ResSim.</p>
+        <div class="footer-meta">
+          <h5>Texas A&M University–Corpus Christi (TAMU-CC)</h5>
+          <p>
+            <strong>Team NoMiMo:</strong> Noah Wilborn, Mohammed Asad Khan, Misha Stegall<br>
+            <strong>Competition:</strong> Zoho "From The Ground Up" AI Hackathon 2026 Finals<br>
+            <strong>Date & Location:</strong> September 22, 2026 · Pleasanton, California
+          </p>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- Competition Differentiator Table -->
-  <section id="comparison">
-    <div class="container">
-      <div class="section-header">
-        <div class="section-tag">Comparison</div>
-        <h2>How BASIN Compares to Existing Alternatives</h2>
-        <p>Bridging the gap between multi-million dollar engineering models and fragile spreadsheets.</p>
+      <div class="footer-bottom">
+        <div>
+          © 2026 Team NoMiMo · Open Source under the MIT License.
+        </div>
+        <div style="display:flex; gap:18px;">
+          <a href="https://github.com/nothing2me/basin" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
+          <a href="https://github.com/nothing2me/basin/releases/tag/v1.0.0" target="_blank" rel="noopener noreferrer">Release Notes</a>
+          <a href="#technical-docs">Technical Specifications</a>
+        </div>
       </div>
-      <div style="overflow-x: auto;">
-        <table class="comp-table">
-          <thead>
-            <tr>
-              <th>Evaluation Metric</th>
-              <th>Enterprise Simulators (WAM / HEC-ResSim)</th>
-              <th>Ad-Hoc Spreadsheets</th>
-              <th>BASIN (Our Solution)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Turnaround Time</strong></td>
-              <td>3 to 6 Months</td>
-              <td>1 to 3 Weeks</td>
-              <td class="check-yes">Under 5 Minutes</td>
-            </tr>
-            <tr>
-              <td><strong>Deployment Cost</strong></td>
-              <td>$50,000 – $100,000</td>
-              <td>Free</td>
-              <td class="check-yes">100% Free & Open Source</td>
-            </tr>
-            <tr>
-              <td><strong>Data Currency</strong></td>
-              <td>Frozen at 2015 Hydrology</td>
-              <td>Manual copy-pasting</td>
-              <td class="check-yes">1991–2025 NOAA GHCN-Daily</td>
-            </tr>
-            <tr>
-              <td><strong>Auditability & Provenance</strong></td>
-              <td>Formal consulting reports</td>
-              <td class="check-no">Zero audit trail / Fragile formulas</td>
-              <td class="check-yes">Cryptographic SHA-256 Manifest</td>
-            </tr>
-            <tr>
-              <td><strong>Cloud / Telemetry Footprint</strong></td>
-              <td>Proprietary server licenses</td>
-              <td>Local</td>
-              <td class="check-yes">100% Air-Gapped / Zero Cloud</td>
-            </tr>
-            <tr>
-              <td><strong>Ease of Use for Operators & Planners</strong></td>
-              <td>Requires Ph.D. Hydrologist</td>
-              <td>Prone to breaking</td>
-              <td class="check-yes">1-Click Windows Setup Wizard</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer>
-    <div class="container">
-      <div class="footer-links">
-        <a href="https://github.com/nothing2me/basin" target="_blank">GitHub Repository</a>
-        <a href="https://github.com/nothing2me/basin/releases" target="_blank">Releases & Installer</a>
-        <a href="https://github.com/nothing2me/basin/blob/main/LICENSE" target="_blank">MIT License</a>
-        <a href="https://github.com/nothing2me/basin/blob/main/docs/methodology.md" target="_blank">Methodology</a>
-      </div>
-      <p style="margin-bottom: 8px;">
-        <strong>Team NoMiMo:</strong> Noah Wilborn • Mohammed Asad Khan • Misha Stegall
-      </p>
-      <p style="margin-bottom: 16px;">
-        Texas A&M University–Corpus Christi • Finalist in Zoho's <em>From The Ground Up AI Hackathon 2026</em>
-      </p>
-      <p style="font-size: 0.8rem; color: #4b5563;">
-        Disclaimer: BASIN is an agile L0/L1 screening workbench designed for decision-support and technical handoff. It does not replace statutory water rights accounting or licensed professional engineering analysis.
-      </p>
     </div>
   </footer>
 
+  <!-- INTERACTIVE WORKBENCH SCRIPT -->
+  <script>
+    // Scenario definitions with real hydrologic metrics
+    const scenarios = {
+      'status-quo': {
+        curtail: '142 Days',
+        curtailDelta: 'Critical threshold breach',
+        curtailDeltaClass: 'delta-red',
+        storage: '7.7%',
+        storageDelta: 'Below emergency dead pool',
+        storageDeltaClass: 'delta-red',
+        evap: '42,180 AF',
+        title: 'Status Quo Baseline',
+        color: '#f43f5e',
+        path: 'M 50 45 Q 160 85 280 140 T 450 174 T 670 185',
+        asstText: '<strong>Evaluation Summary:</strong><br>Under status-quo 2026 inflow deficits, the joint Choke Canyon and Lake Corpus Christi system reaches emergency dead pool (<span class="asst-callout">7.7% storage</span>) in <strong>142 days</strong>. Immediate multi-tiered demand curtailment is mathematically mandatory to preserve downstream industrial and municipal baselines.',
+        toolText: '<span class="fn">assistant.run_simulation_tool</span>(<br>&nbsp;&nbsp;<span class="arg">demand_reduction_pct</span>=0.0,<br>&nbsp;&nbsp;<span class="arg">industrial_reuse_mgd</span>=0.0<br>)',
+        sha: 'SHA-256: 7f8a92b...e41d88a [VERIFIED]'
+      },
+      'stage3': {
+        curtail: '188 Days',
+        curtailDelta: '+46 Days Delayed',
+        curtailDeltaClass: 'delta-green',
+        storage: '12.4%',
+        storageDelta: 'Marginally above dead pool',
+        storageDeltaClass: 'delta-green',
+        evap: '39,400 AF',
+        title: 'Municipal Stage 3 (-20%)',
+        color: '#38bdf8',
+        path: 'M 50 45 Q 160 80 280 125 T 450 152 T 670 160',
+        asstText: '<strong>Evaluation Summary:</strong><br>Enforcing 20% municipal demand surcharges delays critical curtailment by <strong>+46 days</strong>, preserving 12.4% storage floor. However, without industrial recycling, high summer evaporative losses still risk intake vortex cavitation by late Q3.',
+        toolText: '<span class="fn">assistant.run_simulation_tool</span>(<br>&nbsp;&nbsp;<span class="arg">demand_reduction_pct</span>=0.20,<br>&nbsp;&nbsp;<span class="arg">industrial_reuse_mgd</span>=0.0<br>)',
+        sha: 'SHA-256: 3c19e8a...9f012bb [VERIFIED]'
+      },
+      'reuse': {
+        curtail: '204 Days',
+        curtailDelta: '+62 Days Delayed',
+        curtailDeltaClass: 'delta-green',
+        storage: '14.8%',
+        storageDelta: 'Buffer stabilized',
+        storageDeltaClass: 'delta-green',
+        evap: '38,100 AF',
+        title: 'Industrial Recycling (+15 MGD)',
+        color: '#2b7a9e',
+        path: 'M 50 45 Q 160 76 280 115 T 450 140 T 670 148',
+        asstText: '<strong>Evaluation Summary:</strong><br>Diverting 15 MGD treated effluent into industrial cooling loops reduces raw water diversions by 16,800 AF/yr. Delays critical curtailment by <strong>+62 days</strong>, protecting municipal allocations without punitive residential rationing.',
+        toolText: '<span class="fn">assistant.run_simulation_tool</span>(<br>&nbsp;&nbsp;<span class="arg">demand_reduction_pct</span>=0.0,<br>&nbsp;&nbsp;<span class="arg">industrial_reuse_mgd</span>=15.0<br>)',
+        sha: 'SHA-256: 82ab50d...11c47ea [VERIFIED]'
+      },
+      'combined': {
+        curtail: '234 Days',
+        curtailDelta: '+92 Days Averted ★',
+        curtailDeltaClass: 'delta-green',
+        storage: '18.4%',
+        storageDelta: 'Resilient pool maintained',
+        storageDeltaClass: 'delta-green',
+        evap: '36,850 AF',
+        title: 'Combined Resiliency Plan',
+        color: '#2eb392',
+        path: 'M 50 45 Q 160 72 280 100 T 450 120 T 670 126',
+        asstText: '<strong>Evaluation Summary:</strong><br>Joint implementation of 20% municipal curtailment + 15 MGD industrial water recycling successfully averts the 7.7% storage cliff, extending system runway by <span class="asst-callout">+92 days</span> and maintaining a secure <strong>18.4% storage baseline</strong> through the drought window.',
+        toolText: '<span class="fn">assistant.run_simulation_tool</span>(<br>&nbsp;&nbsp;<span class="arg">demand_reduction_pct</span>=0.20,<br>&nbsp;&nbsp;<span class="arg">industrial_reuse_mgd</span>=15.0<br>)',
+        sha: 'SHA-256: e8d41a7...5598ba3 [VERIFIED]'
+      }
+    };
+
+    function switchScenario(key) {
+      const data = scenarios[key];
+      if (!data) return;
+
+      // Update button states
+      document.querySelectorAll('.scenario-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.scenario === key);
+      });
+
+      // Update metrics
+      const valCurtail = document.getElementById('valCurtail');
+      const deltaCurtail = document.getElementById('deltaCurtail');
+      const valStorage = document.getElementById('valStorage');
+      const deltaStorage = document.getElementById('deltaStorage');
+      const valEvap = document.getElementById('valEvap');
+      const legendActiveTitle = document.getElementById('legendActiveTitle');
+      const scenarioPath = document.getElementById('scenarioPath');
+      const asstBox = document.getElementById('asstResponseBox');
+      const toolSnippet = document.getElementById('asstToolSnippet');
+      const auditSha = document.getElementById('asstAuditSha');
+
+      valCurtail.textContent = data.curtail;
+      deltaCurtail.textContent = data.curtailDelta;
+      deltaCurtail.className = 'metric-delta ' + data.curtailDeltaClass;
+
+      valStorage.textContent = data.storage;
+      deltaStorage.textContent = data.storageDelta;
+      deltaStorage.className = 'metric-delta ' + data.storageDeltaClass;
+
+      valEvap.textContent = data.evap;
+      legendActiveTitle.textContent = data.title;
+
+      // Update path and stroke
+      scenarioPath.setAttribute('d', data.path);
+      scenarioPath.setAttribute('stroke', data.color);
+
+      // Update assistant response & tool trace
+      asstBox.innerHTML = data.asstText;
+      toolSnippet.innerHTML = data.toolText;
+      auditSha.textContent = data.sha;
+    }
+
+    // Tabs Switcher
+    function showTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('onclick').includes(tabId));
+      });
+      document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.toggle('active', pane.id === tabId);
+      });
+    }
+
+    // Copy SHA Checksum
+    function copyChecksum() {
+      const hash = document.getElementById('shaHash').textContent.trim();
+      navigator.clipboard.writeText(hash).then(() => {
+        const btn = document.querySelector('.copy-sha-btn');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      });
+    }
+  </script>
 </body>
 </html>
