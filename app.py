@@ -1804,187 +1804,196 @@ elif page == "Workspace":
         st.session_state["run_focus_guidance"] = profile_defaults.guidance
         st.session_state["run_focus_skip"] = profile_defaults.dismissed and not profile_defaults.configured
 
-    with st.container(border=True):
-        st.markdown("##### 🎯 Analysis Focus & Presentation Settings")
-        st.caption("Choose what to focus on first. Tailors which measurements and diagnostic tools are prioritized in Step 3 Review. Does not alter mathematical calculations or export data.")
-        focus_goal_col, focus_data_col, focus_guidance_col = st.columns(3)
-        run_focus_goal = focus_goal_col.selectbox(
-            "What are you trying to do?", list(GOALS),
-            format_func=lambda key: GOALS[key]["label"], key="run_focus_goal",
-            help="BASIN will place the related measurements and visuals first in Review.")
-        run_focus_data = focus_data_col.selectbox(
-            "Which data will you use?", list(DATA_SOURCES),
-            format_func=lambda key: DATA_SOURCES[key]["label"], key="run_focus_data",
-            help="This records your intent. It does not upload, validate, or replace data.")
-        run_focus_guidance = focus_guidance_col.selectbox(
-            "Presentation view", list(GUIDANCE),
-            format_func=lambda key: GUIDANCE[key]["label"], key="run_focus_guidance",
-            help="Simple shows key results. Advanced adds technical controls and diagnostics.")
-        run_focus_skip = st.checkbox(
-            "Skip tailoring and show every Review tool", key="run_focus_skip",
-            help="You can tailor the Review later without losing work.")
-        if run_focus_data == "own":
-            has_custom = any(s.startswith("LOCAL_") for s in names)
-            if has_custom:
-                local_name = next(names[s] for s in names if s.startswith("LOCAL_"))
-                st.info(f"Custom Gauge Active: Generating scenarios from user-provided dataset '{local_name}' (unverified). {CUSTOM_CATCHMENT_DISCLAIMER}")
-            else:
-                st.info("Upload your rainfall CSV here to drive scenarios with your own gauge:")
-                local_rainfall_preview(expanded=True, as_expander=False)
-                st.caption("Tip: You can also explore full NOAA paired-station comparisons in Step 1: Data Dashboard.")
-        elif run_focus_data == "example":
-            col_ex1, col_ex2 = st.columns([2.5, 1.5])
-            col_ex1.caption("The reproducible example pre-loads 6 diverse drought candidates (Seed 22).")
-            col_ex2.button("Load Example Run ➔", key="btn_builder_load_example_inline", on_click=start_example, args=(source, names), type="primary", width="stretch")
-        elif run_focus_skip:
-            st.caption("This run will use the full Review layout. You can choose a focus later in Review.")
-
-    # 1. Upfront Priority Weights & Presets
-    with tour_target("sidebar_presets"):
+    # 1. Side-by-Side Presentation Settings & Community Priority Presets Cards
+    col_settings, col_presets = st.columns(2, gap="medium")
+    with col_settings:
         with st.container(border=True):
-            st.markdown("##### ⚖️ Community Priority Presets & Ranking Weights")
-            st.caption("Set illustrative community priorities before building scenarios or adjust to rerank existing candidates. The shortlist reflects these operational priorities.")
-            preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
-            matched = "Custom weights"
-            curr_weights = dict(w.weights) if w else {"severity": 40, "duration": 30, "concurrence": 20, "season": 10}
-            for p_name, p_vals in COMMUNITY_PRESETS.items():
-                if curr_weights == p_vals:
-                    matched = p_name
-                    break
-            col_pre1, col_pre2 = st.columns([1.5, 2.5])
-            with col_pre1:
+            st.markdown("##### 🎯 Analysis Focus & Presentation Settings")
+            st.caption("Choose what to focus on first. Tailors which measurements and diagnostic tools are prioritized in Step 3 Review. Does not alter mathematical calculations or export data.")
+            run_focus_goal = st.selectbox(
+                "What are you trying to do?", list(GOALS),
+                format_func=lambda key: GOALS[key]["label"], key="run_focus_goal",
+                help="BASIN will place the related measurements and visuals first in Review.")
+            col_f_data, col_f_guidance = st.columns(2)
+            with col_f_data:
+                run_focus_data = st.selectbox(
+                    "Which data will you use?", list(DATA_SOURCES),
+                    format_func=lambda key: DATA_SOURCES[key]["label"], key="run_focus_data",
+                    help="This records your intent. It does not upload, validate, or replace data.")
+            with col_f_guidance:
+                run_focus_guidance = st.selectbox(
+                    "Presentation view", list(GUIDANCE),
+                    format_func=lambda key: GUIDANCE[key]["label"], key="run_focus_guidance",
+                    help="Simple shows key results. Advanced adds technical controls and diagnostics.")
+            run_focus_skip = st.checkbox(
+                "Skip tailoring and show every Review tool", key="run_focus_skip",
+                help="You can tailor the Review later without losing work.")
+            if run_focus_data == "own":
+                has_custom = any(s.startswith("LOCAL_") for s in names)
+                if has_custom:
+                    local_name = next(names[s] for s in names if s.startswith("LOCAL_"))
+                    st.info(f"Custom Gauge Active: Generating scenarios from user-provided dataset '{local_name}' (unverified). {CUSTOM_CATCHMENT_DISCLAIMER}")
+                else:
+                    st.info("Upload your rainfall CSV here to drive scenarios with your own gauge:")
+                    local_rainfall_preview(expanded=True, as_expander=False)
+                    st.caption("Tip: You can also explore full NOAA paired-station comparisons in Step 1: Data Dashboard.")
+            elif run_focus_data == "example":
+                col_ex1, col_ex2 = st.columns([2.5, 1.5])
+                col_ex1.caption("The reproducible example pre-loads 6 diverse drought candidates (Seed 22).")
+                col_ex2.button("Load Example Run ➔", key="btn_builder_load_example_inline", on_click=start_example, args=(source, names), type="primary", width="stretch")
+            elif run_focus_skip:
+                st.caption("This run will use the full Review layout. You can choose a focus later in Review.")
+
+    with col_presets:
+        with tour_target("sidebar_presets"):
+            with st.container(border=True):
+                st.markdown("##### ⚖️ Community Priority Presets & Ranking Weights")
+                st.caption("Set illustrative community priorities before building scenarios or adjust to rerank existing candidates. The shortlist reflects these operational priorities.")
+                preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
+                matched = "Custom weights"
+                curr_weights = dict(w.weights) if w else {"severity": 40, "duration": 30, "concurrence": 20, "season": 10}
+                for p_name, p_vals in COMMUNITY_PRESETS.items():
+                    if curr_weights == p_vals:
+                        matched = p_name
+                        break
                 chosen_preset = st.selectbox(
                     "Community priority preset", preset_options,
                     index=preset_options.index(matched),
                     key=f"preset_select_{w.id if w else 'initial'}",
                     help="Biases the shortlist toward your operational priority: 'Crop stress' prioritizes summer deficit; 'Chronic drought' prioritizes duration."
                 )
-            if chosen_preset != "Custom weights" and chosen_preset != matched:
-                new_w = dict(COMMUNITY_PRESETS[chosen_preset])
-                for k, v in new_w.items():
-                    st.session_state[f"weight_{k}"] = v
-                if w:
-                    w.rerank(new_w)
-                    w.rebuild_shortlist()
-                    save(w)
-                    st.rerun()
-
-            slider_configs = {
-                "severity": ("Deficit severity vs history", "Relative weight for severity (% of historical windows exceeded in rainfall shortfall)."),
-                "duration": ("Scenario duration (days)", "Relative weight for duration (favors longer multi-season drought stress periods)."),
-                "concurrence": ("Regional station concurrence", "Relative weight for concurrence (favors scenarios where all stations experience synchronized deficits)."),
-                "season": ("Summer timing (June–Sept)", "Relative weight for critical warm-season timing (June–September evaporation and crop flowering)."),
-            }
-            w_cols = st.columns(4)
-            weights = {}
-            for idx, (k, (lbl, hlp)) in enumerate(slider_configs.items()):
-                with w_cols[idx]:
-                    val = int(st.session_state.get(f"weight_{k}", curr_weights[k]))
-                    weights[k] = st.slider(lbl, 0, 100, val, key=f"weight_{k}", help=hlp)
-            if w:
-                if sum(weights.values()) == 0:
-                    st.error("At least one weight must be positive.")
-                elif weights != w.weights:
-                    w.rerank(weights)
-                    save(w)
-                if st.button("Rebuild shortlist from current weights", key=f"btn_rebuild_shortlist_{w.id}", disabled=sum(weights.values()) == 0, width="stretch"):
-                    try:
+                if chosen_preset != "Custom weights" and chosen_preset != matched:
+                    new_w = dict(COMMUNITY_PRESETS[chosen_preset])
+                    for k, v in new_w.items():
+                        st.session_state[f"weight_{k}"] = v
+                    if w:
+                        w.rerank(new_w)
                         w.rebuild_shortlist()
                         save(w)
-                        st.success(f"Shortlist rebuilt using updated priorities: {w.weights}")
                         st.rerun()
-                    except ValueError as error:
-                        st.error(str(error))
-            else:
-                st.caption("Configured weights will prioritize candidate severity, duration, concurrence, and seasonality during initial generation.")
 
-    # 2. Scenario Generator
+                slider_configs = {
+                    "severity": ("Deficit severity vs history", "Relative weight for severity (% of historical windows exceeded in rainfall shortfall)."),
+                    "duration": ("Scenario duration (days)", "Relative weight for duration (favors longer multi-season drought stress periods)."),
+                    "concurrence": ("Regional station concurrence", "Relative weight for concurrence (favors scenarios where all stations experience synchronized deficits)."),
+                    "season": ("Summer timing (June–Sept)", "Relative weight for critical warm-season timing (June–September evaporation and crop flowering)."),
+                }
+                w_row1_c1, w_row1_c2 = st.columns(2)
+                w_row2_c1, w_row2_c2 = st.columns(2)
+                w_cols = [w_row1_c1, w_row1_c2, w_row2_c1, w_row2_c2]
+                weights = {}
+                for idx, (k, (lbl, hlp)) in enumerate(slider_configs.items()):
+                    with w_cols[idx]:
+                        val = int(st.session_state.get(f"weight_{k}", curr_weights[k]))
+                        weights[k] = st.slider(lbl, 0, 100, val, key=f"weight_{k}", help=hlp)
+                if w:
+                    if sum(weights.values()) == 0:
+                        st.error("At least one weight must be positive.")
+                    elif weights != w.weights:
+                        w.rerank(weights)
+                        save(w)
+                    if st.button("Rebuild shortlist from current weights", key=f"btn_rebuild_shortlist_{w.id}", disabled=sum(weights.values()) == 0, width="stretch"):
+                        try:
+                            w.rebuild_shortlist()
+                            save(w)
+                            st.success(f"Shortlist rebuilt using updated priorities: {w.weights}")
+                            st.rerun()
+                        except ValueError as error:
+                            st.error(str(error))
+                else:
+                    st.caption("Configured weights will prioritize candidate severity, duration, concurrence, and seasonality during initial generation.")
+
+    # 2. Scenario Generator (Internally Split Side-by-Side)
     c_gen = st.container()
     with c_gen:
         with tour_target("sidebar_generator"):
             with st.container(border=True):
                 st.markdown("##### 🌧️ Build rainfall scenarios")
-                stations = st.multiselect(
-                    "Stations", list(names),
-                    default=list(w.params.stations) if w else list(names), format_func=names.get,
-                    help="NOAA First-Order Long-Term Continuous Index Stations (Corpus Christi, Victoria, San Antonio) providing synchronized daily precipitation records spanning 1991–2025.",
-                    placeholder="Type a station name or ID",
-                )
+                st.caption("Define observation stations, historical search window, and drought stress parameters.")
+                col_gen_scope, col_gen_params = st.columns(2, gap="medium")
+                with col_gen_scope:
+                    stations = st.multiselect(
+                        "Stations", list(names),
+                        default=list(w.params.stations) if w else list(names), format_func=names.get,
+                        help="NOAA First-Order Long-Term Continuous Index Stations (Corpus Christi, Victoria, San Antonio) providing synchronized daily precipitation records spanning 1991–2025.",
+                        placeholder="Type a station name or ID",
+                    )
 
-                default_gen_mode = "analog_search" if (w and not getattr(w.params, "calendar_ranges", ())) else "variations"
-                gen_mode = st.radio(
-                    "Scenario Generation Mode",
-                    ["variations", "analog_search"],
-                    index=0 if default_gen_mode == "variations" else 1,
-                    format_func=lambda x: "Variations of Selected Historical Window" if x == "variations" else "Multi-Year Historical Analog Search (1991–2025)",
-                    key="scenario_gen_mode",
-                    help="Choose whether to generate retention variations of one specific historical window, or search across distinct historical dry windows from the 1991–2025 NOAA record."
-                )
+                    default_gen_mode = "analog_search" if (w and not getattr(w.params, "calendar_ranges", ())) else "variations"
+                    gen_mode = st.radio(
+                        "Scenario Generation Mode",
+                        ["variations", "analog_search"],
+                        index=0 if default_gen_mode == "variations" else 1,
+                        format_func=lambda x: "Variations of Selected Historical Window" if x == "variations" else "Multi-Year Historical Analog Search (1991–2025)",
+                        key="scenario_gen_mode",
+                        help="Choose whether to generate retention variations of one specific historical window, or search across distinct historical dry windows from the 1991–2025 NOAA record."
+                    )
 
-                calendar_ranges = []
-                custom_range_incomplete = False
-                source_start_date = pd.Timestamp(source.manifest["start"]).date()
-                source_end_date = pd.Timestamp(source.manifest["end"]).date()
+                    calendar_ranges = []
+                    custom_range_incomplete = False
+                    source_start_date = pd.Timestamp(source.manifest["start"]).date()
+                    source_end_date = pd.Timestamp(source.manifest["end"]).date()
 
-                if gen_mode == "variations":
-                    saved_ranges = tuple(getattr(w.params, "calendar_ranges", ())) if w else ()
-                    if saved_ranges:
-                        saved_start = datetime.fromisoformat(saved_ranges[0][0]).date()
-                        saved_end = datetime.fromisoformat(saved_ranges[0][1]).date()
+                    if gen_mode == "variations":
+                        saved_ranges = tuple(getattr(w.params, "calendar_ranges", ())) if w else ()
+                        if saved_ranges:
+                            saved_start = datetime.fromisoformat(saved_ranges[0][0]).date()
+                            saved_end = datetime.fromisoformat(saved_ranges[0][1]).date()
+                        else:
+                            saved_end = source_end_date
+                            saved_start = max(source_start_date, source_end_date - timedelta(days=89))
+                        selected_dates = st.date_input(
+                            "Dates", value=(saved_start, saved_end),
+                            min_value=source_start_date, max_value=source_end_date,
+                            help="Select historical start and end dates to construct retention variations from.",
+                            key="scenario_dates",
+                        )
+                        custom_range_incomplete = len(selected_dates) != 2
+                        if custom_range_incomplete:
+                            st.caption("Select both a start and end date.")
+                        else:
+                            start_date, end_date = selected_dates
+                            dur_days = (end_date - start_date).days + 1
+                            st.caption(f"📌 **Single Historical Window**: {start_date} to {end_date} ({dur_days} days) · Generates scaled retention variations of this exact historical record.")
+                            calendar_ranges.append((
+                                datetime.combine(start_date, datetime.min.time()).isoformat(timespec="minutes"),
+                                datetime.combine(end_date, datetime.strptime("23:59", "%H:%M").time()).isoformat(timespec="minutes"),
+                            ))
+                        durations = ((end_date - start_date).days + 1,) if not custom_range_incomplete else (90,)
+                        months = (start_date.month,) if not custom_range_incomplete else (1,)
                     else:
-                        saved_end = source_end_date
-                        saved_start = max(source_start_date, source_end_date - timedelta(days=89))
-                    selected_dates = st.date_input(
-                        "Dates", value=(saved_start, saved_end),
-                        min_value=source_start_date, max_value=source_end_date,
-                        help="Select historical start and end dates to construct retention variations from.",
-                        key="scenario_dates",
-                    )
-                    custom_range_incomplete = len(selected_dates) != 2
-                    if custom_range_incomplete:
-                        st.caption("Select both a start and end date.")
-                    else:
-                        start_date, end_date = selected_dates
-                        dur_days = (end_date - start_date).days + 1
-                        st.caption(f"📌 **Single Historical Window**: {start_date} to {end_date} ({dur_days} days) · Generates scaled retention variations of this exact historical record.")
-                        calendar_ranges.append((
-                            datetime.combine(start_date, datetime.min.time()).isoformat(timespec="minutes"),
-                            datetime.combine(end_date, datetime.strptime("23:59", "%H:%M").time()).isoformat(timespec="minutes"),
-                        ))
-                    durations = ((end_date - start_date).days + 1,) if not custom_range_incomplete else (90,)
-                    months = (start_date.month,) if not custom_range_incomplete else (1,)
-                else:
-                    st.info("🔍 **Multi-Year Historical Search**: Scans the 1991–2025 NOAA record for multi-season drought sequences across distinct years and onset seasons.")
-                    col_d, col_m = st.columns(2)
-                    default_durs = [d for d in [90, 180, 270] if d in [30, 60, 90, 180, 270, 365]]
-                    chosen_durs = col_d.multiselect("Search durations (days)", [30, 60, 90, 180, 270, 365], default=default_durs, help="Historical window durations to screen.")
-                    chosen_months = col_m.multiselect("Search onset months", list(range(1, 13)), default=[1, 4, 7, 10], format_func=lambda m: calendar.month_name[m], help="Onset months for drought screening windows.")
-                    durations = tuple(sorted(chosen_durs)) if chosen_durs else (90, 180, 270)
-                    months = tuple(sorted(chosen_months)) if chosen_months else (1, 4, 7, 10)
+                        st.info("🔍 **Multi-Year Historical Search**: Scans the 1991–2025 NOAA record for multi-season drought sequences across distinct years and onset seasons.")
+                        col_d, col_m = st.columns(2)
+                        default_durs = [d for d in [90, 180, 270] if d in [30, 60, 90, 180, 270, 365]]
+                        chosen_durs = col_d.multiselect("Search durations (days)", [30, 60, 90, 180, 270, 365], default=default_durs, help="Historical window durations to screen.")
+                        chosen_months = col_m.multiselect("Search onset months", list(range(1, 13)), default=[1, 4, 7, 10], format_func=lambda m: calendar.month_name[m], help="Onset months for drought screening windows.")
+                        durations = tuple(sorted(chosen_durs)) if chosen_durs else (90, 180, 270)
+                        months = tuple(sorted(chosen_months)) if chosen_months else (1, 4, 7, 10)
 
-                with st.form("generate", border=False):
-                    retention = st.slider(
-                        "Retained rainfall (% of observed rainfall)", 0, 100, (35, 85), 5,
-                        help="Retained rainfall percentage (e.g., 70% retained = 30% reduction). Scales historical rainfall downwards within the window.",
-                    )
-                    extent = st.selectbox(
-                        "Where reduced rainfall occurs", ["All stations", "One station", "Mixed"],
-                        help="Regional spatial extent: 'All stations' models widespread basin-wide meteorological drought; 'One station' models localized precipitation deficits; 'Mixed' allows varied station stress."
-                    )
-                    a, b = st.columns(2)
-                    count = a.selectbox(
-                        "Scenarios to test", [100, 300, 500, 1000], index=1,
-                        help="Total historical window variations sampled across the 1991–2025 record before applying multi-criteria ranking."
-                    )
-                    size = b.selectbox(
-                        "Scenarios to review", [3, 4, 6, 8], index=2,
-                        help="Number of top-ranked, representative drought candidate profiles shortlisted for engineering review."
-                    )
-                    seed = st.number_input(
-                        "Repeatable run seed", 0, 4294967295, w.params.seed if w else 22,
-                        help="Seed integer ensuring exact mathematical repeatability and audit replay across sessions."
-                    )
-                    generate = st.form_submit_button("Create rainfall scenarios", type="primary", width="stretch")
+                with col_gen_params:
+                    with st.form("generate", border=False):
+                        retention = st.slider(
+                            "Retained rainfall (% of observed rainfall)", 0, 100, (35, 85), 5,
+                            help="Retained rainfall percentage (e.g., 70% retained = 30% reduction). Scales historical rainfall downwards within the window.",
+                        )
+                        extent = st.selectbox(
+                            "Where reduced rainfall occurs", ["All stations", "One station", "Mixed"],
+                            help="Regional spatial extent: 'All stations' models widespread basin-wide meteorological drought; 'One station' models localized precipitation deficits; 'Mixed' allows varied station stress."
+                        )
+                        a, b = st.columns(2)
+                        count = a.selectbox(
+                            "Scenarios to test", [100, 300, 500, 1000], index=1,
+                            help="Total historical window variations sampled across the 1991–2025 record before applying multi-criteria ranking."
+                        )
+                        size = b.selectbox(
+                            "Scenarios to review", [3, 4, 6, 8], index=2,
+                            help="Number of top-ranked, representative drought candidate profiles shortlisted for engineering review."
+                        )
+                        seed = st.number_input(
+                            "Repeatable run seed", 0, 4294967295, w.params.seed if w else 22,
+                            help="Seed integer ensuring exact mathematical repeatability and audit replay across sessions."
+                        )
+                        generate = st.form_submit_button("Create rainfall scenarios", type="primary", width="stretch")
         if generate:
             if not stations:
                 st.error("Select at least one station before generating scenarios.")
