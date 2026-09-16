@@ -67,7 +67,7 @@ def test_drawer_sizing_and_smooth_transitions(monkeypatch, tmp_path):
             assert at.session_state.notes_height == 600
 
     # Assistant drawer toggle & width selector
-    at.button(key="btn_top_assistant").click().run()
+    at.button(key="assistant_open_tab_btn").click().run()
     assert at.session_state.assistant_open is True
     if hasattr(at, "segmented_control"):
         sc_w = next((c for c in at.segmented_control if c.key == "assistant_width_selector"), None)

@@ -1272,10 +1272,23 @@ TUTORIAL_STEPS = [
 ]
 
 
-def start_example(source, names, force=False, crisis_demo=False):
-    """Open a reproducible example without approving any scenario."""
+def workspace_has_custom(workspace) -> bool:
+    """Safe check for custom data that handles properties, callables, or missing attributes."""
+    if workspace is None:
+        return False
+    val = getattr(workspace, "has_custom_data", False)
+    if callable(val):
+        try:
+            return bool(val())
+        except TypeError:
+            return False
+    return bool(val)
+
+
+def start_example(source, names, force: bool = False, crisis_demo: bool = False):
+    """Seed an illustrative 6-candidate drought exploration run."""
     curr_w = st.session_state.get("workspace")
-    if not force and curr_w and (any(s.status == "accepted" for s in curr_w.scenarios) or curr_w.has_custom_data):
+    if not force and curr_w and (any(s.status == "accepted" for s in curr_w.scenarios) or workspace_has_custom(curr_w)):
         st.session_state.confirm_reset_example = "crisis" if crisis_demo else "standard"
         return
     st.session_state.pop("confirm_reset_example", None)
@@ -1508,7 +1521,7 @@ else:
         st.rerun()
 
 with top_r:
-    u_col1, u_col2 = st.columns(2)
+    u_col1, u_col2, u_col3 = st.columns(3)
     with u_col1:
         with st.popover("Saved Runs", width="stretch"):
             st.markdown("**Saved Workspace Runs**")
@@ -1563,22 +1576,25 @@ with top_r:
                 key="show_assistant_developer_tools",
                 help="Shows the direct calculation-tool selector inside the Analyst Assistant.",
             )
-            def _toggle_top_assistant():
-                st.session_state.assistant_open = not st.session_state.get("assistant_open", False)
 
+    with u_col3:
+        with st.popover("Help", width="stretch"):
+            st.markdown("**Guided Walkthrough & Help**")
+            st.caption("Step-by-step interactive walkthrough across the 4-step workflow.")
             st.button(
-                "🤖 " + ("Close AI Assistant" if st.session_state.get("assistant_open", False) else "Open AI Assistant"),
-                key="btn_top_assistant",
+                "Start tutorial",
+                key="help_start_tutorial_btn",
                 width="stretch",
-                on_click=_toggle_top_assistant,
+                type="secondary",
+                on_click=start_tutorial,
+                args=(source, names),
+                help="Start an interactive step-by-step tour of the BASIN workspace.",
             )
-            st.divider()
-            st.caption("Interactive walkthrough tour")
-            st.button("Start tutorial", key="start_tutorial_btn", width="stretch", type="secondary", on_click=start_tutorial, args=(source, names))
             if st.session_state.get("tutorial_active", False):
+                st.divider()
                 curr_step = st.session_state.get("tutorial_step", 0)
                 st.caption(f"Tour running: Step {curr_step + 1} of {len(TUTORIAL_STEPS)}")
-                st.button("Exit tutorial", key="sidebar_exit_tutorial_btn", width="stretch", on_click=tutorial_exit)
+                st.button("Exit tutorial", key="help_exit_tutorial_btn", width="stretch", on_click=tutorial_exit)
 
 # Top 4-Stage Horizontal Navigation Stepper
 render_top_navigation(page, w)
@@ -1616,10 +1632,10 @@ if page == "Data":
 
     if w is None:
         with st.container(border=True):
-            quick_intro, guided_demo, crisis_demo = st.columns([2.2, 1, 1.25], vertical_alignment="center")
+            quick_intro, guided_demo, crisis_demo, tour_demo = st.columns([1.6, 1, 1.2, 1], vertical_alignment="center")
             quick_intro.markdown(
-                "**Start with a prepared example**\n\n"
-                "Both examples remain unreviewed until you make a decision."
+                "**Start with a prepared example or walkthrough**\n\n"
+                "Examples remain unreviewed until you make a decision."
             )
             guided_demo.button(
                 "Try an example",
@@ -1636,6 +1652,15 @@ if page == "Data":
                 type="primary",
                 width="stretch",
                 help="Starts an illustrative storage experiment from the documented April 2026 7.7% combined-storage context.",
+            )
+            tour_demo.button(
+                "Start tutorial",
+                key="start_tutorial_btn",
+                on_click=start_tutorial,
+                args=(source, names),
+                width="stretch",
+                type="secondary",
+                help="Start an interactive step-by-step tour of the BASIN workspace.",
             )
 
     # 2. Session Restoration Dropdown
@@ -3039,11 +3064,12 @@ elif page == "Exports":
             st.markdown("#### 1. Export Controls & Verification")
             share = st.checkbox("Include provider notes and free-text review notes", value=False, key=f"share_notes_{w.id}")
             share_custom = False
-            if w.has_custom_data:
+            w_has_custom = workspace_has_custom(w)
+            if w_has_custom:
                 st.warning("This analysis contains custom evidence. Replay requires all saved normalized upload versions, station/location/source metadata and suitability rationale.")
                 share_custom = st.checkbox(
                     "Include custom numerical inputs and source metadata in this replayable export",
-                    key="custom_export_" + digest({"uploads": w.custom_uploads, "snapshot": w.source.manifest.get("sha256")}),
+                    key="custom_export_" + digest({"uploads": getattr(w, "custom_uploads", []), "snapshot": w.source.manifest.get("sha256")}),
                 )
 
             def report_token(accepted_scenarios):
@@ -3086,9 +3112,9 @@ elif page == "Exports":
             with tour_target("export_panel"):
                 if not ready:
                     st.warning("⚠️ **Export locked:** Review decisions required before generating verified bundle. Use '✅ Accept all shortlisted with batch decision' above or review each scenario individually.")
-                elif w.has_custom_data and not share_custom:
+                elif w_has_custom and not share_custom:
                     st.warning("⚠️ **Custom Evidence Consent Required:** Check 'Include custom numerical inputs and source metadata' above to enable verified export.")
-                if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (w.has_custom_data and not share_custom)):
+                if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (w_has_custom and not share_custom)):
                     try:
                         payload = export_bundle(w, share, include_custom=share_custom)
                         report = verify_bundle(payload)
@@ -3162,7 +3188,7 @@ elif page == "Exports":
 
             packet_fresh = bool(
                 packet
-                and (not w.has_custom_data or share_custom)
+                and (not workspace_has_custom(w) or share_custom)
                 and packet.get("custom", False) == share_custom
                 and packet.get("share") == share
                 and packet.get("config") == experiment_config.fingerprint()

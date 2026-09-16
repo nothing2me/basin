@@ -104,13 +104,24 @@ h3{font-size:1.6rem!important;font-weight:650!important}
     font-weight:500!important;
     color:var(--basin-muted)!important;
 }
-.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:4px 0;margin:0 auto}
-.basin-top-logo-dark{height:46px;width:auto;max-width:260px;object-fit:contain;display:block;background:#20292E;padding:7px 12px;border-radius:8px;box-sizing:content-box}
-.basin-top-logo-light{display:none;height:46px;width:auto;max-width:260px;object-fit:contain;background:transparent;padding:7px 12px;border-radius:8px;box-sizing:content-box}
+.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:2px 0;margin:0 auto;text-align:center}
+.basin-top-logo-dark{height:54px;width:auto;max-width:280px;object-fit:contain;display:block;background:#1e293b;border:1px solid rgba(255,255,255,0.08);padding:6px 20px;border-radius:10px;box-sizing:content-box;box-shadow:0 2px 6px rgba(0,0,0,0.18)}
+.basin-top-logo-light{display:none;height:54px;width:auto;max-width:280px;object-fit:contain;background:#e2e8f0;border:1px solid rgba(0,0,0,0.08);padding:6px 20px;border-radius:10px;box-sizing:content-box;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
 body.basin-theme-light .basin-top-logo-dark{display:none}
 body.basin-theme-light .basin-top-logo-light{display:block}
 body.basin-theme-dark .basin-top-logo-dark{display:block}
 body.basin-theme-dark .basin-top-logo-light{display:none}
+
+/* Tactile smooth micro-interactions on clicks & hovers (0ms loading time overhead) */
+[data-testid="stButton"] button, [data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-primary"], [role="tab"], .stSelectbox div[data-baseweb="select"] {
+    transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease !important;
+}
+[data-testid="stButton"] button:active, [data-testid="stBaseButton-secondary"]:active, [data-testid="stBaseButton-primary"]:active, [role="tab"]:active {
+    transform: scale(0.985) !important;
+}
+.stTabs [role="tab"] {
+    transition: color 0.14s ease, border-color 0.14s ease, background-color 0.14s ease !important;
+}
 .st-key-notes_slide_drawer{position:fixed!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:min(680px,94vw)!important;z-index:99995!important;transition:left .35s cubic-bezier(0.16, 1, 0.3, 1)!important;pointer-events:none!important}
 .st-key-notes_slide_drawer *{pointer-events:none!important}
 .st-key-notes_slide_drawer button, .st-key-notes_slide_drawer textarea, .st-key-notes_slide_drawer input, .st-key-notes_slide_drawer a{pointer-events:auto!important}

@@ -1007,27 +1007,26 @@ DOMAIN_TOPICS: dict[str, str] = {
         "💡 *Tip: If you are new to the workspace, click **'Tour'** in the top navigation bar for an interactive tour, or click any of the quick-action buttons above!*"
     ),
     "workflow_guide": (
-        "### 🗺️ BASIN 4-Step Screening Workflow Guide\n\n"
-        "BASIN is a decision-support workbench that helps rural-serving water providers and hydrologists screen rainfall records and stress-test drought contingency plans.\n\n"
-        "#### **Step 1: Data Dashboard (Baseline & Catchment)**\n"
-        "- Inspect the 1991–2025 continuous NOAA index precipitation records (Corpus Christi, Victoria, San Antonio).\n"
-        "- *(Optional)* Upload and observe your own local catchment rain gauge CSV to augment the baseline.\n"
-        "- Choose your **Analysis Focus** (Storage Stress, Agronomics, Regulatory Handoff, or Comparison).\n\n"
-        "#### **Step 2: Scenarios (Rainfall Screening)**\n"
-        "- Set your **Community Priority Presets** (*Crop stress*, *Reservoir risk*, *Chronic drought*, *Widespread deficit*) and fine-tune priority weights.\n"
-        "- Choose your generation mode: **Variations of Single Window** or **Multi-Year Historical Search**.\n"
-        "- Click **'Create rainfall scenarios'** to generate candidates and an automated diverse shortlist.\n\n"
-        "#### **Step 3: Review (Engineering Due Diligence)**\n"
-        "- Inspect shortlisted candidate profiles: cumulative deficit curves, uncalibrated reservoir drawdown simulations, and crop water demand.\n"
-        "- Record your provider notes and mark scenarios as **Accepted** or **Rejected**.\n\n"
-        "#### **Step 4: Exports (Hydrologist Handoff)**\n"
-        "- Verify the **Export Readiness** checklist (all shortlisted scenarios reviewed).\n"
-        "- Grant privacy consent if including local gauge data.\n"
-        "- Download the self-contained **Verified Data Bundle (.zip)** and printable **Executive Technical Brief (.pdf)** for your consulting hydrologist.\n\n"
-        "---\n"
-        "💡 **If you ever get confused:**\n"
-        "- Click **'Tour'** in the top navigation bar for a step-by-step UI walkthrough.\n"
-        "- Click **'Load Example Run'** (Seed 22) on Step 1 to explore a fully pre-loaded demonstration run."
+        "### 🧭 Welcome to BASIN: How to Explore & Navigate the Platform\n\n"
+        "BASIN (**Basin Analysis and Scenario Intelligence Navigator**) is an engineering decision-support tool for water providers and regional authorities to screen drought scenarios, test reservoir storage drawdown, and prepare verified hydrologic handoffs.\n\n"
+        "Here are the best ways to get oriented and figure out the application:\n\n"
+        "#### 1. 🎓 Take the Interactive Walkthrough Tour\n"
+        "- On **Step 1: Data Dashboard**, click the **'Start tutorial'** button in the top banner.\n"
+        "- The tutorial will step you through every key element of the interface with live visual anchors (map, metrics, scenario generator, and export gates).\n\n"
+        "#### 2. 🧪 Explore with a Prepared Demonstration Run\n"
+        "- Want to see immediate results without configuring parameters? On **Step 1: Data Dashboard**:\n"
+        "  - Click **'Try an example'** to instantly load 6 diverse drought candidate scenarios (Seed 22).\n"
+        "  - Click **'Load 2026 crisis demo'** to explore an illustrative storage stress test from an actual 7.7% reservoir drought context.\n\n"
+        "#### 3. 🗺️ The 4-Stage Workflow (Top Navigation Stepper)\n"
+        "- **Step 1: Data Dashboard** — Verify 35 years of NOAA index precipitation data (1991–2025), inspect paired station anomaly heatmaps, and set your decision context.\n"
+        "- **Step 2: Scenario Builder** — Choose community priority presets (e.g., *Crop stress*, *Chronic drought*), configure drought reduction percentages, and generate candidate profiles.\n"
+        "- **Step 3: Review Selections** — Examine shortlisted scenario deficit envelopes, simulate combined reservoir drawdown (Choke Canyon + Lake Corpus Christi), and log your Accept/Reject determinations.\n"
+        "- **Step 4: Export** — Build verifiable SHA-256 audit bundles (`.zip`) and printable Executive Technical Briefs (`.pdf`).\n\n"
+        "#### 4. 💬 What You Can Ask Me\n"
+        "- Ask about specific scenarios: *\"Tell me about B-042\"*\n"
+        "- Compare options: *\"Compare B-012 and B-087\"*\n"
+        "- Understand concepts: *\"What is station stress concurrence?\"* or *\"Why is 35% storage critical?\"*\n"
+        "- Check progress: *\"Can I export yet?\"*"
     ),
     "step_1_guide": (
         "### 📊 Guide to Step 1: Data Dashboard\n\n"
@@ -1371,16 +1370,29 @@ def semantic_query_route(workspace, prompt: str) -> str:
     if not id_matches and any(k in p for k in ["step 4", "step four", "export tab", "how to export", "export bundle", "export packet", "how do i export", "download pdf", "download zip", "export deliverables"]):
         return DOMAIN_TOPICS["step_4_guide"]
 
-    # General Workflow, Getting Started, or "Confused"
+    # General Workflow, Getting Started, Website Orientation, or "Confused"
     is_workflow_guide = (
         not id_matches
-        and any(k in p for k in [
-            "how do i use", "how to use", "how does this work", "how does basin work",
-            "getting started", "where do i start", "what do i do", "walkthrough", "tutorial",
-            "confused", "i am lost", "i'm lost", "help with this tool", "explain the tool",
-            "workflow", "how the tool works", "user guide", "instructions", "overview of basin",
-            "how is the user supposed to learn", "how do users learn"
-        ])
+        and (
+            any(k in p for k in [
+                "how do i use", "how to use", "how does this work", "how does basin work",
+                "getting started", "where do i start", "what do i do", "walkthrough", "tutorial",
+                "confused", "i am lost", "i'm lost", "help with this tool", "explain the tool",
+                "workflow", "how the tool works", "user guide", "instructions", "overview of basin",
+                "how is the user supposed to learn", "how do users learn", "figure out",
+                "understand the website", "figure out the website", "navigate", "orientation",
+                "show me around", "what is this site", "what is this tool", "what can i do here",
+                "how do i begin", "help me learn", "how to operate", "how do i navigate",
+                "what should i do", "where should i start", "where do we start", "how do we start"
+            ])
+            or (
+                any(w in p for w in ["website", "site", "webpage", "web page", "app", "application", "tool", "platform", "interface"])
+                and any(w in p for w in ["help", "figure out", "guide", "learn", "how", "what", "navigate", "start", "understand", "use", "explore", "tour", "tutorial", "work"])
+            )
+            or (
+                "what can i do" in p and not any(k in p for k in ["scenario", "rainfall", "storage", "station", "deficit"])
+            )
+        )
     )
     if is_workflow_guide:
         return DOMAIN_TOPICS["workflow_guide"]
@@ -1571,8 +1583,13 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
         return (
             "**BASIN Analyst Assistant**\n\n"
-            "I am a read-only decision-support tool. I answer questions using verified, "
-            "deterministic workspace calculations, and provide guidance on the BASIN workflow.\n\n"
+            "I am a read-only decision-support tool focused on rainfall scenario analysis, "
+            "reservoir stress testing, and guiding you through the BASIN workflow.\n\n"
+            "💡 **Looking to learn the application?**\n"
+            "- Ask me: *\"How do I use this website?\"* or *\"Show me around the workflow\"*\n"
+            "- Click **'Start tutorial'** on Step 1: Data Dashboard for a step-by-step interactive tour.\n"
+            "- Click **'Try an example'** on Step 1 to load pre-computed scenarios and explore immediately.\n\n"
+            "I can also help you with verified calculations for this workspace:\n\n"
             f"{TOOL_LIST_HELP}"
         )
     except ValueError as err:
