@@ -30,7 +30,7 @@ body.basin-theme-light{
     --basin-warning-text:#92400E;--basin-danger-text:#991B1B;
     --basin-user-avatar-bg:#23856d;
 }
-.block-container{padding:4.25rem 2.8rem 6.5rem;max-width:1560px}
+.block-container, [data-testid="stMainBlockContainer"]{padding:2.75rem 2.8rem 6.5rem!important;max-width:1560px}
 [data-testid="stAppDeployButton"], #MainMenu, [data-testid="stMainMenuButton"], .stDeployButton{display:none!important}
 [data-testid="stHeader"]{background:transparent}
 [data-testid="stSidebar"]{border-right:1px solid color-mix(in srgb,currentColor 12%,transparent)}
@@ -104,8 +104,13 @@ h3{font-size:1.6rem!important;font-weight:650!important}
     font-weight:500!important;
     color:var(--basin-muted)!important;
 }
-.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:0;margin:-12px auto -6px auto;text-align:center}
-[data-testid="stMarkdownContainer"]:has(.basin-top-logo-wrap), [data-testid="stMarkdownContainer"]:has(.basin-top-logo-wrap) p{margin:0!important;padding:0!important}
+[data-testid="stHorizontalBlock"]:has(.st-key-global_unit_selector){
+    margin-top:-6px!important;
+    margin-bottom:12px!important;
+    align-items:center!important;
+}
+.basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:0;margin:-16px auto -8px auto;text-align:center;transform:translateY(-8px)}
+[data-testid="stMarkdownContainer"]:has(.basin-top-logo-wrap), [data-testid="stMarkdownContainer"]:has(.basin-top-logo-wrap) p, [data-testid="stElementContainer"]:has(.basin-top-logo-wrap){margin:0!important;padding:0!important}
 .basin-top-logo-dark{height:68px;width:auto;max-width:330px;object-fit:contain;display:block;background:#1e293b;border:1px solid rgba(255,255,255,0.10);padding:6px 24px;border-radius:12px;box-sizing:content-box;box-shadow:0 3px 10px rgba(0,0,0,0.22)}
 .basin-top-logo-light{display:none;height:68px;width:auto;max-width:330px;object-fit:contain;background:#e2e8f0;border:1px solid rgba(0,0,0,0.10);padding:6px 24px;border-radius:12px;box-sizing:content-box;box-shadow:0 3px 10px rgba(0,0,0,0.08)}
 body.basin-theme-light .basin-top-logo-dark{display:none!important}
@@ -323,7 +328,7 @@ body:not(.basin-assistant-open) .st-key-assistant_tab_open,body:not(.basin-assis
     [data-testid="stHorizontalBlock"]:has(.st-key-global_unit_selector)>[data-testid="stColumn"]:nth-child(3) button{
         min-height:2.6rem!important;padding:.35rem!important;font-size:.72rem!important
     }
-    .basin-top-logo-wrap{padding:0}
+    .basin-top-logo-wrap{padding:0;transform:none!important;margin:0 auto!important}
     .basin-top-logo-dark{height:34px;padding:5px 9px}
     .basin-top-logo-light{height:34px;width:auto;max-width:200px;padding:5px 9px;object-fit:contain;box-sizing:content-box}
     [data-testid="stHorizontalBlock"]:has(.st-key-nav_tab_Data){
