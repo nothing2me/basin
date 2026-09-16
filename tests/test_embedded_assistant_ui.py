@@ -22,6 +22,10 @@ def test_assistant_drawer_is_tall_with_visible_shortcuts():
     assert 'position:sticky!important;bottom:0!important' in theme_source
     assert '.st-key-assistant_suggestions{padding:2px 0 0!important}' in theme_source
 
+    chat_box_section = ui_source.split('chat_box = st.container(height=520, border=True, key="assistant_conversation")')[1]
+    chat_box_body = chat_box_section.split('suggestion_bar = st.container(key="assistant_suggestions")')[0]
+    assert "st.chat_input(" not in chat_box_body
+
 
 def test_embedded_drawer_chat_query(workspace, monkeypatch):
     def no_network(*args, **kwargs):

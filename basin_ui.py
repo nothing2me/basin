@@ -328,18 +328,17 @@ def assistant_panel(w, source=None, names=None):
                 with st.chat_message(msg["role"], avatar=av):
                     st.markdown(msg["content"])
 
-            st.chat_input(
-                "Ask about scenarios, rainfall, or evidence",
-                key="assistant_chat_input",
-                on_submit=_queue_assistant_query,
-            )
-
         direct_tool_run = None
         direct_result_added = False
         sid = w.selected[0] if w.selected else (w.scenarios[0].id if w.scenarios else "B-001")
 
         suggestion_bar = st.container(key="assistant_suggestions")
         with suggestion_bar:
+            st.chat_input(
+                "Ask about scenarios, rainfall, or evidence",
+                key="assistant_chat_input",
+                on_submit=_queue_assistant_query,
+            )
             st.markdown('<p class="basin-suggested-label">Suggested questions</p>', unsafe_allow_html=True)
             quick_one, quick_two, quick_three, quick_four, quick_five, quick_six = st.columns(6, gap="small")
             with quick_one:
