@@ -135,3 +135,44 @@ def test_custom_gauge_scenario_edit_invalidates_approval(base_source):
     assert updated_scenario.revision == 2
     assert updated_scenario.status == "unreviewed"
     assert updated_scenario.approved_revision is None
+
+
+def test_custom_gauge_auto_restore_session(base_source, tmp_path):
+    """Proves that a saved custom gauge session can auto-restore against base_source."""
+    dates = pd.date_range("2020-01-01", "2022-12-31")
+    custom_series = pd.Series(1.5, index=dates)
+    aug_source = base_source.with_custom_station("AUTO_GAUGE", "Auto Rain Gauge", custom_series)
+    
+    params = ScenarioParams(stations=("AUTO_GAUGE",), durations=(90,), months=(1, 4), candidates=10, seed=42)
+    workspace = Workspace(aug_source, params, size=3)
+    session_file = workspace.save(tmp_path)
+    
+    # Reload with auto_restore_custom=True
+    restored = Workspace.load(base_source, session_file, auto_restore_custom=True)
+    assert restored.id == workspace.id
+    assert "AUTO_GAUGE" in restored.source.daily.columns
+    assert restored.reference.stations == ["AUTO_GAUGE"]
+    assert len(restored.scenarios) == len(workspace.scenarios)
+
+
+def test_custom_gauge_export_bundle_and_verify(base_source):
+    """Proves that a custom gauge session can export and verify with explicit consent."""
+    from basin_core.exporter import export_bundle, verify_bundle
+    dates = pd.date_range("2020-01-01", "2022-12-31")
+    custom_series = pd.Series(1.5, index=dates)
+    aug_source = base_source.with_custom_station("EXPORT_GAUGE", "Export Rain Gauge", custom_series)
+    
+    params = ScenarioParams(stations=("EXPORT_GAUGE",), durations=(90,), months=(1, 4), candidates=10, seed=42)
+    workspace = Workspace(aug_source, params, size=3)
+    for sid in workspace.selected:
+        workspace.get(sid).review(True, "Reviewed and accepted for testing")
+        
+    # Consent required
+    with pytest.raises(ValueError, match="Explicit consent is required"):
+        export_bundle(workspace, include_notes=True, include_custom=False)
+        
+    # Export with consent
+    bundle_bytes = export_bundle(workspace, include_notes=True, include_custom=True)
+    report = verify_bundle(bundle_bytes)
+    assert report["verified"] is True
+    assert report["scenarios_replayed"] == 3

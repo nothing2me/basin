@@ -415,14 +415,16 @@ class Workspace:
 
     def record(self, include_notes=False, include_series=False, include_custom=False):
         validate_evidence(self.evidence, self.evidence_refs, self.conflicts, [s.id for s in self.scenarios])
-        if self.custom_uploads and not include_custom:
+        custom_stations = [s for s in self.source.manifest.get("stations", []) if s.get("custom")]
+        has_custom = bool(self.custom_uploads) or bool(custom_stations)
+        if has_custom and not include_custom:
             raise ValueError("Explicit consent is required to include custom numerical data and source metadata")
         validate_records(self.custom_uploads, self.source)
         validate_links(self.custom_uploads, self.evidence_refs, self.evidence, self.scenarios)
         extended = bool(self.simulation_runs) or any(
             e["action"] == "supporting evidence changed" or "review_context_sha256" in e
             for scenario in self.scenarios for e in scenario.history)
-        result = {"schema_version": "2.2" if extended else "2.1" if self.custom_uploads else "2.0", "id": self.id, "created_at": self.created_at,
+        result = {"schema_version": "2.2" if extended else "2.1" if has_custom else "2.0", "id": self.id, "created_at": self.created_at,
                   "snapshot_sha256": self.source.manifest["sha256"], "params": asdict(self.params),
                   "weights": self.weights, "selected": self.selected, "generation": self.generation,
                   "clustering": self.clustering, "footprint": self.footprint, "selection_history": self.selection_history,
@@ -431,6 +433,19 @@ class Workspace:
                       evidence_history=self.evidence_history, comparisons=self.comparisons)
         result["water_system_selection"] = self.water_system_selection.record()
         result["analysis_context"] = self.analysis_context.record()
+        if custom_stations and include_custom:
+            result["custom_stations"] = [
+                {
+                    "id": s["id"],
+                    "name": s["name"],
+                    "location": s.get("location", ""),
+                    "observations": [
+                        [date.strftime("%Y-%m-%d"), round(float(val), 2)]
+                        for date, val in self.source.daily[s["id"]].dropna().items()
+                    ],
+                }
+                for s in custom_stations
+            ]
         if self.custom_uploads:
             result["custom_uploads"] = self.custom_uploads
         if getattr(self, "documents", []):
@@ -468,10 +483,34 @@ class Workspace:
         return target
 
     @classmethod
-    def load(cls, source, path):
+    def load(cls, source, path, auto_restore_custom: bool = False):
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         if data["schema_version"] not in ("1.0", "2.0", "2.1", "2.2"):
             raise ValueError("Saved session uses an unsupported schema version")
+
+        if auto_restore_custom:
+            if "custom_stations" in data:
+                for cs in data["custom_stations"]:
+                    st_id = cs["id"]
+                    if st_id not in source.daily.columns:
+                        s_series = pd.Series(
+                            {pd.to_datetime(d): v for d, v in cs["observations"]}
+                        ).sort_index()
+                        source = source.with_custom_station(
+                            st_id, cs["name"], s_series, cs.get("location", "")
+                        )
+            elif data.get("custom_uploads"):
+                for record in data["custom_uploads"]:
+                    c_name = record.get("station", "")
+                    c_obs = record.get("observations", [])
+                    if c_obs:
+                        s_series = pd.Series({pd.to_datetime(d): v for d, v in c_obs}).sort_index()
+                        for st_id in data.get("params", {}).get("stations", []):
+                            if st_id not in source.daily.columns:
+                                source = source.with_custom_station(
+                                    st_id, c_name, s_series, record.get("location", "")
+                                )
+
         legacy_warning = None
         if data.get("snapshot_sha256") != source.manifest["sha256"]:
             legacy_warning = f"Notice: Saved session was generated with NOAA snapshot {str(data.get('snapshot_sha256'))[:8]}… (current: {source.manifest['sha256'][:8]}…)."

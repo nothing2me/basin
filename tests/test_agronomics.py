@@ -53,7 +53,7 @@ def test_kbdi_burn_ban_breach():
     assert summary.burn_ban_breached is True
     assert summary.burn_ban_day is not None
     assert summary.peak_kbdi > 600.0
-    assert "burn-ban threshold" in summary.takeaway
+    assert ("600 illustrative stress marker" in summary.takeaway) or ("burn-ban threshold" in summary.takeaway)
     assert len(summary.daily_kbdi) == 180
 
 
@@ -105,7 +105,7 @@ def test_kbdi_illustrative_policy_disclaimer():
     assert summary.burn_ban_breached is True
     assert "illustrative decision support" in summary.takeaway
     assert "not an official legal declaration" in summary.takeaway
-    assert "Illustrative Burn Ban Trigger" in summary.danger_class
+    assert "Illustrative KBDI Stress Marker" in summary.danger_class or "Illustrative Burn Ban Trigger" in summary.danger_class
 
 
 def test_crop_water_deficit_validation_and_custom_kc():

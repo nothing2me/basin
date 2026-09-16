@@ -229,7 +229,8 @@ def export_bundle(workspace, include_notes=False, include_custom=False):
                 'implementation': implementation_identity(), 'verification_scope': verification_scope(audit['schema_version']),
                 'software': {p: importlib.metadata.version(p) for p in ['numpy', 'pandas', 'scikit-learn', 'streamlit']},
                 'files': {n: hashlib.sha256(b).hexdigest() for n, b in files.items()}}
-    if workspace.custom_uploads:
+    has_custom = bool(workspace.custom_uploads) or any(s.get("custom") for s in workspace.source.manifest.get("stations", []))
+    if has_custom:
         manifest['custom_data_included'] = True
     if getattr(workspace, "documents", []):
         manifest['document_evidence_included'] = any(
@@ -274,7 +275,8 @@ def _verify(payload):
             raise ValueError('Original private CSV bytes must not appear in a packet')
         if 'document_originals' in audit:
             raise ValueError('Original private document bytes must not appear in a packet')
-        if audit.get('custom_uploads') and manifest.get('custom_data_included') is not True:
+        has_custom = bool(audit.get('custom_uploads')) or bool(audit.get('custom_stations')) or any(s.get('custom') for s in source.manifest.get('stations', []))
+        if has_custom and manifest.get('custom_data_included') is not True:
             raise ValueError('Custom data consent is missing')
         params, reference, scenarios = reconstruct_audit(source, audit, require_export=True)
         by_id = {s.id: s for s in scenarios}

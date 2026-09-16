@@ -1645,9 +1645,9 @@ def render_html_report(
         </p>
         <div style="font-size: 7.2pt; color: #475569; margin-bottom: 6px; background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0; line-height: 1.35;">
             <strong>Technical Terms Gloss:</strong>
-            <strong>Concurrence:</strong> share of regional stations simultaneously experiencing precipitation deficits (6–10 words).
-            · <strong>Empirical percentile:</strong> historical frequency rank relative to all observed drought windows.
-            · <strong>Sample threshold (n &ge; 5):</strong> minimum sample size required for robust statistical significance.
+            <strong>Concurrence:</strong> fraction of eligible 30-day windows with all selected stations simultaneously in deficit.
+            · <strong>Empirical percentile:</strong> historical shortfall rank relative to matched observation windows.
+            · <strong>Reference window gating (n &ge; 5):</strong> minimum benchmark sample size required for comparative evaluation.
         </div>
         <table style="table-layout: fixed;">
             <colgroup><col style="width: 16%;"><col style="width: 28%;"><col style="width: 16%;"><col style="width: 20%;"><col style="width: 20%;"></colgroup>
@@ -1657,7 +1657,7 @@ def render_html_report(
                     <th>Source Window</th>
                     <th>Duration</th>
                     <th>Precip Deficit</th>
-                    <th>Concurrence (regional share)</th>
+                    <th>Selected-Stations Concurrent Deficit</th>
                 </tr>
             </thead>
             <tbody>
@@ -2366,9 +2366,9 @@ def build_fallback_pdf(
     flow.heading("2. SCENARIO IDENTITY AND RAINFALL INPUT", size=9.5)
     flow.paragraph(f"Primary Scenario Identity: {primary_id}. {_input_sentence(metrics)}", size=7.0)
     flow.paragraph(
-        "Technical Terminology Gloss: Concurrence: share of regional stations simultaneously experiencing precipitation deficits. "
-        "Empirical percentile: historical frequency rank relative to all observed drought windows. "
-        "Sample threshold (n >= 5): minimum sample size required for robust statistical significance.",
+        "Technical Terminology Gloss: Concurrence: fraction of eligible 30-day windows with all selected stations simultaneously in deficit. "
+        "Empirical percentile: historical shortfall rank relative to matched observation windows. "
+        "Reference window gating (n >= 5): minimum benchmark sample size required for comparative evaluation.",
         size=6.8, color=(0.35, 0.4, 0.48),
     )
     flow.heading("SHORTLISTED CANDIDATE SCENARIOS (Accepted for Planning Analysis)", size=8.0)

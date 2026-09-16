@@ -433,7 +433,7 @@ def test_page_one_orientation_precedes_warning_box(approved):
 
 
 def test_inline_plain_language_glosses(approved):
-    """Item 12: 6-10 word inline plain-language glosses for technical jargon."""
+    """Item 12: Technical terms inline plain-language glosses."""
     accepted = approved.exportable()
     html = render_html_report(approved, accepted)
     pdf_bytes = build_fallback_pdf(approved, accepted)
@@ -441,13 +441,18 @@ def test_inline_plain_language_glosses(approved):
 
     pdf_text = " ".join(page_text(pdf_bytes).split())
 
-    assert "share of regional stations simultaneously experiencing precipitation deficits" in html
-    assert "historical frequency rank relative to all observed drought windows" in html
-    assert "minimum sample size required for robust statistical significance" in html
+    assert "(6–10 words)" not in html
+    assert "(6–10 words)" not in pdf_text
+    assert "statistical significance" not in html
+    assert "statistical significance" not in pdf_text
 
-    assert "share of regional stations simultaneously experiencing precipitation deficits" in pdf_text
-    assert "historical frequency rank relative to all observed drought windows" in pdf_text
-    assert "minimum sample size required for robust statistical significance" in pdf_text
+    assert "fraction of eligible 30-day windows with all selected stations simultaneously in deficit" in html
+    assert "historical shortfall rank relative to matched observation windows" in html
+    assert "minimum benchmark sample size required for comparative evaluation" in html
+
+    assert "fraction of eligible 30-day windows with all selected stations simultaneously in deficit" in pdf_text
+    assert "historical shortfall rank relative to matched observation windows" in pdf_text
+    assert "minimum benchmark sample size required for comparative evaluation" in pdf_text
 
 
 def test_long_config_strings_do_not_overflow(approved):

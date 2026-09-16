@@ -133,7 +133,8 @@ def reconstruct_audit(source, audit, legacy=False, require_export=False):
     if not legacy:
         validate_evidence(audit["evidence"], audit["evidence_refs"], audit["conflicts"], ids)
     custom = audit.get("custom_uploads", [])
-    if audit["schema_version"] != "2.2" and (audit["schema_version"] == "2.1") != bool(custom):
+    has_custom = bool(custom) or bool(audit.get("custom_stations")) or any(s.get("custom") for s in source.manifest.get("stations", []))
+    if audit["schema_version"] != "2.2" and (audit["schema_version"] == "2.1") != has_custom:
         raise ValueError("Custom upload schema mismatch")
     validate_records(custom, source)
     if not legacy:

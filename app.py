@@ -1031,21 +1031,34 @@ def decision_summary(w):
         "Proceed to Step 4: Export Deliverables"
         if approved == len(w.selected) else f"Step 3: Review {len(w.selected) - approved} remaining scenario(s)"
     )
+    unique_windows = len({(s.provenance.get("source_start"), s.provenance.get("source_end")) for s in w.scenarios})
+    unique_years = len({pd.Timestamp(s.provenance.get("source_start")).year for s in w.scenarios if s.provenance.get("source_start")})
+    durations_list = sorted({s.features.get("duration_days") for s in w.scenarios if "duration_days" in s.features})
+    dur_str = ", ".join(f"{d}d" for d in durations_list)
+
     with st.container(key="decision_summary", border=True):
         st.markdown("### Decision summary: Active Shortlist")
-        st.markdown(
-            "**Representative drought candidates shortlisted from the 1991–2025 NOAA record.** "
-            "These scenarios represent the highest-priority historical drought sequences identified under your configured ranking weights."
-        )
+        if unique_windows == 1:
+            p = lead.provenance
+            st.warning(
+                f"📌 **Single Historical Source Window**: All {len(w.scenarios)} candidate scenarios are scaled variations "
+                f"of **one** historical record ({p.get('source_start')} to {p.get('source_end')}, {dur_str}). "
+                "This reflects retention/extent variations of that specific sequence, not an empirical multi-year screening across the 1991–2025 record."
+            )
+        else:
+            st.info(
+                f"🔍 **Multi-Year Historical Screening**: Shortlisted from {len(w.scenarios)} candidate scenarios spanning "
+                f"**{unique_windows} unique historical source windows** across **{unique_years} distinct calendar years** (durations: {dur_str})."
+            )
         st.caption(
             f"Scenario to review: **{lead.id}** · Why it ranked here: "
             f"**{w.selection_reason(lead.id)}** · Evidence used: **{evidence_count} records**"
         )
-        st.caption(f"{len(w.selected)} scenarios selected for review · {approved} approved for export")
+        st.caption(f"{len(w.selected)} scenarios selected for review · {approved} approved for export · Station proxies: {', '.join(w.reference.stations)} (catchment representativeness unvalidated)")
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Lead Scenario", lead.id, f"{w.selection_reason(lead.id).split(';')[0]}")
         c2.metric("Shortlist Progress", f"{approved} / {len(w.selected)} Approved", "Pending Review" if approved < len(w.selected) else "Ready for Export")
-        c3.metric("Evidence Records", f"{evidence_count} Attached", limitation)
+        c3.metric("Candidate Scope", f"{unique_windows} Source Window{'s' if unique_windows != 1 else ''}", f"{unique_years} year{'s' if unique_years != 1 else ''} sampled")
         c4.metric("Recommended Next Action", next_action)
 
 
@@ -1536,7 +1549,7 @@ with top_r:
                 )
                 if st.button("Open run", key="btn_open_saved_run", width="stretch", type="primary"):
                     try:
-                        restored = Workspace.load(source, previous)
+                        restored = Workspace.load(source, previous, auto_restore_custom=True)
                         st.session_state.clear()
                         st.session_state.workspace = restored
                         st.session_state.data_accepted = True
@@ -1853,12 +1866,71 @@ elif page == "Workspace":
         elif run_focus_skip:
             st.caption("This run will use the full Review layout. You can choose a focus later in Review.")
 
-    # Scenario Generation & Priority Weights Builder
+    # 1. Upfront Priority Weights & Presets
+    with tour_target("sidebar_presets"):
+        with st.container(border=True):
+            st.markdown("##### ⚖️ Community Priority Presets & Ranking Weights")
+            st.caption("Set illustrative community priorities before building scenarios or adjust to rerank existing candidates. The shortlist reflects these operational priorities.")
+            preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
+            matched = "Custom weights"
+            curr_weights = dict(w.weights) if w else {"severity": 40, "duration": 30, "concurrence": 20, "season": 10}
+            for p_name, p_vals in COMMUNITY_PRESETS.items():
+                if curr_weights == p_vals:
+                    matched = p_name
+                    break
+            col_pre1, col_pre2 = st.columns([1.5, 2.5])
+            with col_pre1:
+                chosen_preset = st.selectbox(
+                    "Community priority preset", preset_options,
+                    index=preset_options.index(matched),
+                    key=f"preset_select_{w.id if w else 'initial'}",
+                    help="Biases the shortlist toward your operational priority: 'Crop stress' prioritizes summer deficit; 'Chronic drought' prioritizes duration."
+                )
+            if chosen_preset != "Custom weights" and chosen_preset != matched:
+                new_w = dict(COMMUNITY_PRESETS[chosen_preset])
+                for k, v in new_w.items():
+                    st.session_state[f"weight_{k}"] = v
+                if w:
+                    w.rerank(new_w)
+                    w.rebuild_shortlist()
+                    save(w)
+                    st.rerun()
+
+            slider_configs = {
+                "severity": ("Deficit severity vs history", "Relative weight for severity (% of historical windows exceeded in rainfall shortfall)."),
+                "duration": ("Scenario duration (days)", "Relative weight for duration (favors longer multi-season drought stress periods)."),
+                "concurrence": ("Regional station concurrence", "Relative weight for concurrence (favors scenarios where all stations experience synchronized deficits)."),
+                "season": ("Summer timing (June–Sept)", "Relative weight for critical warm-season timing (June–September evaporation and crop flowering)."),
+            }
+            w_cols = st.columns(4)
+            weights = {}
+            for idx, (k, (lbl, hlp)) in enumerate(slider_configs.items()):
+                with w_cols[idx]:
+                    val = int(st.session_state.get(f"weight_{k}", curr_weights[k]))
+                    weights[k] = st.slider(lbl, 0, 100, val, key=f"weight_{k}", help=hlp)
+            if w:
+                if sum(weights.values()) == 0:
+                    st.error("At least one weight must be positive.")
+                elif weights != w.weights:
+                    w.rerank(weights)
+                    save(w)
+                if st.button("Rebuild shortlist from current weights", key=f"btn_rebuild_shortlist_{w.id}", disabled=sum(weights.values()) == 0, width="stretch"):
+                    try:
+                        w.rebuild_shortlist()
+                        save(w)
+                        st.success(f"Shortlist rebuilt using updated priorities: {w.weights}")
+                        st.rerun()
+                    except ValueError as error:
+                        st.error(str(error))
+            else:
+                st.caption("Configured weights will prioritize candidate severity, duration, concurrence, and seasonality during initial generation.")
+
+    # 2. Scenario Generator
     c_gen = st.container()
     with c_gen:
         with tour_target("sidebar_generator"):
             with st.container(border=True):
-                st.markdown("##### Build rainfall scenarios")
+                st.markdown("##### 🌧️ Build rainfall scenarios")
                 stations = st.multiselect(
                     "Stations", list(names),
                     default=list(w.params.stations) if w else list(names), format_func=names.get,
@@ -1866,31 +1938,56 @@ elif page == "Workspace":
                     placeholder="Type a station name or ID",
                 )
 
-                saved_ranges = tuple(getattr(w.params, "calendar_ranges", ())) if w else ()
+                default_gen_mode = "analog_search" if (w and not getattr(w.params, "calendar_ranges", ())) else "variations"
+                gen_mode = st.radio(
+                    "Scenario Generation Mode",
+                    ["variations", "analog_search"],
+                    index=0 if default_gen_mode == "variations" else 1,
+                    format_func=lambda x: "Variations of Selected Historical Window" if x == "variations" else "Multi-Year Historical Analog Search (1991–2025)",
+                    key="scenario_gen_mode",
+                    help="Choose whether to generate retention variations of one specific historical window, or search across distinct historical dry windows from the 1991–2025 NOAA record."
+                )
+
+                calendar_ranges = []
+                custom_range_incomplete = False
                 source_start_date = pd.Timestamp(source.manifest["start"]).date()
                 source_end_date = pd.Timestamp(source.manifest["end"]).date()
-                if saved_ranges:
-                    saved_start = datetime.fromisoformat(saved_ranges[0][0]).date()
-                    saved_end = datetime.fromisoformat(saved_ranges[0][1]).date()
+
+                if gen_mode == "variations":
+                    saved_ranges = tuple(getattr(w.params, "calendar_ranges", ())) if w else ()
+                    if saved_ranges:
+                        saved_start = datetime.fromisoformat(saved_ranges[0][0]).date()
+                        saved_end = datetime.fromisoformat(saved_ranges[0][1]).date()
+                    else:
+                        saved_end = source_end_date
+                        saved_start = max(source_start_date, source_end_date - timedelta(days=89))
+                    selected_dates = st.date_input(
+                        "Dates", value=(saved_start, saved_end),
+                        min_value=source_start_date, max_value=source_end_date,
+                        help="Select historical start and end dates to construct retention variations from.",
+                        key="scenario_dates",
+                    )
+                    custom_range_incomplete = len(selected_dates) != 2
+                    if custom_range_incomplete:
+                        st.caption("Select both a start and end date.")
+                    else:
+                        start_date, end_date = selected_dates
+                        dur_days = (end_date - start_date).days + 1
+                        st.caption(f"📌 **Single Historical Window**: {start_date} to {end_date} ({dur_days} days) · Generates scaled retention variations of this exact historical record.")
+                        calendar_ranges.append((
+                            datetime.combine(start_date, datetime.min.time()).isoformat(timespec="minutes"),
+                            datetime.combine(end_date, datetime.strptime("23:59", "%H:%M").time()).isoformat(timespec="minutes"),
+                        ))
+                    durations = ((end_date - start_date).days + 1,) if not custom_range_incomplete else (90,)
+                    months = (start_date.month,) if not custom_range_incomplete else (1,)
                 else:
-                    saved_end = source_end_date
-                    saved_start = max(source_start_date, source_end_date - timedelta(days=89))
-                selected_dates = st.date_input(
-                    "Dates", value=(saved_start, saved_end),
-                    min_value=source_start_date, max_value=source_end_date,
-                    help="Click the field to use the calendar, or type the start and end dates.",
-                    key="scenario_dates",
-                )
-                calendar_ranges = []
-                custom_range_incomplete = len(selected_dates) != 2
-                if custom_range_incomplete:
-                    st.caption("Select an end date.")
-                else:
-                    start_date, end_date = selected_dates
-                    calendar_ranges.append((
-                        datetime.combine(start_date, datetime.min.time()).isoformat(timespec="minutes"),
-                        datetime.combine(end_date, datetime.strptime("23:59", "%H:%M").time()).isoformat(timespec="minutes"),
-                    ))
+                    st.info("🔍 **Multi-Year Historical Search**: Scans the 1991–2025 NOAA record for multi-season drought sequences across distinct years and onset seasons.")
+                    col_d, col_m = st.columns(2)
+                    default_durs = [d for d in [90, 180, 270] if d in [30, 60, 90, 180, 270, 365]]
+                    chosen_durs = col_d.multiselect("Search durations (days)", [30, 60, 90, 180, 270, 365], default=default_durs, help="Historical window durations to screen.")
+                    chosen_months = col_m.multiselect("Search onset months", list(range(1, 13)), default=[1, 4, 7, 10], format_func=lambda m: calendar.month_name[m], help="Onset months for drought screening windows.")
+                    durations = tuple(sorted(chosen_durs)) if chosen_durs else (90, 180, 270)
+                    months = tuple(sorted(chosen_months)) if chosen_months else (1, 4, 7, 10)
 
                 with st.form("generate", border=False):
                     retention = st.slider(
@@ -1923,24 +2020,22 @@ elif page == "Workspace":
             else:
                 try:
                     with st.spinner("Computing…"):
-                        durations = tuple(sorted({
-                            (datetime.fromisoformat(end).date() - datetime.fromisoformat(start).date()).days + 1
-                            for start, end in calendar_ranges
-                        }))
-                        months = tuple(sorted({datetime.fromisoformat(start).month for start, _end in calendar_ranges}))
                         params = ScenarioParams(
                             tuple(stations), tuple(durations), tuple(months), retention[0]/100,
                             retention[1]/100, extent, count, int(seed),
                             calendar_ranges=tuple(calendar_ranges),
                         )
                         new = Workspace(source, params, size, analysis_context=analysis_context_for_run())
+                        if weights and weights != new.weights:
+                            new.rerank(weights)
+                            new.rebuild_shortlist()
                         if w:
                             new.notes = w.notes
                         st.session_state.workspace = new
                         st.session_state.data_accepted = True
                         st.session_state.scenarios_accepted = True
                         for key in list(st.session_state):
-                            if key.startswith(("weight_", "review_", "note_", "edit_", "swap_", "provider_")):
+                            if key.startswith(("review_", "note_", "edit_", "swap_", "provider_")):
                                 del st.session_state[key]
                         st.session_state.pop("inspect_id", None)
                         st.session_state.pop("packet", None)
@@ -1956,53 +2051,6 @@ elif page == "Workspace":
                     st.rerun()
                 except (ValueError, OSError) as error:
                     st.error(str(error))
-
-    with st.expander("Advanced ranking settings", expanded=False):
-        with tour_target("sidebar_presets"):
-            with st.container(border=True):
-                st.markdown("##### Ranking Priorities & Weights")
-                preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
-                matched = "Custom weights"
-                curr_weights = dict(w.weights) if w else {"severity": 40, "duration": 30, "concurrence": 20, "season": 10}
-                for p_name, p_vals in COMMUNITY_PRESETS.items():
-                    if curr_weights == p_vals:
-                        matched = p_name
-                        break
-                chosen_preset = st.selectbox("Community priority preset", preset_options,
-                                             index=preset_options.index(matched),
-                                             key=f"preset_select_{w.id if w else 'initial'}",
-                                             help="Biases the shortlist toward your operational priority: 'Crop stress' prioritizes summer deficit; 'Chronic drought' prioritizes duration.")
-                if chosen_preset != "Custom weights" and chosen_preset != matched:
-                    new_w = dict(COMMUNITY_PRESETS[chosen_preset])
-                    for k, v in new_w.items():
-                        st.session_state[f"weight_{k}"] = v
-                    if w:
-                        w.rerank(new_w)
-                        save(w)
-                        st.rerun()
-
-                slider_configs = {
-                    "severity": ("Deficit severity vs history", "Relative weight for severity (% of historical windows exceeded in rainfall shortfall)."),
-                    "duration": ("Scenario duration (days)", "Relative weight for duration (favors longer multi-season drought stress periods)."),
-                    "concurrence": ("Regional station concurrence", "Relative weight for concurrence (favors scenarios where all stations experience synchronized deficits)."),
-                    "season": ("Summer timing (June–Sept)", "Relative weight for critical warm-season timing (June–September evaporation and crop flowering)."),
-                }
-                weights = {k: st.slider(slider_configs[k][0], 0, 100, int(curr_weights[k]), key=f"weight_{k}", help=slider_configs[k][1]) for k in slider_configs}
-                if w:
-                    if sum(weights.values()) == 0:
-                        st.error("At least one weight must be positive.")
-                    elif weights != w.weights:
-                        w.rerank(weights)
-                        save(w)
-                    if st.button("Rebuild shortlist", key=f"btn_rebuild_shortlist_{w.id}", disabled=sum(weights.values()) == 0, width="stretch"):
-                        try:
-                            w.rebuild_shortlist()
-                            save(w)
-                            st.rerun()
-                        except ValueError as error:
-                            st.error(str(error))
-                else:
-                    st.caption("Illustrative weights will prioritize candidate severity, duration, concurrence, and seasonality when generated.")
 
     # 2. Candidate Shortlist & Diversity Inspection
     if w is not None:
@@ -2597,6 +2645,7 @@ elif page == "Review":
 
                         with tour_target("review_simulation"):
                             st.markdown("#### Combined storage")
+                            st.caption("⚠️ **Uncalibrated Toy Mass-Balance Planning Model**: Illustrative mathematical simulation under fixed evaporation and inflow coefficients. Not a safe-yield forecast; does not determine statutory drought stages or restriction dates.")
                             if simple_view:
                                 st.plotly_chart(accessible_chart(storage_trajectory_figure(sim_df, chosen_sys.stage_bands_pct)), width="stretch", config={"displayModeBar": False})
                             else:
@@ -2753,9 +2802,9 @@ elif page == "Review":
 
                 gap_val = f"{crop_def['irrigation_gap_in']:.2f} in" if is_us else f"{crop_def['irrigation_gap_mm']:.1f} mm"
                 st.markdown(f'''<div class="basin-callout-card" style="border-left: 5px solid #087e8b;">
-                    <div class="metric-label">🌾 Decision Metric · Net Irrigation Deficit</div>
+                    <div class="metric-label">🌾 Decision Metric · Illustrative Net Atmospheric Deficit (ETc - P)</div>
                     <div class="metric-val" style="color: var(--basin-info-text); font-size: 1.4rem; font-weight: 800;">{gap_val}</div>
-                    <div class="metric-desc">Total supplemental irrigation depth required across crop cycle to prevent yield reduction.</div>
+                    <div class="metric-desc">Illustrative Net Atmospheric Deficit (ETc - P): Daily crop evapotranspiration demand minus rainfall, assuming fixed regional ETo and crop coefficients without field soil-moisture carryover or irrigation application efficiency.</div>
                 </div>''', unsafe_allow_html=True)
 
                 a1, a2, a3 = st.columns(3)
@@ -2790,15 +2839,15 @@ elif page == "Review":
 
                 if kbdi_res.burn_ban_breached:
                     st.markdown(f'''<div class="basin-callout-card alert" style="border-left: 5px solid #dc2626;">
-                        <div class="metric-label">🔴 Decision Metric · Burn-Ban Trigger (KBDI ≥ 600)</div>
-                        <div class="metric-val" style="color: var(--basin-danger-text); font-size: 1.4rem; font-weight: 800;">Breached on Day {kbdi_res.burn_ban_day} (Peak: {kbdi_res.peak_kbdi:.0f})</div>
-                        <div class="metric-desc">Critical threshold crossed: severe drought and elevated wildfire ignition danger.</div>
+                        <div class="metric-label">🔴 Decision Metric · Illustrative KBDI Stress Marker (≥ 600)</div>
+                        <div class="metric-val" style="color: var(--basin-danger-text); font-size: 1.4rem; font-weight: 800;">Crossed on Day {kbdi_res.burn_ban_day} (Peak: {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.peak_day})</div>
+                        <div class="metric-desc">Illustrative meteorological stress marker crossed; county burn bans are legal determinations issued by County Commissioners Courts based on local conditions, not an automated dashboard trigger.</div>
                     </div>''', unsafe_allow_html=True)
                 else:
                     st.markdown(f'''<div class="basin-callout-card" style="border-left: 5px solid #16a34a;">
-                        <div class="metric-label">🟢 Decision Metric · Burn-Ban Trigger (KBDI ≥ 600)</div>
-                        <div class="metric-val" style="color: var(--basin-success-text); font-size: 1.4rem; font-weight: 800;">Below 600 (Peak: {kbdi_res.peak_kbdi:.0f})</div>
-                        <div class="metric-desc">Soil moisture remains below typical Texas county burn-ban triggers throughout the scenario.</div>
+                        <div class="metric-label">🟢 Decision Metric · Illustrative KBDI Stress Marker (≥ 600)</div>
+                        <div class="metric-val" style="color: var(--basin-success-text); font-size: 1.4rem; font-weight: 800;">Below 600 (Peak: {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.peak_day})</div>
+                        <div class="metric-desc">Soil moisture deficit index remains below typical Texas county stress markers throughout the scenario.</div>
                     </div>''', unsafe_allow_html=True)
 
                 k1, k2, k3 = st.columns(3)
@@ -2807,9 +2856,14 @@ elif page == "Review":
                 k3.metric("Final KBDI", f"{kbdi_res.final_kbdi:.0f}")
 
                 if kbdi_res.burn_ban_breached:
-                    st.warning(f"🚨 **Illustrative Burn Ban Threshold Breached**: KBDI reaches {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.burn_ban_day}. Texas county commissioners courts evaluate outdoor burn bans around KBDI ≥ 600 as decision support; this is an illustrative modeling threshold, not a statutory declaration.")
+                    st.warning(
+                        f"⚠️ **Illustrative KBDI Stress Marker (≥600) Crossed on Day {kbdi_res.burn_ban_day}**: "
+                        f"Soil moisture depletion marker crossed at Day {kbdi_res.burn_ban_day}; peak KBDI reaches {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.peak_day}. "
+                        "Texas county outdoor burn bans are legal determinations made by County Commissioners Courts under Local Government Code § 352.081 based on local fire conditions, not an automated dashboard trigger. "
+                        "Consult the [Texas A&M Forest Service Official Burn Ban Map](https://tfsweb.tamu.edu/wildfire-and-other-disasters/burn-bans-and-information/) for current statutory declarations."
+                    )
                 else:
-                    st.success(f"✅ KBDI peaks at {kbdi_res.peak_kbdi:.0f}, remaining below typical county burn-ban triggers (600).")
+                    st.success(f"✅ KBDI peaks at {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.peak_day}, remaining below the illustrative 600 meteorological stress marker.")
 
                 st.info("📢 **Operational Takeaway**: " + kbdi_res.takeaway)
                 st.caption("Illustrative decision support. Official burn bans are enacted by County Commissioners Courts.")
@@ -3015,11 +3069,18 @@ elif page == "Exports":
                         "BASIN's scientific provenance standard requires each shortlisted scenario to have a deliberate human decision (Accept or Reject) before generating a verified engineering bundle."
                     )
                     col_a, col_b = st.columns([1, 1])
-                    if col_a.button("✅ Accept all shortlisted for export", key="btn_accept_all_for_export", type="primary"):
+                    batch_rationale = col_a.text_input(
+                        "Batch review rationale",
+                        value="Batch-accepted for comparative screening during initial review",
+                        key="input_batch_rationale",
+                        help="Recorded in audit log for transparency that these scenarios were accepted as a batch rather than individually examined."
+                    )
+                    if col_a.button("✅ Accept all shortlisted with batch decision", key="btn_accept_all_for_export", type="primary"):
+                        note = f"included by batch decision: {batch_rationale.strip()}"
                         for s in unreviewed:
-                            s.review(True, "Accepted during export preparation")
+                            s.review(True, note)
                         save(w)
-                        st.success("All shortlisted candidates accepted.")
+                        st.success("All shortlisted candidates included by batch decision.")
                         st.rerun()
                     if col_b.button("🔍 Review candidates in Review tab", key="btn_goto_review_tab"):
                         switch_page("Review")
@@ -3027,7 +3088,7 @@ elif page == "Exports":
 
             with tour_target("export_panel"):
                 if not ready:
-                    st.warning("⚠️ **Export locked:** Review decisions required before generating verified bundle. Use '✅ Accept all shortlisted for export' above to unlock.")
+                    st.warning("⚠️ **Export locked:** Review decisions required before generating verified bundle. Use '✅ Accept all shortlisted with batch decision' above or review each scenario individually.")
                 elif bool(w.custom_uploads) and not share_custom:
                     st.warning("⚠️ **Custom Evidence Consent Required:** Check 'Include custom numerical inputs and source metadata' above to enable verified export.")
                 if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (bool(w.custom_uploads) and not share_custom)):
@@ -3082,6 +3143,15 @@ elif page == "Exports":
                             "token": report_token(w.exportable()),
                             "report": report
                         }
+                        meta_path = out_dir / f"BASIN-Meta-{w.id}.json"
+                        meta_path.write_text(json.dumps({
+                            "fingerprint": json.dumps(w.record(share, include_custom=share_custom), sort_keys=True),
+                            "share": share,
+                            "custom": share_custom,
+                            "config": experiment_config.fingerprint(),
+                            "run_id": w.id,
+                            "created_at": w.created_at,
+                        }, indent=2), encoding="utf-8")
                         st.success(f"✅ Verified deliverables generated and saved to disk: `output/{pdf_path.name}`, `output/{zip_path.name}`, and `output/{xlsx_path.name}`")
                     except (ValueError, AssertionError, OSError) as error:
                         st.error(f"Verification failed: {error}")
@@ -3110,22 +3180,53 @@ elif page == "Exports":
             disk_zip = ROOT / "output" / f"BASIN-{w.id}.zip"
             disk_pdf = ROOT / "output" / f"BASIN-Executive-Brief-{w.id}.pdf"
             disk_xlsx = ROOT / "output" / f"BASIN-Shortlist-{w.id}.xlsx"
+            disk_meta = ROOT / "output" / f"BASIN-Meta-{w.id}.json"
+
+            disk_fresh = False
+            if disk_meta.exists():
+                try:
+                    dm = json.loads(disk_meta.read_text(encoding="utf-8"))
+                    disk_fresh = (
+                        dm.get("fingerprint") == current_fingerprint
+                        and dm.get("share") == share
+                        and dm.get("custom") == share_custom
+                        and dm.get("config") == experiment_config.fingerprint()
+                    )
+                except Exception:
+                    disk_fresh = False
+
             if not packet_fresh and disk_zip.exists() and disk_pdf.exists():
-                st.info(f"📦 **Existing Verified Deliverables on Disk** for run `{w.id}`. You can download previously saved files or rebuild above.")
-                c_d1, c_d2, c_d3, c_d4 = st.columns([1, 1, 1, 1])
-                c_d1.download_button("Download Saved PDF", disk_pdf.read_bytes(), disk_pdf.name, "application/pdf", key=f"dl_disk_pdf_{w.id}", width="stretch")
-                c_d2.download_button("Download Saved ZIP", disk_zip.read_bytes(), disk_zip.name, "application/zip", key=f"dl_disk_zip_{w.id}", width="stretch")
-                if disk_xlsx.exists():
-                    c_d3.download_button("Download Saved Excel", disk_xlsx.read_bytes(), disk_xlsx.name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key=f"dl_disk_xlsx_{w.id}", width="stretch")
-                if c_d4.button("Open Output Folder", key=f"btn_open_disk_out_{w.id}", width="stretch"):
-                    import subprocess, sys
-                    out_folder = ROOT / "output"
-                    if sys.platform == "win32":
-                        subprocess.Popen(["explorer", str(out_folder.resolve())])
-                    elif sys.platform == "darwin":
-                        subprocess.Popen(["open", str(out_folder.resolve())])
-                    else:
-                        subprocess.Popen(["xdg-open", str(out_folder.resolve())])
+                if disk_fresh:
+                    st.info(f"📦 **Existing Verified Deliverables on Disk** for run `{w.id}`. (Matches current settings and consent).")
+                    c_d1, c_d2, c_d3, c_d4 = st.columns([1, 1, 1, 1])
+                    c_d1.download_button("Download Saved PDF", disk_pdf.read_bytes(), disk_pdf.name, "application/pdf", key=f"dl_disk_pdf_{w.id}", width="stretch")
+                    c_d2.download_button("Download Saved ZIP", disk_zip.read_bytes(), disk_zip.name, "application/zip", key=f"dl_disk_zip_{w.id}", width="stretch")
+                    if disk_xlsx.exists():
+                        c_d3.download_button("Download Saved Excel", disk_xlsx.read_bytes(), disk_xlsx.name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key=f"dl_disk_xlsx_{w.id}", width="stretch")
+                    if c_d4.button("Open Output Folder", key=f"btn_open_disk_out_{w.id}", width="stretch"):
+                        import subprocess, sys
+                        out_folder = ROOT / "output"
+                        if sys.platform == "win32":
+                            subprocess.Popen(["explorer", str(out_folder.resolve())])
+                        elif sys.platform == "darwin":
+                            subprocess.Popen(["open", str(out_folder.resolve())])
+                        else:
+                            subprocess.Popen(["xdg-open", str(out_folder.resolve())])
+                else:
+                    st.warning(
+                        f"⚠️ **Previous Local Draft Found on Disk** (`output/BASIN-{w.id}.*`). "
+                        "Settings, review decisions, or privacy consent have changed since this artifact was created. "
+                        "Rebuild the verified export above to update the packet."
+                    )
+                    if st.button("📁 Open Output Folder (Inspect Historical Drafts)", key=f"btn_open_disk_out_{w.id}"):
+                        import subprocess, sys
+                        out_folder = ROOT / "output"
+                        if sys.platform == "win32":
+                            subprocess.Popen(["explorer", str(out_folder.resolve())])
+                        elif sys.platform == "darwin":
+                            subprocess.Popen(["open", str(out_folder.resolve())])
+                        else:
+                            subprocess.Popen(["xdg-open", str(out_folder.resolve())])
 
             if packet_fresh:
                 st.success(
@@ -3273,7 +3374,7 @@ elif page == "Exports":
                             )
                             bands_pct = tuple(b * 100.0 if b <= 1.0 else b for b in bands)
 
-                            st.markdown("**Figure 1: Projected Reservoir Storage Trajectory & Threshold Crossings**")
+                            st.markdown("**Figure 1: Projected Reservoir Storage Trajectory & Threshold Crossings (Uncalibrated Toy Planning Model — No Regulatory Restriction Date)**")
                             st.plotly_chart(storage_trajectory_figure(sim_lead, bands), width="stretch", config={"displayModeBar": False})
 
                             st.markdown("**Figure 2: Milestone Gantt Timeline — Response Band Crossings Across Retention Tiers**")

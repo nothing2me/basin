@@ -100,6 +100,35 @@ class CachedSource:
         custom_series = custom_series[~custom_series.index.duplicated(keep="first")].sort_index()
         new_daily[station_id] = custom_series.reindex(new_daily.index)
 
+        # Prepare custom station daily rows for snapshot CSV
+        clean_s = custom_series.loc[(custom_series.index >= start_ts) & (custom_series.index <= end_ts)].dropna()
+        custom_df = pd.DataFrame({
+            "date": clean_s.index.strftime("%Y-%m-%d"),
+            "station_id": station_id,
+            "precip_mm": [f"{v:.2f}" for v in clean_s.values],
+            "mflag": "",
+            "qflag": "",
+            "sflag": "CUSTOM",
+            "excluded": "False",
+        })
+
+        if self.raw:
+            try:
+                orig_df = pd.read_csv(io.BytesIO(self.raw), dtype=str)
+                orig_df = orig_df[orig_df["station_id"] != station_id]
+                for col in orig_df.columns:
+                    if col not in custom_df.columns:
+                        custom_df[col] = "False" if col == "excluded" else ""
+                custom_df = custom_df[orig_df.columns]
+                combined_df = pd.concat([orig_df, custom_df], ignore_index=True)
+                new_raw = combined_df.to_csv(index=False, lineterminator="\n").encode("utf-8")
+            except Exception:
+                raw_clean = self.raw.rstrip(b"\r\n")
+                custom_csv = custom_df.to_csv(index=False, header=False, lineterminator="\n").encode("utf-8")
+                new_raw = raw_clean + b"\n" + custom_csv
+        else:
+            new_raw = custom_df.to_csv(index=False, lineterminator="\n").encode("utf-8")
+
         new_manifest = json.loads(json.dumps(self.manifest))
         new_manifest["stations"] = [s for s in new_manifest["stations"] if s.get("id") != station_id]
         new_manifest["stations"].append({
@@ -111,4 +140,17 @@ class CachedSource:
             "latitude": None,
             "longitude": None,
         })
-        return CachedSource(_daily=new_daily, _manifest=new_manifest, _raw=self.raw)
+        if "quality" in new_manifest and isinstance(new_manifest["quality"], list):
+            new_manifest["quality"] = [q for q in new_manifest["quality"] if q.get("station_id") != station_id]
+            valid_days = int(clean_s.count())
+            expected_days = len(new_daily)
+            new_manifest["quality"].append({
+                "station_id": station_id,
+                "expected_days": expected_days,
+                "valid_days": valid_days,
+                "missing_or_excluded_days": expected_days - valid_days,
+                "completeness_pct": round(valid_days / expected_days * 100, 3) if expected_days else 0.0,
+                "trace_days": 0,
+            })
+        new_manifest["sha256"] = hashlib.sha256(new_raw).hexdigest()
+        return CachedSource(_daily=new_daily, _manifest=new_manifest, _raw=new_raw)
