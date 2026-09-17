@@ -689,25 +689,21 @@ def render_analysis_focus_card(default_goal="storage"):
 
         focus_details = {
             "storage": {
-                "icon": "💧",
                 "title": "Storage Stress (Municipal & Industrial Water Supply)",
                 "does": "Prioritizes sustained multi-month cumulative rainfall deficits and measures severe drought drawdown trajectories against the combined regional reservoir capacity (Choke Canyon + Lake Corpus Christi, 919,900 ac-ft).",
                 "changes": "Weights duration and deficit severity highest in Step 2; activates Drought Contingency Plan Stages 1–4 triggers, storage drawdown curves, and mandatory conservation tests in Step 3 Review."
             },
             "operations": {
-                "icon": "🌾",
                 "title": "Agronomics & Soil Moisture (Irrigation & Wildfire)",
                 "does": "Evaluates agricultural root-zone water deficits, crop evapotranspiration (ETc for corn, cotton, grain sorghum), and Keetch-Byram Drought Index (KBDI) wildfire risk potential.",
                 "changes": "Biases scenario candidate selection toward spring/summer crop growth seasons; unlocks crop irrigation deficit tables and seasonal wildfire vulnerability gauges in Step 3 Review."
             },
             "handoff": {
-                "icon": "📋",
                 "title": "Regulatory Handoff & Governance (Council & Planning)",
                 "does": "Emphasizes multi-criteria weighted scoring, transparent audit logs, and verifiable SHA-256 data integrity for official decision-making by city councils and regional water authorities.",
                 "changes": "Highlights station completeness, review rationales, audit trail history, and one-click Executive Technical Brief PDF and verified ZIP packet exports in Step 4."
             },
             "compare": {
-                "icon": "📊",
                 "title": "Comparison & Sensitivity (Multi-Scenario Analysis)",
                 "does": "Highlights multi-scenario deficit envelopes, historical analog percentiles across the 1991–2025 NOAA record, and comparative trade-offs between competing drought candidates.",
                 "changes": "Displays the synchronized multi-scenario deficit comparison graph in Step 2, and renders side-by-side scenario metric comparisons in Step 3 Review."
@@ -716,10 +712,11 @@ def render_analysis_focus_card(default_goal="storage"):
         detail = focus_details.get(active_goal, focus_details["storage"])
 
         st.markdown(f"""
-        <div style="margin-top:12px;padding:14px 16px;border-radius:8px;background:color-mix(in srgb,currentColor 5%,transparent);border:1px solid color-mix(in srgb,currentColor 15%,transparent);">
-            <div style="font-size:0.95rem;font-weight:750;margin-bottom:6px;">{detail['icon']} {detail['title']}</div>
-            <div style="font-size:0.85rem;line-height:1.45;margin-bottom:8px;"><b>What it evaluates:</b> {detail['does']}</div>
-            <div style="font-size:0.83rem;line-height:1.45;opacity:0.9;border-top:1px dashed color-mix(in srgb,currentColor 20%,transparent);padding-top:6px;"><b>Tool adaptations:</b> {detail['changes']}</div>
+        <div class="basin-focus-detail">
+            <div class="basin-focus-detail__eyebrow">Analysis mode</div>
+            <div class="basin-focus-detail__title">{detail['title']}</div>
+            <div class="basin-focus-detail__body"><b>What it evaluates:</b> {detail['does']}</div>
+            <div class="basin-focus-detail__adaptation"><b>Tool adaptations:</b> {detail['changes']}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1664,24 +1661,26 @@ if page == "Data":
             )
 
     # 2. Session Restoration Dropdown
-    with st.expander("📦 Restore analysis from verified .zip", expanded=False):
-        st.caption("Restore and re-verify a complete previously exported BASIN `.zip` data bundle. Re-validates the SHA-256 manifest and mathematical replay on this device.")
-        uploaded_bundle = st.file_uploader("Upload BASIN Bundle (.zip)", type=["zip"], key="bundle_restore_uploader")
-        if uploaded_bundle is not None:
-            if st.button("Verify & Restore Bundle", key="btn_execute_bundle_restore", type="primary", width="stretch"):
-                try:
-                    payload = uploaded_bundle.getvalue()
-                    restored_w, verif = Workspace.restore_from_bundle(payload, source)
-                    st.session_state.clear()
-                    st.session_state.workspace = restored_w
-                    st.session_state.data_accepted = True
-                    st.session_state.scenarios_accepted = True
-                    save(restored_w)
-                    st.success(f"Verified Bundle Restored: {verif['scenarios_replayed']} scenarios replayed successfully.")
-                    st.session_state.page = "Review"
-                    st.rerun()
-                except Exception as err:
-                    st.error(f"Bundle restoration failed: {err}")
+    with st.container(key="verified_restore_section"):
+        st.markdown('<div class="basin-restore-label">Verified archive</div>', unsafe_allow_html=True)
+        with st.expander("Restore analysis from verified .zip", expanded=False):
+            st.caption("Restore and re-verify a complete previously exported BASIN `.zip` data bundle. Re-validates the SHA-256 manifest and mathematical replay on this device.")
+            uploaded_bundle = st.file_uploader("Upload BASIN Bundle (.zip)", type=["zip"], key="bundle_restore_uploader")
+            if uploaded_bundle is not None:
+                if st.button("Verify & Restore Bundle", key="btn_execute_bundle_restore", type="primary", width="stretch"):
+                    try:
+                        payload = uploaded_bundle.getvalue()
+                        restored_w, verif = Workspace.restore_from_bundle(payload, source)
+                        st.session_state.clear()
+                        st.session_state.workspace = restored_w
+                        st.session_state.data_accepted = True
+                        st.session_state.scenarios_accepted = True
+                        save(restored_w)
+                        st.success(f"Verified Bundle Restored: {verif['scenarios_replayed']} scenarios replayed successfully.")
+                        st.session_state.page = "Review"
+                        st.rerun()
+                    except Exception as err:
+                        st.error(f"Bundle restoration failed: {err}")
     metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
     quality = pd.DataFrame(source.manifest["quality"])
     station_table = metadata.merge(quality, on="station_id")

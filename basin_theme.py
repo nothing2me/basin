@@ -162,6 +162,35 @@ body.basin-theme-bw .basin-scenario-summary{background:#111!important;border-lef
 .basin-callout-card .metric-label{font-size:0.84rem!important;font-weight:700!important;letter-spacing:0.04em!important;text-transform:uppercase!important;opacity:0.82!important;margin-bottom:4px!important}
 .basin-callout-card .metric-val{font-size:1.4rem!important;font-weight:800!important;line-height:1.25!important;margin:4px 0!important}
 .basin-callout-card .metric-desc{font-size:0.85rem!important;opacity:0.85!important;line-height:1.45!important;margin-top:4px!important}
+.basin-focus-detail{
+    position:relative;margin-top:12px;padding:15px 17px 16px 19px;border-radius:8px;
+    background:color-mix(in srgb,currentColor 4%,transparent);
+    border:1px solid color-mix(in srgb,currentColor 15%,transparent);overflow:hidden
+}
+.basin-focus-detail:before{
+    content:"";position:absolute;inset:0 auto 0 0;width:3px;background:#3da6bd
+}
+.basin-focus-detail__eyebrow{
+    margin-bottom:5px;color:#61bfd2;font-size:.65rem;font-weight:750;
+    letter-spacing:.14em;text-transform:uppercase
+}
+.basin-focus-detail__title{font-size:.96rem;font-weight:750;line-height:1.3;margin-bottom:8px;letter-spacing:-.01em}
+.basin-focus-detail__body{font-size:.85rem;line-height:1.5;margin-bottom:9px}
+.basin-focus-detail__adaptation{
+    padding-top:8px;border-top:1px solid color-mix(in srgb,currentColor 15%,transparent);
+    font-size:.83rem;line-height:1.5;opacity:.9
+}
+.st-key-verified_restore_section{margin-top:10px!important}
+.basin-restore-label{
+    margin:0 0 5px 2px;color:var(--basin-muted,#71808a);font-size:.64rem;font-weight:750;
+    letter-spacing:.14em;text-transform:uppercase
+}
+.st-key-verified_restore_section [data-testid="stExpander"]{
+    border-left:3px solid #3da6bd!important;background:color-mix(in srgb,currentColor 2.5%,transparent)!important
+}
+.st-key-verified_restore_section [data-testid="stExpander"] summary p{
+    font-weight:650!important;letter-spacing:-.005em!important
+}
 body.basin-theme-bw .basin-callout-card{background:#000!important;border:1.5px solid #fff!important}
 body.basin-theme-bw,body.basin-theme-bw .stApp,body.basin-theme-bw [data-testid="stAppViewContainer"],body.basin-theme-bw [data-testid="stHeader"]{background-color:#000!important;background-image:none!important;color:#fff!important}
 body.basin-theme-bw .block-container{background-color:#000!important}
