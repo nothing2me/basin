@@ -303,7 +303,7 @@ def assistant_panel(w, source=None, names=None):
                 diamond_img = (
                     f'<img src="data:image/png;base64,{avatar_b64}" class="basin-assistant-mark" alt="BASIN Diamond Logo" />'
                     if avatar_b64
-                    else '<div class="basin-assistant-mark" style="font-size:3.5rem;text-align:center;">💎</div>'
+                    else '<div class="basin-assistant-mark basin-assistant-mark-fallback" role="img" aria-label="BASIN"></div>'
                 )
                 st.markdown(
                     f"""
@@ -331,22 +331,22 @@ def assistant_panel(w, source=None, names=None):
                 key="assistant_chat_input",
                 on_submit=_queue_assistant_query,
             )
-            st.markdown('<p class="basin-suggested-label">💡 Platform & Guidance Shortcuts</p>', unsafe_allow_html=True)
+            st.markdown('<p class="basin-suggested-label basin-guidance-label">Platform &amp; Guidance Shortcuts</p>', unsafe_allow_html=True)
             help_col1, help_col2, help_col3, help_col4 = st.columns(4, gap="small")
             with help_col1:
-                if st.button("🛠️ Other tools", key="quick_other_tools", width="stretch", help="See all independent analysis tools in BASIN"):
+                if st.button("Other tools", key="quick_other_tools", width="stretch", help="See all independent analysis tools in BASIN"):
                     st.session_state.assistant_pending_query = "What other tools can I use besides the tutorial?"
                     st.rerun()
             with help_col2:
-                if st.button("🧭 Next step", key="quick_next_step", width="stretch", help="Get context-aware advice on what to do next"):
+                if st.button("Next step", key="quick_next_step", width="stretch", help="Get context-aware advice on what to do next"):
                     st.session_state.assistant_pending_query = "What should I do next?"
                     st.rerun()
             with help_col3:
-                if st.button("💡 In simple terms", key="quick_simple_terms", width="stretch", help="Plain-English explanation of BASIN"):
+                if st.button("In simple terms", key="quick_simple_terms", width="stretch", help="Plain-English explanation of BASIN"):
                     st.session_state.assistant_pending_query = "Explain what BASIN does in simple terms"
                     st.rerun()
             with help_col4:
-                if st.button("💬 Ask custom Q", key="quick_custom_q", width="stretch", help="Ask custom questions about water and drought"):
+                if st.button("Ask custom", key="quick_custom_q", width="stretch", help="Ask custom questions about water and drought"):
                     st.session_state.assistant_pending_query = "Can I ask a custom question about water planning?"
                     st.rerun()
 
