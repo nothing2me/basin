@@ -2435,32 +2435,6 @@ elif page == "Review":
                            (w.get(i).status == 'accepted' and w.get(i).approved_revision != w.get(i).revision)]
                 st.caption(f"{len(w.selected) - len(pending)} of {len(w.selected)} shortlisted scenarios reviewed")
 
-                if len(pending) > 1:
-                    with st.expander(f"⚡ Batch Review ({len(pending)} unreviewed shortlisted)", expanded=False):
-                        st.caption(
-                            f"Include all remaining {len(pending)} unreviewed shortlisted scenarios "
-                            f"({', '.join(pending)}) at once with a single documented screening rationale."
-                        )
-                        b_note = st.text_input(
-                            "Batch review rationale",
-                            key=f"review_tab_batch_rationale_{w.id}",
-                            placeholder="e.g. Regional analogues reviewed; verified suitable for reservoir stress screening.",
-                            help="Minimum 20 characters required to enable batch inclusion."
-                        )
-                        b_valid = len(b_note.strip()) >= 20
-                        if not b_valid and b_note.strip():
-                            st.caption(f"Requires at least 20 characters ({len(b_note.strip())}/20 entered).")
-                        if st.button("✅ Include all pending shortlisted scenarios", key=f"btn_batch_accept_review_{w.id}",
-                                     type="primary", disabled=not b_valid):
-                            full_batch_note = f"included by batch decision: {b_note.strip()}"
-                            for pid in pending:
-                                ps = w.get(pid)
-                                if ps:
-                                    ps.review(True, full_batch_note, decision_mode="batch")
-                            save(w)
-                            st.success(f"All {len(pending)} shortlisted scenarios included.")
-                            st.rerun()
-
                 attached = set(w.evidence_refs[s.id])
                 conflicts = [c for c in w.conflicts if c['status'] == 'unresolved' and
                              (c['left_id'] in attached or c['right_id'] in attached)]
@@ -3202,23 +3176,38 @@ elif page == "Exports":
         with st.container():
             st.markdown(
                 """<style>
+                .st-key-btn_build_verified_export,
+                .st-key-btn_build_verified_export > div,
+                .st-key-btn_build_verified_export button {
+                    width: 100% !important;
+                }
                 .st-key-btn_build_verified_export button {
                     background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%) !important;
                     color: #ffffff !important;
-                    font-size: 1.15rem !important;
-                    font-weight: 700 !important;
-                    letter-spacing: 0.02em !important;
-                    padding: 0.85rem 2.2rem !important;
-                    min-height: 54px !important;
-                    border: 1px solid #60a5fa !important;
-                    border-radius: 8px !important;
-                    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+                    font-size: 1.45rem !important;
+                    font-weight: 800 !important;
+                    letter-spacing: 0.03em !important;
+                    padding: 1.2rem 2.5rem !important;
+                    min-height: 68px !important;
+                    border: 1.5px solid #60a5fa !important;
+                    border-radius: 10px !important;
+                    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45) !important;
                     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                    width: 100% !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                }
+                .st-key-btn_build_verified_export button p,
+                .st-key-btn_build_verified_export button span,
+                .st-key-btn_build_verified_export button div {
+                    font-size: 1.45rem !important;
+                    font-weight: 800 !important;
+                    line-height: 1.3 !important;
+                    color: #ffffff !important;
                 }
                 .st-key-btn_build_verified_export button:hover {
                     background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 50%, #2563eb 100%) !important;
-                    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6) !important;
+                    box-shadow: 0 8px 28px rgba(37, 99, 235, 0.7) !important;
                     transform: translateY(-2px) !important;
                     border-color: #93c5fd !important;
                     color: #ffffff !important;
@@ -3230,6 +3219,10 @@ elif page == "Exports":
                     box-shadow: none !important;
                     cursor: not-allowed !important;
                     transform: none !important;
+                }
+                .st-key-btn_build_verified_export button:disabled p,
+                .st-key-btn_build_verified_export button:disabled span {
+                    color: #64748b !important;
                 }
                 </style>""",
                 unsafe_allow_html=True,
@@ -3329,7 +3322,7 @@ elif page == "Exports":
                         st.warning("⚠️ **Export locked:** Review decisions required before generating verified bundle. Use '✅ Accept all shortlisted with batch decision' above or review each scenario individually.")
                 elif w_has_custom and not share_custom:
                     st.warning("⚠️ **Custom Evidence Consent Required:** Check 'Include custom numerical inputs and source metadata' above to enable verified export.")
-                if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (w_has_custom and not share_custom)):
+                if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (w_has_custom and not share_custom), width="stretch"):
                     try:
                         with st.spinner("Compiling verified data bundle, rendering Executive Brief vector PDF, and preparing Excel handoff..."):
                             payload = export_bundle(w, share, include_custom=share_custom)
