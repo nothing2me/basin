@@ -10,7 +10,7 @@ from pathlib import Path
 import streamlit as st
 
 
-_TOPOGRAPHY_PATH = Path(__file__).resolve().parent / "assets" / "topographic_contours.png"
+_TOPOGRAPHY_PATH = Path(__file__).resolve().parent / "assets" / "topographic_contours_blurred.png"
 _TOPOGRAPHY_DATA_URI = (
     "data:image/png;base64," + base64.b64encode(_TOPOGRAPHY_PATH.read_bytes()).decode("ascii")
 )
@@ -33,9 +33,9 @@ body.basin-theme-dark{
     --basin-user-avatar-bg:#23856d;
 }
 body.basin-theme-light{
-    --basin-text-strong:#182127;--basin-text:#20292E;--basin-muted:#4D5C66;
-    --basin-surface:#F3F6FA;--basin-surface-elevated:#FFFFFF;--basin-surface-soft:#E2EAF2;
-    --basin-border:#8796A0;--basin-info-text:#075985;--basin-success-text:#166534;
+    --basin-text-strong:#183139;--basin-text:#293E45;--basin-muted:#586B72;
+    --basin-surface:#E1E8E7;--basin-surface-elevated:#EDF1F0;--basin-surface-soft:#CFDCDD;
+    --basin-border:#7F959D;--basin-info-text:#0B607F;--basin-success-text:#166534;
     --basin-warning-text:#92400E;--basin-danger-text:#991B1B;
     --basin-user-avatar-bg:#23856d;
 }
@@ -567,6 +567,61 @@ body.basin-theme-dark [data-testid="stDataEditor"]{
     box-shadow:0 14px 34px rgba(0,8,13,.16)!important;
 }
 
+/* Light mode is a complete presentation, not a widget-only inversion. The
+   warm mineral surfaces keep the contour field visible at the edges while
+   restoring dependable contrast for dense analytical content. */
+body.basin-theme-light .stApp,
+body.basin-theme-light [data-testid="stAppViewContainer"]{
+    color:var(--basin-text)!important;
+}
+body.basin-theme-light h1,
+body.basin-theme-light h2,
+body.basin-theme-light h3,
+body.basin-theme-light h4,
+body.basin-theme-light h5,
+body.basin-theme-light h6{
+    color:var(--basin-text-strong)!important;
+}
+body.basin-theme-light [data-testid="stVerticalBlockBorderWrapper"],
+body.basin-theme-light [data-basin-glass-surface="true"],
+body.basin-theme-light [data-testid="stVerticalBlock"].st-emotion-cache-1qu4don,
+body.basin-theme-light [data-testid="stExpander"]{
+    background:rgba(235,240,239,.92)!important;
+    border-color:rgba(86,111,121,.32)!important;
+    box-shadow:0 14px 34px rgba(39,63,71,.09)!important;
+    backdrop-filter:blur(9px) saturate(82%)!important;
+}
+body.basin-theme-light .stTabs [data-baseweb="tab-panel"],
+body.basin-theme-light [data-testid="stTabPanel"]{
+    background:rgba(235,240,239,.91)!important;
+    border:1px solid rgba(86,111,121,.24)!important;
+    border-radius:0 0 12px 12px!important;
+    padding:16px 18px 20px!important;
+    box-shadow:0 16px 38px rgba(39,63,71,.08)!important;
+    backdrop-filter:blur(9px) saturate(82%)!important;
+}
+body.basin-theme-light [data-testid="stPlotlyChart"]{
+    background:rgba(239,243,242,.93)!important;
+    border:1px solid rgba(86,111,121,.22)!important;
+    border-radius:12px!important;
+    padding:8px!important;
+    box-sizing:border-box!important;
+    box-shadow:0 12px 30px rgba(39,63,71,.07)!important;
+    backdrop-filter:blur(8px) saturate(82%)!important;
+}
+body.basin-theme-light [data-testid="stMetric"]{
+    background:rgba(237,241,240,.94)!important;
+    border-color:rgba(86,111,121,.27)!important;
+    box-shadow:0 8px 22px rgba(39,63,71,.06)!important;
+    backdrop-filter:blur(8px)!important;
+}
+body.basin-theme-light [data-testid="stDataFrame"],
+body.basin-theme-light [data-testid="stDataEditor"]{
+    background:rgba(239,243,242,.96)!important;
+    border:1px solid rgba(86,111,121,.25)!important;
+    box-shadow:0 12px 28px rgba(39,63,71,.07)!important;
+}
+
 /* Purpose-built, monochrome section symbols replace platform-dependent emoji. */
 .basin-section-heading{
     display:flex!important;align-items:center!important;gap:9px!important;
@@ -638,14 +693,15 @@ body.basin-theme-dark [data-testid="stAppViewContainer"]{{
 }}
 body.basin-theme-light .stApp,
 body.basin-theme-light [data-testid="stAppViewContainer"]{{
-    background-color:#edf1f1!important;
+    background-color:#d7dfde!important;
     background-image:
-        linear-gradient(rgba(245,247,247,.90),rgba(239,243,243,.94)),
+        radial-gradient(circle at 48% 12%,rgba(236,242,240,.16),transparent 42%),
+        linear-gradient(rgba(225,233,231,.66),rgba(213,224,222,.72)),
         url("{_TOPOGRAPHY_DATA_URI}")!important;
-    background-size:auto,1800px 1000px!important;
-    background-position:center,center top!important;
+    background-size:auto,auto,1800px 1000px!important;
+    background-position:center top,center,center top!important;
     background-attachment:fixed!important;
-    background-blend-mode:normal,luminosity!important;
+    background-blend-mode:normal,normal,normal!important;
 }}
 body.basin-theme-dark .st-key-assistant_drawer{{
     background-color:#091b25!important;
@@ -658,14 +714,15 @@ body.basin-theme-dark .st-key-assistant_drawer{{
     background-attachment:local!important;
 }}
 body.basin-theme-light .st-key-assistant_drawer{{
-    background-color:#eef2f2!important;
+    background-color:#d9e1e0!important;
     background-image:
-        linear-gradient(rgba(248,249,249,.84),rgba(239,243,243,.91)),
+        radial-gradient(circle at 52% 18%,rgba(236,242,240,.15),transparent 42%),
+        linear-gradient(rgba(226,234,232,.68),rgba(214,225,223,.75)),
         url("{_TOPOGRAPHY_DATA_URI}")!important;
-    background-size:auto,900px 500px!important;
-    background-position:center,center top!important;
+    background-size:auto,auto,900px 500px!important;
+    background-position:center top,center,center top!important;
     background-attachment:local!important;
-    background-blend-mode:normal,luminosity!important;
+    background-blend-mode:normal,normal,normal!important;
 }}
 body.basin-theme-dark .st-key-assistant_conversation{{
     background:rgba(6,20,29,.88)!important;
@@ -673,30 +730,30 @@ body.basin-theme-dark .st-key-assistant_conversation{{
     backdrop-filter:blur(9px) saturate(106%)!important;
 }}
 body.basin-theme-light .st-key-assistant_conversation{{
-    background:rgba(250,251,251,.92)!important;
+    background:rgba(235,240,239,.95)!important;
     border-color:rgba(71,91,101,.28)!important;
     backdrop-filter:blur(9px) saturate(96%)!important;
 }}
 </style>""")
     st.html("""<script>(() => {
-const syncBasinTheme = () => {
-  const app = document.querySelector('.stApp');
-  if (!app) return;
-  const match = getComputedStyle(app).backgroundColor.match(/[0-9.]+/g);
-  if (!match || match.length < 3) return;
-  const [r, g, b] = match.slice(0, 3).map(Number);
-  const isLight = (0.2126 * r + 0.7152 * g + 0.0722 * b) > 145;
+const applyBasinTheme = (requested) => {
+  const mode = requested || localStorage.getItem('basin-theme-mode') || 'System';
+  const isLight = mode === 'Light' ||
+    (mode === 'System' && !window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   document.body.classList.toggle('basin-theme-light', isLight);
   document.body.classList.toggle('basin-theme-dark', !isLight);
 };
-window.__basinThemeObserver?.disconnect();
-syncBasinTheme();
-const app = document.querySelector('.stApp');
-if (app) {
-  window.__basinThemeObserver = new MutationObserver(syncBasinTheme);
-  window.__basinThemeObserver.observe(app, {attributes:true, attributeFilter:['class','style']});
+window.__applyBasinTheme = applyBasinTheme;
+applyBasinTheme();
+if (!window.__basinSystemThemeListenerAttached) {
+  window.__basinSystemThemeListenerAttached = true;
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
+    if ((localStorage.getItem('basin-theme-mode') || 'System') === 'System') applyBasinTheme('System');
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'basin-theme-mode') applyBasinTheme(event.newValue || 'System');
+  });
 }
-window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', syncBasinTheme);
 
 // Attach stable custom symbols to dynamic Streamlit tabs without placing
 // decorative characters in their accessible names.
@@ -806,6 +863,8 @@ def appearance_picker():
      const name = button.dataset.basinTheme;
      document.body.classList.remove('basin-theme-bw');
      localStorage.removeItem('basin-bw-theme');
+     localStorage.setItem('basin-theme-mode', name);
+     window.__applyBasinTheme?.(name);
      const menuButton = document.querySelector('[data-testid="stMainMenuButton"]');
      if (!menuButton) { status.textContent = 'Open the top-right menu to change appearance.'; return; }
      status.textContent = '';
@@ -816,6 +875,7 @@ def appearance_picker():
        if (!item) return false;
        observer?.disconnect(); clearTimeout(timer);
        item.click();
+       window.__applyBasinTheme?.(name);
        const openMenu = document.querySelector('[data-testid="stMainMenuButton"][aria-expanded="true"]');
        if (openMenu) openMenu.click();
        button.focus();

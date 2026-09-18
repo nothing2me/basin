@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 from scipy.ndimage import binary_dilation, gaussian_filter
 
 
@@ -11,6 +11,7 @@ WIDTH = 1800
 HEIGHT = 1000
 SEED = 20260917
 OUTPUT = Path(__file__).resolve().parents[1] / "assets" / "topographic_contours.png"
+BLURRED_OUTPUT = Path(__file__).resolve().parents[1] / "assets" / "topographic_contours_blurred.png"
 
 
 def _periodic_terrain(height: int, width: int) -> np.ndarray:
@@ -53,7 +54,17 @@ def generate() -> None:
 
     image = Image.fromarray(rgba, mode="RGBA")
     image.save(OUTPUT, optimize=True)
+    # A restrained optical softening keeps the contour field atmospheric
+    # while preserving its recognizable terrain shapes behind dense UI.
+    softened = image.filter(ImageFilter.GaussianBlur(radius=0.9))
+    softened = softened.quantize(
+        colors=64,
+        method=Image.Quantize.FASTOCTREE,
+        dither=Image.Dither.NONE,
+    ).convert("RGBA")
+    softened.save(BLURRED_OUTPUT, optimize=True)
     print(f"Generated {OUTPUT} ({OUTPUT.stat().st_size:,} bytes)")
+    print(f"Generated {BLURRED_OUTPUT} ({BLURRED_OUTPUT.stat().st_size:,} bytes)")
 
 
 if __name__ == "__main__":
