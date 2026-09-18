@@ -94,7 +94,7 @@ def _geometry_layer(key):
         for f in load_catalog()[key]["features"]]}
 
 
-def _station_trace(rows, name, color, size, *, emoji=None):
+def _station_trace(rows, name, color, size, *, emoji=None, emoji_symbol=None):
     hover = []
     for row in rows:
         period = (f"PRCP inventory: {row['first_year']}–{row['last_year']}<br>"
@@ -107,12 +107,16 @@ def _station_trace(rows, name, color, size, *, emoji=None):
         return go.Scattermap(
             lon=[r["longitude"] for r in rows],
             lat=[r["latitude"] for r in rows],
-            text=[emoji] * len(rows),
-            customdata=hover,
-            mode="text",
+            text=hover,
+            mode="markers",
             name=trace_name,
-            textfont=dict(size=max(13, int(size * 1.35))),
-            hovertemplate="%{customdata}<br>%{lat:.4f}, %{lon:.4f}<extra></extra>",
+            marker=dict(
+                color=color,
+                size=max(13, int(size * 1.35)),
+                symbol=emoji_symbol,
+                allowoverlap=True,
+            ),
+            hovertemplate="%{text}<br>%{lat:.4f}, %{lon:.4f}<extra></extra>",
         )
     return go.Scattermap(
         lon=[r["longitude"] for r in rows],
@@ -182,6 +186,15 @@ def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=T
         "loaded_source": "🎯",
         "custom_source": "⭐",
     }
+    # Scattermap text is rendered through MapLibre's limited glyph atlas, which
+    # does not include color emoji. Use its supported pictogram markers so emoji
+    # mode keeps the same hover/click behavior and point coordinates as dots.
+    emoji_symbols = {
+        "rain_stations": "water",
+        "water_stations": "drinking-water",
+        "loaded_source": "star",
+        "custom_source": "star-stroked",
+    }
     for key in ("rain_stations", "water_stations"):
         if key in layers:
             rows = [r for r in catalog[key] if key != "rain_stations" or r["station_id"] not in source_ids]
@@ -191,6 +204,7 @@ def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=T
                 active_colors[key],
                 9 if key == "rain_stations" else 11,
                 emoji=emojis[key] if is_emoji else None,
+                emoji_symbol=emoji_symbols[key] if is_emoji else None,
             ))
     for custom in (False, True):
         rows = [dict(r, map_role="User-entered analysis source" if custom else "Loaded rainfall analysis source")
@@ -205,6 +219,7 @@ def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=T
                 role_color,
                 18,
                 emoji=emoji_char,
+                emoji_symbol=emoji_symbols["custom_source" if custom else "loaded_source"] if is_emoji else None,
             ))
     if focus:
         fig.add_trace(go.Scattermap(lon=[focus["lon"]], lat=[focus["lat"]], mode="markers+text",

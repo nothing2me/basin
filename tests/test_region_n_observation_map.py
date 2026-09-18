@@ -37,6 +37,7 @@ def test_observation_map_legend_font_and_emoji_mode():
     fig_dots = build_observation_map(loaded)
     assert fig_dots.layout.legend.font.size >= 14
     assert fig_dots.layout.legend.itemsizing == "constant"
+    traces_dots = {trace.name: trace for trace in fig_dots.data}
 
     # Check emoji mode
     fig_emoji = build_observation_map(loaded, marker_style="emoji")
@@ -44,8 +45,34 @@ def test_observation_map_legend_font_and_emoji_mode():
     assert "🌧️ NOAA rainfall stations" in traces_emoji
     assert "💧 USGS water sites" in traces_emoji
     assert "🎯 Loaded rainfall source" in traces_emoji
-    assert traces_emoji["🌧️ NOAA rainfall stations"].mode == "text"
-    assert traces_emoji["🌧️ NOAA rainfall stations"].text[0] == "🌧️"
+    trace_pairs = (
+        (traces_dots["NOAA rainfall stations"], traces_emoji["🌧️ NOAA rainfall stations"], "water"),
+        (traces_dots["USGS water sites"], traces_emoji["💧 USGS water sites"], "drinking-water"),
+        (traces_dots["Loaded rainfall source"], traces_emoji["🎯 Loaded rainfall source"], "star"),
+    )
+    for dot_trace, emoji_trace, symbol in trace_pairs:
+        assert emoji_trace.mode == "markers"
+        assert emoji_trace.marker.symbol == symbol
+        assert emoji_trace.marker.allowoverlap is True
+        assert list(emoji_trace.lon) == list(dot_trace.lon)
+        assert list(emoji_trace.lat) == list(dot_trace.lat)
+        assert list(emoji_trace.text) == list(dot_trace.text)
+
+
+def test_emoji_mode_does_not_mutate_colored_marker_data():
+    loaded = pd.DataFrame([
+        {"station_id": "USW00012924", "name": "Corpus Christi", "latitude": 27.7839,
+         "longitude": -97.5114, "is_custom": False},
+    ])
+    custom = {"rain_stations": "#00ff00", "water_stations": "#ff00ff", "loaded_source": "#123456"}
+    dots_before = build_observation_map(loaded, marker_style="dots", custom_colors=custom)
+    colors_before = {trace.name: trace.marker.color for trace in dots_before.data}
+
+    emojis = build_observation_map(loaded, marker_style="emoji", custom_colors=custom)
+    dots_after = build_observation_map(loaded, marker_style="dots", custom_colors=custom)
+
+    assert emojis is not dots_before
+    assert {trace.name: trace.marker.color for trace in dots_after.data} == colors_before
 
 
 def test_observation_map_custom_colors():
