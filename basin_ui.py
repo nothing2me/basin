@@ -352,35 +352,38 @@ def assistant_panel(w, source=None, names=None):
                         st.session_state.assistant_pending_query = "Can I ask a custom question about water planning?"
                         st.rerun()
 
-            st.markdown('<p class="basin-suggested-label">Suggested questions · Scenario calculations</p>', unsafe_allow_html=True)
-            quick_one, quick_two, quick_three, quick_four, quick_five, quick_six = st.columns(6, gap="small")
-            with quick_one:
-                if st.button("Top scenario", key="quick_top1", width="stretch", help="Explain the top-ranked scenario"):
-                    direct_tool_run = ("describe_scenario", {"scenario_id": sid}, f"Tell me about scenario {sid}")
-            with quick_two:
-                if st.button("Compare", key="quick_compare", width="stretch", help="Compare the two highest-ranked scenarios"):
-                    id1 = w.selected[0] if w.selected else sid
-                    ranked_ids = [scenario.id for scenario in w.scenarios]
-                    id2 = w.selected[1] if len(w.selected) > 1 else next((candidate for candidate in ranked_ids if candidate != id1), id1)
-                    direct_tool_run = ("compare_scenarios", {"scenario_id_1": id1, "scenario_id_2": id2}, f"Compare scenario {id1} and {id2}")
-            with quick_three:
-                if st.button("Stress", key="quick_concur", width="stretch", help="Check station stress overlap"):
-                    direct_tool_run = ("check_concurrence", {"scenario_id": sid}, f"Check station stress concurrence for {sid}")
-            with quick_four:
-                if st.button("Ranking", key="quick_ranking", width="stretch", help="Explain how the top scenario was scored"):
-                    direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
-            with quick_five:
-                if st.button("Crop deficit", key="quick_crop_et", width="stretch", help="Estimate the crop water deficit"):
-                    from basin_core.agronomics import calculate_crop_water_deficit
-                    sc = w.get(sid)
-                    c_res = calculate_crop_water_deficit(sc.series)
-                    direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
-                    st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
-                    st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
-                    direct_result_added = True
-            with quick_six:
-                if st.button("Export", key="quick_export", width="stretch", help="Check export readiness"):
-                    direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
+            with st.container(key="assistant_scenario_shortcuts"):
+                st.markdown('<p class="basin-suggested-label basin-scenario-label">Suggested questions · Scenario calculations</p>', unsafe_allow_html=True)
+                quick_one, quick_two = st.columns(2, gap="small")
+                with quick_one:
+                    if st.button("Top scenario", key="quick_top1", width="stretch", help="Explain the top-ranked scenario"):
+                        direct_tool_run = ("describe_scenario", {"scenario_id": sid}, f"Tell me about scenario {sid}")
+                with quick_two:
+                    if st.button("Compare", key="quick_compare", width="stretch", help="Compare the two highest-ranked scenarios"):
+                        id1 = w.selected[0] if w.selected else sid
+                        ranked_ids = [scenario.id for scenario in w.scenarios]
+                        id2 = w.selected[1] if len(w.selected) > 1 else next((candidate for candidate in ranked_ids if candidate != id1), id1)
+                        direct_tool_run = ("compare_scenarios", {"scenario_id_1": id1, "scenario_id_2": id2}, f"Compare scenario {id1} and {id2}")
+                quick_three, quick_four = st.columns(2, gap="small")
+                with quick_three:
+                    if st.button("Station stress", key="quick_concur", width="stretch", help="Check station stress overlap"):
+                        direct_tool_run = ("check_concurrence", {"scenario_id": sid}, f"Check station stress concurrence for {sid}")
+                with quick_four:
+                    if st.button("Explain ranking", key="quick_ranking", width="stretch", help="Explain how the top scenario was scored"):
+                        direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
+                quick_five, quick_six = st.columns(2, gap="small")
+                with quick_five:
+                    if st.button("Crop deficit", key="quick_crop_et", width="stretch", help="Estimate the crop water deficit"):
+                        from basin_core.agronomics import calculate_crop_water_deficit
+                        sc = w.get(sid)
+                        c_res = calculate_crop_water_deficit(sc.series)
+                        direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
+                        st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
+                        st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
+                        direct_result_added = True
+                with quick_six:
+                    if st.button("Export readiness", key="quick_export", width="stretch", help="Check export readiness"):
+                        direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
 
         if direct_tool_run:
             t_name, t_args, u_msg = direct_tool_run

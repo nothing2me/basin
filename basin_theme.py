@@ -4,7 +4,16 @@ Native themes keep canvas dataframes, popup menus and plots in sync. The small
 browser-only shortcut uses the installed Streamlit menu instead of changing
 server config or reloading a user's workspace.
 """
+import base64
+from pathlib import Path
+
 import streamlit as st
+
+
+_TOPOGRAPHY_PATH = Path(__file__).resolve().parent / "assets" / "topographic_contours.png"
+_TOPOGRAPHY_DATA_URI = (
+    "data:image/png;base64," + base64.b64encode(_TOPOGRAPHY_PATH.read_bytes()).decode("ascii")
+)
 
 
 def apply_design():
@@ -29,6 +38,36 @@ body.basin-theme-light{
     --basin-border:#8796A0;--basin-info-text:#075985;--basin-success-text:#166534;
     --basin-warning-text:#92400E;--basin-danger-text:#991B1B;
     --basin-user-avatar-bg:#23856d;
+}
+/* BASIN topographic canvas: a self-contained, low-contrast hydrology texture.
+   Keeping the artwork in CSS avoids a network request and leaves application
+   structure, maps, charts, and controls completely untouched. */
+body.basin-theme-dark .stApp,
+body.basin-theme-dark [data-testid="stAppViewContainer"]{
+    background-color:#07151e!important;
+    background-image:
+        radial-gradient(circle at 50% 18%,rgba(24,72,91,.16),transparent 42%),
+        linear-gradient(rgba(4,17,25,.18),rgba(4,17,25,.34)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='760' viewBox='0 0 1200 760'%3E%3Cg fill='none' stroke='%23196580' stroke-width='1.15' opacity='.52'%3E%3Cpath d='M-35 96C-4 20 76-22 158 4c74 24 142 14 196 65 50 47 46 117-8 166-57 52-132 37-197 55-75 21-161 9-190-60-18-43-12-91 6-134Z'/%3E%3Cpath d='M4 105C29 48 91 19 153 38c57 18 112 10 154 49 38 36 33 88-9 126-43 39-103 29-153 43-58 17-120 7-142-45-14-32-12-71 1-106Z'/%3E%3Cpath d='M45 114c18-38 63-57 108-43 40 13 80 7 109 35 27 25 22 62-8 88-31 28-73 21-109 31-40 11-84 4-99-32-10-24-9-53-1-79Z'/%3E%3Cpath d='M83 124c12-22 38-33 66-25 24 8 49 4 67 21 16 15 13 37-5 53-19 17-45 13-67 19-25 7-51 2-60-20-6-14-6-32-1-48Z'/%3E%3Cpath d='M455 25c69-31 153-20 194 30 35 43 79 61 82 116 3 51-37 91-92 101-58 11-105-24-156-33-59-10-117-45-117-102 0-36 33-86 89-112Z'/%3E%3Cpath d='M480 58c52-23 114-15 145 22 27 33 60 46 62 87 2 38-28 68-69 76-43 8-78-18-117-25-44-8-87-34-87-76 0-27 25-64 66-84Z'/%3E%3Cpath d='M508 88c34-15 76-10 96 15 18 21 40 30 41 57 2 25-18 45-45 50-29 6-52-12-78-16-29-5-58-23-58-51 0-18 16-43 44-55Z'/%3E%3Cpath d='M535 116c19-9 43-6 55 8 10 13 22 18 23 33 0 15-10 26-26 29-16 3-30-6-45-9-17-3-33-13-33-29 0-10 10-25 26-32Z'/%3E%3Cpath d='M858-14c78 0 139 41 153 103 13 54 44 89 20 140-23 47-78 63-131 45-56-19-81-70-121-104-46-39-74-101-43-150 19-31 58-34 122-34Z'/%3E%3Cpath d='M865 25c59 0 105 31 115 77 10 41 33 67 15 105-17 36-58 47-98 34-42-14-61-52-91-78-35-29-56-76-33-113 15-23 44-25 92-25Z'/%3E%3Cpath d='M873 66c39 0 69 20 76 51 7 27 22 44 10 69-12 24-39 31-65 23-28-10-40-35-60-52-23-19-37-50-22-74 10-16 29-17 61-17Z'/%3E%3Cpath d='M881 105c22 0 39 12 43 29 4 15 12 25 5 39-6 13-22 18-37 13-16-5-23-20-34-29-13-11-21-29-12-42 5-9 16-10 35-10Z'/%3E%3Cpath d='M1090 213c56-31 123-26 157 14 30 36 67 50 69 96 1 42-32 74-78 80-48 7-85-23-128-32-49-10-96-39-94-86 1-29 29-54 74-72Z'/%3E%3Cpath d='M1106 246c40-22 89-19 113 10 22 25 48 36 49 69 1 30-23 53-56 57-34 5-61-16-92-23-35-7-69-28-67-61 1-21 20-39 53-52Z'/%3E%3Cpath d='M1119 279c25-14 55-12 70 6 14 16 30 22 31 43 0 19-15 33-35 36-22 3-38-10-57-14-22-5-43-18-42-39 0-13 12-24 33-32Z'/%3E%3Cpath d='M109 404c66-40 149-34 191 14 37 42 82 57 86 112 4 51-33 91-87 101-58 10-105-22-157-29-60-9-120-42-123-98-2-36 36-74 90-100Z'/%3E%3Cpath d='M134 438c50-30 112-26 143 10 28 31 62 43 65 84 3 38-25 68-65 75-44 8-79-16-118-22-45-6-90-31-92-73-2-27 26-56 67-74Z'/%3E%3Cpath d='M163 472c33-20 74-17 95 7 18 21 41 28 43 55 2 26-17 45-44 50-29 5-52-11-78-14-30-5-60-21-61-49-1-18 18-37 45-49Z'/%3E%3Cpath d='M191 506c19-11 42-9 54 4 10 12 23 16 24 32 1 14-9 25-25 28-16 3-29-6-44-8-17-3-34-12-35-28 0-10 11-21 26-28Z'/%3E%3Cpath d='M520 391c64-16 133 9 157 61 21 45 55 72 44 120-10 45-54 69-103 63-52-6-84-44-127-65-50-25-89-70-70-117 12-29 47-49 99-62Z'/%3E%3Cpath d='M536 428c48-12 100 7 118 46 16 34 42 54 33 90-8 34-40 52-77 48-39-5-63-33-95-49-38-18-67-52-53-88 9-22 35-37 74-47Z'/%3E%3Cpath d='M555 465c31-8 66 4 78 30 10 23 27 36 21 60-5 22-27 34-51 32-26-3-42-22-63-33-25-12-44-34-35-58 6-14 23-25 50-31Z'/%3E%3Cpath d='M574 501c18-4 38 3 45 18 6 13 15 21 12 34-3 13-16 20-30 18-15-2-24-13-36-19-14-7-25-20-20-33 3-8 13-15 29-18Z'/%3E%3Cpath d='M836 455c57-37 131-36 172 4 36 34 77 45 85 94 7 45-23 83-70 97-51 14-98-10-145-12-54-2-111-26-119-75-5-31 30-78 77-108Z'/%3E%3Cpath d='M860 487c43-28 98-27 129 3 27 26 58 34 64 70 5 34-17 63-53 73-38 11-73-7-108-9-41-1-83-19-89-56-4-23 22-58 57-81Z'/%3E%3Cpath d='M886 520c28-18 65-18 85 2 18 17 39 23 43 47 4 22-11 41-35 48-25 7-48-5-72-6-27-1-55-13-59-37-2-16 15-39 38-54Z'/%3E%3Cpath d='M912 552c16-10 37-10 49 1 10 10 22 13 24 27 2 13-6 24-20 28-15 4-28-3-41-4-16 0-32-7-34-21-2-9 8-22 22-31Z'/%3E%3C/g%3E%3Cg fill='none' stroke='%232aa8ca' stroke-width='1.45' opacity='.58'%3E%3Cpath d='M-35 96C-4 20 76-22 158 4c74 24 142 14 196 65 50 47 46 117-8 166-57 52-132 37-197 55-75 21-161 9-190-60-18-43-12-91 6-134Z'/%3E%3Cpath d='M455 25c69-31 153-20 194 30 35 43 79 61 82 116 3 51-37 91-92 101-58 11-105-24-156-33-59-10-117-45-117-102 0-36 33-86 89-112Z'/%3E%3Cpath d='M109 404c66-40 149-34 191 14 37 42 82 57 86 112 4 51-33 91-87 101-58 10-105-22-157-29-60-9-120-42-123-98-2-36 36-74 90-100Z'/%3E%3Cpath d='M836 455c57-37 131-36 172 4 36 34 77 45 85 94 7 45-23 83-70 97-51 14-98-10-145-12-54-2-111-26-119-75-5-31 30-78 77-108Z'/%3E%3C/g%3E%3Cg fill='none' stroke='%2313465a' stroke-width='.9' opacity='.38' stroke-dasharray='5 10'%3E%3Cpath d='M313 320c71-48 135-55 191-24s104 35 163 0 136-39 203 1'/%3E%3Cpath d='M325 344c64-38 122-42 174-16s98 29 153 1 129-31 193 3'/%3E%3C/g%3E%3C/svg%3E")!important;
+    background-size:auto,auto,1200px 760px!important;
+    background-position:center top,center,center top!important;
+    background-attachment:fixed!important;
+}
+body.basin-theme-light .stApp,
+body.basin-theme-light [data-testid="stAppViewContainer"]{
+    background-image:
+        linear-gradient(rgba(247,250,252,.90),rgba(247,250,252,.94)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='760' viewBox='0 0 1200 760'%3E%3Cg fill='none' stroke='%232b7a9e' stroke-width='1.2' opacity='.22'%3E%3Cpath d='M-70 122C60 4 208 8 306 90s168 73 247-6 220-98 333-7 215 75 340-36'/%3E%3Cpath d='M-76 159C55 42 192 45 285 119s176 79 266-2 214-82 324-1 222 77 353-28'/%3E%3Cpath d='M-62 200C61 92 183 86 270 151s181 85 282 5 205-63 310 6 225 77 360-17'/%3E%3Cpath d='M38 684c70-97 166-127 253-75s151 53 214-22 178-110 269-42 177 69 251-11 137-83 221-43'/%3E%3Cpath d='M83 580c59-78 142-101 210-52s116 45 164-19 130-85 202-29 128 53 177-17 119-86 196-47 151 48 205-20'/%3E%3C/g%3E%3C/svg%3E")!important;
+    background-size:auto,1200px 760px!important;
+    background-position:center,center top!important;
+    background-attachment:fixed!important;
+}
+body.basin-theme-dark [data-testid="stVerticalBlockBorderWrapper"]{
+    background:color-mix(in srgb,var(--basin-surface-elevated) 91%,transparent);
+    box-shadow:0 12px 34px rgba(0,8,14,.10);
+}
+body.basin-theme-light [data-testid="stVerticalBlockBorderWrapper"]{
+    background:color-mix(in srgb,var(--basin-surface-elevated) 94%,transparent);
 }
 .block-container, [data-testid="stMainBlockContainer"]{padding:2.75rem 2.8rem 6.5rem!important;max-width:1560px}
 [data-testid="stAppDeployButton"], #MainMenu, [data-testid="stMainMenuButton"], .stDeployButton{display:none!important}
@@ -410,19 +449,19 @@ body.basin-theme-dark .basin-assistant-status strong{color:#7fe0ad!important}
 .basin-assistant-empty h2{font-size:1.25rem!important;line-height:1.28!important;letter-spacing:-.02em!important;margin:0 0 8px!important;font-weight:750!important;color:var(--basin-text-strong, #182127)!important}
 .basin-assistant-empty p{font-size:.84rem!important;line-height:1.55!important;margin:0!important;color:var(--basin-muted, #4D5C66)!important}
 .basin-assistant-mark-fallback{width:118px!important;height:118px!important;margin:30px auto 42px!important;border:2px solid #5da9bd!important;border-radius:24px!important;background:linear-gradient(135deg,color-mix(in srgb,#5da9bd 22%,transparent),color-mix(in srgb,#d5a94d 18%,transparent))!important;transform:rotate(45deg)!important;box-shadow:inset 0 0 0 7px color-mix(in srgb,#5da9bd 9%,transparent),0 12px 26px rgba(0,0,0,.14)!important}
-.st-key-assistant_guidance_shortcuts{margin:10px 0 16px!important;padding:11px!important;border:1px solid color-mix(in srgb,var(--basin-border, #8796A0) 54%,transparent)!important;border-radius:10px!important;background:color-mix(in srgb,var(--basin-surface, #F3F6FA) 42%,transparent)!important}
-.st-key-assistant_guidance_shortcuts [data-testid="stHorizontalBlock"]{gap:8px!important;margin-bottom:8px!important}
-.st-key-assistant_guidance_shortcuts [data-testid="stHorizontalBlock"]:last-child{margin-bottom:0!important}
+.st-key-assistant_guidance_shortcuts,.st-key-assistant_scenario_shortcuts{margin:10px 0 16px!important;padding:11px!important;border:1px solid color-mix(in srgb,var(--basin-border, #8796A0) 54%,transparent)!important;border-radius:10px!important;background:color-mix(in srgb,var(--basin-surface, #F3F6FA) 62%,transparent)!important;box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 5%,transparent)!important;backdrop-filter:blur(7px)!important}
+.st-key-assistant_guidance_shortcuts [data-testid="stHorizontalBlock"],.st-key-assistant_scenario_shortcuts [data-testid="stHorizontalBlock"]{gap:8px!important;margin-bottom:8px!important}
+.st-key-assistant_guidance_shortcuts [data-testid="stHorizontalBlock"]:last-child,.st-key-assistant_scenario_shortcuts [data-testid="stHorizontalBlock"]:last-child{margin-bottom:0!important}
 .st-key-quick_other_tools button,.st-key-quick_next_step button,.st-key-quick_simple_terms button,.st-key-quick_custom_q button{width:100%!important;min-height:44px!important;justify-content:flex-start!important;padding:8px 12px!important;border-radius:8px!important;border:1px solid color-mix(in srgb,var(--basin-border, #8796A0) 82%,transparent)!important;background:color-mix(in srgb,var(--basin-surface, #F3F6FA) 84%,transparent)!important;box-shadow:none!important;display:flex!important;align-items:center!important;gap:9px!important;transition:background .15s ease,border-color .15s ease,transform .12s ease!important;color:var(--basin-text-strong, #182127)!important}
 .st-key-quick_other_tools button p,.st-key-quick_next_step button p,.st-key-quick_simple_terms button p,.st-key-quick_custom_q button p{font-size:.75rem!important;line-height:1.2!important;white-space:nowrap!important;text-align:left!important;margin:0!important;color:var(--basin-text-strong, #182127)!important;-webkit-text-fill-color:var(--basin-text-strong, #182127)!important;font-weight:650!important}
 .st-key-quick_next_step button{border-color:color-mix(in srgb,#48a7c5 68%,var(--basin-border, #8796A0))!important;background:color-mix(in srgb,#48a7c5 10%,var(--basin-surface, #F3F6FA))!important}
 .st-key-quick_other_tools button:hover,.st-key-quick_next_step button:hover,.st-key-quick_simple_terms button:hover,.st-key-quick_custom_q button:hover{border-color:#48a7c5!important;background:color-mix(in srgb,#48a7c5 12%,var(--basin-surface, #F3F6FA))!important;transform:translateY(-1px)!important}
 .st-key-quick_other_tools button:focus-visible,.st-key-quick_next_step button:focus-visible,.st-key-quick_simple_terms button:focus-visible,.st-key-quick_custom_q button:focus-visible{outline:2px solid #48a7c5!important;outline-offset:2px!important}
-.st-key-quick_top1 button,.st-key-quick_compare button,.st-key-quick_concur button,.st-key-quick_ranking button,.st-key-quick_crop_et button,.st-key-quick_export button{width:100%!important;min-height:52px!important;justify-content:center!important;text-align:center!important;padding:7px 2px!important;margin-bottom:4px!important;border-radius:8px!important;border:1px solid color-mix(in srgb,var(--basin-border, #8796A0) 82%,transparent)!important;background:color-mix(in srgb,var(--basin-surface, #F3F6FA) 84%,transparent)!important;box-shadow:none!important;font-size:.67rem!important;font-weight:650!important;position:relative!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:4px!important;transition:background .15s ease,border-color .15s ease,transform .12s ease!important;color:var(--basin-text-strong, #182127)!important}
-.st-key-quick_top1 button p,.st-key-quick_compare button p,.st-key-quick_concur button p,.st-key-quick_ranking button p,.st-key-quick_crop_et button p,.st-key-quick_export button p{font-size:.66rem!important;line-height:1.15!important;white-space:normal!important;word-break:normal!important;text-align:center!important;margin:0!important;padding:0!important;color:var(--basin-text-strong, #182127)!important;-webkit-text-fill-color:var(--basin-text-strong, #182127)!important;font-weight:650!important}
-.st-key-quick_other_tools button::before,.st-key-quick_next_step button::before,.st-key-quick_simple_terms button::before,.st-key-quick_custom_q button::before,.st-key-quick_top1 button::before,.st-key-quick_compare button::before,.st-key-quick_concur button::before,.st-key-quick_ranking button::before,.st-key-quick_crop_et button::before,.st-key-quick_export button::before,.basin-guidance-label::before{content:""!important;display:block!important;flex:0 0 auto!important;width:18px!important;height:18px!important;background:#55aeca!important;-webkit-mask:var(--basin-assistant-icon) center/contain no-repeat!important;mask:var(--basin-assistant-icon) center/contain no-repeat!important}
-.st-key-quick_top1 button::before,.st-key-quick_compare button::before,.st-key-quick_concur button::before,.st-key-quick_ranking button::before,.st-key-quick_crop_et button::before,.st-key-quick_export button::before{width:20px!important;height:20px!important}
+.st-key-quick_top1 button,.st-key-quick_compare button,.st-key-quick_concur button,.st-key-quick_ranking button,.st-key-quick_crop_et button,.st-key-quick_export button{width:100%!important;min-height:46px!important;justify-content:flex-start!important;text-align:left!important;padding:8px 12px!important;margin-bottom:0!important;border-radius:8px!important;border:1px solid color-mix(in srgb,var(--basin-border, #8796A0) 82%,transparent)!important;background:color-mix(in srgb,var(--basin-surface, #F3F6FA) 84%,transparent)!important;box-shadow:none!important;font-size:.75rem!important;font-weight:650!important;position:relative!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:9px!important;transition:background .15s ease,border-color .15s ease,transform .12s ease!important;color:var(--basin-text-strong, #182127)!important}
+.st-key-quick_top1 button p,.st-key-quick_compare button p,.st-key-quick_concur button p,.st-key-quick_ranking button p,.st-key-quick_crop_et button p,.st-key-quick_export button p{font-size:.75rem!important;line-height:1.2!important;white-space:normal!important;word-break:normal!important;text-align:left!important;margin:0!important;padding:0!important;color:var(--basin-text-strong, #182127)!important;-webkit-text-fill-color:var(--basin-text-strong, #182127)!important;font-weight:650!important}
+.st-key-quick_other_tools button::before,.st-key-quick_next_step button::before,.st-key-quick_simple_terms button::before,.st-key-quick_custom_q button::before,.st-key-quick_top1 button::before,.st-key-quick_compare button::before,.st-key-quick_concur button::before,.st-key-quick_ranking button::before,.st-key-quick_crop_et button::before,.st-key-quick_export button::before,.basin-guidance-label::before,.basin-scenario-label::before{content:""!important;display:block!important;flex:0 0 auto!important;width:18px!important;height:18px!important;background:#55aeca!important;-webkit-mask:var(--basin-assistant-icon) center/contain no-repeat!important;mask:var(--basin-assistant-icon) center/contain no-repeat!important}
 .basin-guidance-label,.st-key-quick_next_step button{--basin-assistant-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8z'/%3E%3C/svg%3E")}
+.basin-scenario-label{--basin-assistant-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20V11h4v9M10 20V5h4v15M16 20v-6h4v6M2 20h20'/%3E%3C/svg%3E")}
 .st-key-quick_other_tools button{--basin-assistant-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-2.4 2.4-2.1-2.1a4 4 0 0 0 5 5l7.4 7.4a2 2 0 0 1-2.8 2.8l-7.4-7.4'/%3E%3Cpath d='m5 14-3.5 3.5a2.1 2.1 0 0 0 3 3L8 17'/%3E%3C/svg%3E")}
 .st-key-quick_simple_terms button{--basin-assistant-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h9l4 4v14H6z'/%3E%3Cpath d='M14 3v5h5M9 12h7M9 16h5'/%3E%3C/svg%3E")}
 .st-key-quick_custom_q button{--basin-assistant-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 11a8 8 0 0 1-8 8H7l-4 3 1.4-5A8 8 0 1 1 21 11Z'/%3E%3Cpath d='M8 11h.01M12 11h.01M16 11h.01'/%3E%3C/svg%3E")}
@@ -449,7 +488,7 @@ body.basin-theme-dark .basin-assistant-status strong{color:#7fe0ad!important}
 .basin-suggested-label{font-size:.72rem!important;font-weight:750!important;letter-spacing:.055em!important;color:var(--basin-muted, #4D5C66)!important;margin:11px 0 7px!important;text-transform:uppercase!important}
 .basin-guidance-label{display:flex!important;align-items:center!important;gap:7px!important}
 .basin-guidance-label::before{width:15px!important;height:15px!important}
-.st-key-assistant_guidance_shortcuts .basin-guidance-label{margin:0 0 9px!important;white-space:nowrap!important}
+.st-key-assistant_guidance_shortcuts .basin-guidance-label,.st-key-assistant_scenario_shortcuts .basin-scenario-label{display:flex!important;align-items:center!important;gap:7px!important;margin:0 0 9px!important;white-space:normal!important}
 .st-key-assistant_suggestions{position:sticky!important;bottom:0!important}
 .st-key-assistant_suggestions{padding:2px 0 0!important}
 .basin-assistant-trust{font-size:.7rem!important;line-height:1.45!important;text-align:center!important;color:var(--basin-muted, #4D5C66)!important;margin:8px 0 12px!important}
@@ -486,6 +525,158 @@ body.basin-theme-dark .basin-assistant-status strong{color:#7fe0ad!important}
 .basin-step-name{font-size:.84rem;font-weight:650;line-height:1.2;margin:1px 0}
 .basin-step-status{font-size:.70rem;opacity:.75}
 .basin-step-arrow{opacity:.35;font-size:.85rem;user-select:none}
+
+/* Terrain-aware surfaces: preserve the map texture at the page edges while
+   protecting dense analysis content with tinted instrument-glass panels. */
+body.basin-theme-dark [data-testid="stVerticalBlockBorderWrapper"],
+body.basin-theme-dark [data-basin-glass-surface="true"],
+/* Streamlit 1.5x renders border=True directly on this padded block class. */
+body.basin-theme-dark [data-testid="stVerticalBlock"].st-emotion-cache-1qu4don,
+body.basin-theme-dark [data-testid="stExpander"]{
+    background:rgba(7,22,31,.93)!important;
+    border-color:rgba(120,170,188,.30)!important;
+    box-shadow:0 14px 38px rgba(0,8,13,.18)!important;
+    backdrop-filter:blur(8px) saturate(108%)!important;
+}
+body.basin-theme-dark .stTabs [data-baseweb="tab-panel"],
+body.basin-theme-dark [data-testid="stTabPanel"]{
+    background:rgba(7,22,31,.88)!important;
+    border:1px solid rgba(120,170,188,.22)!important;
+    border-radius:0 0 12px 12px!important;
+    padding:16px 18px 20px!important;
+    box-shadow:0 16px 42px rgba(0,8,13,.16)!important;
+    backdrop-filter:blur(8px) saturate(105%)!important;
+}
+body.basin-theme-dark [data-testid="stPlotlyChart"]{
+    background:rgba(6,20,29,.88)!important;
+    border:1px solid rgba(120,170,188,.20)!important;
+    border-radius:12px!important;
+    padding:8px!important;
+    box-sizing:border-box!important;
+    backdrop-filter:blur(7px)!important;
+}
+body.basin-theme-dark [data-testid="stMetric"]{
+    background:rgba(10,28,38,.90)!important;
+    border-color:rgba(120,170,188,.25)!important;
+    backdrop-filter:blur(7px)!important;
+}
+body.basin-theme-dark [data-testid="stDataFrame"],
+body.basin-theme-dark [data-testid="stDataEditor"]{
+    background:rgba(9,25,34,.94)!important;
+    border:1px solid rgba(120,170,188,.24)!important;
+    box-shadow:0 14px 34px rgba(0,8,13,.16)!important;
+}
+
+/* Purpose-built, monochrome section symbols replace platform-dependent emoji. */
+.basin-section-heading{
+    display:flex!important;align-items:center!important;gap:9px!important;
+    margin:.1rem 0 .55rem!important;color:var(--basin-text-strong,#f7fafc)!important;
+    font-size:1rem!important;font-weight:750!important;line-height:1.3!important;
+    letter-spacing:-.012em!important
+}
+.basin-section-heading::before,
+button[role="tab"][data-basin-tool-icon]::before{
+    content:""!important;display:inline-block!important;flex:0 0 auto!important;
+    width:18px!important;height:18px!important;background:#55b6cf!important;
+    -webkit-mask:var(--basin-tool-icon) center/contain no-repeat!important;
+    mask:var(--basin-tool-icon) center/contain no-repeat!important
+}
+.basin-section-heading--focus{
+    --basin-tool-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='7'/%3E%3Ccircle cx='12' cy='12' r='2.5'/%3E%3Cpath d='M12 2v3M12 19v3M2 12h3M19 12h3'/%3E%3C/svg%3E")
+}
+.basin-section-heading--priority{
+    --basin-tool-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M5 3v18M12 3v18M19 3v18M2 8h6M9 15h6M16 10h6'/%3E%3Ccircle cx='5' cy='8' r='2' fill='black' stroke='none'/%3E%3Ccircle cx='12' cy='15' r='2' fill='black' stroke='none'/%3E%3Ccircle cx='19' cy='10' r='2' fill='black' stroke='none'/%3E%3C/svg%3E")
+}
+.basin-section-heading--rainfall,
+button[role="tab"][data-basin-tool-icon="rainfall"]{
+    --basin-tool-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 15h11a4 4 0 0 0 .4-8 6 6 0 0 0-11-1.5A4.5 4.5 0 0 0 6 15Z'/%3E%3Cpath d='M8 18v3M12 18v3M16 18v3'/%3E%3C/svg%3E")
+}
+.basin-section-heading--storage,
+button[role="tab"][data-basin-tool-icon="storage"]{
+    --basin-tool-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 4h16v15H4z'/%3E%3Cpath d='M4 13c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 4-1.5'/%3E%3C/svg%3E")
+}
+.basin-section-heading--agronomics,
+button[role="tab"][data-basin-tool-icon="agronomics"]{
+    --basin-tool-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21V9M12 16c-4 0-7-2-7-6 4 0 7 2 7 6Zm0-3c4 0 7-2 7-6-4 0-7 2-7 6Z'/%3E%3C/svg%3E")
+}
+button[role="tab"][data-basin-tool-icon="evidence"]{
+    --basin-tool-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h9l4 4v14H6z'/%3E%3Cpath d='M14 3v5h5M9 12h7M9 16h7'/%3E%3C/svg%3E")
+}
+button[role="tab"][data-basin-tool-icon="edit"]{
+    --basin-tool-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 16-1 5 5-1L20 8l-4-4zM14 6l4 4'/%3E%3C/svg%3E")
+}
+button[role="tab"][data-basin-tool-icon="wildfire"]{
+    --basin-tool-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2c1 5-3 6-1 10 1-2 3-3 5-4 2 2 3 5 2 8-1 4-4 6-8 6s-7-3-7-7c0-4 3-7 6-10 0 3 1 4 3 5'/%3E%3C/svg%3E")
+}
+button[role="tab"][data-basin-tool-icon]{display:flex!important;align-items:center!important;gap:7px!important}
+button[role="tab"][data-basin-tool-icon]::before{width:15px!important;height:15px!important}
+body.basin-theme-light .basin-section-heading::before,
+body.basin-theme-light button[role="tab"][data-basin-tool-icon]::before{background:#1f708d!important}
+body.basin-theme-dark [data-testid="stTabs"] [data-testid="stIconMaterial"],
+body.basin-theme-dark [data-testid="stTabs"] [role="img"][aria-label$=" icon"]{
+    color:#55b6cf!important;
+}
+body.basin-theme-light [data-testid="stTabs"] [data-testid="stIconMaterial"],
+body.basin-theme-light [data-testid="stTabs"] [role="img"][aria-label$=" icon"]{
+    color:#1f708d!important;
+}
+</style>""")
+    # Override the earlier lightweight fallback with the authored terrain
+    # texture. The transparent PNG is seamless, local, and generated from a
+    # deterministic multi-scale elevation field in scripts/.
+    st.html(f"""<style>
+body.basin-theme-dark .stApp,
+body.basin-theme-dark [data-testid="stAppViewContainer"]{{
+    background-color:#06141d!important;
+    background-image:
+        radial-gradient(circle at 50% 14%,rgba(27,76,94,.08),transparent 40%),
+        linear-gradient(rgba(3,16,24,.48),rgba(3,16,24,.60)),
+        url("{_TOPOGRAPHY_DATA_URI}")!important;
+    background-size:auto,auto,1800px 1000px!important;
+    background-position:center top,center,center top!important;
+    background-attachment:fixed!important;
+}}
+body.basin-theme-light .stApp,
+body.basin-theme-light [data-testid="stAppViewContainer"]{{
+    background-color:#edf1f1!important;
+    background-image:
+        linear-gradient(rgba(245,247,247,.90),rgba(239,243,243,.94)),
+        url("{_TOPOGRAPHY_DATA_URI}")!important;
+    background-size:auto,1800px 1000px!important;
+    background-position:center,center top!important;
+    background-attachment:fixed!important;
+    background-blend-mode:normal,luminosity!important;
+}}
+body.basin-theme-dark .st-key-assistant_drawer{{
+    background-color:#091b25!important;
+    background-image:
+        radial-gradient(circle at 52% 18%,rgba(34,91,108,.12),transparent 42%),
+        linear-gradient(rgba(5,18,26,.72),rgba(5,18,26,.84)),
+        url("{_TOPOGRAPHY_DATA_URI}")!important;
+    background-size:auto,auto,900px 500px!important;
+    background-position:center top,center,center top!important;
+    background-attachment:local!important;
+}}
+body.basin-theme-light .st-key-assistant_drawer{{
+    background-color:#eef2f2!important;
+    background-image:
+        linear-gradient(rgba(248,249,249,.84),rgba(239,243,243,.91)),
+        url("{_TOPOGRAPHY_DATA_URI}")!important;
+    background-size:auto,900px 500px!important;
+    background-position:center,center top!important;
+    background-attachment:local!important;
+    background-blend-mode:normal,luminosity!important;
+}}
+body.basin-theme-dark .st-key-assistant_conversation{{
+    background:rgba(6,20,29,.88)!important;
+    border-color:rgba(110,169,189,.34)!important;
+    backdrop-filter:blur(9px) saturate(106%)!important;
+}}
+body.basin-theme-light .st-key-assistant_conversation{{
+    background:rgba(250,251,251,.92)!important;
+    border-color:rgba(71,91,101,.28)!important;
+    backdrop-filter:blur(9px) saturate(96%)!important;
+}}
 </style>""")
     st.html("""<script>(() => {
 const syncBasinTheme = () => {
@@ -506,6 +697,47 @@ if (app) {
   window.__basinThemeObserver.observe(app, {attributes:true, attributeFilter:['class','style']});
 }
 window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', syncBasinTheme);
+
+// Attach stable custom symbols to dynamic Streamlit tabs without placing
+// decorative characters in their accessible names.
+const basinTabIcons = new Map([
+  ['Storage Drawdown & Water System', 'storage'],
+  ['Agronomics & Wildfire Risk', 'agronomics'],
+  ['Rainfall Deficit & Historical Context', 'rainfall'],
+  ['Edit Rainfall & Refine Shortlist', 'edit'],
+  ['Evidence & Daily Values', 'evidence'],
+  ['Crop Water Deficit (ETc)', 'agronomics'],
+  ['Wildfire Risk (KBDI)', 'wildfire'],
+]);
+const decorateBasinTabs = () => {
+  document.querySelectorAll('button[role="tab"]').forEach(tab => {
+    const label = (tab.textContent || '').replace(/\\s+/g, ' ').trim();
+    const icon = basinTabIcons.get(label);
+    if (icon) tab.dataset.basinToolIcon = icon;
+    else delete tab.dataset.basinToolIcon;
+  });
+};
+
+// Streamlit's bordered-container test id changed in newer releases. Mark the
+// actual padded, bordered vertical blocks so the readability layer remains
+// stable across supported Streamlit versions.
+const decorateBasinGlassSurfaces = () => {
+  document.querySelectorAll('[data-testid="stVerticalBlock"]').forEach(block => {
+    const style = getComputedStyle(block);
+    const borderWidth = Number((style.borderTopWidth || '0').replace('px', ''));
+    const isBordered = style.borderTopStyle !== 'none' && borderWidth > 0;
+    if (isBordered) block.dataset.basinGlassSurface = 'true';
+    else delete block.dataset.basinGlassSurface;
+  });
+};
+window.__basinTabIconObserver?.disconnect();
+decorateBasinTabs();
+decorateBasinGlassSurfaces();
+window.__basinTabIconObserver = new MutationObserver(() => {
+  decorateBasinTabs();
+  decorateBasinGlassSurfaces();
+});
+window.__basinTabIconObserver.observe(document.body, {childList:true, subtree:true});
 
 // Instant zero-latency edge drawer motion controller
 if (!window.__basinDrawerControllerAttached) {

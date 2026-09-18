@@ -16,7 +16,9 @@ def test_assistant_drawer_is_tall_with_visible_shortcuts():
     assert 'st.container(height=520, border=True, key="assistant_conversation")' in ui_source
     assert '"Suggested analyses"' not in ui_source
     assert 'Suggested questions' in ui_source
-    assert 'quick_one, quick_two, quick_three, quick_four, quick_five, quick_six = st.columns(6, gap="small")' in ui_source
+    assert 'st.container(key="assistant_scenario_shortcuts")' in ui_source
+    assert 'quick_one, quick_two = st.columns(2, gap="small")' in ui_source
+    assert 'quick_five, quick_six = st.columns(2, gap="small")' in ui_source
     assert 'st.container(key="assistant_suggestions")' in ui_source
     assert "width:190px!important;height:190px!important" in theme_source
     assert 'position:sticky!important;bottom:0!important' in theme_source
@@ -62,7 +64,7 @@ def test_embedded_drawer_chat_query(workspace, monkeypatch):
     assert any("Uses this workspace’s data" in m.value for m in app.markdown)
     assert app.button(key="quick_top1").label == "Top scenario"
     assert app.button(key="quick_compare").label == "Compare"
-    assert app.button(key="quick_concur").label == "Stress"
+    assert app.button(key="quick_concur").label == "Station stress"
     sid = workspace.selected[0]
     app.chat_input(key="assistant_chat_input").set_value(f"Describe scenario {sid}").run()
     assert not app.exception

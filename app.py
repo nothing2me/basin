@@ -1832,7 +1832,10 @@ elif page == "Workspace":
     col_settings, col_presets = st.columns(2, gap="medium")
     with col_settings:
         with st.container(border=True):
-            st.markdown("##### 🎯 Analysis Focus & Presentation Settings")
+            st.markdown(
+                '<h5 class="basin-section-heading basin-section-heading--focus">Analysis Focus &amp; Presentation Settings</h5>',
+                unsafe_allow_html=True,
+            )
             st.caption("Choose what to focus on first. Tailors which measurements and diagnostic tools are prioritized in Step 3 Review. Does not alter mathematical calculations or export data.")
             run_focus_goal = st.selectbox(
                 "What are you trying to do?", list(GOALS),
@@ -1871,7 +1874,10 @@ elif page == "Workspace":
     with col_presets:
         with tour_target("sidebar_presets"):
             with st.container(border=True):
-                st.markdown("##### ⚖️ Community Priority Presets & Ranking Weights")
+                st.markdown(
+                    '<h5 class="basin-section-heading basin-section-heading--priority">Community Priority Presets &amp; Ranking Weights</h5>',
+                    unsafe_allow_html=True,
+                )
                 st.caption("Set illustrative community priorities before building scenarios or adjust to rerank existing candidates. The shortlist reflects these operational priorities.")
                 preset_options = ["Custom weights"] + list(COMMUNITY_PRESETS.keys())
                 matched = "Custom weights"
@@ -1932,7 +1938,10 @@ elif page == "Workspace":
     with c_gen:
         with tour_target("sidebar_generator"):
             with st.container(border=True):
-                st.markdown("##### 🌧️ Build rainfall scenarios")
+                st.markdown(
+                    '<h5 class="basin-section-heading basin-section-heading--rainfall">Build rainfall scenarios</h5>',
+                    unsafe_allow_html=True,
+                )
                 st.caption("Define observation stations, historical search window, and drought stress parameters.")
                 col_gen_scope, col_gen_params = st.columns(2, gap="medium")
                 with col_gen_scope:
@@ -2464,7 +2473,10 @@ elif page == "Review":
                 with st.container(border=True):
                     st.caption("Optional illustrative storage experiment.")
 
-                    st.markdown("##### 💧 Water Storage System")
+                    st.markdown(
+                        '<h5 class="basin-section-heading basin-section-heading--storage">Water Storage System</h5>',
+                        unsafe_allow_html=True,
+                    )
                     sys_options = list(SYSTEM_PRESETS.keys()) + ["Custom System Configuration..."]
                     active_selection = w.water_system_selection
                     selected_label = SYSTEM_ID_TO_LABEL.get(active_selection.identifier, "Custom System Configuration...")
@@ -2809,9 +2821,15 @@ elif page == "Review":
 
         with tab_agro:
             st.caption("Decision-support estimates for crop irrigation deficit and wildfire stress.")
-            c_agro_tab, c_fire_tab = st.tabs(["🌾 Crop Water Deficit (ETc)", "🔥 Wildfire Risk (KBDI)"])
+            c_agro_tab, c_fire_tab = st.tabs([
+                ":material/eco: Crop Water Deficit (ETc)",
+                ":material/local_fire_department: Wildfire Risk (KBDI)",
+            ])
             with c_agro_tab:
-                st.markdown("##### 🌾 Crop Evapotranspiration & Irrigation Deficit")
+                st.markdown(
+                    '<h5 class="basin-section-heading basin-section-heading--agronomics">Crop Evapotranspiration &amp; Irrigation Deficit</h5>',
+                    unsafe_allow_html=True,
+                )
                 c1, c2 = st.columns([2, 1])
                 crop_choice = c1.selectbox("Crop Type", list(CROP_COEFFICIENTS.keys()), key=f"crop_sel_{s.id}_{w.id}")
                 crop_def = calculate_crop_water_deficit(s.series, crop_name=crop_choice)
