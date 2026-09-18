@@ -2647,6 +2647,8 @@ class VectorFlow:
         return self.y - height >= self.BOTTOM
 
     def break_page(self) -> None:
+        if self.y >= self.TOP + 15:
+            return
         self.page = self.doc.add_page()
         self.doc.rect(self.page, 36, 742, 540, 26, fill=(0.06, 0.09, 0.16))
         self.doc.text(self.page, 50, 750, "BASIN * TECHNICAL ENGINEERING APPENDIX (CONTINUED)",
@@ -2663,7 +2665,7 @@ class VectorFlow:
         self.y -= height
 
     def heading(self, text: str, size: float = 9.5) -> None:
-        self.ensure(size + 14)
+        self.ensure(size + 30)
         self.doc.text(self.page, self.LEFT, self.y - size, text, font="/F2", size=size,
                       color=(0.06, 0.09, 0.16))
         self.y -= size + 8
@@ -2679,19 +2681,18 @@ class VectorFlow:
             self.y -= leading
 
     def callout_box(self, title: str, lines: list[str], fill=(0.99, 0.98, 0.94), stroke=(0.85, 0.65, 0.15),
-                    title_col=(0.7, 0.4, 0.05), text_col=(0.3, 0.25, 0.1)) -> None:
-        leading = 11.0
+                    title_col=(0.7, 0.4, 0.05), text_col=(0.3, 0.25, 0.1), size: float = 6.8, leading: float = 9.0) -> None:
         wrapped_lines: list[str] = []
         for line in lines:
-            wrapped_lines.extend(wrap_text(line, "/F1", 7.2, self.WIDTH - 24))
-        h = 24.0 + len(wrapped_lines) * leading
-        self.ensure(h + 8)
+            wrapped_lines.extend(wrap_text(line, "/F1", size, self.WIDTH - 24))
+        h = 18.0 + len(wrapped_lines) * leading
+        self.ensure(h + 6)
         y_bottom = self.y - h
         self.doc.rect(self.page, self.LEFT, y_bottom, self.WIDTH, h, fill=fill, stroke=stroke, line_width=1.0)
-        self.doc.text(self.page, self.LEFT + 12, self.y - 14, title, font="/F2", size=8.5, color=title_col)
+        self.doc.text(self.page, self.LEFT + 12, self.y - 13, title, font="/F2", size=8.0, color=title_col)
         for idx, line in enumerate(wrapped_lines):
-            self.doc.text(self.page, self.LEFT + 12, self.y - 26 - idx * leading, line, font="/F1", size=7.2, color=text_col)
-        self.y -= h + 8
+            self.doc.text(self.page, self.LEFT + 12, self.y - 23 - idx * leading, line, font="/F1", size=size, color=text_col)
+        self.y -= h + 6
 
     def metric_cards(self, cards: list[tuple[str, str, str, tuple[float, float, float]]]) -> None:
         """Draw 3 metric cards horizontally."""
@@ -2766,7 +2767,7 @@ class VectorFlow:
 
     def table_row(self, cells, index: int, size: float = 6.8) -> None:
         """cells: sequence of (text, font) aligned with the current header columns."""
-        leading = size + 2.4
+        leading = size + 2.0
         wrapped = [
             wrap_text(text, font, size, width - 6)
             for (text, font), (_, _, width) in zip(cells, self._columns)
@@ -3314,7 +3315,7 @@ def build_fallback_pdf(
         "• Empirical percentile: historical shortfall rank relative to matched observation windows.\n"
         "• Reference window gating (n >= 5): minimum benchmark sample size required for comparative evaluation, ensuring evaluations reflect statistically valid drought analogs rather than isolated outliers.\n"
         "• Composite score: multi-criteria weighted rank score prioritizing scenarios within each cluster based on volume, duration, and summer timing.",
-        size=6.8, color=(0.35, 0.4, 0.48),
+        size=6.5, color=(0.35, 0.4, 0.48),
     )
     flow.heading("SHORTLISTED CANDIDATE SCENARIOS (Accepted for Planning Analysis)", size=8.0)
     scenario_columns = [
@@ -3684,9 +3685,7 @@ def build_fallback_pdf(
         flow.paragraph("No evidence records are attached to this analysis.", color=(0.45, 0.5, 0.55))
     for record in evidence_records:
         flow.paragraph(f"{record.get('id', 'unidentified')}: {record.get('title', 'Untitled')}", font="/F2", size=7.2)
-        flow.paragraph(f"{record.get('kind', 'unspecified')} * {record.get('review_status', 'unspecified')} * {record.get('publisher', 'publisher not supplied')}", size=6.8, color=(0.35, 0.4, 0.48))
-        flow.paragraph(f"Source: {record.get('source_locator', 'not supplied')}; source date: {record.get('source_date') or 'not supplied'}.", size=6.8, color=(0.35, 0.4, 0.48))
-        flow.paragraph(f"Geography: {record.get('geographic_scope', 'not supplied')}. Units: {record.get('units') or 'not applicable'}.", size=6.8, color=(0.35, 0.4, 0.48))
+        flow.paragraph(f"{record.get('kind', 'unspecified')} * {record.get('review_status', 'unspecified')} * {record.get('publisher', 'publisher not supplied')} | Source: {record.get('source_locator', 'not supplied')} ({record.get('source_date') or 'not supplied'}) | Scope: {record.get('geographic_scope', 'not supplied')}", size=6.5, color=(0.35, 0.4, 0.48))
         flow.paragraph(record.get("description", ""), size=6.8)
         if include_notes and record.get("private_note"):
             flow.paragraph(f"Private annotation: {record['private_note']}", size=6.8, color=(0.7, 0.4, 0.05))
@@ -3707,8 +3706,9 @@ def build_fallback_pdf(
             flow.paragraph("Private annotation recorded (omitted: export privacy setting excludes private notes).", size=6.8, color=(0.45, 0.5, 0.55))
 
     # -------------------------------------------------------------------------
-    # SECTION 7: LIMITATIONS
+    # SECTION 7: LIMITATIONS & SECTION 8: VERIFICATION
     # -------------------------------------------------------------------------
+    flow.ensure(210)
     flow.heading("7. LIMITATIONS", size=9.5)
     flow.heading("MODELING BOUNDARIES AND LIMITATIONS", size=8.5)
     flow.paragraph("* NOT a safe-yield, firm-yield, or delivery forecast; uncalibrated exploratory screening model.", size=7.0)
@@ -3720,7 +3720,6 @@ def build_fallback_pdf(
     # -------------------------------------------------------------------------
     # SECTION 8: VERIFICATION AND HASHES
     # -------------------------------------------------------------------------
-    flow.ensure(140)
     flow.heading("8. VERIFICATION AND HASHES", size=9.5)
     provenance_lines = [
         (f"* Station Proxies: NOAA GHCN-Daily {stations}.", "/F1"),
