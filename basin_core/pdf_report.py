@@ -1520,7 +1520,7 @@ def render_html_report(
     audience_label = getattr(analysis_context, "audience_label", "Region N planning area")
     county_label = getattr(analysis_context, "county_label", "All 11 Region N counties")
     context_boundary = (
-        "Note: naming this audience does not select representative gauges or calibrate the storage experiment — those are set independently, below."
+        "Note: Audience naming is document metadata and does not select representative gauges or calibrate storage — those reflect the regional system defined below."
     )
 
     manifest = getattr(workspace.source, "manifest", {}) or {}
@@ -3248,7 +3248,7 @@ def build_fallback_pdf(
     flow.heading("1. EXECUTIVE SUMMARY", size=10.0)
     flow.paragraph(
         f"Prepared for: {audience_label} | Service area: {county_label}. "
-        "Note: naming this audience does not select representative gauges or calibrate the storage experiment — those are set independently, below.",
+        "Note: Audience naming is document metadata and does not select representative gauges or calibrate storage — those reflect the regional system defined below.",
         size=7.0,
     )
     flow.paragraph(
