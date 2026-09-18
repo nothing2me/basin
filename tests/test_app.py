@@ -15,7 +15,7 @@ def test_searchable_station_picker_and_direct_date_range(tmp_path, monkeypatch):
     app.sidebar.radio[0].set_value("Workspace").run()
 
     station_picker = next(widget for widget in app.multiselect if widget.label == "Stations")
-    assert set(station_picker.value) == {"USW00012924", "USW00012912", "USW00012921"}
+    assert set(station_picker.value) == {"USW00012924", "USW00012926", "USC00412011", "USC00416739"}
     assert [widget.label for widget in app.date_input] == ["Dates"]
     assert not app.time_input
 

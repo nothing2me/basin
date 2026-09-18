@@ -8,6 +8,8 @@ hydrologically representative of that community.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import re
+
 
 
 REGION_N_COUNTIES = (
@@ -41,6 +43,32 @@ DECISION_USES = {
     "provider_discussion": "Support a provider or board discussion",
     "other": "Other planning use",
 }
+
+
+def is_placeholder_text(text: str | None) -> bool:
+    """Detect test/placeholder strings like 'asdf', 'ewrwewe', 'fsdf', or random consonant clusters."""
+    if not text or not text.strip():
+        return True
+    cleaned = re.sub(r"[^a-zA-Z]", "", text).strip().lower()
+    if not cleaned:
+        return True
+    if len(cleaned) < 3:
+        return True
+    common_placeholders = {
+        "asdf", "qwer", "zxcv", "test", "demo", "placeholder", "dummy", "fsdf",
+        "ewrwewe", "qwerty", "temp", "sample", "fake", "abcd", "xyz", "foo", "bar",
+        "xxx", "yyy", "zzz", "aaa", "bbb",
+    }
+    if cleaned in common_placeholders:
+        return True
+    if len(set(cleaned)) == 1:
+        return True
+    if len(set(cleaned)) <= 2 and len(cleaned) >= 4:
+        return True
+    # Excessive consonant cluster (5 or more consecutive consonants without vowels)
+    if re.search(r"[bcdfghjklmnpqrstvwxyz]{5,}", cleaned):
+        return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -113,8 +141,14 @@ class AnalysisContext:
     def audience_label(self) -> str:
         if self.scope == "region_wide":
             return "Region N planning area"
-        place = f" · {self.community}" if self.community else ""
-        return f"{self.organization_name}{place}"
+        org = self.organization_name
+        comm = self.community
+        if is_placeholder_text(org):
+            org = "Region N Planning Entity (Unspecified)"
+        if is_placeholder_text(comm):
+            comm = ""
+        place = f" · {comm}" if comm else ""
+        return f"{org}{place}"
 
     @property
     def county_label(self) -> str:

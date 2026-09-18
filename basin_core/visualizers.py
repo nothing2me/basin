@@ -128,7 +128,19 @@ def rainfall_shortfall_figure(
                    dict(size=14, symbol="circle-open", color="#E69F00", line=dict(width=2)), rank=101)
         add_points(panel[panel["ID"] == focused_id], "Scenario details", "focus",
                    dict(size=18, symbol="square-open", color="#E69F00", line=dict(width=2)), focus=True)
-        fig.update_xaxes(range=[-extent, extent], visible=False, fixedrange=True, showgrid=False, zeroline=False, showticklabels=False, ticks="", row=row, col=col)
+        fig.update_xaxes(
+            range=[-extent, extent],
+            visible=True,
+            fixedrange=True,
+            showgrid=False,
+            zeroline=False,
+            showticklabels=True,
+            tickmode="array",
+            tickvals=[0],
+            ticktext=[f"{duration} d window"],
+            title_text="Duration Clusters (Days)" if row == rows else None,
+            row=row, col=col,
+        )
         fig.update_yaxes(range=y_range, showgrid=True, zeroline=False,
                          title_text=f"Total rainfall deficit ({unit_label})" if col == 1 else None,
                          showticklabels=col == 1, row=row, col=col)

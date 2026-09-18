@@ -1253,13 +1253,22 @@ def _render_next_steps_guide(workspace) -> str:
         )
 
 
+def _no_scenarios_guidance() -> str:
+    return (
+        "⚠️ **No active analysis run**: You have not generated any scenarios yet in this session.\n\n"
+        "To generate drought scenarios:\n"
+        "1. Go to **Step 2: Scenario Builder** to configure priority weights and click **'Create rainfall scenarios'**.\n"
+        "2. Or on **Step 1: Data Dashboard**, click **'Try an example'** to explore a 6-candidate demonstration set."
+    )
+
+
 def _render_workspace_summary(workspace) -> str:
     """Render a comprehensive overview of the loaded run and shortlisted scenarios."""
     import calendar
     scenarios = getattr(workspace, "scenarios", [])
     selected_ids = getattr(workspace, "selected", [])
     if not scenarios:
-        return "⚠️ **No scenarios in workspace**: Generate or load scenarios first."
+        return _no_scenarios_guidance()
 
     total_candidates = len(scenarios)
     shortlist_count = len(selected_ids)
@@ -1417,6 +1426,14 @@ def semantic_query_route(workspace, prompt: str) -> str:
             id_matches.append(s.id)
     shortlist_text = ", ".join(list(getattr(workspace, "selected", []))[:8]) or "none"
 
+    if id_matches and not getattr(workspace, "scenarios", None):
+        return (
+            f"⚠️ **No active analysis run**: Scenario **{id_matches[0]}** cannot be inspected because no scenarios have been generated in this session yet.\n\n"
+            "To generate drought scenarios:\n"
+            "1. Go to **Step 2: Scenario Builder** to configure priority weights and click **'Create rainfall scenarios'**.\n"
+            "2. Or on **Step 1: Data Dashboard**, click **'Try an example'** to explore a 6-candidate demonstration set."
+        )
+
     def clarify(message: str) -> str:
         return f"⚠️ **Please clarify**: {message}"
 
@@ -1470,7 +1487,9 @@ def semantic_query_route(workspace, prompt: str) -> str:
             "which scenario is the worst", "what is the worst scenario", "which is the worst"
         ])
     )
-    if is_worst_query and getattr(workspace, "scenarios", None):
+    if is_worst_query:
+        if not getattr(workspace, "scenarios", None):
+            return _no_scenarios_guidance()
         candidates = getattr(workspace, "selected", []) or [s.id for s in workspace.scenarios]
         target_id = max(candidates, key=lambda sid: workspace.get(sid).features.get("deficit_mm", 0.0))
         target_s = workspace.get(target_id)
@@ -1483,7 +1502,9 @@ def semantic_query_route(workspace, prompt: str) -> str:
             "which scenario is the longest", "what is the longest scenario"
         ])
     )
-    if is_longest_query and getattr(workspace, "scenarios", None):
+    if is_longest_query:
+        if not getattr(workspace, "scenarios", None):
+            return _no_scenarios_guidance()
         candidates = getattr(workspace, "selected", []) or [s.id for s in workspace.scenarios]
         target_id = max(candidates, key=lambda sid: workspace.get(sid).features.get("duration_days", 0))
         target_s = workspace.get(target_id)
@@ -1496,7 +1517,9 @@ def semantic_query_route(workspace, prompt: str) -> str:
             "number one scenario", "headline scenario", "highest ranked scenario"
         ])
     )
-    if is_top_query and getattr(workspace, "scenarios", None):
+    if is_top_query:
+        if not getattr(workspace, "scenarios", None):
+            return _no_scenarios_guidance()
         target_id = workspace.selected[0] if getattr(workspace, "selected", None) else workspace.scenarios[0].id
         target_s = workspace.get(target_id)
         intro = f"**Top-Ranked Scenario: {target_id}** (Priority Score: {target_s.score:.2f}, Profile: {getattr(target_s, 'cluster_name', f'Group {target_s.cluster}')})\n\n"
@@ -1507,10 +1530,14 @@ def semantic_query_route(workspace, prompt: str) -> str:
         "why did", "higher than", "better than", "ahead of", "beat", "rank higher",
         "ranked higher", "rank vs", "compare ranking", "compare score", "why is"
     ]):
+        if not getattr(workspace, "scenarios", None):
+            return _no_scenarios_guidance()
         return _render_rank_comparison(workspace, id_matches[0], id_matches[1])
 
     # 8. Compare top 2 without explicit IDs
     if len(id_matches) < 2 and any(k in p for k in ["top two", "top 2", "first two", "first 2", "compare shortlisted"]):
+        if not getattr(workspace, "scenarios", None):
+            return _no_scenarios_guidance()
         if len(getattr(workspace, "selected", [])) >= 2:
             res = compare_scenarios(workspace, workspace.selected[0], workspace.selected[1])
             return render_tool_result("compare_scenarios", res)
@@ -1676,8 +1703,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
                 "what should i do", "where should i start", "where do we start", "how do we start"
             ])
             or (
-                any(w in p for w in ["website", "site", "webpage", "web page", "app", "application", "tool", "platform", "interface"])
-                and any(w in p for w in ["help", "figure out", "guide", "learn", "how", "what", "navigate", "start", "understand", "use", "explore", "tour", "tutorial", "work"])
+                any(re.search(rf"\b{re.escape(w)}\b", p) for w in ["website", "site", "webpage", "web page", "app", "application", "tool", "platform", "interface"])
+                and any(re.search(rf"\b{re.escape(w)}\b", p) for w in ["help", "figure out", "guide", "learn", "how", "what", "navigate", "start", "understand", "use", "explore", "tour", "tutorial", "work"])
             )
             or (
                 "what can i do" in p and not any(k in p for k in ["scenario", "rainfall", "storage", "station", "deficit"])
@@ -1760,6 +1787,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
         # Routes 1-2: illustrative storage experiments with explicitly labelled settings
         if spectrum_request or reservoir_request:
+            if not getattr(workspace, "scenarios", None):
+                return _no_scenarios_guidance()
             if len(id_matches) > 1:
                 return clarify("name one scenario ID for this experiment; several were given: " + ", ".join(id_matches) + ".")
             arguments = parse_experiment_arguments(p, spectrum_request)
@@ -1778,6 +1807,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
             or ("station" in p and any(k in p for k in ["rain", "precipitation", "observations", "records", "daily", "recorded"]))
             or (any(k in p for k in ["usw000", "12924", "12912", "12921"]) and any(k in p for k in ["rain", "precipitation", "recorded", "observations"]))
         ):
+            if not getattr(workspace, "source", None):
+                return "⚠️ **Data Source Not Available**: No observation baseline data is currently loaded."
             if station_id is None:
                 return clarify("name a station (" + ", ".join(known_stations) + ") and a date range or year.")
             if len(date_matches) >= 2:
@@ -1794,6 +1825,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
         # Route 4: Find scenarios by year
         year_words = any(k in p for k in ["recent", "modern", "years", "from 20", "from 19"])
         if (year is not None and (not id_matches or any(k in p for k in ["scenarios", "find", "list", "show", "search", "events", "years"]))) or year_words:
+            if not getattr(workspace, "scenarios", None):
+                return _no_scenarios_guidance()
             if year is None:
                 years = sorted({s.provenance["source_start"][:4] for s in workspace.scenarios})
                 return clarify("give a four-digit source start year; none is assumed. Start years in this workspace: " + ", ".join(years) + ".")
@@ -1802,11 +1835,15 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
         # Route 5: Export readiness check
         if any(k in p for k in ["readiness", "export ready", "can i export", "blocker", "export check", "ready to export", "ready for export"]):
+            if not getattr(workspace, "scenarios", None):
+                return _no_scenarios_guidance()
             res = check_export_readiness(workspace)
             return render_tool_result("check_export_readiness", res)
 
         # Route 6: Compare scenarios
         if any(k in p for k in ["compare", "versus", "difference"]) or re.search(r"\bvs\b", p):
+            if not getattr(workspace, "scenarios", None):
+                return _no_scenarios_guidance()
             if len(id_matches) < 2:
                 return need_ids(2, "compare")
             res = compare_scenarios(workspace, id_matches[0], id_matches[1], id_matches[2] if len(id_matches) >= 3 else "")
@@ -1814,6 +1851,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
         # Route 7: Station stress concurrence
         if any(k in p for k in ["stress", "concurrence", "simultaneous", "station stress", "concurrence in", "concurrent"]):
+            if not getattr(workspace, "scenarios", None):
+                return _no_scenarios_guidance()
             if not id_matches:
                 return need_ids(1, "analyse station stress")
             res = check_concurrence(workspace, id_matches[0])
@@ -1821,6 +1860,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
         # Route 8: Run sensitivity test with explicitly requested weights
         if any(k in p for k in ["sensitivity", "what if", "doubled the", "half the weight"]) or ("weight" in p and any(k in p for k in ["change", "impact", "sensitivity", "double", "half", "test", "ranking weights"])):
+            if not getattr(workspace, "scenarios", None):
+                return _no_scenarios_guidance()
             changes: dict[str, float] = {}
             for weight_name in ("severity", "duration", "concurrence", "season"):
                 explicit = re.search(rf"\b{weight_name}\b(?:\s+weight)?\s*(?:to|=|of|at|is|was)\s*(\d+(?:\.\d+)?)\b", p)
@@ -1838,6 +1879,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
         # Route 9: Explain ranking / score
         if any(k in p for k in ["rank", "score", "why did", "position", "scoring"]):
+            if not getattr(workspace, "scenarios", None):
+                return _no_scenarios_guidance()
             if not id_matches:
                 return need_ids(1, "explain its ranking")
             res = explain_ranking(workspace, id_matches[0])
@@ -1845,6 +1888,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
         # Route 10: Summarize evidence / citations / conflicts. "source" alone is provenance.
         if any(k in p for k in ["evidence", "conflict", "disagreement", "citation", "citations", "notes on", "note", "justification"]) or ("source" in p and id_matches):
+            if not getattr(workspace, "scenarios", None):
+                return _no_scenarios_guidance()
             if not id_matches:
                 return need_ids(1, "summarise its evidence")
             res = summarize_evidence(workspace, id_matches[0])
@@ -1853,6 +1898,8 @@ def semantic_query_route(workspace, prompt: str) -> str:
         # Route 11: Describe drought cluster / profile, only for a named group number
         group_match = re.search(r"(?:group|cluster)\s*(\d+)", p)
         if group_match or (not id_matches and any(k in p for k in ["cluster", "profile", "group", "kmeans", "centroid"])):
+            if not getattr(workspace, "scenarios", None):
+                return _no_scenarios_guidance()
             if not group_match:
                 groups = sorted({s.cluster for s in workspace.scenarios})
                 return clarify("name a drought profile group number. Groups in this workspace: " + ", ".join(str(g) for g in groups) + ".")
@@ -1861,11 +1908,15 @@ def semantic_query_route(workspace, prompt: str) -> str:
 
         # Route 12: Data provenance & NOAA metadata
         if any(k in p for k in ["provenance", "noaa", "data source", "station", "manifest", "data come from", "where does this data", "snapshot sha", "ghcn"]):
+            if not getattr(workspace, "source", None):
+                return "⚠️ **Data Source Not Available**: No observation baseline data is currently loaded."
             res = get_data_provenance(workspace)
             return render_tool_result("get_data_provenance", res)
 
         # Route 13: Describe scenario
         if id_matches or ("scenario" in p and any(k in p for k in ["tell me about", "describe", "profile", "metrics", "details"])):
+            if not getattr(workspace, "scenarios", None):
+                return _no_scenarios_guidance()
             if not id_matches:
                 return need_ids(1, "describe")
             res = describe_scenario(workspace, id_matches[0])
@@ -1950,7 +2001,9 @@ def run_assistant(workspace, user_message: str,
 
     reply: str | None = None
 
-    if use_qwen:
+    if not getattr(workspace, "scenarios", None):
+        reply = semantic_query_route(workspace, user_message)
+    elif use_qwen:
         try:
             from basin_core.qwen_runtime import get_qwen_client
             client = get_qwen_client()

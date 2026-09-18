@@ -254,13 +254,15 @@ def test_html_report_scopes_verification_to_the_bundle(approved):
 
 
 def test_reports_do_not_assert_unsupported_policy_or_benefits(approved):
+    import re
     accepted = approved.exportable()
     html = render_html_report(approved, accepted)
     pdf_bytes = build_fallback_pdf(approved, accepted)
+    text_only_html = re.sub(r"data:image/[^;]+;base64,[A-Za-z0-9+/=]+", "", html)
 
     for claim in UNSUPPORTED_POLICY_STRINGS:
         assert claim not in pdf_bytes, claim
-        assert claim.decode() not in html, claim
+        assert claim.decode() not in text_only_html, claim
 
     # Illustrative bands and sourced survey figures must be distinguishable.
     assert b"NOT ADOPTED POLICY" in pdf_bytes
@@ -351,7 +353,7 @@ def test_scenario_ranking_rationale_and_concurrence_detail(approved):
     assert b"ranking driver is" in pdf_bytes
 
     # Concurrence station persistence details
-    assert "Concurrence & Breakdown" in html
+    assert "Selected-Stations Concurrent Deficit" in html
 
 
 def test_station_completeness_table_in_observation_provenance(approved):

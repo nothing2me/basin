@@ -88,7 +88,7 @@ def generate_brief(workspace, accepted):
              '# BASIN — Rainfall Scenario Handoff', '', f'Run: `{workspace.id}` · created {workspace.created_at} · BASIN {__version__}', '',
              '## Purpose and limits', '',
              'An analyst selected rainfall stress scenarios for deeper drought-planning analysis. Accept records a local rainfall-content review; it does not establish professional sign-off, validated catchment suitability, probability, water supply or restriction dates.', '',
-             'Stations are provisional regional airport proxies. Rainfall retention cannot be applied directly to naturalized streamflow. A domain specialist must determine geographic suitability, rainfall–runoff modeling, operating rules and any appropriate downstream modeling application.', '',
+             'Stations are provisional NOAA GHCN-Daily airport proxies (primary coastal/urban stations: Corpus Christi network [Intl AP, NAS, NWS, Padre Island], Alice Intl, Kingsville NAAS; regional context stations: Rockport, Victoria, San Antonio). Rainfall retention cannot be applied directly to naturalized streamflow. A domain specialist must determine geographic suitability, rainfall–runoff modeling, operating rules and any appropriate downstream modeling application.', '',
              *context_lines,
              '## Community Priority Configuration', '', 'User-selected normalized weights (illustrative priorities; no provider endorsement):', '']
     lines += [f'- {k.title()}: {v / total:.1%} (raw weight {v})' for k, v in workspace.weights.items()]
@@ -150,7 +150,7 @@ def generate_brief(workspace, accepted):
         from basin_core.analysis import threshold_text
         lines = [line.replace("The separate illustrative reservoir experiment is excluded from this packet.", "Saved illustrative experiments are included below; numerical replay does not establish physical validity.") for line in lines]
         lines += ["", "## Saved illustrative simulations", "",
-                  "Thresholds are inclusive (at or below), evaluated at initial storage (day 0) and daily endpoints. Not reached means only within the modeled period. These are not official restriction stages or forecasts.",
+                  "Thresholds are inclusive (at or below), evaluated at initial storage (day 0) and daily endpoints. Not reached means only within the modeled period. These are not official restriction bands or forecasts.",
                   "All saved experiment versions and numerical inputs are in audit.json. The following are the active experiments for accepted rainfall revisions; historical versions are not current approvals."]
         by_run = {r["id"]: r for r in workspace.simulation_runs}
         for scenario in accepted:

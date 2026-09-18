@@ -104,7 +104,7 @@
 > ⚙️ **HOW (THE AI ARCHITECTURE):**
 > Many AI projects fail in municipal government because language models hallucinate. In water planning, an invented reservoir elevation could trigger a false emergency or delay critical conservation.
 > BASIN solves this with a **dual-AI architecture**:
-> 1. **Unsupervised K-Means Machine Learning:** Automatically clusters 300 candidate drought scenarios across an 8-dimensional hydrologic feature space (deficit, duration, spatial concurrence, season) into distinct physical archetypes, eliminating confirmation bias.
+> 1. **Unsupervised K-Means Machine Learning:** Automatically clusters 300 candidate drought scenarios across a 5-dimensional hydrologic feature space (deficit, duration, spatial concurrence, season, max dry spell) into distinct physical archetypes, eliminating confirmation bias.
 > 2. **Local Pinned LLM (Qwen-2.5-3B via GGUF):** Runs entirely on CPU with zero cloud connection. The LLM is barred from doing arithmetic; it acts purely as an intent classifier that invokes 13 deterministic Python analysis tools.
 > 3. **Exact Physical Conservation:** Models dual-reservoir dynamics with dynamic power-law evaporation, enforcing $|\text{Error}| < 10^{-6}$ acre-feet on every daily time step.
 > 

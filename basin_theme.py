@@ -17,6 +17,14 @@ _TOPOGRAPHY_DATA_URI = (
 
 
 def apply_design():
+    assets_dir = Path(__file__).resolve().parent / "assets"
+    dark_logo_file = assets_dir / "basin-logo.png"
+    light_logo_file = assets_dir / "basin-logo-light.png"
+    basin_icon_file = assets_dir / "basin.png"
+    dark_logo_b64 = base64.b64encode(dark_logo_file.read_bytes()).decode("ascii") if dark_logo_file.exists() else ""
+    light_logo_b64 = base64.b64encode(light_logo_file.read_bytes()).decode("ascii") if light_logo_file.exists() else dark_logo_b64
+    basin_icon_b64 = base64.b64encode(basin_icon_file.read_bytes()).decode("ascii") if basin_icon_file.exists() else ""
+
     st.html("""<style>
 body{
     --basin-text-strong:#182127;--basin-text:#20292E;--basin-muted:#4D5C66;
@@ -39,35 +47,22 @@ body.basin-theme-light{
     --basin-warning-text:#92400E;--basin-danger-text:#991B1B;
     --basin-user-avatar-bg:#23856d;
 }
-/* BASIN topographic canvas: a self-contained, low-contrast hydrology texture.
-   Keeping the artwork in CSS avoids a network request and leaves application
-   structure, maps, charts, and controls completely untouched. */
-body.basin-theme-dark .stApp,
-body.basin-theme-dark [data-testid="stAppViewContainer"]{
-    background-color:#07151e!important;
-    background-image:
-        radial-gradient(circle at 50% 18%,rgba(24,72,91,.16),transparent 42%),
-        linear-gradient(rgba(4,17,25,.18),rgba(4,17,25,.34)),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='760' viewBox='0 0 1200 760'%3E%3Cg fill='none' stroke='%23196580' stroke-width='1.15' opacity='.52'%3E%3Cpath d='M-35 96C-4 20 76-22 158 4c74 24 142 14 196 65 50 47 46 117-8 166-57 52-132 37-197 55-75 21-161 9-190-60-18-43-12-91 6-134Z'/%3E%3Cpath d='M4 105C29 48 91 19 153 38c57 18 112 10 154 49 38 36 33 88-9 126-43 39-103 29-153 43-58 17-120 7-142-45-14-32-12-71 1-106Z'/%3E%3Cpath d='M45 114c18-38 63-57 108-43 40 13 80 7 109 35 27 25 22 62-8 88-31 28-73 21-109 31-40 11-84 4-99-32-10-24-9-53-1-79Z'/%3E%3Cpath d='M83 124c12-22 38-33 66-25 24 8 49 4 67 21 16 15 13 37-5 53-19 17-45 13-67 19-25 7-51 2-60-20-6-14-6-32-1-48Z'/%3E%3Cpath d='M455 25c69-31 153-20 194 30 35 43 79 61 82 116 3 51-37 91-92 101-58 11-105-24-156-33-59-10-117-45-117-102 0-36 33-86 89-112Z'/%3E%3Cpath d='M480 58c52-23 114-15 145 22 27 33 60 46 62 87 2 38-28 68-69 76-43 8-78-18-117-25-44-8-87-34-87-76 0-27 25-64 66-84Z'/%3E%3Cpath d='M508 88c34-15 76-10 96 15 18 21 40 30 41 57 2 25-18 45-45 50-29 6-52-12-78-16-29-5-58-23-58-51 0-18 16-43 44-55Z'/%3E%3Cpath d='M535 116c19-9 43-6 55 8 10 13 22 18 23 33 0 15-10 26-26 29-16 3-30-6-45-9-17-3-33-13-33-29 0-10 10-25 26-32Z'/%3E%3Cpath d='M858-14c78 0 139 41 153 103 13 54 44 89 20 140-23 47-78 63-131 45-56-19-81-70-121-104-46-39-74-101-43-150 19-31 58-34 122-34Z'/%3E%3Cpath d='M865 25c59 0 105 31 115 77 10 41 33 67 15 105-17 36-58 47-98 34-42-14-61-52-91-78-35-29-56-76-33-113 15-23 44-25 92-25Z'/%3E%3Cpath d='M873 66c39 0 69 20 76 51 7 27 22 44 10 69-12 24-39 31-65 23-28-10-40-35-60-52-23-19-37-50-22-74 10-16 29-17 61-17Z'/%3E%3Cpath d='M881 105c22 0 39 12 43 29 4 15 12 25 5 39-6 13-22 18-37 13-16-5-23-20-34-29-13-11-21-29-12-42 5-9 16-10 35-10Z'/%3E%3Cpath d='M1090 213c56-31 123-26 157 14 30 36 67 50 69 96 1 42-32 74-78 80-48 7-85-23-128-32-49-10-96-39-94-86 1-29 29-54 74-72Z'/%3E%3Cpath d='M1106 246c40-22 89-19 113 10 22 25 48 36 49 69 1 30-23 53-56 57-34 5-61-16-92-23-35-7-69-28-67-61 1-21 20-39 53-52Z'/%3E%3Cpath d='M1119 279c25-14 55-12 70 6 14 16 30 22 31 43 0 19-15 33-35 36-22 3-38-10-57-14-22-5-43-18-42-39 0-13 12-24 33-32Z'/%3E%3Cpath d='M109 404c66-40 149-34 191 14 37 42 82 57 86 112 4 51-33 91-87 101-58 10-105-22-157-29-60-9-120-42-123-98-2-36 36-74 90-100Z'/%3E%3Cpath d='M134 438c50-30 112-26 143 10 28 31 62 43 65 84 3 38-25 68-65 75-44 8-79-16-118-22-45-6-90-31-92-73-2-27 26-56 67-74Z'/%3E%3Cpath d='M163 472c33-20 74-17 95 7 18 21 41 28 43 55 2 26-17 45-44 50-29 5-52-11-78-14-30-5-60-21-61-49-1-18 18-37 45-49Z'/%3E%3Cpath d='M191 506c19-11 42-9 54 4 10 12 23 16 24 32 1 14-9 25-25 28-16 3-29-6-44-8-17-3-34-12-35-28 0-10 11-21 26-28Z'/%3E%3Cpath d='M520 391c64-16 133 9 157 61 21 45 55 72 44 120-10 45-54 69-103 63-52-6-84-44-127-65-50-25-89-70-70-117 12-29 47-49 99-62Z'/%3E%3Cpath d='M536 428c48-12 100 7 118 46 16 34 42 54 33 90-8 34-40 52-77 48-39-5-63-33-95-49-38-18-67-52-53-88 9-22 35-37 74-47Z'/%3E%3Cpath d='M555 465c31-8 66 4 78 30 10 23 27 36 21 60-5 22-27 34-51 32-26-3-42-22-63-33-25-12-44-34-35-58 6-14 23-25 50-31Z'/%3E%3Cpath d='M574 501c18-4 38 3 45 18 6 13 15 21 12 34-3 13-16 20-30 18-15-2-24-13-36-19-14-7-25-20-20-33 3-8 13-15 29-18Z'/%3E%3Cpath d='M836 455c57-37 131-36 172 4 36 34 77 45 85 94 7 45-23 83-70 97-51 14-98-10-145-12-54-2-111-26-119-75-5-31 30-78 77-108Z'/%3E%3Cpath d='M860 487c43-28 98-27 129 3 27 26 58 34 64 70 5 34-17 63-53 73-38 11-73-7-108-9-41-1-83-19-89-56-4-23 22-58 57-81Z'/%3E%3Cpath d='M886 520c28-18 65-18 85 2 18 17 39 23 43 47 4 22-11 41-35 48-25 7-48-5-72-6-27-1-55-13-59-37-2-16 15-39 38-54Z'/%3E%3Cpath d='M912 552c16-10 37-10 49 1 10 10 22 13 24 27 2 13-6 24-20 28-15 4-28-3-41-4-16 0-32-7-34-21-2-9 8-22 22-31Z'/%3E%3C/g%3E%3Cg fill='none' stroke='%232aa8ca' stroke-width='1.45' opacity='.58'%3E%3Cpath d='M-35 96C-4 20 76-22 158 4c74 24 142 14 196 65 50 47 46 117-8 166-57 52-132 37-197 55-75 21-161 9-190-60-18-43-12-91 6-134Z'/%3E%3Cpath d='M455 25c69-31 153-20 194 30 35 43 79 61 82 116 3 51-37 91-92 101-58 11-105-24-156-33-59-10-117-45-117-102 0-36 33-86 89-112Z'/%3E%3Cpath d='M109 404c66-40 149-34 191 14 37 42 82 57 86 112 4 51-33 91-87 101-58 10-105-22-157-29-60-9-120-42-123-98-2-36 36-74 90-100Z'/%3E%3Cpath d='M836 455c57-37 131-36 172 4 36 34 77 45 85 94 7 45-23 83-70 97-51 14-98-10-145-12-54-2-111-26-119-75-5-31 30-78 77-108Z'/%3E%3C/g%3E%3Cg fill='none' stroke='%2313465a' stroke-width='.9' opacity='.38' stroke-dasharray='5 10'%3E%3Cpath d='M313 320c71-48 135-55 191-24s104 35 163 0 136-39 203 1'/%3E%3Cpath d='M325 344c64-38 122-42 174-16s98 29 153 1 129-31 193 3'/%3E%3C/g%3E%3C/svg%3E")!important;
-    background-size:auto,auto,1200px 760px!important;
-    background-position:center top,center,center top!important;
-    background-attachment:fixed!important;
-}
-body.basin-theme-light .stApp,
-body.basin-theme-light [data-testid="stAppViewContainer"]{
-    background-image:
-        linear-gradient(rgba(247,250,252,.90),rgba(247,250,252,.94)),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='760' viewBox='0 0 1200 760'%3E%3Cg fill='none' stroke='%232b7a9e' stroke-width='1.2' opacity='.22'%3E%3Cpath d='M-70 122C60 4 208 8 306 90s168 73 247-6 220-98 333-7 215 75 340-36'/%3E%3Cpath d='M-76 159C55 42 192 45 285 119s176 79 266-2 214-82 324-1 222 77 353-28'/%3E%3Cpath d='M-62 200C61 92 183 86 270 151s181 85 282 5 205-63 310 6 225 77 360-17'/%3E%3Cpath d='M38 684c70-97 166-127 253-75s151 53 214-22 178-110 269-42 177 69 251-11 137-83 221-43'/%3E%3Cpath d='M83 580c59-78 142-101 210-52s116 45 164-19 130-85 202-29 128 53 177-17 119-86 196-47 151 48 205-20'/%3E%3C/g%3E%3C/svg%3E")!important;
-    background-size:auto,1200px 760px!important;
-    background-position:center,center top!important;
-    background-attachment:fixed!important;
-}
 body.basin-theme-dark [data-testid="stVerticalBlockBorderWrapper"]{
     background:color-mix(in srgb,var(--basin-surface-elevated) 91%,transparent);
     box-shadow:0 12px 34px rgba(0,8,14,.10);
 }
 body.basin-theme-light [data-testid="stVerticalBlockBorderWrapper"]{
     background:color-mix(in srgb,var(--basin-surface-elevated) 94%,transparent);
+}
+@media (prefers-color-scheme: dark) {
+    body:not(.basin-theme-light) {
+        --basin-text-strong:#F7FAFC;--basin-text:#E7ECEF;--basin-muted:#B6C2CA;
+        --basin-surface:#171C20;--basin-surface-elevated:#1E262C;--basin-surface-soft:#252D33;
+        --basin-border:#65737D;--basin-info-text:#7DD3FC;--basin-success-text:#86EFAC;
+        --basin-warning-text:#FCD34D;--basin-danger-text:#FCA5A5;
+        --basin-user-avatar-bg:#23856d;
+    }
+}
 }
 .block-container, [data-testid="stMainBlockContainer"]{padding:2.75rem 2.8rem 6.5rem!important;max-width:1560px}
 [data-testid="stAppDeployButton"], #MainMenu, [data-testid="stMainMenuButton"], .stDeployButton{display:none!important}
@@ -82,9 +77,16 @@ body.basin-theme-light [data-testid="stVerticalBlockBorderWrapper"]{
 .basin-eyebrow{font-size:.67rem;font-weight:700;letter-spacing:.14em;color:var(--basin-muted)!important;margin-top:8px}
 h1,h2,h3{letter-spacing:-.025em}
 h3{font-size:1.6rem!important;font-weight:650!important}
-[data-testid="stMetric"]{border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:13px;padding:11px 14px;background:color-mix(in srgb,currentColor 2%,transparent)}
-[data-testid="stMetricValue"]{font-size:1.7rem;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.025em}
-[data-testid="stMetricLabel"]{font-size:.76rem;color:var(--basin-muted)!important;opacity:1}
+[data-testid="stMetric"]{border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:13px;padding:8px 10px;background:color-mix(in srgb,currentColor 2%,transparent);min-width:0!important;overflow:visible!important}
+[data-testid="stMetricValue"]{font-size:clamp(1.1rem,1.3vw,1.45rem)!important;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.025em;white-space:nowrap!important;overflow:visible!important}
+[data-testid="stMetricLabel"]{font-size:.74rem;color:var(--basin-muted)!important;opacity:1;white-space:normal!important;word-break:break-word!important;line-height:1.15!important}
+[data-testid="stMetricDelta"]{font-size:.70rem!important;white-space:normal!important;word-break:break-word!important}
+div[data-testid="stPopover"]{width:100%!important}
+div[data-testid="stPopover"]>button{white-space:nowrap!important;min-width:0!important;padding:0.35rem 0.45rem!important;font-size:0.83rem!important}
+body.basin-assistant-open [data-testid="stMetric"]{padding:5px 7px!important}
+body.basin-assistant-open [data-testid="stMetricValue"]{font-size:clamp(0.82rem,1.05vw,1.15rem)!important}
+body.basin-assistant-open [data-testid="stMetricLabel"]{font-size:0.68rem!important}
+body.basin-assistant-open [data-testid="stMetricDelta"]{font-size:0.65rem!important}
 [data-testid="stCaptionContainer"]{font-size:.78rem;color:var(--basin-muted)!important;opacity:1}
 [data-testid="stCaptionContainer"] *{color:inherit!important}
 [data-testid="stSidebar"] [role="radiogroup"]{gap:5px}
@@ -735,6 +737,123 @@ body.basin-theme-light .st-key-assistant_conversation{{
     backdrop-filter:blur(9px) saturate(96%)!important;
 }}
 </style>""")
+    st.html("""<style>
+/* Explicit Dark Mode Overrides for Drawers & Assistant Controls */
+body.basin-theme-dark .st-key-assistant_drawer,
+body:not(.basin-theme-light) .st-key-assistant_drawer {
+    background: #1E262C !important;
+    color: #E7ECEF !important;
+    border-left: 1.5px solid #65737D !important;
+}
+body.basin-theme-dark .st-key-notes_drawer_closed,
+body.basin-theme-dark .st-key-notes_drawer_panel,
+body:not(.basin-theme-light) .st-key-notes_drawer_closed,
+body:not(.basin-theme-light) .st-key-notes_drawer_panel {
+    background: #1E262C !important;
+    color: #E7ECEF !important;
+    border-color: #65737D !important;
+}
+body.basin-theme-dark .st-key-notes_drawer_panel textarea,
+body.basin-theme-dark .st-key-notes_drawer_panel [data-testid="stTextArea"] textarea,
+body.basin-theme-dark .st-key-notes_drawer_panel div[data-baseweb="textarea"],
+body:not(.basin-theme-light) .st-key-notes_drawer_panel textarea,
+body:not(.basin-theme-light) .st-key-notes_drawer_panel [data-testid="stTextArea"] textarea,
+body:not(.basin-theme-light) .st-key-notes_drawer_panel div[data-baseweb="textarea"] {
+    background: #171C20 !important;
+    color: #F7FAFC !important;
+    -webkit-text-fill-color: #F7FAFC !important;
+    border-color: #65737D !important;
+}
+body.basin-theme-dark .st-key-assistant_conversation [data-testid="stVerticalBlockBorderWrapper"],
+body:not(.basin-theme-light) .st-key-assistant_conversation [data-testid="stVerticalBlockBorderWrapper"] {
+    background: #171C20 !important;
+    border-color: #65737D !important;
+}
+body.basin-theme-dark .st-key-assistant_drawer [data-testid="stChatInput"],
+body.basin-theme-dark .st-key-assistant_drawer div[data-testid="stChatInput"],
+body:not(.basin-theme-light) .st-key-assistant_drawer [data-testid="stChatInput"],
+body:not(.basin-theme-light) .st-key-assistant_drawer div[data-testid="stChatInput"] {
+    background: #171C20 !important;
+    border-color: #65737D !important;
+}
+body.basin-theme-dark .st-key-assistant_drawer [data-testid="stChatInput"] textarea,
+body:not(.basin-theme-light) .st-key-assistant_drawer [data-testid="stChatInput"] textarea {
+    color: #F7FAFC !important;
+    -webkit-text-fill-color: #F7FAFC !important;
+}
+body.basin-theme-dark .st-key-quick_top1 button,
+body.basin-theme-dark .st-key-quick_compare button,
+body.basin-theme-dark .st-key-quick_concur button,
+body.basin-theme-dark .st-key-quick_ranking button,
+body.basin-theme-dark .st-key-quick_crop_et button,
+body.basin-theme-dark .st-key-quick_export button,
+body:not(.basin-theme-light) .st-key-quick_top1 button,
+body:not(.basin-theme-light) .st-key-quick_compare button,
+body:not(.basin-theme-light) .st-key-quick_concur button,
+body:not(.basin-theme-light) .st-key-quick_ranking button,
+body:not(.basin-theme-light) .st-key-quick_crop_et button,
+body:not(.basin-theme-light) .st-key-quick_export button {
+    background: #171C20 !important;
+    color: #F7FAFC !important;
+    border-color: #65737D !important;
+}
+body.basin-theme-dark .st-key-quick_top1 button p,
+body.basin-theme-dark .st-key-quick_compare button p,
+body.basin-theme-dark .st-key-quick_concur button p,
+body.basin-theme-dark .st-key-quick_ranking button p,
+body.basin-theme-dark .st-key-quick_crop_et button p,
+body.basin-theme-dark .st-key-quick_export button p,
+body:not(.basin-theme-light) .st-key-quick_top1 button p,
+body:not(.basin-theme-light) .st-key-quick_compare button p,
+body:not(.basin-theme-light) .st-key-quick_concur button p,
+body:not(.basin-theme-light) .st-key-quick_ranking button p,
+body:not(.basin-theme-light) .st-key-quick_crop_et button p,
+body:not(.basin-theme-light) .st-key-quick_export button p {
+    color: #F7FAFC !important;
+    -webkit-text-fill-color: #F7FAFC !important;
+}
+body.basin-theme-dark .st-key-assistant_clear_chat button,
+body:not(.basin-theme-light) .st-key-assistant_clear_chat button {
+    background: #171C20 !important;
+    color: #E7ECEF !important;
+    border-color: #65737D !important;
+}
+body.basin-theme-dark .basin-assistant-title,
+body.basin-theme-dark .basin-assistant-empty h2,
+body:not(.basin-theme-light) .basin-assistant-title,
+body:not(.basin-theme-light) .basin-assistant-empty h2 {
+    color: #F7FAFC !important;
+}
+body.basin-theme-dark .basin-assistant-empty p,
+body.basin-theme-dark .basin-assistant-trust,
+body.basin-theme-dark .basin-suggested-label,
+body:not(.basin-theme-light) .basin-assistant-empty p,
+body:not(.basin-theme-light) .basin-assistant-trust,
+body:not(.basin-theme-light) .basin-suggested-label {
+    color: #B6C2CA !important;
+}
+
+
+
+/* Enhanced Running Status Bar across top of app */
+[data-testid="stDecoration"] {
+  height: 3.5px !important;
+  background-image: linear-gradient(90deg, #0284c7, #38bdf8, #0ea5e9, #6366f1) !important;
+  background-size: 200% auto !important;
+  animation: basinGradientPulse 2.2s linear infinite !important;
+}
+@keyframes basinGradientPulse {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+[data-testid="stStatusWidget"] {
+  background: var(--basin-surface-elevated, #1e293b) !important;
+  border: 1px solid var(--basin-border, rgba(255,255,255,0.15)) !important;
+  border-radius: 20px !important;
+  padding: 4px 12px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18) !important;
+}
+</style>""")
     st.html("""<script>(() => {
 const applyBasinTheme = (requested) => {
   const mode = requested || localStorage.getItem('basin-theme-mode') || 'System';
@@ -819,6 +938,40 @@ if (!window.__basinDrawerControllerAttached) {
       btn.getAttribute('data-testid') === 'stBaseButton-btn_toggle_notes'
     ) {
       document.body.classList.toggle('basin-notes-open');
+    } else if (
+      btn.closest('.basin-header-text-btn') ||
+      btn.closest('.st-key-nav_tab_Data') ||
+      btn.closest('.st-key-nav_tab_Workspace') ||
+      btn.closest('.st-key-nav_tab_Review') ||
+      btn.closest('.st-key-nav_tab_Exports') ||
+      btn.closest('[class*="st-key-nav_"]') ||
+      btn.getAttribute('data-testid')?.includes('nav_') ||
+      btn.textContent?.includes('Back to Step') ||
+      btn.textContent?.includes('Continue to')
+    ) {
+      if (document.activeElement && (document.activeElement.tagName === 'BUTTON' || document.activeElement.tagName === 'A')) {
+        document.activeElement.blur();
+      }
+      const resetScroll = () => {
+        const targets = [
+          window,
+          document.documentElement,
+          document.body,
+          document.querySelector('[data-testid="stMain"]'),
+          document.querySelector('.main'),
+          document.querySelector('section.main'),
+          document.querySelector('[data-testid="stAppViewContainer"]')
+        ];
+        targets.forEach(t => {
+          if (t) {
+            if (t.scrollTo) t.scrollTo({ top: 0, behavior: 'instant' });
+            t.scrollTop = 0;
+          }
+        });
+      };
+      resetScroll();
+      requestAnimationFrame(resetScroll);
+      [10, 30, 80, 150, 300, 600, 1000].forEach(ms => setTimeout(resetScroll, ms));
     }
   }, true);
 
@@ -838,6 +991,38 @@ if (!window.__basinDrawerControllerAttached) {
   });
 }
 })();</script>""", unsafe_allow_javascript=True)
+    if basin_icon_b64:
+        st.html(f"""<style>
+[data-testid="stStatusWidget"] {{
+  background: var(--basin-surface-elevated, #1e293b) !important;
+  border: 1.5px solid var(--basin-border, rgba(255,255,255,0.18)) !important;
+  border-radius: 20px !important;
+  padding: 4px 14px 4px 10px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.2) !important;
+}}
+[data-testid="stStatusWidget"] svg {{
+  display: none !important;
+}}
+[data-testid="stStatusWidget"]::before {{
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: middle;
+  background-image: url('data:image/png;base64,{basin_icon_b64}');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 4px;
+  animation: basinSpinLogo 1.6s ease-in-out infinite;
+}}
+@keyframes basinSpinLogo {{
+  0% {{ transform: scale(0.92); opacity: 0.85; }}
+  50% {{ transform: scale(1.08); opacity: 1; }}
+  100% {{ transform: scale(0.92); opacity: 0.85; }}
+}}
+</style>""")
 
 
 def appearance_picker():

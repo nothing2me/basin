@@ -14,7 +14,14 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/"
-IDS = ["USW00012924", "USW00012912", "USW00012921"]
+IDS = [
+    "USW00012924", "USW00012926", "USC00412011", "USC00416739",
+    "USW00012912",
+    "USW00012921",
+    "USW00012928", "USC00414810",
+    "USC00417704", "USW00012972",
+    "USW00012932",
+]
 
 
 def download(path):

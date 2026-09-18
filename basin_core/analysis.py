@@ -4,10 +4,6 @@ from abc import ABC, abstractmethod
 from dataclasses import replace
 import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score, pairwise_distances
-from threadpoolctl import threadpool_limits
-
 from basin_core.engine import Scenario
 from basin_core.water_system import WaterSource, WaterSystemConfig, REGION_N_PRESET, SYSTEM_PRESETS
 
@@ -74,6 +70,10 @@ class ScenarioClusterer:
     def fit(self, scenarios: list[Scenario], count=6) -> dict:
         if not scenarios:
             raise ValueError("No scenarios to group")
+        from sklearn.cluster import KMeans
+        from sklearn.metrics import silhouette_score
+        from threadpoolctl import threadpool_limits
+
         x = np.asarray([vector(s) for s in scenarios])
         count = min(count, len(np.unique(x, axis=0)), len(x))
         with threadpool_limits(limits=1):
@@ -117,6 +117,7 @@ def shortlist(scenarios: list[Scenario], count: int) -> list[str]:
 
 
 def comparison(scenarios: list[Scenario], selected: list[str], seed: int) -> list[dict]:
+    from sklearn.metrics import pairwise_distances
     rng = np.random.default_rng(seed)
     by_id = {s.id: s for s in scenarios}
     n = len(selected)

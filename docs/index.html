@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BASIN — Decision-Grade Hydrologic Screening Workbench</title>
+  <title>BASIN — Decision-Support Hydrologic Screening Workbench</title>
   <meta name="description" content="On-device decision support workbench for regional water authorities, river basins, and municipal utilities. Governed by strict mass-conservation physics.">
   <link rel="icon" href="assets/basin.ico" type="image/x-icon">
 
@@ -206,7 +206,7 @@
 
     /* HERO SECTION */
     .hero-section {
-      padding: 80px 0 40px;
+      padding: 80px 0 70px;
       text-align: center;
     }
 
@@ -305,264 +305,6 @@
     .hero-specs-line strong {
       color: var(--text-strong);
     }
-
-    /* SHOWCASE DESKTOP WINDOW */
-    .showcase-wrapper {
-      margin: 40px auto 90px;
-      max-width: 1140px;
-      background: var(--bg-window);
-      border: 1px solid var(--border-medium);
-      border-radius: var(--radius-md);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
-      overflow: hidden;
-    }
-
-    .window-chrome {
-      height: 38px;
-      background: #090c10;
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px;
-    }
-
-    .window-controls {
-      display: flex;
-      gap: 7px;
-    }
-
-    .win-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.18);
-    }
-    .win-dot.red { background: #ef4444; }
-    .win-dot.amber { background: #f59e0b; }
-    .win-dot.green { background: #10b981; }
-
-    .window-title {
-      font-size: 0.74rem;
-      font-weight: 500;
-      color: var(--text-muted);
-      letter-spacing: 0.02em;
-    }
-
-    .window-status {
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: var(--accent-emerald);
-      letter-spacing: 0.04em;
-    }
-
-    .workbench-layout {
-      padding: 24px;
-      background: #0e131a;
-      display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: 20px;
-    }
-
-    @media (max-width: 960px) {
-      .workbench-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* SCENARIO SEGMENTED CONTROLS */
-    .scenario-nav {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      background: rgba(0, 0, 0, 0.25);
-      padding: 4px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-subtle);
-      margin-bottom: 18px;
-    }
-
-    @media (max-width: 720px) {
-      .scenario-nav {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    .scen-tab {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 9px 10px;
-      text-align: center;
-      font-size: 0.78rem;
-      font-weight: 550;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .scen-tab:hover {
-      color: var(--text-white);
-    }
-
-    .scen-tab.active {
-      background: var(--bg-surface-elevated);
-      color: var(--text-white);
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    /* METRIC CARDS (MIRRORING basin_theme.py:46) */
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-
-    @media (max-width: 720px) {
-      .metric-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    .app-metric-card {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      padding: 12px 14px;
-    }
-
-    .app-metric-label {
-      font-size: 0.7rem;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .app-metric-value {
-      font-size: 1.45rem;
-      font-weight: 650;
-      color: var(--text-white);
-      letter-spacing: -0.02em;
-      font-variant-numeric: tabular-nums;
-      margin-bottom: 2px;
-    }
-
-    .app-metric-delta {
-      font-size: 0.72rem;
-      font-weight: 550;
-    }
-
-    .delta-alert { color: var(--accent-rose); }
-    .delta-safe { color: var(--accent-emerald); }
-    .delta-dim { color: var(--text-muted); }
-
-    /* HYDROLOGIC CHART */
-    .chart-card {
-      background: rgba(0, 0, 0, 0.28);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
-      padding: 16px;
-    }
-
-    .chart-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      font-size: 0.75rem;
-    }
-
-    .chart-caption {
-      color: var(--text-strong);
-      font-weight: 600;
-    }
-
-    .chart-keys {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      color: var(--text-muted);
-    }
-
-    .chart-key {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .key-dash {
-      width: 12px;
-      height: 2px;
-    }
-
-    /* RIGHT COLUMN: ASSISTANT SUMMARY */
-    .assistant-card {
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .asst-header-strip {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: 14px;
-    }
-
-    .asst-avatar-box {
-      width: 28px;
-      height: 28px;
-      background: var(--brand-teal);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 0.75rem;
-      font-weight: 700;
-    }
-
-    .asst-header-title {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--text-white);
-    }
-
-    .asst-header-sub {
-      font-size: 0.68rem;
-      color: var(--brand-teal-light);
-    }
-
-    .asst-text-body {
-      font-size: 0.84rem;
-      line-height: 1.6;
-      color: var(--text-strong);
-      margin-bottom: 16px;
-      flex-grow: 1;
-    }
-
-    .asst-audit-snippet {
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid var(--border-subtle);
-      border-radius: 4px;
-      padding: 10px;
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      line-height: 1.5;
-      color: var(--text-muted);
-    }
-
-    .asst-audit-snippet span.fn { color: var(--accent-ocean); }
-    .asst-audit-snippet span.arg { color: var(--brand-teal-light); }
 
     /* SECTION STYLING */
     .section-wrap {
@@ -883,7 +625,6 @@
       <nav>
         <ul class="header-nav">
           <li><a href="#overview" class="nav-link">Overview</a></li>
-          <li><a href="#simulation" class="nav-link">Simulation</a></li>
           <li><a href="#architecture" class="nav-link">Architecture</a></li>
           <li><a href="#specifications" class="nav-link">Benchmarks</a></li>
           <li><a href="#download" class="nav-link">Download</a></li>
@@ -909,7 +650,7 @@
         </div>
 
         <h1 class="hero-headline">
-          Decision-grade hydrologic screening.<br>100% on-device.
+          Decision-support hydrologic screening.<br>100% on-device.
         </h1>
 
         <p class="hero-subhead">
@@ -921,154 +662,16 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.401H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.902-1.799"/></svg>
             Download for Windows (200 MB)
           </a>
-          <a href="#simulation" class="btn-secondary">
-            Explore Interactive Simulation &darr;
+          <a href="#overview" class="btn-secondary">
+            Technical Overview &darr;
           </a>
         </div>
 
         <div class="hero-specs-line">
           <span><strong>Platform:</strong> Windows 10 / 11 (64-bit)</span>
-          <span><strong>Physics:</strong> |Residual Error| &lt; 10⁻⁶ AF</span>
+          <span><strong>Solver Precision:</strong> |Residual Error| &lt; 10⁻⁶ AF (arithmetic mass balance)</span>
           <span><strong>Air-Gap:</strong> 0 KB Network Egress</span>
           <span><strong>Release:</strong> v1.0.0 Standalone</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- CENTERPIECE: REAL DESKTOP SOFTWARE SHOWCASE -->
-    <section class="container" id="simulation">
-      <div class="showcase-wrapper">
-        <!-- Title bar -->
-        <div class="window-chrome">
-          <div class="window-controls">
-            <span class="win-dot red"></span>
-            <span class="win-dot amber"></span>
-            <span class="win-dot green"></span>
-          </div>
-          <div class="window-title">
-            BASIN Drought Workbench &bull; Lower Nueces Basin (Choke Canyon & Lake Corpus Christi)
-          </div>
-          <div class="window-status">
-            &bull; AIR-GAPPED ENGINE ACTIVE
-          </div>
-        </div>
-
-        <!-- Workbench Body -->
-        <div class="workbench-layout">
-          <div>
-            <!-- Scenario Selector -->
-            <div class="scenario-nav">
-              <button type="button" class="scen-tab active" data-scenario="status-quo" onclick="updateScenario('status-quo')">
-                1. Status Quo Baseline
-              </button>
-              <button type="button" class="scen-tab" data-scenario="stage3" onclick="updateScenario('stage3')">
-                2. Municipal Stage 3 (-20%)
-              </button>
-              <button type="button" class="scen-tab" data-scenario="reuse" onclick="updateScenario('reuse')">
-                3. Industrial Reuse (+15 MGD)
-              </button>
-              <button type="button" class="scen-tab" data-scenario="combined" onclick="updateScenario('combined')">
-                4. Combined Resiliency Plan ★
-              </button>
-            </div>
-
-            <!-- Key Metric Registers -->
-            <div class="metric-grid">
-              <div class="app-metric-card">
-                <div class="app-metric-label">Days to Curtailment</div>
-                <div class="app-metric-value" id="cardCurtail">142 Days</div>
-                <div class="app-metric-delta delta-alert" id="cardCurtailDelta">Critical threshold breach</div>
-              </div>
-              <div class="app-metric-card">
-                <div class="app-metric-label">Storage Floor</div>
-                <div class="app-metric-value" id="cardStorage">7.7%</div>
-                <div class="app-metric-delta delta-alert" id="cardStorageDelta">Below 10.0% intake limit</div>
-              </div>
-              <div class="app-metric-card">
-                <div class="app-metric-label">Evaporative Loss</div>
-                <div class="app-metric-value" id="cardEvap">42,180 AF</div>
-                <div class="app-metric-delta delta-dim">A(S) Polynomial Loss</div>
-              </div>
-              <div class="app-metric-card">
-                <div class="app-metric-label">Conservation Error</div>
-                <div class="app-metric-value" style="color:var(--accent-emerald);">0.000000</div>
-                <div class="app-metric-delta delta-safe">|Residual| &lt; 10⁻⁶ AF</div>
-              </div>
-            </div>
-
-            <!-- SVG Reservoir Hydrograph -->
-            <div class="chart-card">
-              <div class="chart-meta">
-                <span class="chart-caption">Combined Reservoir Storage Trajectory (365-Day Forward Screening)</span>
-                <div class="chart-keys">
-                  <span class="chart-key"><span class="key-dash" style="background:#f43f5e;"></span> Status Quo Baseline</span>
-                  <span class="chart-key"><span class="key-dash" style="background:#2eb392; height:3px;"></span> <span id="keyActiveTitle">Active Policy</span></span>
-                  <span class="chart-key"><span class="key-dash" style="background:#94a3b8; border-top:1px dashed #94a3b8;"></span> Intake Invert (10%)</span>
-                </div>
-              </div>
-
-              <svg viewBox="0 0 680 200" style="width:100%; height:200px; display:block;">
-                <!-- Subtle grid lines -->
-                <line x1="36" y1="25" x2="660" y2="25" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-                <line x1="36" y1="70" x2="660" y2="70" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-                <line x1="36" y1="115" x2="660" y2="115" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-                <line x1="36" y1="160" x2="660" y2="160" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-
-                <!-- Y labels -->
-                <text x="30" y="29" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">50%</text>
-                <text x="30" y="74" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">35%</text>
-                <text x="30" y="119" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">20%</text>
-                <text x="30" y="164" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">5%</text>
-
-                <!-- X labels -->
-                <text x="45" y="190" fill="#64748b" font-size="9" font-family="monospace">Day 0</text>
-                <text x="200" y="190" fill="#64748b" font-size="9" font-family="monospace">Day 90</text>
-                <text x="350" y="190" fill="#64748b" font-size="9" font-family="monospace">Day 180</text>
-                <text x="500" y="190" fill="#64748b" font-size="9" font-family="monospace">Day 270</text>
-                <text x="640" y="190" fill="#64748b" font-size="9" font-family="monospace">Day 365</text>
-
-                <!-- Intake Dead-Pool Invert Threshold (10% storage limit at y = 145) -->
-                <line x1="36" y1="145" x2="660" y2="145" stroke="#f43f5e" stroke-dasharray="3 3" stroke-width="1.2" opacity="0.75"/>
-                <text x="655" y="140" fill="#f87171" font-size="8.5" text-anchor="end" font-family="monospace">10.0% Intake Invert Limit</text>
-
-                <!-- Status quo baseline (Red dashed) -->
-                <path d="M 45 40 Q 150 78 260 125 T 420 155 T 650 165" fill="none" stroke="#f43f5e" stroke-width="1.8" stroke-dasharray="3 3" opacity="0.7"/>
-
-                <!-- Active policy curve -->
-                <path id="chartPath" d="M 45 40 Q 150 78 260 125 T 420 155 T 650 165" fill="none" stroke="#2eb392" stroke-width="2.6" style="transition: all 0.3s ease;"/>
-              </svg>
-            </div>
-          </div>
-
-          <!-- Assistant Panel -->
-          <div class="assistant-card">
-            <div>
-              <div class="asst-header-strip">
-                <div class="asst-avatar-box">B</div>
-                <div>
-                  <div class="asst-header-title">Analyst Assistant</div>
-                  <div class="asst-header-sub">Deterministic Tool Routing</div>
-                </div>
-              </div>
-
-              <div class="asst-text-body" id="asstNarrative">
-                Under status-quo 2026 inflow deficits, the joint Choke Canyon and Lake Corpus Christi system reaches emergency dead pool (7.7% storage) on <strong>Day 142</strong>. Immediate multi-tiered demand curtailment is mandatory to avoid downstream intake suction cavitation.
-              </div>
-            </div>
-
-            <div class="asst-audit-snippet">
-              <div style="font-weight:600; color:var(--text-strong); margin-bottom:4px;">DETERMINISTIC DISPATCH:</div>
-              <div id="asstSnippet">
-                <span class="fn">assistant.run_simulation_tool</span>(<br>
-                &nbsp;&nbsp;<span class="arg">demand_reduction_pct</span>=0.0,<br>
-                &nbsp;&nbsp;<span class="arg">industrial_reuse_mgd</span>=0.0<br>
-                )
-              </div>
-              <div style="color:var(--text-muted); font-size:0.65rem; margin-top:6px;" id="asstHash">
-                SHA-256: 7f8a92b...e41d88a [VERIFIED]
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </section>
@@ -1078,9 +681,9 @@
       <div class="container">
         <div class="section-header">
           <span class="section-eyebrow">Engineering Fundamentals</span>
-          <h2 class="section-headline">Rigorous hydrologic physics. Zero hallucinations.</h2>
+          <h2 class="section-headline">Rigorous hydrologic physics. Zero calculation hallucinations.</h2>
           <p>
-            General-purpose AI models hallucinate arithmetic and fail conservation laws. BASIN is engineered specifically for mission-critical municipal water systems.
+            General-purpose LLMs hallucinate numbers and violate conservation laws. In BASIN, all mathematical calculations and simulations are strictly quarantined within deterministic, vectorized Python and NumPy kernels. The optional local AI assistant operates exclusively through read-only inspection tools and deterministic routing—it never invents or computes numbers.
           </p>
         </div>
 
@@ -1089,7 +692,7 @@
             <span class="feature-number">01 / DETERMINISTIC CONTINUITY</span>
             <h3>Strict Mass Conservation</h3>
             <p>
-              The AI model never computes reservoir volumes. All storage projections execute in compiled C/NumPy finite-difference kernels where mass conservation is guaranteed:
+              The AI model never computes reservoir volumes. All storage projections execute in vectorized NumPy finite-difference kernels where mass conservation is guaranteed:
               <code style="display:block; margin-top:8px; font-size:0.8rem; color:var(--brand-teal-light);">S(t+1) = S(t) + I(t) - E(S(t)) - R(t) - W(t)</code>
             </p>
           </div>
@@ -1106,7 +709,7 @@
             <span class="feature-number">03 / REGULATORY TRANSPARENCY</span>
             <h3>Tamper-Evident Decision Briefs</h3>
             <p>
-              Export cryptographic SHA-256 signed executive PDF briefs for city councils, river authority boards, and TCEQ regulatory hearings. Fully compliant with Texas Occupations Code § 1001 screening standards.
+              Export cryptographic SHA-256 signed executive PDF briefs for internal planning discussions, river authority work sessions, and pre-engineering technical handoff.
             </p>
           </div>
         </div>
@@ -1133,9 +736,9 @@
             </p>
             <ul class="tier-list">
               <li><span class="check">&check;</span> 13 Deterministic hydrologic calculation tools</li>
-              <li><span class="check">&check;</span> Embedded Python 3.12 runtime + C++ OpenMP DLLs</li>
+              <li><span class="check">&check;</span> Embedded Python 3.12 runtime + vectorized NumPy &amp; SciPy</li>
               <li><span class="check">&check;</span> Deterministic Intent Router (Instant answers to common queries)</li>
-              <li><span class="check">&check;</span> 8-Dimensional K-Means historical Texas climate analog search</li>
+              <li><span class="check">&check;</span> 5-Dimensional K-Means historical Texas climate analog search</li>
               <li><span class="check">&check;</span> 100% Offline with zero external downloads required</li>
             </ul>
           </div>
@@ -1162,10 +765,10 @@
     <section class="section-wrap" id="specifications">
       <div class="container">
         <div class="section-header">
-          <span class="section-eyebrow">System Benchmark</span>
-          <h2 class="section-headline">How BASIN compares to legacy hydrologic workflows.</h2>
+          <span class="section-eyebrow">Workflow Positioning</span>
+          <h2 class="section-headline">Where BASIN fits alongside statutory modeling.</h2>
           <p>
-            Bridging the gap between heavy Fortran batch models and error-prone spreadsheets.
+            Agile scenario screening and pre-engineering triage to inform official models and internal work sessions.
           </p>
         </div>
 
@@ -1175,12 +778,19 @@
               <tr>
                 <th>Evaluation Parameter</th>
                 <th style="color:var(--brand-teal-light);">BASIN (TAMU-CC)</th>
-                <th>TWDB WAM (Fortran Models)</th>
+                <th>TWDB WAM (Statutory Regulatory Models)</th>
                 <th>Legacy Excel Spreadsheets</th>
                 <th>Cloud AI Chatbots</th>
               </tr>
             </thead>
             <tbody>
+              <tr>
+                <td><strong>Primary Role</strong></td>
+                <td class="basin-column">Scenario screening & triage (Pre-engineering)</td>
+                <td>Statutory water availability & permitting (Official standard)</td>
+                <td>Ad-hoc desktop analysis</td>
+                <td>Unconstrained conversational text</td>
+              </tr>
               <tr>
                 <td><strong>Execution Latency</strong></td>
                 <td class="basin-column">&lt; 15 milliseconds</td>
@@ -1189,8 +799,8 @@
                 <td>3 to 8 seconds</td>
               </tr>
               <tr>
-                <td><strong>Mass Conservation Error</strong></td>
-                <td class="basin-column">|Residual| &lt; 10⁻⁶ AF (Strict)</td>
+                <td><strong>Solver Mass-Balance Precision</strong></td>
+                <td class="basin-column">|Residual| &lt; 10⁻⁶ AF (arithmetic)*</td>
                 <td>Strict (Fortran)</td>
                 <td>Frequent formula drift & errors</td>
                 <td style="color:var(--accent-rose);">Severe hallucinations</td>
@@ -1212,7 +822,7 @@
               <tr>
                 <td><strong>1-Click Desktop Installer</strong></td>
                 <td class="basin-column">Yes (200 MB Standalone)</td>
-                <td>Manual Fortran compilation</td>
+                <td>Enterprise batch execution</td>
                 <td>Requires Excel license</td>
                 <td>Browser service</td>
               </tr>
@@ -1225,6 +835,9 @@
               </tr>
             </tbody>
           </table>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:12px; line-height:1.4;">
+            * Measures finite-difference arithmetic mass balance within the numerical simulation solver. This is an internal convergence check, not a claim of real-world hydrologic forecast accuracy or runoff model validation.
+          </div>
         </div>
       </div>
     </section>
@@ -1304,109 +917,7 @@
     </div>
   </footer>
 
-  <!-- LIGHTWEIGHT SCENARIO INTERACTIVITY -->
   <script>
-    const scenarios = {
-      'status-quo': {
-        curtail: '142 Days',
-        curtailDelta: 'Critical threshold breach',
-        curtailClass: 'delta-alert',
-        storage: '7.7%',
-        storageDelta: 'Below 10.0% intake limit',
-        storageClass: 'delta-alert',
-        evap: '42,180 AF',
-        title: 'Status Quo Baseline',
-        path: 'M 45 40 Q 150 78 260 125 T 420 155 T 650 165',
-        color: '#f43f5e',
-        narrative: 'Under status-quo 2026 inflow deficits, the joint Choke Canyon and Lake Corpus Christi system reaches emergency dead pool (7.7% storage) on <strong>Day 142</strong>. Immediate multi-tiered demand curtailment is mandatory to avoid downstream intake suction cavitation.',
-        snippet: '<span class="fn">assistant.run_simulation_tool</span>(<br>&nbsp;&nbsp;<span class="arg">demand_reduction_pct</span>=0.0,<br>&nbsp;&nbsp;<span class="arg">industrial_reuse_mgd</span>=0.0<br>)',
-        hash: 'SHA-256: 7f8a92b...e41d88a [VERIFIED]'
-      },
-      'stage3': {
-        curtail: '188 Days',
-        curtailDelta: '+46 Days Delayed',
-        curtailClass: 'delta-safe',
-        storage: '12.4%',
-        storageDelta: 'Marginally above dead pool',
-        storageClass: 'delta-safe',
-        evap: '39,400 AF',
-        title: 'Municipal Stage 3 (-20%)',
-        path: 'M 45 40 Q 150 74 260 115 T 420 138 T 650 144',
-        color: '#2b7a9e',
-        narrative: 'Enforcing mandatory 20% municipal demand surcharges delays critical curtailment by <strong>+46 days</strong> (preserving a 12.4% storage floor). However, summer evaporative losses without industrial reuse still leave downstream intake suction vulnerable by late Q3.',
-        snippet: '<span class="fn">assistant.run_simulation_tool</span>(<br>&nbsp;&nbsp;<span class="arg">demand_reduction_pct</span>=0.20,<br>&nbsp;&nbsp;<span class="arg">industrial_reuse_mgd</span>=0.0<br>)',
-        hash: 'SHA-256: 3c19e8a...9f012bb [VERIFIED]'
-      },
-      'reuse': {
-        curtail: '204 Days',
-        curtailDelta: '+62 Days Delayed',
-        curtailClass: 'delta-safe',
-        storage: '14.8%',
-        storageDelta: 'Operational buffer stabilized',
-        storageClass: 'delta-safe',
-        evap: '38,100 AF',
-        title: 'Industrial Reuse (+15 MGD)',
-        path: 'M 45 40 Q 150 70 260 105 T 420 128 T 650 134',
-        color: '#2b7a9e',
-        narrative: 'Diverting 15 MGD treated effluent into petrochemical industrial cooling loops offsets 16,800 AF/yr of raw water diversions. Delays critical curtailment by <strong>+62 days</strong>, protecting municipal allocations without rationing residential households.',
-        snippet: '<span class="fn">assistant.run_simulation_tool</span>(<br>&nbsp;&nbsp;<span class="arg">demand_reduction_pct</span>=0.0,<br>&nbsp;&nbsp;<span class="arg">industrial_reuse_mgd</span>=15.0<br>)',
-        hash: 'SHA-256: 82ab50d...11c47ea [VERIFIED]'
-      },
-      'combined': {
-        curtail: '234 Days',
-        curtailDelta: '+92 Days Averted ★',
-        curtailClass: 'delta-safe',
-        storage: '18.4%',
-        storageDelta: 'Resilient storage floor maintained',
-        storageClass: 'delta-safe',
-        evap: '36,850 AF',
-        title: 'Combined Resiliency Plan',
-        path: 'M 45 40 Q 150 66 260 92 T 420 110 T 650 115',
-        color: '#2eb392',
-        narrative: 'Joint implementation of 20% municipal curtailment + 15 MGD industrial water recycling successfully averts the 7.7% storage cliff. Extends system runway by <span style="color:var(--brand-teal-light); font-weight:700;">+92 days</span>, securing an <strong>18.4% storage baseline</strong> through the drought window.',
-        snippet: '<span class="fn">assistant.run_simulation_tool</span>(<br>&nbsp;&nbsp;<span class="arg">demand_reduction_pct</span>=0.20,<br>&nbsp;&nbsp;<span class="arg">industrial_reuse_mgd</span>=15.0<br>)',
-        hash: 'SHA-256: 4e0212f...51d8e [VERIFIED]'
-      }
-    };
-
-    function updateScenario(id) {
-      const data = scenarios[id];
-      if (!data) return;
-
-      document.querySelectorAll('.scen-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.scenario === id);
-      });
-
-      const cardCurtail = document.getElementById('cardCurtail');
-      const cardCurtailDelta = document.getElementById('cardCurtailDelta');
-      const cardStorage = document.getElementById('cardStorage');
-      const cardStorageDelta = document.getElementById('cardStorageDelta');
-      const cardEvap = document.getElementById('cardEvap');
-      const keyActiveTitle = document.getElementById('keyActiveTitle');
-      const chartPath = document.getElementById('chartPath');
-      const asstNarrative = document.getElementById('asstNarrative');
-      const asstSnippet = document.getElementById('asstSnippet');
-      const asstHash = document.getElementById('asstHash');
-
-      cardCurtail.textContent = data.curtail;
-      cardCurtailDelta.textContent = data.curtailDelta;
-      cardCurtailDelta.className = 'app-metric-delta ' + data.curtailClass;
-
-      cardStorage.textContent = data.storage;
-      cardStorageDelta.textContent = data.storageDelta;
-      cardStorageDelta.className = 'app-metric-delta ' + data.storageClass;
-
-      cardEvap.textContent = data.evap;
-      keyActiveTitle.textContent = data.title;
-
-      chartPath.setAttribute('d', data.path);
-      chartPath.setAttribute('stroke', data.color);
-
-      asstNarrative.innerHTML = data.narrative;
-      asstSnippet.innerHTML = data.snippet;
-      asstHash.textContent = data.hash;
-    }
-
     function copyHash() {
       const text = document.getElementById('shaText').textContent.trim();
       navigator.clipboard.writeText(text).then(() => {

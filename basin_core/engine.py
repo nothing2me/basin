@@ -95,7 +95,9 @@ class Reference:
             if avail.empty:
                 raise ValueError("Insufficient monthly observations for the 1991–2020 reference")
             clim = avail.groupby(avail.index.month).mean()
-            reg_cols = [c for c in source.daily.columns if c in ("USW00012924", "USW00012912", "USW00012921")]
+            reg_cols = [c for c in source.daily.columns if c.startswith("US")]
+            if not reg_cols:
+                reg_cols = [c for c in source.daily.columns if c in ("USW00012924", "USW00012912", "USW00012921")]
             if reg_cols:
                 reg_norm = source.daily[reg_cols].loc["1991":"2020"].groupby(lambda d: d.month).mean().mean(axis=1)
                 for m in range(1, 13):
@@ -175,7 +177,7 @@ class Reference:
         if len(benchmark) < 5:
             benchmark = [w["deficit_mm"] for w in historic]
         if len(benchmark) < 5:
-            is_custom_ref = any(s not in ("USW00012924", "USW00012912", "USW00012921") for s in self.stations)
+            is_custom_ref = any(s.startswith("LOCAL_") or not s.startswith("US") for s in self.stations)
             if is_custom_ref:
                 if not benchmark:
                     benchmark = [deficit]
@@ -277,7 +279,7 @@ class ScenarioGenerator:
         rng = np.random.default_rng(p.seed)
         eligible = {}
         unavailable = []
-        is_custom_run = any(s not in ("USW00012924", "USW00012912", "USW00012921") for s in p.stations)
+        is_custom_run = any(s.startswith("LOCAL_") or not s.startswith("US") for s in p.stations)
         min_pre2015 = 0 if is_custom_run else 5
         for month, start_day, duration, requested_start, requested_end in p.sampling_windows():
             if requested_start is not None:

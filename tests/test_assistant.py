@@ -155,7 +155,7 @@ def test_get_data_provenance(workspace):
     data = get_data_provenance(workspace)
     assert data["source"] == "NOAA NCEI GHCN-Daily"
     assert "snapshot_sha256" in data
-    assert data["station_count"] == 3
+    assert data["station_count"] == len(workspace.source.manifest["stations"])
 
     rendered = render_tool_result("get_data_provenance", data)
     assert "NOAA NCEI GHCN-Daily" in rendered

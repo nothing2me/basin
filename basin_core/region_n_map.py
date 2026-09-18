@@ -282,39 +282,18 @@ def render_observation_map(stations_df, *, show_catalog=False):
     except (OSError, ValueError) as error:
         st.error(f"The bundled Region N map catalog could not be loaded: {error}")
         return
-    st.caption("Satellite observation map · Orange outline: Region N's 11 counties. "
+    st.caption("Bundled offline satellite observation map · Orange outline: Region N's 11 counties. "
                "Geographic layers show mapped features, not current water levels or streamflow.")
 
-    has_offline = OFFLINE_TILES_DIR.exists() and any(OFFLINE_TILES_DIR.iterdir())
-    col_m1, col_m2, col_m3 = st.columns([2.2, 1.4, 1.4], gap="medium")
-    with col_m1:
-        layers = st.multiselect(
-            "Visible map layers",
-            list(LAYER_LABELS),
-            default=DEFAULT_FAST_LAYERS,
-            format_func=LAYER_LABELS.get,
-            key="observation_map_layers",
-        )
-    with col_m2:
-        map_mode = st.radio(
-            "Satellite imagery source",
-            ["Live Esri (online)", "Bundled (offline)"] if has_offline else ["Live Esri (online)"],
-            index=0,
-            horizontal=True,
-            help="Live Esri streams high-resolution satellite imagery for any region worldwide from ArcGIS Online. Bundled operates fully offline from local storage without network latency.",
-            key="observation_map_basemap_mode",
-        )
-    with col_m3:
-        marker_style_choice = st.radio(
-            "Marker style",
-            ["● Colored dots", "🌧️ Emojis"],
-            index=0,
-            horizontal=True,
-            help="Switch between classic colored circular points or visual hydrology emojis (🌧️ for rainfall stations, 💧 for water sites, 🎯 for loaded analysis stations).",
-            key="observation_map_marker_style",
-        )
-    use_offline = map_mode.startswith("Bundled")
-    marker_style = "emoji" if "emoji" in marker_style_choice.lower() else "dots"
+    layers = st.multiselect(
+        "Visible map layers",
+        list(LAYER_LABELS),
+        default=DEFAULT_FAST_LAYERS,
+        format_func=LAYER_LABELS.get,
+        key="observation_map_layers",
+    )
+    use_offline = True
+    marker_style = "dots"
 
     col_search, col_colors = st.columns([3.8, 1.2], gap="small", vertical_alignment="bottom")
     with col_search:

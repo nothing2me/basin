@@ -9,7 +9,7 @@ Demonstrates:
 3. Compound stressor test: +2.0°C global warming evaporation + 8.0 MGD AI data center cooling.
 4. Stage 2 drought trigger acceleration (-55 days earlier).
 5. Actionable stakeholder decision benefits (Municipal, AI siting, Rural districts).
-6. Scoping-to-engineering handoff into Texas WAM Run 3 and HEC-ResSim under Texas § 1001.
+6. Scoping-to-engineering handoff into official Texas WAM Run 3 and HEC-ResSim workflows.
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ def create_base_canvas(title_tag="PRE-ENGINEERING SCOPING"):
 
     # Bottom Footer
     draw_rounded_rect(draw, (40, 1015, 1880, 1060), radius=8, fill=BG_PANEL, outline=BORDER_SLATE, width=1)
-    draw.text((65, 1028), "Deterministic Mass-Balance  •  Zero Synthetic Hallucination  •  Texas Engineering Practice Act (§ 1001) Compliant", font=FONT_SMALL, fill=TEXT_MUTED)
+    draw.text((65, 1028), "Deterministic Mass-Balance  •  Zero Synthetic Hallucination  •  Pre-Engineering Technical Handoff", font=FONT_SMALL, fill=TEXT_MUTED)
     draw.text((1570, 1028), "From the Ground Up 2026", font=FONT_SMALL, fill=CYAN_ACCENT)
 
     return img, draw
@@ -118,7 +118,7 @@ def render_scene1_title(frame_idx, total_frames):
     pillars = [
         ("01. THE CRISIS", "Texas Region N Reservoir Squeeze", "600,000 residents & industrial hubs depend on Lake Corpus Christi and Choke Canyon. Official state WAM models stop at 2015 hydrology, creating an unquantified 10-year risk gap.", GOLD_STAGE1),
         ("02. THE PARADOX", "AI & Global Warming Evaporative Draw", "Summer heatwaves exceed 100°F (8–10 in/mo pan evaporation). Meanwhile, expanding AI data centers draw millions of gallons daily for evaporative cooling, accelerating drought triggers.", RED_STAGE2),
-        ("03. THE SOLUTION", "100% Offline Scoping Workbench", "Synchronized historical resampling over 35 years of NOAA records, physical mass balance, and automated § 1001 engineer handoff in under 1.2 seconds with 0.004 Wh compute.", GREEN_NORMAL)
+        ("03. THE SOLUTION", "100% Offline Scoping Workbench", "Synchronized historical resampling over 35 years of NOAA records, physical mass balance, and automated engineering handoff in under 1.2 seconds with 0.004 Wh compute.", GREEN_NORMAL)
     ]
 
     for i, (tag, title, desc, col) in enumerate(pillars):
@@ -491,14 +491,14 @@ def render_scene6_conclusion(frame_idx, total_frames):
 
     draw_rounded_rect(draw, (200, 140, 1720, 960), radius=18, fill=BG_PANEL, outline=CYAN_ACCENT, width=2)
 
-    draw.text((250, 180), "FROM PRE-ENGINEERING SCOPING TO STATUTORY COMPLIANCE", font=FONT_HEADING, fill=TEXT_WHITE)
-    draw.text((250, 230), "How BASIN bridges community data science to Texas Engineering Practice Act (§ 1001) engineering standards", font=FONT_SUBHEAD, fill=CYAN_ACCENT)
+    draw.text((250, 180), "FROM PRE-ENGINEERING SCOPING TO STATUTORY WORKFLOWS", font=FONT_HEADING, fill=TEXT_WHITE)
+    draw.text((250, 230), "How BASIN bridges exploratory community screening to formal engineering and WAM workflows", font=FONT_SUBHEAD, fill=CYAN_ACCENT)
 
     flow_steps = [
         ("1. Real NOAA Observations", "1991–2025 GHCN-Daily records. Cryptographically verified with SHA-256."),
         ("2. Window Resampling", "Synchronized multi-station drought windows preserving true storm physics."),
         ("3. Unsupervised K-Means", "Objective morphological profile clustering eliminating scenario groupthink."),
-        ("4. Human-in-the-Loop Review", "Practitioner sign-off (§ 1001); modifications track provenance."),
+        ("4. Human-in-the-Loop Review", "Practitioner review & sign-off; modifications track provenance."),
         ("5. Verified Engineering Export", "Direct input translation for Texas WAM Run 3 and HEC-ResSim.")
     ]
 
@@ -512,7 +512,7 @@ def render_scene6_conclusion(frame_idx, total_frames):
         ("0.004 Wh", "Compute Footprint per Run", GREEN_NORMAL),
         ("0 Packets", "Zero Cloud Network Calls", CYAN_ACCENT),
         ("100% Offline", "Standalone Windows Executable", GOLD_STAGE1),
-        ("Texas § 1001", "Engineering Ethics Compliant", TEXT_WHITE)
+        ("Pre-Engineering", "Screening Handoff Ready", TEXT_WHITE)
     ]
 
     for si, (num, lbl, col) in enumerate(stat_boxes):

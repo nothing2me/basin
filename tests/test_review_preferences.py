@@ -184,11 +184,12 @@ def workspace_state(at):
 def test_pre_run_answers_configure_the_new_review(isolated_sessions):
     """The run inherits the profile chosen before scenario generation."""
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=90).run()
-    at.sidebar.radio[0].set_value("Workspace").run()
 
     at.selectbox(key="run_focus_goal").set_value("storage")
     at.selectbox(key="run_focus_data").set_value("own")
     at.selectbox(key="run_focus_guidance").set_value("technical")
+    at.run()
+    at.sidebar.radio[0].set_value("Workspace").run()
     next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
     assert not at.exception
 
@@ -208,8 +209,9 @@ def test_pre_run_answers_configure_the_new_review(isolated_sessions):
 
 def test_pre_run_setup_can_be_skipped():
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=90).run()
-    at.sidebar.radio[0].set_value("Workspace").run()
     at.checkbox(key="run_focus_skip").set_value(True)
+    at.run()
+    at.sidebar.radio[0].set_value("Workspace").run()
     next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
     at.sidebar.radio[0].set_value("Review").run()
     assert not at.exception
@@ -446,8 +448,9 @@ def test_operations_goal_leads_with_agronomics_and_provenance(app):
 
 def test_tutorial_step5_auto_expands_storage_in_more_tools():
     at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=90).run()
-    at.sidebar.radio[0].set_value("Workspace").run()
     at.selectbox(key="run_focus_goal").set_value("compare")
+    at.run()
+    at.sidebar.radio[0].set_value("Workspace").run()
     next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
     at.sidebar.radio[0].set_value("Review").run()
     assert not at.exception

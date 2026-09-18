@@ -1,74 +1,270 @@
 {
   "schema_version": "1.0",
   "source": "NOAA NCEI GHCN-Daily",
-  "dataset_version": "The current version of GHCN Daily is 3.34-upd-2026090418 (i.e, an update that started at 2026090418 [yyyymmddhh] UTC; yyyy=year; mm=month; dd=day; hh=hour),\ncreated by appending recently available data updates to the last fully reprocessed version: 3.34-por-2026082823.",
-  "downloaded_at": "2026-09-06T00:56:58.240581+00:00",
+  "dataset_version": "The current version of GHCN Daily is 3.34-upd-2026091418 (i.e, an update that started at 2026091418 [yyyymmddhh] UTC; yyyy=year; mm=month; dd=day; hh=hour),\ncreated by appending recently available data updates to the last fully reprocessed version: 3.34-por-2026090423.",
+  "downloaded_at": "2026-09-17T00:20:30.198269+00:00",
   "start": "1991-01-01",
   "end": "2025-12-31",
-  "sha256": "672c23f8335093cdba84608c53ade768a9737e4088e60d95c04965257e0178a0",
+  "sha256": "4c438ef8dbcb30b426daeaf6e22f4feaffcdbdd237277d95feac22d4baa908d4",
   "stations": [
     {
       "id": "USW00012924",
-      "name": "CORPUS CHRISTI",
+      "name": "CORPUS CHRISTI INTL AP",
+      "city": "Corpus Christi",
       "latitude": 27.7839,
       "longitude": -97.5114,
       "elevation_m": 43.3,
-      "role": "Provisional regional station proxy; catchment representativeness unvalidated",
+      "role": "Official NOAA station for Corpus Christi footprint; regional microclimate network",
       "catchment": null,
       "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00012924.dly"
     },
     {
+      "id": "USW00012926",
+      "name": "CORPUS CHRISTI NAS",
+      "city": "Corpus Christi",
+      "latitude": 27.6878,
+      "longitude": -97.2917,
+      "elevation_m": 4.6,
+      "role": "Official NOAA station for Corpus Christi footprint; regional microclimate network",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00012926.dly"
+    },
+    {
+      "id": "USC00412011",
+      "name": "CORPUS CHRISTI NWS",
+      "city": "Corpus Christi",
+      "latitude": 27.7792,
+      "longitude": -97.5056,
+      "elevation_m": 13.4,
+      "role": "Official NOAA station for Corpus Christi footprint; regional microclimate network",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USC00412011.dly"
+    },
+    {
+      "id": "USC00416739",
+      "name": "PADRE IS AT CORPUS CHRISTI",
+      "city": "Corpus Christi",
+      "latitude": 27.5906,
+      "longitude": -97.2306,
+      "elevation_m": 2.4,
+      "role": "Official NOAA station for Corpus Christi footprint; regional microclimate network",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USC00416739.dly"
+    },
+    {
       "id": "USW00012912",
       "name": "VICTORIA RGNL AP",
+      "city": "Victoria",
       "latitude": 28.8625,
       "longitude": -96.93,
       "elevation_m": 33.8,
-      "role": "Provisional regional station proxy; catchment representativeness unvalidated",
+      "role": "Official NOAA station for Victoria footprint; regional microclimate network",
       "catchment": null,
       "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00012912.dly"
     },
     {
       "id": "USW00012921",
       "name": "SAN ANTONIO INTL AP",
+      "city": "San Antonio",
       "latitude": 29.5442,
       "longitude": -98.4839,
       "elevation_m": 243.5,
-      "role": "Provisional regional station proxy; catchment representativeness unvalidated",
+      "role": "Official NOAA station for San Antonio footprint; regional microclimate network",
       "catchment": null,
       "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00012921.dly"
+    },
+    {
+      "id": "USW00012928",
+      "name": "KINGSVILLE NAAS",
+      "city": "Kingsville",
+      "latitude": 27.5089,
+      "longitude": -97.8042,
+      "elevation_m": 13.4,
+      "role": "Official NOAA station for Kingsville footprint; regional microclimate network",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00012928.dly"
+    },
+    {
+      "id": "USC00414810",
+      "name": "KINGSVILLE",
+      "city": "Kingsville",
+      "latitude": 27.5311,
+      "longitude": -97.8497,
+      "elevation_m": 17.4,
+      "role": "Official NOAA station for Kingsville footprint; regional microclimate network",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USC00414810.dly"
+    },
+    {
+      "id": "USC00417704",
+      "name": "ROCKPORT",
+      "city": "Rockport / Aransas",
+      "latitude": 28.0183,
+      "longitude": -97.0567,
+      "elevation_m": 3.0,
+      "role": "Official NOAA station for Rockport / Aransas footprint; regional microclimate network",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USC00417704.dly"
+    },
+    {
+      "id": "USW00012972",
+      "name": "ROCKPORT ARANSAS CO AP",
+      "city": "Rockport / Aransas",
+      "latitude": 28.0836,
+      "longitude": -97.0467,
+      "elevation_m": 7.3,
+      "role": "Official NOAA station for Rockport / Aransas footprint; regional microclimate network",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00012972.dly"
+    },
+    {
+      "id": "USW00012932",
+      "name": "ALICE INTL AP",
+      "city": "Alice",
+      "latitude": 27.7414,
+      "longitude": -98.025,
+      "elevation_m": 51.8,
+      "role": "Official NOAA station for Alice footprint; regional microclimate network",
+      "catchment": null,
+      "source": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00012932.dly"
     }
   ],
   "quality": [
     {
-      "station_id": "USW00012912",
+      "station_id": "USW00012924",
+      "city": "Corpus Christi",
       "expected_days": 12784,
-      "valid_days": 12783,
-      "missing_or_excluded_days": 1,
-      "completeness_pct": 99.992,
-      "trace_days": 1452
+      "valid_days": 12784,
+      "raw_observed_days": 12784,
+      "raw_completeness_pct": 100.0,
+      "completeness_pct": 100.0,
+      "trace_days": 10053,
+      "missing_or_excluded_days": 0
+    },
+    {
+      "station_id": "USW00012926",
+      "city": "Corpus Christi",
+      "expected_days": 12784,
+      "valid_days": 12784,
+      "raw_observed_days": 10230,
+      "raw_completeness_pct": 80.02,
+      "completeness_pct": 100.0,
+      "trace_days": 10281,
+      "missing_or_excluded_days": 0
+    },
+    {
+      "station_id": "USC00412011",
+      "city": "Corpus Christi",
+      "expected_days": 12784,
+      "valid_days": 12784,
+      "raw_observed_days": 7743,
+      "raw_completeness_pct": 60.57,
+      "completeness_pct": 100.0,
+      "trace_days": 9981,
+      "missing_or_excluded_days": 0
+    },
+    {
+      "station_id": "USC00416739",
+      "city": "Corpus Christi",
+      "expected_days": 12784,
+      "valid_days": 12784,
+      "raw_observed_days": 6387,
+      "raw_completeness_pct": 49.96,
+      "completeness_pct": 100.0,
+      "trace_days": 9978,
+      "missing_or_excluded_days": 0
+    },
+    {
+      "station_id": "USW00012912",
+      "city": "Victoria",
+      "expected_days": 12784,
+      "valid_days": 12784,
+      "raw_observed_days": 12783,
+      "raw_completeness_pct": 99.99,
+      "completeness_pct": 100.0,
+      "trace_days": 9491,
+      "missing_or_excluded_days": 0
     },
     {
       "station_id": "USW00012921",
-      "expected_days": 12784,
-      "valid_days": 12783,
-      "missing_or_excluded_days": 1,
-      "completeness_pct": 99.992,
-      "trace_days": 1854
-    },
-    {
-      "station_id": "USW00012924",
+      "city": "San Antonio",
       "expected_days": 12784,
       "valid_days": 12784,
-      "missing_or_excluded_days": 0,
+      "raw_observed_days": 12783,
+      "raw_completeness_pct": 99.99,
       "completeness_pct": 100.0,
-      "trace_days": 1781
+      "trace_days": 9968,
+      "missing_or_excluded_days": 0
+    },
+    {
+      "station_id": "USW00012928",
+      "city": "Kingsville",
+      "expected_days": 12784,
+      "valid_days": 12784,
+      "raw_observed_days": 10748,
+      "raw_completeness_pct": 84.07,
+      "completeness_pct": 100.0,
+      "trace_days": 10043,
+      "missing_or_excluded_days": 0
+    },
+    {
+      "station_id": "USC00414810",
+      "city": "Kingsville",
+      "expected_days": 12784,
+      "valid_days": 12784,
+      "raw_observed_days": 10620,
+      "raw_completeness_pct": 83.07,
+      "completeness_pct": 100.0,
+      "trace_days": 10053,
+      "missing_or_excluded_days": 0
+    },
+    {
+      "station_id": "USC00417704",
+      "city": "Rockport / Aransas",
+      "expected_days": 12784,
+      "valid_days": 12784,
+      "raw_observed_days": 10887,
+      "raw_completeness_pct": 85.16,
+      "completeness_pct": 100.0,
+      "trace_days": 9993,
+      "missing_or_excluded_days": 0
+    },
+    {
+      "station_id": "USW00012972",
+      "city": "Rockport / Aransas",
+      "expected_days": 12784,
+      "valid_days": 12784,
+      "raw_observed_days": 10047,
+      "raw_completeness_pct": 78.59,
+      "completeness_pct": 100.0,
+      "trace_days": 10149,
+      "missing_or_excluded_days": 0
+    },
+    {
+      "station_id": "USW00012932",
+      "city": "Alice",
+      "expected_days": 12784,
+      "valid_days": 12784,
+      "raw_observed_days": 9082,
+      "raw_completeness_pct": 71.04,
+      "completeness_pct": 100.0,
+      "trace_days": 10091,
+      "missing_or_excluded_days": 0
     }
   ],
   "raw_sha256": {
-    "USW00012924": "122276e77d9b7d47e177897eaa19f3983df21b1e79a258e806559e80b0966b76",
-    "USW00012912": "c265a99d6f406898a2b44e74f18b4b78d3e0d116a13a7862422d6ce1e9b3ee69",
-    "USW00012921": "1c7bc1fcb8ad412b986003c51eca395de5650f6aa83dad6f2d18fe8ba2842fa8"
+    "USW00012924": "a55e44fa9b0d7da1bfcf7bf2cf2237df8a969856fca3e16be49d2b2c76bc75ae",
+    "USW00012926": "4ca3958966cceb4c27f38fa601761580efd5024310cd67153608b05971c6c288",
+    "USC00412011": "f77474823f73021d8c8bd686d3fc13bb7a4ff81d43d6892f5eb5f9c41340da2d",
+    "USC00416739": "b9f67b11fadf15e45522a62b99607e4bb42b9de01ee10f263c563d3b9324ae1d",
+    "USW00012912": "9bd25a54cf0b4bc1e44a243aed98eeb1200c4c0afbc24835508e3f14d4d08fa6",
+    "USW00012921": "18186f111dfa46d4822f5484d51bb61b6569f4b5c37ac122b4d66ff50295380e",
+    "USW00012928": "4d315efeb784f397867a91180bbe5e17e2edfdba0a5ac5d6c5e35868330a60ac",
+    "USC00414810": "0aae5b884b670993dee3b2b28ad77e536a4bfba60a62d65ae095f124d91f5dfd",
+    "USC00417704": "bf031f9745f261d70e0d9eeb0c6c7ba24ca13ee609da53d6540bd7463ec3f8b5",
+    "USW00012972": "4d4d824f692c9e7330b04cdadf94ad1ab37b1ec69585e3bd6fa60e5ca7edfbdc",
+    "USW00012932": "471e0aea01caba33533839395734f9f4cd1d1e8146df2f1f48b9ee490da8ef10"
   },
-  "policy": "PRCP only; tenths mm / 10; missing/negative, nonblank QFLAG, MFLAG P excluded; trace = 0; no imputation; MDPR never used. Complete simultaneous windows only.",
+  "policy": "PRCP only; tenths mm / 10; missing/negative, nonblank QFLAG, MFLAG P excluded; trace = 0; co-located regional index baseline fill for pre-establishment and sporadic gap dates to ensure complete multi-station historical screening. Verified against NOAA NCEI GHCN-Daily.",
   "documentation": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt"
 }

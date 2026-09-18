@@ -108,3 +108,92 @@ def test_simple_and_advanced_review_density(monkeypatch):
     assert any(b.label == "Build verified export" for b in at.button)
     assert any("Export Controls & Verification" in m.value for m in at.markdown)
     assert any("Deliverable Workspace & Documentation" in m.value for m in at.markdown)
+
+
+def test_review_decision_gating_and_suggested_rationale(monkeypatch):
+    """Verify that Include button is disabled until 20 chars are entered or suggested rationale is used."""
+    from basin_core.workspace import Workspace
+    monkeypatch.setattr(Workspace, "save", lambda self: True)
+
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=45).run()
+    at.sidebar.radio[0].set_value("Workspace").run()
+    next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
+
+    at.sidebar.radio[0].set_value("Review").run()
+    assert not at.exception
+
+    include_btn = next(b for b in at.button if b.label == "Include")
+    assert include_btn.disabled  # Initially disabled because review note is empty
+
+    # Click 'Use suggested rationale'
+    suggest_btn = next(b for b in at.button if "Use suggested rationale" in b.label)
+    suggest_btn.click().run()
+    assert not at.exception
+
+    # Note text area is now populated with > 20 chars
+    note_area = next(t for t in at.text_area if t.label == "Review note")
+    assert len(note_area.value.strip()) >= 20
+
+    # Include button is now unlocked
+    include_btn = next(b for b in at.button if b.label == "Include")
+    assert not include_btn.disabled
+
+    # Click Include to review the scenario
+    include_btn.click().run()
+    assert not at.exception
+
+
+def test_next_scenario_cycles_through_all_scenarios(monkeypatch):
+    """Verify that clicking Next scenario navigates through all 6 scenarios in sequence without looping between 2."""
+    from basin_core.workspace import Workspace
+    monkeypatch.setattr(Workspace, "save", lambda self: True)
+
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=45).run()
+    at.sidebar.radio[0].set_value("Workspace").run()
+    next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
+
+    at.sidebar.radio[0].set_value("Review").run()
+    assert not at.exception
+
+    selected = list(at.session_state.workspace.selected)
+    assert len(selected) == 6
+
+    visited = [at.session_state.inspect_id]
+    for _ in range(len(selected) - 1):
+        next(b for b in at.button if b.label == "Next scenario").click().run()
+        assert not at.exception
+        visited.append(at.session_state.inspect_id)
+
+    # All 6 distinct scenarios must be visited in order
+    assert len(set(visited)) == 6
+    assert visited == selected
+
+
+def test_export_deliverable_workspace_tabs_single_row(monkeypatch):
+    """Verify Deliverable Workspace & Documentation uses a single un-nested row of 6 clean tabs."""
+    from basin_core.workspace import Workspace
+    monkeypatch.setattr(Workspace, "save", lambda self: True)
+
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=45).run()
+    at.sidebar.radio[0].set_value("Workspace").run()
+    next(b for b in at.button if b.label == "Create rainfall scenarios").click().run()
+
+    at.sidebar.radio[0].set_value("Exports").run()
+    assert not at.exception
+    assert any("Deliverable Workspace & Documentation" in m.value for m in at.markdown)
+
+    # Verify the 5 clean tabs exist and HTML Report is removed
+    tab_labels = [t.label for t in at.tabs]
+    expected_tabs = [
+        "📈 Visual Figures",
+        "📄 Executive Brief",
+        "📊 Shortlist Details",
+        "📁 Evidence & Provenance",
+        "🌱 Environmental Footprint",
+    ]
+    for tab in expected_tabs:
+        assert any(tab in label for label in tab_labels), f"Missing tab: {tab}"
+    assert not any("HTML Report" in label for label in tab_labels), "HTML Report tab should be removed"
+
+
+

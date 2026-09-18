@@ -13,9 +13,14 @@ def initial_evidence(source):
     common = {"source_date": manifest["end"], "retrieved_at": manifest["downloaded_at"],
               "geographic_scope": "Corpus Christi, Victoria and San Antonio station locations; catchments unvalidated",
               "review_status": "provisional", "private_note": ""}
+    ds_version = manifest['dataset_version'].strip().rstrip('.')
+    noaa_desc = (
+        f"NOAA GHCN-Daily historical observations through December 31, 2025 (1991–2025 PRCP observations). "
+        f"Version: {ds_version}. Snapshot SHA-256: {manifest['sha256']}. " + manifest["policy"]
+    )
     definitions = [
         ("noaa-snapshot", "NOAA daily precipitation snapshot", "NOAA NCEI", manifest["documentation"], "observation", "mm/day",
-         f"1991–2025 PRCP observations. Version: {manifest['dataset_version'].strip()}. Snapshot SHA-256: {manifest['sha256']}. " + manifest["policy"]),
+         noaa_desc),
         ("station-suitability", "Regional index station network", "NOAA NCEI", "docs/methodology.md", "observation", "",
          "Continuous multi-decadal daily precipitation index stations across the Nueces basin (Corpus Christi, Victoria, San Antonio). Observations are point measurements without spatial area weighting."),
         ("rainfall-method", "Constructed rainfall and measured deficit", "BASIN implementation", "docs/methodology.md", "derived calculation", "mm per station",

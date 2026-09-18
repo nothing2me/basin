@@ -109,13 +109,19 @@ def comparison_panel(w, save):
             for identifier in ids:
                 s = w.get(identifier)
                 f = s.features
-                rows[identifier] = {"Source dates": f"{s.provenance['source_start']} to {s.provenance['source_end']}",
-                                    "Days": f["duration_days"], "Deficit mm/station": round(f["deficit_mm"], 2),
-                                    "Stations stressed together": round(f["concurrence"], 3), "Reference sample n": f["benchmark_n"],
-                                    "How unusual vs history": round(f["historical_percentile"], 3),
-                                    "Score": round(s.score, 2), "Revision": s.revision, "Status": s.status,
-                                    "Why this scenario ranked here": w.selection_reason(identifier),
-                                    **{f"Ranking contribution: {k}": round(v, 2) for k, v in s.components.items()}}
+                rows[identifier] = {
+                    "Source dates": f"{s.provenance['source_start']} to {s.provenance['source_end']}",
+                    "Days": f"{f['duration_days']}",
+                    "Deficit mm/station": f"{f['deficit_mm']:.2f}",
+                    "Stations stressed together": f"{f['concurrence']:.3f}",
+                    "Reference sample n": f"{f['benchmark_n']}",
+                    "How unusual vs history": f"{f['historical_percentile']:.3f}",
+                    "Score": f"{s.score:.2f}",
+                    "Revision": f"{s.revision}",
+                    "Status": f"{s.status}",
+                    "Why this scenario ranked here": f"{w.selection_reason(identifier)}",
+                    **{f"Ranking contribution: {k}": f"{v:.2f}" for k, v in s.components.items()},
+                }
             st.dataframe(pd.DataFrame(rows), width="stretch")
             st.caption("Approval covers rainfall content, not later priority weights.")
         else:
@@ -161,6 +167,8 @@ def direct_tool_arguments(w, tool_name: str):
     """
     if tool_name in DIRECT_TOOLS_NEEDING_INPUT:
         return None
+    if not w or not getattr(w, "scenarios", None):
+        return None
     sid = w.selected[0] if w.selected else w.scenarios[0].id
     if tool_name in ("describe_scenario", "explain_ranking", "check_concurrence", "summarize_evidence"):
         return {"scenario_id": sid}, f" for {sid} (first shortlisted scenario)"
@@ -174,12 +182,20 @@ def direct_tool_arguments(w, tool_name: str):
     return {}, ""
 
 
-@st.cache_resource(show_spinner=False)
-def _get_cached_assistant_workspace(_source, station_ids_tuple):
-    from basin_core.engine import ScenarioParams
-    from basin_core.workspace import Workspace
-    params = ScenarioParams(station_ids_tuple, (90, 180, 270), (1, 4, 7, 10), 0.35, 0.85, "All stations", 300, 22)
-    return Workspace(_source, params, 6)
+class BaselineWorkspace:
+    """Lightweight baseline wrapper when no scenarios have been generated yet."""
+
+    def __init__(self, source=None):
+        self.source = source
+        self.scenarios = []
+        self.selected = []
+        self.weights = {"severity": 35, "duration": 20, "concurrence": 30, "season": 15}
+        self.water_system_selection = None
+        self.id = "baseline"
+        self.notes = {}
+
+    def get(self, scenario_id):
+        raise KeyError(f"No scenario {scenario_id} exists (no scenarios generated yet).")
 
 
 def _open_assistant_panel():
@@ -232,33 +248,34 @@ def assistant_panel(w, source=None, names=None):
     else:
         st.html("<script>document.body.classList.remove('basin-assistant-open');</script>", unsafe_allow_javascript=True)
 
-    if w is None:
-        if source is not None:
-            station_ids = tuple(names.keys()) if names else tuple(source.daily.columns)
-            w = _get_cached_assistant_workspace(source, station_ids)
-
-    if w is None:
-        return
+    active_w = w
+    if active_w is None and source is not None:
+        active_w = BaselineWorkspace(source)
+    has_scenarios = active_w is not None and bool(getattr(active_w, "scenarios", None))
 
     with st.container(key="assistant_drawer"):
         model_info = get_model_info()
         client = get_qwen_client()
         status = client.status
-        if status == "ready":
-            status_label = "Ready"
-            status_detail = f'Uses this workspace’s data · Local model {model_info["quantization"]}'
-        elif status == "model_missing":
-            status_label = "Ready"
-            status_detail = "Uses this workspace’s data · Deterministic tools"
-        elif status == "loading":
-            status_label = "Preparing local model"
-            status_detail = "Workspace tools remain available"
-        elif status == "crashed":
-            status_label = "Ready with fallback"
-            status_detail = "Uses this workspace’s deterministic tools"
+        if has_scenarios:
+            if status == "ready":
+                status_label = "Ready"
+                status_detail = f'Uses this workspace’s data · Local model {model_info["quantization"]}'
+            elif status == "model_missing":
+                status_label = "Ready"
+                status_detail = "Uses this workspace’s data · Deterministic tools"
+            elif status == "loading":
+                status_label = "Preparing local model"
+                status_detail = "Workspace tools remain available"
+            elif status == "crashed":
+                status_label = "Ready with fallback"
+                status_detail = "Uses this workspace’s deterministic tools"
+            else:
+                status_label = "Ready"
+                status_detail = "Uses this workspace’s deterministic tools"
         else:
             status_label = "Ready"
-            status_detail = "Uses this workspace’s deterministic tools"
+            status_detail = "No active analysis run · Baseline data & guidance"
 
         avatar_path = _DIAMOND_AVATAR_PATH
         avatar_b64 = _DIAMOND_AVATAR_B64
@@ -283,23 +300,9 @@ def assistant_panel(w, source=None, names=None):
         )
 
         pending_query = st.session_state.pop("assistant_pending_query", None)
-        if pending_query:
-            st.session_state.assistant_messages.append({"role": "user", "content": pending_query})
-            with st.spinner("Analyzing workspace data..."):
-                try:
-                    import time
-                    t0 = time.time()
-                    reply, new_hist = run_assistant(w, pending_query, st.session_state.assistant_history)
-                    dt = time.time() - t0
-                    st.session_state["assistant_inference_seconds"] = st.session_state.get("assistant_inference_seconds", 0.0) + dt
-                    st.session_state.assistant_history = new_hist
-                    st.session_state.assistant_messages.append({"role": "assistant", "content": reply})
-                except Exception as ex:
-                    st.session_state.assistant_messages.append({"role": "assistant", "content": f"I could not complete that analysis: {ex}"})
-
         chat_box = st.container(height=520, border=True, key="assistant_conversation")
         with chat_box:
-            if not st.session_state.assistant_messages:
+            if not st.session_state.assistant_messages and not pending_query:
                 diamond_img = (
                     f'<img src="data:image/png;base64,{avatar_b64}" class="basin-assistant-mark" alt="BASIN Diamond Logo" />'
                     if avatar_b64
@@ -320,9 +323,30 @@ def assistant_panel(w, source=None, names=None):
                 with st.chat_message(msg["role"], avatar=av):
                     st.markdown(msg["content"])
 
+            if pending_query:
+                with st.chat_message("user"):
+                    st.markdown(pending_query)
+                st.session_state.assistant_messages.append({"role": "user", "content": pending_query})
+                av = str(avatar_path) if avatar_path.exists() else None
+                with st.chat_message("assistant", avatar=av):
+                    with st.spinner("Analyzing workspace data & computing metrics..."):
+                        try:
+                            import time
+                            t0 = time.time()
+                            reply, new_hist = run_assistant(active_w, pending_query, st.session_state.assistant_history)
+                            dt = time.time() - t0
+                            st.session_state["assistant_inference_seconds"] = st.session_state.get("assistant_inference_seconds", 0.0) + dt
+                            st.session_state.assistant_history = new_hist
+                            st.markdown(reply)
+                            st.session_state.assistant_messages.append({"role": "assistant", "content": reply})
+                        except Exception as ex:
+                            err_msg = f"I could not complete that analysis: {ex}"
+                            st.markdown(err_msg)
+                            st.session_state.assistant_messages.append({"role": "assistant", "content": err_msg})
+
         direct_tool_run = None
         direct_result_added = False
-        sid = w.selected[0] if w.selected else (w.scenarios[0].id if w.scenarios else "B-001")
+        sid = active_w.selected[0] if (active_w and active_w.selected) else (active_w.scenarios[0].id if (active_w and active_w.scenarios) else None)
 
         suggestion_bar = st.container(key="assistant_suggestions")
         with suggestion_bar:
@@ -352,43 +376,50 @@ def assistant_panel(w, source=None, names=None):
                         st.session_state.assistant_pending_query = "Can I ask a custom question about water planning?"
                         st.rerun()
 
+            btn_disabled = not has_scenarios
+            btn_help_suffix = "" if has_scenarios else " (Requires generated scenarios — Step 2 or 'Try an example')"
             with st.container(key="assistant_scenario_shortcuts"):
                 st.markdown('<p class="basin-suggested-label basin-scenario-label">Suggested questions · Scenario calculations</p>', unsafe_allow_html=True)
                 quick_one, quick_two = st.columns(2, gap="small")
                 with quick_one:
-                    if st.button("Top scenario", key="quick_top1", width="stretch", help="Explain the top-ranked scenario"):
-                        direct_tool_run = ("describe_scenario", {"scenario_id": sid}, f"Tell me about scenario {sid}")
+                    if st.button("Top scenario", key="quick_top1", width="stretch", disabled=btn_disabled, help=f"Explain the top-ranked scenario{btn_help_suffix}"):
+                        if sid:
+                            direct_tool_run = ("describe_scenario", {"scenario_id": sid}, f"Tell me about scenario {sid}")
                 with quick_two:
-                    if st.button("Compare", key="quick_compare", width="stretch", help="Compare the two highest-ranked scenarios"):
-                        id1 = w.selected[0] if w.selected else sid
-                        ranked_ids = [scenario.id for scenario in w.scenarios]
-                        id2 = w.selected[1] if len(w.selected) > 1 else next((candidate for candidate in ranked_ids if candidate != id1), id1)
-                        direct_tool_run = ("compare_scenarios", {"scenario_id_1": id1, "scenario_id_2": id2}, f"Compare scenario {id1} and {id2}")
+                    if st.button("Compare", key="quick_compare", width="stretch", disabled=btn_disabled, help=f"Compare the two highest-ranked scenarios{btn_help_suffix}"):
+                        if active_w and getattr(active_w, "scenarios", None):
+                            id1 = active_w.selected[0] if active_w.selected else sid
+                            ranked_ids = [scenario.id for scenario in active_w.scenarios]
+                            id2 = active_w.selected[1] if len(active_w.selected) > 1 else next((candidate for candidate in ranked_ids if candidate != id1), id1)
+                            direct_tool_run = ("compare_scenarios", {"scenario_id_1": id1, "scenario_id_2": id2}, f"Compare scenario {id1} and {id2}")
                 quick_three, quick_four = st.columns(2, gap="small")
                 with quick_three:
-                    if st.button("Station stress", key="quick_concur", width="stretch", help="Check station stress overlap"):
-                        direct_tool_run = ("check_concurrence", {"scenario_id": sid}, f"Check station stress concurrence for {sid}")
+                    if st.button("Station stress", key="quick_concur", width="stretch", disabled=btn_disabled, help=f"Check station stress overlap{btn_help_suffix}"):
+                        if sid:
+                            direct_tool_run = ("check_concurrence", {"scenario_id": sid}, f"Check station stress concurrence for {sid}")
                 with quick_four:
-                    if st.button("Explain ranking", key="quick_ranking", width="stretch", help="Explain how the top scenario was scored"):
-                        direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
+                    if st.button("Explain ranking", key="quick_ranking", width="stretch", disabled=btn_disabled, help=f"Explain how the top scenario was scored{btn_help_suffix}"):
+                        if sid:
+                            direct_tool_run = ("explain_ranking", {"scenario_id": sid}, f"Explain ranking for scenario {sid}")
                 quick_five, quick_six = st.columns(2, gap="small")
                 with quick_five:
-                    if st.button("Crop deficit", key="quick_crop_et", width="stretch", help="Estimate the crop water deficit"):
-                        from basin_core.agronomics import calculate_crop_water_deficit
-                        sc = w.get(sid)
-                        c_res = calculate_crop_water_deficit(sc.series)
-                        direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
-                        st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
-                        st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
-                        direct_result_added = True
+                    if st.button("Crop deficit", key="quick_crop_et", width="stretch", disabled=btn_disabled, help=f"Estimate the crop water deficit{btn_help_suffix}"):
+                        if active_w and sid:
+                            from basin_core.agronomics import calculate_crop_water_deficit
+                            sc = active_w.get(sid)
+                            c_res = calculate_crop_water_deficit(sc.series)
+                            direct_content = f"**Crop Water Deficit ({c_res['crop_name']})**\n\n{c_res['takeaway']}\n\n| Metric | Value |\n|---|---|\n| Total Scenario Rain | {c_res['total_rain_in']:.2f} in ({c_res['total_rain_mm']:.1f} mm) |\n| Crop ET Demand | {c_res['total_etc_in']:.2f} in |\n| Net Irrigation Deficit | **{c_res['irrigation_gap_in']:.2f} in (acre-inches per acre)** |\n"
+                            st.session_state.assistant_messages.append({"role": "user", "content": f"Calculate crop water deficit for {sid}"})
+                            st.session_state.assistant_messages.append({"role": "assistant", "content": direct_content})
+                            direct_result_added = True
                 with quick_six:
-                    if st.button("Export readiness", key="quick_export", width="stretch", help="Check export readiness"):
+                    if st.button("Export readiness", key="quick_export", width="stretch", disabled=btn_disabled, help=f"Check export readiness{btn_help_suffix}"):
                         direct_tool_run = ("check_export_readiness", {}, "Check export readiness")
 
         if direct_tool_run:
             t_name, t_args, u_msg = direct_tool_run
             try:
-                res = run_tool_directly(w, t_name, t_args)
+                res = run_tool_directly(active_w, t_name, t_args)
                 st.session_state.assistant_messages.append({"role": "user", "content": u_msg})
                 st.session_state.assistant_messages.append({"role": "assistant", "content": res})
                 direct_result_added = True
@@ -422,12 +453,12 @@ def assistant_panel(w, source=None, names=None):
             tool_name = st.selectbox("Calculation", list(TOOL_REGISTRY.keys()), key="direct_tool_select")
             if st.button("Run calculation", key="direct_tool_run", type="primary", width="stretch"):
                 try:
-                    prepared = direct_tool_arguments(w, tool_name)
+                    prepared = direct_tool_arguments(active_w, tool_name)
                     if prepared is None:
                         st.info(f"{tool_name} needs explicit inputs. Ask in the chat, naming the station and dates, year, weight values or scenario and settings.")
                     else:
                         args, described = prepared
-                        tool_out = run_tool_directly(w, tool_name, args)
+                        tool_out = run_tool_directly(active_w, tool_name, args)
                         st.session_state.assistant_messages.append({"role": "user", "content": f"Run {tool_name}{described}"})
                         st.session_state.assistant_messages.append({"role": "assistant", "content": tool_out})
                         st.success("Result added to the conversation.")

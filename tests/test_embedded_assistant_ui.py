@@ -72,3 +72,74 @@ def test_embedded_drawer_chat_query(workspace, monkeypatch):
     reply = app.session_state.assistant_messages[-1]["content"]
     assert f"Scenario {sid}" in reply
     assert "Error processing query" not in reply
+
+
+def test_fresh_session_assistant_no_scenarios(source, monkeypatch):
+    """In a fresh session (workspace=None), the assistant must not reference past scenarios."""
+    from basin_core import qwen_runtime
+    offline_client = SimpleNamespace(status="model_missing")
+    monkeypatch.setattr(qwen_runtime, "get_qwen_client", lambda: offline_client)
+
+    app = AppTest.from_string(
+        "import streamlit as st\n"
+        "from basin_ui import assistant_panel\n"
+        "assistant_panel(st.session_state.workspace, source=st.session_state.source)\n",
+        default_timeout=30,
+    )
+    app.session_state.workspace = None
+    app.session_state.source = source
+    app.session_state.assistant_open = False
+    app.run()
+    assert not app.exception
+
+    # Open drawer
+    app.button(key="assistant_open_tab_btn").click().run()
+    assert not app.exception
+    assert app.session_state.assistant_open is True
+
+    # Status should indicate no active analysis run
+    assert any("No active analysis run" in m.value for m in app.markdown)
+
+    # Scenario calculation buttons should be disabled
+    assert app.button(key="quick_top1").disabled is True
+    assert app.button(key="quick_compare").disabled is True
+    assert app.button(key="quick_concur").disabled is True
+    assert app.button(key="quick_ranking").disabled is True
+    assert app.button(key="quick_crop_et").disabled is True
+    assert app.button(key="quick_export").disabled is True
+
+    # Platform guidance buttons should be enabled
+    assert app.button(key="quick_other_tools").disabled is False
+    assert app.button(key="quick_next_step").disabled is False
+
+    # Ask about scenarios when none have been run
+    app.chat_input(key="assistant_chat_input").set_value("What are my scenarios?").run()
+    assert not app.exception
+    reply = app.session_state.assistant_messages[-1]["content"]
+    assert "No active analysis run" in reply
+    assert "Step 2: Scenario Builder" in reply
+    assert "Try an example" in reply
+
+    # Ask about worst scenario when none have been run
+    app.chat_input(key="assistant_chat_input").set_value("What is the worst scenario?").run()
+    assert not app.exception
+    reply = app.session_state.assistant_messages[-1]["content"]
+    assert "No active analysis run" in reply
+
+    # Ask about specific scenario ID when none have been run
+    app.chat_input(key="assistant_chat_input").set_value("Tell me about B-001").run()
+    assert not app.exception
+    reply = app.session_state.assistant_messages[-1]["content"]
+    assert "No active analysis run" in reply
+    assert "B-001" in reply
+
+    # Data provenance and concept questions should still work
+    app.chat_input(key="assistant_chat_input").set_value("Where does this data come from?").run()
+    assert not app.exception
+    reply = app.session_state.assistant_messages[-1]["content"]
+    assert "NOAA" in reply or "GHCN" in reply
+
+    app.chat_input(key="assistant_chat_input").set_value("What does concurrence mean?").run()
+    assert not app.exception
+    reply = app.session_state.assistant_messages[-1]["content"]
+    assert "Concurrence" in reply

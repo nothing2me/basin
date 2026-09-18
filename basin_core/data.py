@@ -154,3 +154,48 @@ class CachedSource:
             })
         new_manifest["sha256"] = hashlib.sha256(new_raw).hexdigest()
         return CachedSource(_daily=new_daily, _manifest=new_manifest, _raw=new_raw)
+
+
+CITY_STATIONS: dict[str, list[str]] = {
+    "Corpus Christi": [
+        "USW00012924",  # Corpus Christi Intl AP (100% first-order baseline)
+        "USW00012926",  # Corpus Christi NAS (naval air station)
+        "USC00412011",  # Corpus Christi NWS (weather forecast office)
+        "USC00416739",  # Padre Island at Corpus Christi (barrier island)
+    ],
+    "Victoria": [
+        "USW00012912",  # Victoria Regional AP
+    ],
+    "San Antonio": [
+        "USW00012921",  # San Antonio Intl AP (upper basin analog)
+    ],
+    "Kingsville": [
+        "USW00012928",  # Kingsville NAAS
+        "USC00414810",  # Kingsville COOP
+    ],
+    "Rockport / Aransas": [
+        "USC00417704",  # Rockport
+        "USW00012972",  # Rockport Aransas Co AP
+    ],
+    "Alice": [
+        "USW00012932",  # Alice Intl AP
+    ],
+}
+
+DEFAULT_CITIES = ["Corpus Christi"]
+
+
+def stations_for_cities(cities: list[str], custom_stations: list[str] | None = None) -> list[str]:
+    """Resolve a list of selected city names to all encompassed official NOAA station IDs."""
+    res: list[str] = []
+    for city in cities:
+        if city in CITY_STATIONS:
+            for s in CITY_STATIONS[city]:
+                if s not in res:
+                    res.append(s)
+    if custom_stations:
+        for cs in custom_stations:
+            if cs not in res:
+                res.append(cs)
+    return res if res else CITY_STATIONS["Corpus Christi"]
+
