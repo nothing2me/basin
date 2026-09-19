@@ -1165,11 +1165,11 @@ DOMAIN_TOPICS: dict[str, str] = {
     "metric_definitions_faq": (
         "### 📐 Key BASIN Metrics Explained in Plain English\n\n"
         "- **Deficit (Shortfall)**: The total missing rainfall compared to average historical conditions over the same timeframe, measured in millimeters (mm) or inches (in).\n"
-        "- **Station Concurrence (%)**: The percentage of regional index weather stations (Corpus Christi, Victoria, San Antonio) that suffered drought simultaneously. 100% concurrence means widespread regional drought.\n"
+        "- **Station Stress Concurrence (%)**: The share of eligible 30-day windows in which all selected gauges exceed their own rolling rainfall-deficit threshold together. It is not the percentage of stations and does not establish reservoir or streamflow stress.\n"
         "- **Historical Percentile**: How rare the drought sequence is compared to 35 years of observations. A 95th percentile scenario is more severe than 95% of all historical dry spells.\n"
         "- **Score**: A composite multi-criteria ranking based on the weights you set on Step 2 (Severity, Duration, Concurrence, and Summer Timing). Highest score ranks #1.\n"
         "- **Combined Storage (%)**: The collective water volume stored in Choke Canyon Reservoir and Lake Corpus Christi relative to their combined conservation capacity (963,600 ac-ft).\n"
-        "- **Stage 3 Critical Shortage (20% or 35%)**: Key policy triggers where municipal lawn watering is prohibited and industrial/irrigation curtailments become mandatory."
+        "- **Storage bands**: The Region N preset shows 40%, 30%, and 20% comparison bands. BASIN's 35% starting case is an experiment setting, not an official trigger. Always verify the currently adopted provider plan before interpreting restrictions."
     ),
     "custom_questions_welcome": (
         "### 💬 Ask Me Any Water, Drought, or Engineering Question!\n\n"
@@ -1180,6 +1180,75 @@ DOMAIN_TOPICS: dict[str, str] = {
         "- **Tool Calculations**: *'Tell me about scenario B-042'*, *'Compare B-001 and B-012'*, *'Test reservoir at 30% storage'*, *'Explain ranking for B-001'*\n"
         "- **Platform Guidance**: *'What should I do next?'*, *'Why is export locked?'*, *'How do I upload custom data?'*\n\n"
         "Feel free to type your question below!"
+    ),
+    "map_explainer": (
+        "### What the Region N Map Shows\n\n"
+        "The map is a **geographic reference**, not a live drought or reservoir-status map. It places the Region N boundary, counties, "
+        "streams and channels, lakes and reservoirs, NOAA rainfall stations, and USGS water sites in their geographic context.\n\n"
+        "- **Orange outline**: the 11-county Region N planning boundary\n"
+        "- **White lines**: county boundaries\n"
+        "- **Cyan lines**: mapped streams and channels\n"
+        "- **Blue areas**: mapped lakes, ponds, and reservoirs\n"
+        "- **Purple lines**: HUC8 watershed/subbasin boundaries\n"
+        "- **Station markers**: catalog locations; the emphasized loaded-source markers identify the stations used by the active rainfall analysis\n\n"
+        "Search or hover for a feature's name and source. Turning layers on or off changes only the view, not the analysis. Satellite imagery is "
+        "a basemap; it does not show current water levels, rainfall, streamflow, or drought severity."
+    ),
+    "map_vs_analysis_stations": (
+        "### Map Stations vs. Analysis Stations\n\n"
+        "The map catalog is intentionally broader than the active dataset. Most markers provide **geographic context only**. The bundled rainfall "
+        "analysis uses the three synchronized NOAA GHCN-Daily stations named in the active snapshot: Corpus Christi, Victoria Regional Airport, "
+        "and San Antonio International Airport. Loaded-source markers are visually emphasized on the map.\n\n"
+        "Those airport gauges are provisional regional proxies, not proof of catchment coverage. Before formal use, review whether the gauges represent "
+        "the service area and source watershed; a nearby marker is not automatically part of the calculation."
+    ),
+    "heatmap_explainer": (
+        "### How to Read the Monthly Rainfall-Departure Heatmap\n\n"
+        "Each cell compares one station's rainfall for a month with that station's **1991–2020 monthly climatology**. Negative departures indicate a "
+        "drier-than-baseline month; positive departures indicate a wetter month. Use the station selector to change perspective.\n\n"
+        "The heatmap is useful for spotting timing, persistence, and whether dry periods appear at more than one loaded gauge. It does not show reservoir "
+        "storage, soil moisture, streamflow, or a catchment-wide rainfall average, and a single red cell is not an official drought declaration."
+    ),
+    "data_quality_freshness": (
+        "### Data Currency and Quality\n\n"
+        "BASIN uses a **versioned local snapshot**, not a live weather feed. The bundled analysis window is 1991-01-01 through 2025-12-31; the Data page's "
+        "snapshot metadata records the NOAA GHCN-Daily version, retrieval time, station list, completeness, source URLs, and SHA-256 hashes.\n\n"
+        "The loader excludes missing or negative precipitation, observations with nonblank NOAA quality flags, and values marked ‘missing presumed zero’; it "
+        "does not fill gaps with zero. NOAA quality control and BASIN's reproducibility checks improve traceability, but they do not prove that the three "
+        "stations represent every watershed or utility. Check the completeness table and station suitability before relying on a result."
+    ),
+    "privacy_and_saving": (
+        "### What Is Saved and Shared\n\n"
+        "BASIN is a single-operator local application. Runs, notes, reviews, and retained uploads are saved in the application's local session storage; they "
+        "are not automatically uploaded to a BASIN cloud service. A custom-gauge preview stays in the current session until you explicitly attach it to an "
+        "active analysis.\n\n"
+        "Export is also explicit. If a run contains custom numerical inputs, Step 4 asks for consent before including them in a downloadable bundle. Local "
+        "files are not encrypted by BASIN, and opening live satellite imagery can contact the configured map-tile provider, so use the bundled basemap when "
+        "network isolation matters."
+    ),
+    "limits_and_trust": (
+        "### What BASIN Can—and Cannot—Establish\n\n"
+        "BASIN can reproduce rainfall-screening calculations, compare shortlisted scenarios, document assumptions, run simplified sensitivity experiments, "
+        "and package a review trail. Supported numerical answers come from application-owned tools and the active workspace.\n\n"
+        "It cannot forecast weather or a water-shortage date, declare a drought stage, prove gauge representativeness, convert point rainfall directly into "
+        "reservoir inflow, or replace a calibrated hydrologic/operations model and professional review. Scores are priorities, scenarios are what-if cases, "
+        "and storage results are assumption-driven experiments—not safety ratings or legal advice."
+    ),
+    "storage_chart_explainer": (
+        "### How to Read the Reservoir-Storage Chart\n\n"
+        "The bars show the configured active storage for each source, while the line shows the simplified combined-pool trajectory as a percentage of "
+        "configured capacity. Horizontal lines mark the selected water-system preset's comparison bands—40%, 30%, and 20% in the Region N preset—plus "
+        "any configured inactive-storage or context marker.\n\n"
+        "Crossing a line means the experiment reached that configured band under its visible assumptions. It does not, by itself, declare a legal drought "
+        "stage or predict when a real reservoir will cross it. Check the selected system, starting storage, demand, pipeline case, rainfall assumption, and "
+        "adopted provider plan before interpreting the chart."
+    ),
+    "ranking_method": (
+        "### How BASIN Ranks and Shortlists Scenarios\n\n"
+        "BASIN calculates a transparent priority score from four user-controlled components: rainfall-shortfall severity, duration, multi-station concurrence, "
+        "and summer timing. The weights express what matters for this screening exercise; the score is not a probability or safety rating.\n\n"
+        "It then uses K-Means feature clustering to avoid returning several near-duplicate windows from one dry episode and selects strong representatives from "
+        "different statistical profiles. Ask `Explain ranking for B-001` with an actual scenario ID to see its weighted contributions."
     )
 }
 
@@ -1364,6 +1433,45 @@ def _render_rank_comparison(workspace, id_a: str, id_b: str) -> str:
         f"{explanation}\n\n"
         f"> Source: BASIN workspace · Snapshot `{snapshot}…`\n"
         f"> ⚠️ Scores are ranking priorities calculated from your weight settings, not probabilities or physical safety ratings."
+    )
+
+
+_FOLLOW_UP_QUESTION_SETS: tuple[tuple[str, ...], ...] = (
+    (
+        "What does the Region N map show?",
+        "Which stations are actually used in the analysis?",
+        "How do I read the rainfall-departure heatmap?",
+    ),
+    (
+        "How current is the bundled data?",
+        "What quality checks are applied to rainfall observations?",
+        "What are BASIN's scientific limitations?",
+    ),
+    (
+        "Why did the top scenario rank first?",
+        "Is a BASIN scenario a forecast?",
+        "What does station stress concurrence mean?",
+    ),
+    (
+        "Where is my work saved?",
+        "What gets included in an export?",
+        "Can I use my own rain-gauge data?",
+    ),
+)
+
+
+def _unmatched_question_response(prompt: str) -> str:
+    """Admit an unsupported intent and vary useful follow-ups by the question text."""
+    index = sum(ord(char) for char in prompt.lower().strip()) % len(_FOLLOW_UP_QUESTION_SETS)
+    suggestions = "\n".join(f"- `{question}`" for question in _FOLLOW_UP_QUESTION_SETS[index])
+    return (
+        "**I could not verify a specific answer to that question from this workspace.**\n\n"
+        "I will not invent a hydrologic fact or silently turn a general question into a scenario calculation. "
+        "Try naming the page, chart, station, scenario ID, date range, or assumption you mean.\n\n"
+        "Here are a few supported follow-ups:\n"
+        f"{suggestions}\n\n"
+        "For a calculation, you can also ask for a named scenario comparison, rainfall-station period, "
+        "ranking explanation, storage sensitivity test, or export-readiness check."
     )
 
 
@@ -1553,6 +1661,69 @@ def semantic_query_route(workspace, prompt: str) -> str:
     )
     if is_greeting:
         return DOMAIN_TOPICS["greetings"]
+
+    # Common site questions are deliberately routed before broad workflow/help
+    # matching so a specific question does not collapse into the welcome guide.
+    if not id_matches and any(k in p for k in [
+        "what does the map show", "what is the map showing", "what is the map describing",
+        "what does this map show", "what is this map", "explain the map", "map legend",
+        "map colors", "map colours", "colors on the map", "colours on the map",
+        "orange outline", "purple lines", "cyan lines", "blue areas on the map",
+        "how do i read the map", "confused regarding the map", "confused about the map"
+    ]):
+        return DOMAIN_TOPICS["map_explainer"]
+
+    if not id_matches and any(k in p for k in [
+        "which stations are used", "which stations are actually used", "what stations are used",
+        "what stations are actually used", "stations used in the analysis",
+        "stations used for analysis", "map stations used", "all map stations", "loaded source station",
+        "loaded stations", "airport gauges", "airport stations", "station coverage",
+        "are all stations used", "which gauges are used", "what gauges are used"
+    ]):
+        return DOMAIN_TOPICS["map_vs_analysis_stations"]
+
+    if not id_matches and any(k in p for k in [
+        "heatmap", "rainfall departures", "monthly departures", "red squares", "teal squares",
+        "red cells", "what do the cells mean", "how do i read the rainfall"
+    ]):
+        return DOMAIN_TOPICS["heatmap_explainer"]
+
+    if not id_matches and any(k in p for k in [
+        "is the data live", "live data", "real time data", "real-time data", "how current is the data",
+        "how current and accurate", "current and accurate", "accuracy of the data",
+        "how recent is the data", "when was the data updated", "data freshness", "data quality",
+        "is the data accurate", "can i trust the data", "missing data", "quality flags",
+        "where are the dates", "what years are covered", "date range"
+    ]):
+        return DOMAIN_TOPICS["data_quality_freshness"]
+
+    if not id_matches and any(k in p for k in [
+        "where is my data saved", "where are runs saved", "does basin save", "does it save",
+        "is my data private", "data privacy", "privacy", "does this upload", "sent to the cloud",
+        "shared online", "what gets shared", "what is saved", "save my work", "save a run"
+    ]):
+        return DOMAIN_TOPICS["privacy_and_saving"]
+
+    if not id_matches and any(k in p for k in [
+        "what are the limitations", "what are its limitations", "limitations of basin", "scientific limitations",
+        "what can basin not do", "what can't basin do", "what cant basin do", "can i trust basin",
+        "how trustworthy", "is this scientifically valid", "replace a hydrologist", "replace an engineer",
+        "is this legal advice", "is this a prediction"
+    ]):
+        return DOMAIN_TOPICS["limits_and_trust"]
+
+    if not id_matches and any(k in p for k in [
+        "what do the storage bands", "what do storage bands", "explain the storage chart",
+        "read the storage chart", "reservoir chart mean", "horizontal lines", "storage bands mean"
+    ]):
+        return DOMAIN_TOPICS["storage_chart_explainer"]
+
+    if not id_matches and any(k in p for k in [
+        "how does basin rank", "how are scenarios ranked", "how does ranking work",
+        "rank and shortlist", "ranking logic", "how are scenarios shortlisted",
+        "how does basin shortlist", "how does the shortlist work"
+    ]):
+        return DOMAIN_TOPICS["ranking_method"]
 
     # Step-specific guides
     if not id_matches and any(k in p for k in ["step 1", "step one", "data dashboard", "load data", "custom gauge", "upload csv", "how to load data"]):
@@ -1922,17 +2093,7 @@ def semantic_query_route(workspace, prompt: str) -> str:
             res = describe_scenario(workspace, id_matches[0])
             return render_tool_result("describe_scenario", res)
 
-        return (
-            "**BASIN Analyst Assistant**\n\n"
-            "I am a read-only decision-support tool focused on rainfall scenario analysis, "
-            "reservoir stress testing, and guiding you through the BASIN workflow.\n\n"
-            "💡 **Looking to learn the application?**\n"
-            "- Ask me: *\"How do I use this website?\"* or *\"Show me around the workflow\"*\n"
-            "- Click **'Start tutorial'** on Step 1: Data Dashboard for a step-by-step interactive tour.\n"
-            "- Click **'Try an example'** on Step 1 to load pre-computed scenarios and explore immediately.\n\n"
-            "I can also help you with verified calculations for this workspace:\n\n"
-            f"{TOOL_LIST_HELP}"
-        )
+        return _unmatched_question_response(prompt)
     except ValueError as err:
         return f"⚠️ **Analysis Boundary**: {err}"
     except Exception as ex:

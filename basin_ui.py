@@ -16,6 +16,27 @@ _DIAMOND_AVATAR_B64 = (
     else ""
 )
 
+ASSISTANT_QUESTION_SETS = (
+    (
+        ("Explain the map", "What does the Region N map show?"),
+        ("Data accuracy", "How current and accurate is the bundled rainfall data?"),
+        ("Next step", "What should I do next?"),
+        ("Scenario or forecast?", "Is a BASIN scenario a forecast?"),
+    ),
+    (
+        ("Read the heatmap", "How do I read the monthly rainfall-departure heatmap?"),
+        ("Stations actually used", "Which stations are actually used in the analysis?"),
+        ("Privacy & saving", "Where is my work saved, and is my data private?"),
+        ("Why export is locked", "Why is the export button locked?"),
+    ),
+    (
+        ("Storage chart", "What do the storage bands in the reservoir chart mean?"),
+        ("Ranking logic", "How does BASIN rank and shortlist scenarios?"),
+        ("Use my own data", "Can I upload and use my own rain-gauge data?"),
+        ("Scientific limits", "What are BASIN's scientific limitations?"),
+    ),
+)
+
 
 def evidence_panel(w, scenario, save):
     key = f"{w.id}_{scenario.id}"
@@ -356,25 +377,31 @@ def assistant_panel(w, source=None, names=None):
                 on_submit=_queue_assistant_query,
             )
             with st.container(key="assistant_guidance_shortcuts"):
-                st.markdown('<p class="basin-suggested-label basin-guidance-label">Platform &amp; Guidance Shortcuts</p>', unsafe_allow_html=True)
-                help_col1, help_col2 = st.columns(2, gap="small")
-                with help_col1:
-                    if st.button("Other tools", key="quick_other_tools", width="stretch", help="See all independent analysis tools in BASIN"):
-                        st.session_state.assistant_pending_query = "What other tools can I use besides the tutorial?"
-                        st.rerun()
-                with help_col2:
-                    if st.button("Next step", key="quick_next_step", width="stretch", help="Get context-aware advice on what to do next"):
-                        st.session_state.assistant_pending_query = "What should I do next?"
-                        st.rerun()
-                help_col3, help_col4 = st.columns(2, gap="small")
-                with help_col3:
-                    if st.button("In simple terms", key="quick_simple_terms", width="stretch", help="Plain-English explanation of BASIN"):
-                        st.session_state.assistant_pending_query = "Explain what BASIN does in simple terms"
-                        st.rerun()
-                with help_col4:
-                    if st.button("Ask custom question", key="quick_custom_q", width="stretch", help="Ask custom questions about water and drought"):
-                        st.session_state.assistant_pending_query = "Can I ask a custom question about water planning?"
-                        st.rerun()
+                user_turns = sum(1 for msg in st.session_state.assistant_messages if msg.get("role") == "user")
+                question_set_index = user_turns % len(ASSISTANT_QUESTION_SETS)
+                questions = ASSISTANT_QUESTION_SETS[question_set_index]
+                st.markdown(
+                    '<p class="basin-suggested-label basin-guidance-label">Suggested questions · rotates after each answer</p>',
+                    unsafe_allow_html=True,
+                )
+                for row in range(2):
+                    columns = st.columns(2, gap="small")
+                    for column, offset in zip(columns, (0, 1)):
+                        question_index = row * 2 + offset
+                        label, query = questions[question_index]
+                        legacy_key = {
+                            (0, 0): "quick_other_tools",
+                            (0, 2): "quick_next_step",
+                        }.get((question_set_index, question_index))
+                        with column:
+                            if st.button(
+                                label,
+                                key=legacy_key or f"quick_common_{question_set_index}_{question_index}",
+                                width="stretch",
+                                help=query,
+                            ):
+                                st.session_state.assistant_pending_query = query
+                                st.rerun()
 
             btn_disabled = not has_scenarios
             btn_help_suffix = "" if has_scenarios else " (Requires generated scenarios — Step 2 or 'Try an example')"
