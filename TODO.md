@@ -28,6 +28,7 @@ Updated: 2026-09-13. This file tracks current release work. The previous detaile
 
 ## Next technical work
 
+- [ ] **Post-presentation watershed validation.** Define expert-reviewed source-watershed coverage and integrate appropriate streamflow observations before BASIN makes any reservoir-inflow or freshwater-availability claim. Preserve the current regional rainfall-screening mode as an explicitly labeled fallback.
 - [ ] **T5 follow-up — upload UI and parser adapter.** Streamlit document upload and review interface, dedicated PDF parsing adapter, page preview with block selection, and OCR remain future work.
 
 ## Part C external acceptance

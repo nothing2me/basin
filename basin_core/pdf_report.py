@@ -783,13 +783,13 @@ def format_scenario_ranking_rationale(scenario, workspace) -> str:
         pos = exp.get('position', '?')
         total = exp.get('total_candidates', '?')
         return (
-            f"Selected as {cluster_name} representative: primary ranking driver is {driver} "
-            f"(composite score {score_val:.2f}, overall rank #{pos} of {total})."
+            f"Selected as {cluster_name} representative: largest user-configured score contribution is {driver} "
+            f"(priority score {score_val:.2f}, overall rank #{pos} of {total})."
         )
     except Exception:
         cluster_val = getattr(scenario, "cluster", "candidate")
         score = getattr(scenario, "score", None)
-        score_str = f" with composite priority score {score:.2f}" if score is not None else ""
+        score_str = f" with user-configured priority score {score:.2f}" if score is not None else ""
         return f"Selected as Group {cluster_val} representative{score_str}."
 
 
@@ -2259,7 +2259,7 @@ def render_html_report(
     <!-- Universal Top Banner (Follows Executive Summary Orientation) -->
     <div style="background: #f8fafc; border: 1.5px solid #94a3b8; border-left: 5px solid #087e8b; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; font-size: 8pt; color: #1e293b; line-height: 1.35;">
         <strong>⚠️ WHAT THIS DOCUMENT IS NOT:</strong>
-        <span>NOT a hydrologic drought-of-record analysis · NOT a safe-yield or delivery forecast · NOT validated against actual streamflow or catchment runoff.</span>
+        <span>Rainfall-scenario screening only · NOT a reservoir-inflow or freshwater-availability prediction · NOT a hydrologic drought-of-record analysis · NOT validated against actual streamflow or catchment runoff.</span>
     </div>
 
     <!-- SECTION 2: SCENARIO IDENTITY AND RAINFALL INPUT -->
@@ -2417,6 +2417,7 @@ def render_html_report(
             <div class="callout-title" style="color: #92400e;">⚠️ WHAT THIS DOCUMENT IS NOT / MODELING LIMITATIONS</div>
             <ul style="margin-left: 18px; font-size: 7.8pt; color: #78350f; line-height: 1.45;">
                 <li><strong>Not an Operational Forecast:</strong> Drawdown trajectories reflect an illustrative planning experiment under historical rainfall deficit series, not a forecast of future lake levels or safe yield.</li>
+                <li><strong>Rainfall Screening Only:</strong> BASIN does not predict reservoir inflow or freshwater availability.</li>
                 <li><strong>Not a Drought-of-Record Analysis:</strong> Historical point-rainfall deficit series do not substitute for comprehensive basin-wide hydrologic modeling.</li>
                 <li><strong>Uncalibrated Hydrology:</strong> Inflow proxy ({escape(str(system_assumptions["inflow"]))}) is not calibrated against river gauges or streamflow measurements.</li>
                 <li><strong>Proxy Evaporation:</strong> Uses regional seasonal proxy rates, not pan-calibrated or surface-area-routed evaporation.</li>

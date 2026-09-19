@@ -346,7 +346,7 @@ def storage_trajectory_figure(
     return fig
 
 
-def drought_anomaly_matrix_figure(observations: pd.DataFrame, title_prefix: str = "Catchment Average") -> go.Figure:
+def drought_anomaly_matrix_figure(observations: pd.DataFrame, title_prefix: str = "Selected-station average") -> go.Figure:
     """Render a 35-year (1991–2025) x 12-month precipitation anomaly heatmap matrix."""
     if isinstance(observations, pd.DataFrame):
         daily_series = observations.mean(axis=1)

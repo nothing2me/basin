@@ -281,7 +281,8 @@ def test_common_user_inquiries_routing(workspace):
     q2 = "im not sure how this works"
     r2 = semantic_query_route(workspace, q2)
     assert "BASIN in Plain English" in r2
-    assert "flight simulator for water planning" in r2
+    assert "rainfall-scenario screening workbench for water planning" in r2
+    assert "does not predict reservoir inflow or freshwater availability" in r2
 
     # 3. Dynamic next steps
     q3 = "what should i do next"
@@ -298,7 +299,8 @@ def test_common_user_inquiries_routing(workspace):
     q5 = "what are all the tools in basin"
     r5 = semantic_query_route(workspace, q5)
     assert "Summary of All Analytical Tools in BASIN" in r5
-    assert "Combined Reservoir Simulator" in r5
+    assert "Illustrative Storage Experiment" in r5
+    assert "not an inflow or supply forecast" in r5
 
     # 6. Custom data upload guide
     q6 = "can i upload my own data"

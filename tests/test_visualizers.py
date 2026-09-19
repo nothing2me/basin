@@ -164,7 +164,7 @@ def test_drought_anomaly_matrix_figure(workspace):
     stations = [s["id"] for s in source.manifest["stations"]]
     obs = source.select(stations)
 
-    fig = drought_anomaly_matrix_figure(obs, title_prefix="Catchment composite")
+    fig = drought_anomaly_matrix_figure(obs, title_prefix="Selected-station average")
     assert isinstance(fig, go.Figure)
     assert len(fig.data) == 1
     assert isinstance(fig.data[0], go.Heatmap)

@@ -325,7 +325,8 @@ def test_issue_18_discriminating_scenario_drivers(approved_workspace):
     primary = accepted[0]
     rationale = format_scenario_ranking_rationale(primary, approved_workspace)
     assert "Selected as" in rationale
-    assert "primary ranking driver is" in rationale
+    assert "largest user-configured score contribution is" in rationale
+    assert "priority score" in rationale
 
 
 # ---------------------------------------------------------------------------

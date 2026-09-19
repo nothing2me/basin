@@ -1244,7 +1244,7 @@ TUTORIAL_STEPS = [
         "page": "Data",
         "tag": "OBSERVATIONS · PROVENANCE",
         "title": "1. Inspect the Observation Sources",
-        "desc": "Three provisional NOAA station proxies with a byte-verified snapshot. A checksum does not validate catchment suitability.",
+        "desc": "Bundled NOAA stations are provisional regional proxies with a byte-verified snapshot. A checksum does not validate catchment suitability.",
         "directive": "Inspect the highlighted station map and completeness table. Open Snapshot metadata & quality policy for the missing-data rules.",
     },
     {
@@ -1705,6 +1705,11 @@ if page == "Data":
     st.markdown("### Step 1: Observation Baseline & Data Sources")
     st.markdown(f"**{PAGE_QUESTIONS['Data']}**")
     st.caption("Verify NOAA long-term continuous meteorological index stations and data completeness before proceeding to scenario generation.")
+    st.caption(
+        "Scope: The original three-station baseline and the expanded NOAA station network are provisional "
+        "regional proxies for rainfall-scenario screening. BASIN does not predict reservoir inflow or "
+        "freshwater availability."
+    )
 
     saved_custom_panel(w)
 
@@ -1776,12 +1781,12 @@ if page == "Data":
         st.caption("Difference from the 35-year monthly average. Crimson is drier; teal is wetter.")
         hm_station_choice = st.selectbox(
             "Heatmap station perspective",
-            ["Catchment composite (All stations average)", *[f"{names[s_id]} ({s_id})" for s_id in names]],
+            ["Selected-station average (not catchment-weighted)", *[f"{names[s_id]} ({s_id})" for s_id in names]],
             label_visibility="collapsed",
         )
-        if hm_station_choice.startswith("Catchment"):
+        if hm_station_choice.startswith("Selected-station average"):
             hm_obs = source.select(list(names))
-            hm_title = "Catchment composite"
+            hm_title = "Selected-station average"
         else:
             selected_s_id = next(s_id for s_id in names if f"({s_id})" in hm_station_choice)
             hm_obs = source.select([selected_s_id])
@@ -1799,7 +1804,10 @@ if page == "Data":
         ])
         with tab_loaded:
             st.markdown("**Loaded Analysis Station Registry & Observation Quality**")
-            st.caption("Synchronized rainfall series loaded for analysis. Other map stations provide geographic context.")
+            st.caption(
+                "The original Corpus Christi, Victoria, and San Antonio NOAA stations and the expanded regional "
+                "network are provisional rainfall proxies; their source-watershed suitability is unvalidated."
+            )
             st.dataframe(
                 station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
                 hide_index=True, width="stretch", height=320,
@@ -1965,7 +1973,7 @@ elif page == "Workspace":
                     selected_cities = st.multiselect(
                         "Cities / Communities", available_cities,
                         default=default_selected_cities,
-                        help="Selecting a city automatically encompasses and loads data from ALL official NOAA observation stations in that city footprint.",
+                        help="Selecting a city loads the bundled NOAA observations in that community footprint. These stations are provisional regional rainfall proxies; source-watershed suitability is unvalidated.",
                         key="selected_cities",
                     )
                     encompassed_stations = stations_for_cities(
@@ -2056,7 +2064,7 @@ elif page == "Workspace":
                         )
                         extent = st.selectbox(
                             "Where reduced rainfall occurs", ["All stations", "One station", "Mixed"],
-                            help="Regional spatial extent: 'All stations' models widespread basin-wide meteorological drought; 'One station' models localized precipitation deficits; 'Mixed' allows varied station stress."
+                            help="Regional proxy extent: 'All stations' applies reduced rainfall to every selected station; 'One station' applies it locally; 'Mixed' allows varied station stress. This is not catchment-weighted rainfall."
                         )
                         a, b = st.columns(2)
                         count = a.selectbox(
@@ -2225,7 +2233,10 @@ elif page == "Workspace":
 
         with tab_ranking:
             st.markdown("**How Ranking Scores Are Calculated**")
-            st.caption("Contribution of severity, duration, concurrence, and season weights to each candidate's priority score.")
+            st.caption(
+                "User-configured score contributions from severity, duration, concurrence, and season. "
+                "These values are not learned AI feature importance."
+            )
             fig = go.Figure()
             for key in w.weights:
                 fig.add_trace(go.Bar(name=key.title(), y=[s.id for s in selected], x=[s.components[key] for s in selected], orientation="h"))
@@ -2542,6 +2553,10 @@ elif page == "Review":
             st.markdown(
                 "**Catchment Weighting Disclosure:** BASIN currently weights the selected NOAA index "
                 "stations equally. This supports regional rainfall screening; it is not calibrated catchment weighting."
+            )
+            st.markdown(
+                "The rainfall screen does not predict reservoir inflow or freshwater availability. "
+                "Those uses require validated source-watershed coverage, streamflow data, and a calibrated hydrologic model."
             )
             st.markdown(
                 "A historical rank describes matched windows in the available observation record. "
@@ -3040,8 +3055,8 @@ elif page == "Review":
                     rc1.metric("Station Concurrence", f"{f['concurrence']:.1%}", f"{f['eligible_concurrence_days']} eligible windows")
                 shortfall_bm = f"{f['benchmark_mm']/25.4:.2f} in" if is_us else f"{f['benchmark_mm']:.1f} mm"
                 rc2.metric("Benchmark Shortfall", shortfall_bm, "Largest matched historical window")
-                rc3.metric("Composite Ranking Score", f"{s.score:.2f}", "Configured Priorities")
-                st.caption("Concurring stress frequency across eligible windows. Composite ranking score is based on the configured priorities.")
+                rc3.metric("Priority Score", f"{s.score:.2f}", "User-configured contributions")
+                st.caption("Concurring stress frequency across eligible windows. The priority score reflects user-configured weights, not learned AI feature importance.")
 
         with tab_edits:
             st.caption("Edits create a new scenario revision and require review again.")

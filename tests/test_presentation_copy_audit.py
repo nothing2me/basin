@@ -17,7 +17,7 @@ COPY_REPLACEMENT_INVENTORY: list[dict[str, str]] = [
         "location": "app.py:1241",
         "context": "Scenario Builder focus header caption",
         "current_wording": "Configures which visuals and tools appear first in Review. Does not change numerical calculations or export consent.",
-        "proposed_concise_wording": "Choose what to focus on first. Does not affect calculations or export.",
+        "proposed_concise_wording": "Select your primary engineering objective.",
         "reason": "Reduces cognitive burden prior to generation; secondary disclaimers are moved to a tooltip.",
         "target_placement": "tooltip",
     },
@@ -110,11 +110,11 @@ COPY_REPLACEMENT_INVENTORY: list[dict[str, str]] = [
         "target_placement": "expander",
     },
     {
-        "location": "app.py:2000",
+        "location": "app.py:2187-2190",
         "context": "Review rainfall candidate ranking score caption",
         "current_wording": "This reflects your priorities; it is not a probability or an evidence-quality score.",
-        "proposed_concise_wording": "Multivariate ranking score based on configured priorities.",
-        "reason": "Replaces double-negative disclaimer with positive definition of the score.",
+        "proposed_concise_wording": "User-configured score contributions; not learned AI feature importance.",
+        "reason": "Defines the score components and distinguishes them from learned model explanations.",
         "target_placement": "tooltip",
     },
     {
@@ -174,7 +174,7 @@ def test_copy_inventory_replacements_are_applied():
     ui_text = (ROOT / "basin_ui.py").read_text(encoding="utf-8")
 
     replacements = [
-        (app_text, "Choose what to focus on first", "Configures which visuals and tools appear first"),
+        (app_text, "Select your primary engineering objective", "Configures which visuals and tools appear first"),
         (app_text, "Presentation view", "How much guidance do you want?"),
         (app_text, "Retained rainfall percentage", "Multiplies observed daily rainfall"),
         (app_text, "Simple View supports quick decisions", "Three questions decide which tools appear first"),
@@ -186,7 +186,7 @@ def test_copy_inventory_replacements_are_applied():
         (app_text, "Dashed line: 1991–2020 monthly reference mean", "monthly mean daily rainfall"),
         (app_text, "Positive: rainfall deficit", "Above zero means less rainfall"),
         (app_text, "Concurring stress frequency", "frequency over time, not a percentage"),
-        (app_text, "based on the configured priorities", "It reflects your priorities"),
+        (app_text, "User-configured score contributions", "It reflects your priorities"),
         (app_text, "Edits create a new scenario revision", "Changing rainfall creates a revision"),
         (ui_text, "Evidence applicability is qualitative", "Evidence types and applicability are declarations"),
         (ui_text, "Approval covers rainfall content", "Approval concerns rainfall content"),
@@ -196,3 +196,26 @@ def test_copy_inventory_replacements_are_applied():
     for source_text, concise, old in replacements:
         assert concise in source_text, f"Concise replacement missing: {concise!r}"
         assert old not in source_text, f"Dense wording still present: {old!r}"
+
+    assert "Selected-station average (not catchment-weighted)" in app_text
+    assert "Catchment composite" not in app_text
+
+
+def test_scientific_scope_disclosures_are_consistent():
+    """The approved presentation scope is stated consistently across primary surfaces."""
+    app_text = (ROOT / "app.py").read_text(encoding="utf-8")
+    assistant_text = (ROOT / "basin_core" / "assistant.py").read_text(encoding="utf-8")
+    exporter_text = (ROOT / "basin_core" / "exporter.py").read_text(encoding="utf-8")
+    report_text = (ROOT / "basin_core" / "pdf_report.py").read_text(encoding="utf-8")
+    methodology_text = (ROOT / "docs" / "methodology.md").read_text(encoding="utf-8")
+    roadmap_text = (ROOT / "TODO.md").read_text(encoding="utf-8")
+
+    for text in (app_text, assistant_text, exporter_text, report_text, methodology_text):
+        assert "reservoir inflow" in text
+        assert "freshwater availability" in text
+
+    assert "provisional regional proxies" in app_text
+    assert "not learned AI feature importance" in app_text
+    assert "watershed validation" in roadmap_text
+    assert "streamflow" in roadmap_text
+    assert "Catchment Average" not in (ROOT / "basin_core" / "visualizers.py").read_text(encoding="utf-8")

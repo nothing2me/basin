@@ -1,6 +1,6 @@
 # BASIN methodology v2
 
-BASIN prepares rainfall stress scenarios and traceable evidence for professional review. Rainfall scenarios do not estimate water supply, reservoir levels, restriction dates, future probabilities, or the hydrologic drought of record. A separately labeled storage-system experiment is illustrative. Review and assistant tools use one workspace-level water-system selection. Review previews are side-effect free; recording the experiment review saves the exact selected system, settings and trajectories for schema 2.2 session and packet replay. Changing the workspace system deactivates older active runs while preserving their immutable history. Replay establishes internal numerical consistency, not physical validity or expert acceptance.
+BASIN prepares rainfall stress scenarios and traceable evidence for professional review. Rainfall scenarios do not estimate reservoir inflow, freshwater availability, reservoir levels, restriction dates, future probabilities, or the hydrologic drought of record. A separately labeled storage-system experiment is illustrative. Review and assistant tools use one workspace-level water-system selection. Review previews are side-effect free; recording the experiment review saves the exact selected system, settings and trajectories for schema 2.2 session and packet replay. Changing the workspace system deactivates older active runs while preserving their immutable history. Replay establishes internal numerical consistency, not physical validity or expert acceptance.
 
 ## Data contract
 
@@ -26,7 +26,7 @@ Rainfall benchmark: the maximum equal-station mean deficit among complete histor
 
 ## Priorities and learning
 
-Weighted score 0–100: normalize user weights by their sum; multiply by historical severity percentile, duration/365, achieved concurrence, and fraction of days in June–September. The summer profile is an illustrative user-selectable priority through its weight, not a verified local demand curve. No score rewards later month numbers. Fixed duration inputs make duration contribution constant; the interface encourages varied durations. Reject all-zero weights.
+User-configured priority score 0–100: normalize user weights by their sum; multiply by historical severity percentile, duration/365, achieved concurrence, and fraction of days in June–September. Its component values are score contributions under the selected priorities, not learned AI feature importance. The summer profile is an illustrative user-selectable priority through its weight, not a verified local demand curve. No score rewards later month numbers. Fixed duration inputs make duration contribution constant; the interface encourages varied durations. Reject all-zero weights.
 
 KMeans is the only learned component: random_state=22, n_init=10, single native computation thread. Features are the four normalized scoring features, maximum dry spell/365, and each station deficit / mean expected rainfall (clipped to 0–1). Domain scales are fixed; equal-station spatial dimensions grow with station count. Cluster count is capped by distinct feature vectors. Canonicalize group labels by sorted centroids. Silhouette is descriptive, not evidence of usefulness or scientific validity.
 

@@ -793,7 +793,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "test_reservoir_infrastructure",
-            "description": "Run an illustrative reservoir storage drawdown simulation on a drought scenario to test if water supply infrastructure survives under drought conditions, including optional reduced rainfall (e.g. 20% lower).",
+            "description": "Run an illustrative, uncalibrated storage sensitivity experiment for a rainfall scenario. It does not predict reservoir inflow, freshwater availability, operational survival, or future lake levels.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -1116,8 +1116,8 @@ DOMAIN_TOPICS: dict[str, str] = {
         "| **Monthly Anomaly Heatmap** | Step 1 | 35-year historical departure matrix (1991–2025) showing historical wet/dry cycles |\n"
         "| **Custom Gauge Uploader** | Step 1 | Upload local rain gauge CSVs with automated gap-filling and quality validation |\n"
         "| **Shortlist Generation Engine** | Step 2 | Multi-criteria priority ranking & K-Means clustering to extract top 6 candidates |\n"
-        "| **Combined Reservoir Simulator** | Step 3 | Mass-balance drawdown simulation for Choke Canyon & Lake Corpus Christi |\n"
-        "| **Milestone Gantt Timeline** | Step 3 | Countdown days and projected dates until drought trigger band crossings |\n"
+        "| **Illustrative Storage Experiment** | Step 3 | Uncalibrated storage sensitivity for Choke Canyon & Lake Corpus Christi; not an inflow or supply forecast |\n"
+        "| **Modeled Milestone Timeline** | Step 3 | Experiment-relative days to assumed storage-band crossings; not projected calendar dates |\n"
         "| **KBDI Wildfire Index Calculator** | Step 3 | Soil moisture and deep organic fuel dryness tracking for county burn ban evaluation |\n"
         "| **Agronomic Crop Water Deficit** | Step 3 | Net atmospheric irrigation deficit calculation for regional sorghum and cotton |\n"
         "| **Verified Handoff Bundle Generator** | Step 4 | SHA-256 signed audit ZIP package, PDF Executive Brief, and Excel workbook |\n"
@@ -1126,16 +1126,16 @@ DOMAIN_TOPICS: dict[str, str] = {
     ),
     "plain_english_orientation": (
         "### 💡 BASIN in Plain English: What This Is & How It Works\n\n"
-        "Think of BASIN as a **'flight simulator for water planning'**.\n\n"
-        "Instead of waiting for a severe drought to strike and hoping reservoir reserves hold up, BASIN lets water managers, utility directors, and municipal councils test 'what-if' dry-weather scenarios against 35 years of real South Texas weather history.\n\n"
+        "Think of BASIN as a **rainfall-scenario screening workbench for water planning**.\n\n"
+        "BASIN lets water managers, utility directors, and municipal councils compare 'what-if' dry-weather scenarios against 35 years of South Texas weather observations. It does not predict reservoir inflow or freshwater availability.\n\n"
         "#### 🚀 The 3-Minute Quickstart (The Easiest Way to Begin):\n"
         "1. **Load Data**: On **Step 1: Data Dashboard**, click **'Try an example'**. This instantly loads 6 diverse historical drought candidates so you don't have to configure anything.\n"
-        "2. **Simulate Water Levels**: Click **Step 3: Review Selections** in the top navigation bar. Toggle **'Explore storage under assumed conditions'** to see how lake storage draws down over time.\n"
+        "2. **Explore Assumptions**: Click **Step 3: Review Selections** in the top navigation bar. Toggle **'Explore storage under assumed conditions'** to inspect an illustrative, uncalibrated storage sensitivity.\n"
         "3. **Approve & Export**: Click **'Accept'** on the scenario you want to plan for, then go to **Step 4: Export** to download your verified PDF brief for your board or council.\n\n"
         "#### 🗺️ The 4 Stages at a Glance:\n"
         "- **Step 1: Data Dashboard** — See 35 years of NOAA rainfall records (1991–2025).\n"
         "- **Step 2: Scenario Builder** — Choose your priorities (e.g. chronic multi-year drought vs. acute summer heat).\n"
-        "- **Step 3: Review Selections** — Check reservoir storage, crop deficits, and fire risk.\n"
+        "- **Step 3: Review Selections** — Review rainfall scenarios and optional illustrative diagnostics.\n"
         "- **Step 4: Export** — Generate signed PDF briefs and replayable data bundles.\n\n"
         "💬 *You can also ask me specific questions anytime, such as: 'Explain B-042', 'What is concurrence?', or 'Test reservoir at 35%'!*"
     ),
@@ -1167,7 +1167,7 @@ DOMAIN_TOPICS: dict[str, str] = {
         "- **Deficit (Shortfall)**: The total missing rainfall compared to average historical conditions over the same timeframe, measured in millimeters (mm) or inches (in).\n"
         "- **Station Stress Concurrence (%)**: The share of eligible 30-day windows in which all selected gauges exceed their own rolling rainfall-deficit threshold together. It is not the percentage of stations and does not establish reservoir or streamflow stress.\n"
         "- **Historical Percentile**: How rare the drought sequence is compared to 35 years of observations. A 95th percentile scenario is more severe than 95% of all historical dry spells.\n"
-        "- **Score**: A composite multi-criteria ranking based on the weights you set on Step 2 (Severity, Duration, Concurrence, and Summer Timing). Highest score ranks #1.\n"
+        "- **Priority Score**: A user-configured ranking calculated from the Step 2 weights (Severity, Duration, Concurrence, and Summer Timing). Its components are score contributions, not learned AI feature importance.\n"
         "- **Combined Storage (%)**: The collective water volume stored in Choke Canyon Reservoir and Lake Corpus Christi relative to their combined conservation capacity (963,600 ac-ft).\n"
         "- **Storage bands**: The Region N preset shows 40%, 30%, and 20% comparison bands. BASIN's 35% starting case is an experiment setting, not an official trigger. Always verify the currently adopted provider plan before interpreting restrictions."
     ),
@@ -2179,7 +2179,9 @@ def run_assistant(workspace, user_message: str,
                             "1. Base all numerical claims, drought severity, durations, and storage metrics on verified tool results.\n"
                             "2. When asked about a scenario, comparison, station rainfall, ranking, reservoir stress test, or drought concurrence, call the appropriate tool.\n"
                             "3. Explain hydrologic principles clearly, professionally, and concisely.\n"
-                            "4. Never invent numbers or hallucinate metrics."
+                            "4. Never invent numbers or hallucinate metrics.\n"
+                            "5. Describe ranking components as user-configured score contributions, never AI feature importance.\n"
+                            "6. BASIN screens rainfall scenarios. Never claim it predicts reservoir inflow, freshwater availability, operational survival, or future lake levels."
                         ),
                     }
                 ]

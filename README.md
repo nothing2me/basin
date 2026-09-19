@@ -111,6 +111,8 @@ The application will bind strictly to loopback (`http://127.0.0.1:8501`) with **
 [Replayable Cryptographic Audit Bundle (.zip) & Companion Executive Brief (.pdf)]
 ```
 
+The original three-station baseline and the expanded NOAA station network are **provisional regional rainfall proxies**. BASIN screens rainfall scenarios; it does **not** predict reservoir inflow or freshwater availability. Source-watershed validation and streamflow integration remain post-presentation roadmap work requiring domain review.
+
 ---
 
 ## 🛠️ Core Capabilities

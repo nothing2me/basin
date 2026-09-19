@@ -347,10 +347,11 @@ def test_scenario_ranking_rationale_and_concurrence_detail(approved):
     html = render_html_report(approved, accepted)
     pdf_bytes = build_fallback_pdf(approved, accepted)
 
-    assert "primary ranking driver is" in html
-    assert "composite score" in html
+    assert "largest user-configured score contribution is" in html
+    assert "priority score" in html
     assert "rank #" in html
-    assert b"ranking driver is" in pdf_bytes
+    assert b"user-configured" in pdf_bytes
+    assert b"priority score" in pdf_bytes
 
     # Concurrence station persistence details
     assert "Selected-Stations Concurrent Deficit" in html
@@ -405,8 +406,9 @@ def test_public_summary_vs_private_review_notes(approved):
     pdf_no_consent = build_fallback_pdf(approved, accepted, include_notes=False)
     assert "CONFIDENTIAL-REVIEWER-FEEDBACK" not in html_no_consent
     assert b"CONFIDENTIAL-REVIEWER-FEEDBACK" not in pdf_no_consent
-    assert "primary ranking driver is" in html_no_consent
-    assert b"ranking driver is" in pdf_no_consent
+    assert "largest user-configured score contribution is" in html_no_consent
+    assert b"user-configured" in pdf_no_consent
+    assert b"priority score" in pdf_no_consent
 
     # With consent: private note included with clear label
     html_consent = render_html_report(approved, accepted, include_notes=True)

@@ -37,6 +37,7 @@ pyarrow==25.0.1
 pydeck==0.9.3
 pygments==2.21.0
 pytest==9.1.1
+pypdf==6.19.0
 python-dateutil==2.9.0.post0
 python-multipart==0.0.32
 referencing==0.37.0
