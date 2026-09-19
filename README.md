@@ -117,12 +117,13 @@ The original three-station baseline and the expanded NOAA station network are **
 
 ## 🛠️ Core Capabilities
 
-* **Synchronized Empirical Resampling:** Resamples continuous historical weather sequences across regional weather stations (NOAA GHCN-Daily 1991–2025) using deterministic pseudo-random seeds (PCG64). Preserves true observed spatial cross-correlation between the Choke Canyon and Lake Corpus Christi watersheds with zero synthetic rainfall artifacts.
-* **5D Hydrologic Feature Clustering:** Maps candidate drought scenarios into a normalized 5-dimensional feature space (cumulative rainfall deficit, drought duration, inter-basin concurrence, summer peak deficit proportion, and consecutive dry-day runs) to isolate balanced, non-redundant risk archetypes.
+* **Synchronized Historical-Window Screening:** Resamples continuous multi-station weather windows from the 1991–2025 analysis snapshot using deterministic pseudo-random seeds (PCG64). The snapshot preserves a per-day distinction between valid NOAA observations and declared proxy fills. Constructed stress tests scale those inputs; they are not synthetic weather forecasts or validated catchment rainfall.
+* **Multi-Factor Scenario Clustering:** Groups candidates using rainfall-deficit rank, duration, selected-station concurrence, summer timing, dry-spell persistence, and station-level deficits to create a varied review shortlist. Group labels organize the candidate pool; they do not establish drought probabilities.
 * **Mass-Conserving Reservoir Simulation:** Simulates multi-reservoir joint storage drawdown with strict physical mass conservation (arithmetic $|\text{Error}| < 10^{-6}$ acre-feet), accounting for dynamic net surface evaporation, elevation-area curves, and inflows.
 * **Demand Policy & Intervention Modeling:** Evaluates municipal drought stage triggers (Bands 1–4) and models policy decisions, such as comparing industrial exemptions (Drought Surcharge Exemption Fee / DSEF) against mandatory industrial curtailment schedules.
-* **Agronomics & Soil Moisture Interoperability:** Computes daily Reference Evapotranspiration ($ET_o$) using Hargreaves-Samani formulations, calculates crop water demand ($ET_c = ET_o \times K_c$) across regional crops (cotton, sorghum, corn, citrus), and tracks deep-soil moisture deficit via the Keetch-Byram Drought Index (KBDI).
-* **Cryptographic Replay Bundle & Companion Brief:** Generates portable `.zip` bundles containing complete run configuration metadata, input datasets, and SHA-256 verification manifests. Any modification to parameters revokes signed approvals upon replay. Accompanied by an automated 6-page companion **Executive Technical Brief (PDF)** formatted for professional follow-up.
+* **Illustrative Agronomic & Wildfire Indicators:** Applies monthly regional reference-ET normals and fixed crop coefficients to show a simplified daily rainfall–ET imbalance for cotton, sorghum, corn, pasture, and a general row crop. It also computes an approximate KBDI stress indicator. These screens omit a calibrated field soil-water balance and do not prescribe irrigation or determine burn bans.
+* **Interconnected Water–Fire Screening:** Because the same rainfall deficit that draws down reservoirs also drives deep-soil moisture deficits, the reservoir drawdown, crop-stress, and approximate Keetch–Byram Drought Index (KBDI) screens all read from the same validated rainfall scenario — one offline pass connects municipal water stress, agricultural demand, and wildfire-season dryness without separate datasets or cloud services.
+* **Cryptographic Replay Bundle & Companion Brief:** Generates portable `.zip` bundles containing run configuration metadata, input datasets, and SHA-256 verification manifests. Changing a reviewed rainfall revision invalidates its recorded inclusion decision until it is reviewed again. Replay verifies packet integrity and internal calculations; it is not a digital signature or scientific validation. An automated companion **Executive Technical Brief (PDF)** supports professional follow-up.
 * **Deterministic Bounded Analyst Assistant:** Features an on-device, quantized 3B LLM (via `llama-cpp-python`) mapped strictly to **13 deterministic Python analytical tools**. The language model does not generate ungrounded arithmetic; it translates user inquiries into tool executions against verified simulation data.
 
 ---
@@ -135,12 +136,13 @@ basin/
 ├── basin_ui.py                 # Multi-tab UI view orchestration & workflows
 ├── basin_theme.py              # Theme styling, CSS tokens, and layout configs
 ├── basin_core/                 # Core analytical screening engine
-│   ├── agronomics.py           # Hargreaves-Samani ET and KBDI soil moisture
+│   ├── agronomics.py           # Monthly ET-normal crop screen and approximate KBDI
 │   ├── analysis.py             # Statistical calculations and feature metrics
-│   ├── clustering.py           # 5D hydrologic feature extraction & K-Means
-│   ├── data_manager.py         # NOAA GHCN-Daily ingestion and station indexing
-│   ├── export.py               # Bundle packing, SHA-256 manifests, and PDF generation
-│   ├── llm_assistant.py        # Local on-device model routing & tool caller
+│   ├── data.py                 # Verified snapshot loading and station indexing
+│   ├── engine.py               # Scenario generation and feature extraction
+│   ├── analysis.py             # Ranking, clustering, and comparative calculations
+│   ├── exporter.py             # Bundle packing and SHA-256 replay verification
+│   ├── assistant.py            # Bounded analyst routing and response assembly
 │   ├── simulation.py           # Mass-conserving multi-reservoir drawdown engine
 │   └── tools.py                # Deterministic analytical tools for LLM assistant
 ├── data/                       # Bundled NOAA climate records & historical baselines
@@ -174,12 +176,9 @@ BASIN includes an automated regression test suite covering physical mass conserv
 
 ## 📚 Data Provenance & Citations
 
-All hydrologic and climatological data bundled with or processed by BASIN originate from authoritative, publicly accessible monitoring networks:
+Underlying public records come from the sources below. BASIN also creates explicitly labeled proxy fills and illustrative derived calculations; those transformations are recorded in the snapshot and export metadata.
 
-* **NOAA National Centers for Environmental Information (NCEI):** Global Historical Climatology Network - Daily (GHCN-Daily).
-  * *Station USW00012924:* Corpus Christi International Airport, TX
-  * *Station USC00411770:* Choke Canyon Dam, TX
-  * *Station USC00415531:* Mathis 4 SSW (Lake Corpus Christi), TX
+* **NOAA National Centers for Environmental Information (NCEI):** Global Historical Climatology Network - Daily (GHCN-Daily). The bundled registry contains 11 point stations in the Corpus Christi, Victoria, San Antonio, Kingsville, Rockport/Aransas, and Alice footprints; exact identifiers, coordinates, raw coverage, proxy-fill counts, source URLs, and snapshot hashes are recorded in `data/manifest.json`.
 * **Texas Water Development Board (TWDB):** Water Data for Texas historical reservoir elevations, storage capacities, and surface area curves.
 * **Texas Commission on Environmental Quality (TCEQ):** Nueces River Basin Water Availability Model (WAM Run 3) parameter baselines.
 
