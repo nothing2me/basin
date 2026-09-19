@@ -1,8 +1,11 @@
 """Download and verify offline satellite tiles for Region N.
 
-Fetches Esri World Imagery tiles covering the 11-county TWDB Region N
-bounding box for zoom levels 6 through 11, saving them into
-``static/tiles/World_Imagery/{z}/{y}/{x}.jpg`` for offline Streamlit serving.
+Fetches EOX Sentinel-2 cloudless (CC BY 4.0) tiles covering the 11-county
+TWDB Region N bounding box for zoom levels 6 through 11, saving them into
+``static/tiles/s2cloudless/{z}/{y}/{x}.jpg`` for offline Streamlit serving.
+
+Imagery: Sentinel-2 cloudless by EOX IT Services GmbH (CC BY 4.0),
+contains modified Copernicus Sentinel data. Attribution is shown in the app.
 """
 from __future__ import annotations
 
@@ -14,11 +17,14 @@ import time
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_DIR = ROOT / "static/tiles/World_Imagery"
+OUTPUT_DIR = ROOT / "static/tiles/s2cloudless"
 
 # Region N bounds: [west, south, east, north]
 BOUNDS = (-98.80361, 26.59791, -96.71357, 28.78654)
-ESRI_URL_TEMPLATE = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+EOX_URL_TEMPLATE = (
+    "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/"
+    "GoogleMapsCompatible/{z}/{y}/{x}.jpg"
+)
 
 
 def deg2num(lat_deg: float, lon_deg: float, zoom: int) -> tuple[int, int]:
@@ -58,7 +64,7 @@ def fetch_tile(tile: tuple[int, int, int], output_dir: Path = OUTPUT_DIR) -> tup
         return tile, tile_file.stat().st_size, "cached"
 
     tile_file.parent.mkdir(parents=True, exist_ok=True)
-    url = ESRI_URL_TEMPLATE.format(z=z, y=y, x=x)
+    url = EOX_URL_TEMPLATE.format(z=z, y=y, x=x)
     req = urllib.request.Request(url, headers={"User-Agent": "BASIN-Offline-Cacher/1.0"})
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:

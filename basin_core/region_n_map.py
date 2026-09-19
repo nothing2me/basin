@@ -15,9 +15,10 @@ import pandas as pd
 import plotly.graph_objects as go
 
 CATALOG_FILE = Path(__file__).resolve().parents[1] / "assets/region_n_map.json.gz"
-OFFLINE_TILES_DIR = Path(__file__).resolve().parents[1] / "static/tiles/World_Imagery"
-OFFLINE_IMAGERY_URL = "/app/static/tiles/World_Imagery/{z}/{y}/{x}.jpg"
-IMAGERY_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+OFFLINE_TILES_DIR = Path(__file__).resolve().parents[1] / "static/tiles/s2cloudless"
+OFFLINE_IMAGERY_URL = "/app/static/tiles/s2cloudless/{z}/{y}/{x}.jpg"
+IMAGERY_URL = "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg"
+IMAGERY_ATTRIBUTION = "Imagery: Sentinel-2 cloudless by EOX IT Services GmbH (CC BY 4.0), contains modified Copernicus Sentinel data"
 LAYER_LABELS = {
     "rain_stations": "NOAA rainfall stations",
     "water_stations": "USGS water sites",
@@ -154,9 +155,9 @@ def build_observation_map(stations_df, *, layers=None, focus=None, use_offline=T
     layers = set(LAYER_LABELS if layers is None else layers)
     imagery_source = OFFLINE_IMAGERY_URL if (use_offline and OFFLINE_TILES_DIR.exists()) else IMAGERY_URL
     attribution = (
-        "Tiles © Esri (Bundled Satellite Cache)"
+        "Imagery: Sentinel-2 cloudless by EOX IT Services GmbH (CC BY 4.0) — Bundled Offline Cache"
         if imagery_source == OFFLINE_IMAGERY_URL
-        else "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+        else "Imagery: Sentinel-2 cloudless by EOX IT Services GmbH (CC BY 4.0), contains modified Copernicus Sentinel data"
     )
     raster_layer = dict(
         below="traces",

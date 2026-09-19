@@ -132,13 +132,13 @@ def main():
     rings = [ring for polygon in polygons for ring in polygon]
     points = [p for ring in rings for p in ring]
     bounds = [min(p[0] for p in points), min(p[1] for p in points), max(p[0] for p in points), max(p[1] for p in points)]
-    esri_geometry = {"rings": [list(reversed(r)) for r in rings], "spatialReference": {"wkid": 4326}}
+    polygon_query_geometry = {"rings": [list(reversed(r)) for r in rings], "spatialReference": {"wkid": 4326}}
     county_where = "Name IN (" + ",".join("'" + county + "'" for county in COUNTIES) + ")"
     jobs = {
         "counties": lambda: query_features(COUNTY, where=county_where),
-        "streams": lambda: query_features(NHD + "/6", geometry=esri_geometry),
-        "lakes": lambda: query_features(NHD + "/12", where="FTYPE IN (390,436)", geometry=esri_geometry),
-        "basins": lambda: query_features(WBD + "/4", geometry=esri_geometry),
+        "streams": lambda: query_features(NHD + "/6", geometry=polygon_query_geometry),
+        "lakes": lambda: query_features(NHD + "/12", where="FTYPE IN (390,436)", geometry=polygon_query_geometry),
+        "basins": lambda: query_features(WBD + "/4", geometry=polygon_query_geometry),
         "rain_stations": lambda: noaa_stations(geometry),
         "water_stations": lambda: usgs_stations(geometry, bounds),
     }

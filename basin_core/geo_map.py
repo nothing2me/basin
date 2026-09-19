@@ -153,7 +153,7 @@ def build_basin_map(stations_df: pd.DataFrame, use_satellite: bool = False) -> g
                 layers=[{
                     "below": "traces",
                     "sourcetype": "raster",
-                    "source": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]
+                    "source": ["https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg"]
                 }],
                 center=dict(lat=center_lat, lon=center_lon),
                 zoom=6.6,

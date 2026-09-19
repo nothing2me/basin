@@ -21,7 +21,7 @@ def test_default_map_is_satellite_and_distinguishes_loaded_sources():
     ])
     fig = build_observation_map(loaded)
     assert fig.layout.map.style == "white-bg"
-    assert "/app/static/tiles/World_Imagery/" in fig.layout.map.layers[0].source[0]
+    assert "/app/static/tiles/s2cloudless/" in fig.layout.map.layers[0].source[0]
     traces = {trace.name: trace for trace in fig.data}
     assert len(traces["NOAA rainfall stations"].lat) == len(load_catalog()["rain_stations"]) - 1
     assert len(traces["USGS water sites"].lat) == len(load_catalog()["water_stations"])

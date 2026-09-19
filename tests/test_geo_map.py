@@ -84,7 +84,7 @@ def test_satellite_mode_configuration(sample_stations):
     fig = build_basin_map(sample_stations, use_satellite=True)
     assert hasattr(fig.layout, "map")
     assert fig.layout.map.layers is not None
-    assert "arcgisonline.com" in fig.layout.map.layers[0]["source"][0]
+    assert "tiles.maps.eox.at" in fig.layout.map.layers[0]["source"][0]
 
 
 def test_vector_data_caching():
