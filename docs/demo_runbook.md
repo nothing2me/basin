@@ -81,6 +81,22 @@ auto-rejects overclaims; the export has **no verdict field**.
 
 **Do not say:** "a survey showed", "many professionals", "verified with professionals."
 
+### The ranking-stability question (from professor/geoscience review)
+
+> **Judge/Reviewer:** *"How stable is your ranking? With correlated features, can
+> you trust the feature-importance breakdown?"*
+
+**Answer:**
+> "The ranking is deterministic — fixed seed and fixed, user-visible weights — so
+> the shortlist is bit-identical on every rerun, which is what lets reviewers
+> audit it. We don't claim the per-feature contributions are independent causal
+> importance: severity, duration, and concurrence are hydrologically correlated,
+> and we treat the weighted components as arithmetic under chosen priorities, not
+> XAI attributions. That's also why the shortlist is selected by cluster diversity
+> first — so correlated features can't collapse it into a single drought
+> archetype. Weights are adjustable on the Review screen so anyone can probe
+> sensitivity live." (Full reasoning: `docs/ranking_stability.md`.)
+
 ### Demo discipline (from the audit)
 
 - **Lead with the deterministic assistant, keep Qwen optional.** The optional 2.1 GB

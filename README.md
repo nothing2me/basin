@@ -111,7 +111,7 @@ The application will bind strictly to loopback (`http://127.0.0.1:8501`) with **
 [Replayable Cryptographic Audit Bundle (.zip) & Companion Executive Brief (.pdf)]
 ```
 
-The original three-station baseline and the expanded NOAA station network are **provisional regional rainfall proxies**. BASIN screens rainfall scenarios; it does **not** predict reservoir inflow or freshwater availability. Source-watershed validation and streamflow integration remain post-presentation roadmap work requiring domain review.
+The original three-station baseline and the expanded NOAA station network are **provisional rainfall proxies**, including 10 gauges placed inside the Nueces/Frio/Atascosa watersheds. BASIN screens rainfall scenarios; it does **not** predict reservoir inflow or freshwater availability. Calibrated catchment rainfall, streamflow integration, and expert-reviewed source-watershed suitability remain roadmap work requiring domain review.
 
 ---
 
@@ -178,7 +178,7 @@ BASIN includes an automated regression test suite covering physical mass conserv
 
 Underlying public records come from the sources below. BASIN also creates explicitly labeled proxy fills and illustrative derived calculations; those transformations are recorded in the snapshot and export metadata.
 
-* **NOAA National Centers for Environmental Information (NCEI):** Global Historical Climatology Network - Daily (GHCN-Daily). The bundled registry contains 11 point stations in the Corpus Christi, Victoria, San Antonio, Kingsville, Rockport/Aransas, and Alice footprints; exact identifiers, coordinates, raw coverage, proxy-fill counts, source URLs, and snapshot hashes are recorded in `data/manifest.json`.
+* **NOAA National Centers for Environmental Information (NCEI):** Global Historical Climatology Network - Daily (GHCN-Daily). The bundled registry contains **21 point stations**: 11 regional stations in the Corpus Christi, Victoria, San Antonio, Kingsville, Rockport/Aransas, and Alice footprints, plus **10 watershed gauges inside the Nueces / Frio / Atascosa drainage basins** (Leakey, Camp Wood, Hondo, Crystal City, Carrizo Springs, Pearsall, Choke Canyon Dam, Pleasanton, Three Rivers, Mathis) that feed Choke Canyon Reservoir and Lake Corpus Christi. Exact identifiers, coordinates, raw coverage, proxy-fill counts, source URLs, and snapshot hashes are recorded in `data/manifest.json`. Watershed gauges are point observations, not calibrated catchment rainfall or runoff.
 * **Texas Water Development Board (TWDB):** Water Data for Texas historical reservoir elevations, storage capacities, and surface area curves.
 * **Texas Commission on Environmental Quality (TCEQ):** Nueces River Basin Water Availability Model (WAM Run 3) parameter baselines.
 

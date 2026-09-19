@@ -15,7 +15,9 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/"
-IDS = [
+# Regional network: official first-order + cooperative stations around the
+# Corpus Christi footprint and neighboring communities.
+REGIONAL_STATIONS = [
     "USW00012924", "USW00012926", "USC00412011", "USC00416739",
     "USW00012912",
     "USW00012921",
@@ -23,6 +25,22 @@ IDS = [
     "USC00417704", "USW00012972",
     "USW00012932",
 ]
+# Watershed network: NOAA cooperative gauges inside the Nueces / Frio /
+# Atascosa drainage basins that feed Choke Canyon Reservoir and Lake Corpus
+# Christi, from headwaters to the reservoir pools.
+WATERSHED_STATIONS = [
+    "USC00415113",  # Leakey — Nueces headwaters
+    "USC00411398",  # Camp Wood — Nueces headwaters
+    "USC00414254",  # Hondo — Hondo Creek (Nueces tributary)
+    "USC00412160",  # Crystal City — upper Nueces (Winter Garden)
+    "USC00411486",  # Carrizo Springs 3S — upper Nueces (Winter Garden)
+    "USC00416879",  # Pearsall — Frio River
+    "USC00411720",  # Choke Canyon Dam — Frio at Choke Canyon Reservoir
+    "USC00417111",  # Pleasanton — Atascosa River
+    "USC00419007",  # Three Rivers 9 NE — Frio/Nueces confluence
+    "USC00415661",  # Mathis 4 SSW — Nueces at Lake Corpus Christi
+]
+IDS = REGIONAL_STATIONS + WATERSHED_STATIONS
 
 CITY_BY_ID = {
     "USW00012924": "Corpus Christi", "USW00012926": "Corpus Christi",
@@ -31,12 +49,20 @@ CITY_BY_ID = {
     "USW00012928": "Kingsville", "USC00414810": "Kingsville",
     "USC00417704": "Rockport / Aransas", "USW00012972": "Rockport / Aransas",
     "USW00012932": "Alice",
+    "USC00415113": "Leakey", "USC00411398": "Camp Wood",
+    "USC00414254": "Hondo", "USC00412160": "Crystal City",
+    "USC00411486": "Carrizo Springs", "USC00416879": "Pearsall",
+    "USC00411720": "Choke Canyon", "USC00417111": "Pleasanton",
+    "USC00419007": "Three Rivers", "USC00415661": "Mathis",
 }
 
 # Ordered sources used only when the target station has no valid daily value.
 # The first source is the same-city index where one exists; the complete Corpus
 # Christi airport series is the final regional proxy. Every substitution is
 # recorded in the output instead of being flattened into an apparent observation.
+# Watershed gauges fill from declared watershed chains (Choke Canyon Dam and
+# Mathis as the two full-window reservoir-pool stations); coastal proxies are
+# never substituted into watershed gauges.
 FILL_SOURCES = {
     "USW00012926": ("USW00012924",),
     "USC00412011": ("USW00012924",),
@@ -48,6 +74,17 @@ FILL_SOURCES = {
     "USC00417704": ("USW00012924",),
     "USW00012972": ("USC00417704", "USW00012924"),
     "USW00012932": ("USW00012924",),
+    # --- Watershed chains (headwaters -> reservoir pools) ---
+    "USC00415113": ("USC00411398", "USC00414254", "USC00411720", "USC00415661"),
+    "USC00411398": ("USC00415113", "USC00414254", "USC00411720", "USC00415661"),
+    "USC00414254": ("USC00415113", "USC00411398", "USC00411720", "USC00415661"),
+    "USC00412160": ("USC00411486", "USC00411720", "USC00415661"),
+    "USC00411486": ("USC00412160", "USC00411720", "USC00415661"),
+    "USC00416879": ("USC00411720", "USC00415661", "USC00414254", "USC00411486"),
+    "USC00411720": ("USC00415661", "USC00419007", "USC00414254", "USC00411486"),
+    "USC00417111": ("USC00419007", "USC00411720", "USC00415661", "USC00414254", "USC00411486"),
+    "USC00419007": ("USC00411720", "USC00415661", "USC00414254", "USC00411486"),
+    "USC00415661": ("USC00411720", "USC00419007", "USC00414254", "USC00411486"),
 }
 
 
@@ -143,10 +180,16 @@ def main():
     registry = []
     for station in IDS:
         line = next(line for line in metadata.splitlines() if line[:11] == station)
+        role = (
+            "Watershed rainfall gauge within the Nueces/Frio/Atascosa drainage basins; "
+            "gauge-level observations, not calibrated catchment rainfall"
+            if station in WATERSHED_STATIONS
+            else "Provisional regional station proxy; catchment representativeness unvalidated"
+        )
         registry.append({"id": station, "name": line[41:71].strip(), "city": CITY_BY_ID[station],
                          "latitude": float(line[12:20]),
                          "longitude": float(line[21:30]), "elevation_m": float(line[31:37]),
-                         "role": "Provisional regional station proxy; catchment representativeness unvalidated",
+                         "role": role,
                          "catchment": None, "source": BASE + f"all/{station}.dly"})
     frames = [parse_dly(raw, station) for station, raw in zip(IDS, payloads[2:])]
     frame, quality = build_analysis_snapshot(frames)
@@ -156,7 +199,7 @@ def main():
                 "sha256": hashlib.sha256(raw_csv).hexdigest(), "stations": registry, "quality": quality,
                 "raw_sha256": {s: hashlib.sha256(r).hexdigest() for s, r in zip(IDS, payloads[2:])},
                 "lineage_columns": ["raw_precip_mm", "value_origin", "fill_source_station_id"],
-                "policy": "PRCP only; tenths mm / 10; missing/negative, nonblank QFLAG, MFLAG P excluded; trace = 0. Missing station-days use the declared same-city index where available, then Corpus Christi airport as a provisional regional proxy. raw_precip_mm, value_origin and fill_source_station_id preserve every substitution. MDPR is never used.",
+                "policy": "PRCP only; tenths mm / 10; missing/negative, nonblank QFLAG, MFLAG P excluded; trace = 0. Regional station-days use the declared same-city index where available, then Corpus Christi airport as a provisional regional proxy. Watershed gauges (Leakey, Camp Wood, Hondo, Crystal City, Carrizo Springs, Pearsall, Choke Canyon Dam, Pleasanton, Three Rivers 9 NE, Mathis 4 SSW) cover the Nueces/Frio/Atascosa drainage basins; their missing days fill only from declared watershed chains ending at the full-window reservoir-pool gauges (Choke Canyon Dam, Mathis) - coastal proxies are never substituted into watershed gauges. raw_precip_mm, value_origin and fill_source_station_id preserve every substitution. MDPR is never used.",
                 "documentation": BASE + "readme.txt"}
     target = ROOT / "data"
     target.mkdir(exist_ok=True)

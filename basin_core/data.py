@@ -226,6 +226,17 @@ CITY_STATIONS: dict[str, list[str]] = {
     "Alice": [
         "USW00012932",  # Alice Intl AP
     ],
+    # Nueces / Frio / Atascosa watershed gauges (feed Choke Canyon + Lake Corpus Christi)
+    "Leakey": ["USC00415113"],          # Nueces headwaters
+    "Camp Wood": ["USC00411398"],       # Nueces headwaters
+    "Hondo": ["USC00414254"],           # Hondo Creek (Nueces tributary)
+    "Crystal City": ["USC00412160"],    # upper Nueces (Winter Garden)
+    "Carrizo Springs": ["USC00411486"], # upper Nueces (Winter Garden)
+    "Pearsall": ["USC00416879"],        # Frio River
+    "Choke Canyon": ["USC00411720"],    # Frio at Choke Canyon Reservoir
+    "Pleasanton": ["USC00417111"],      # Atascosa River
+    "Three Rivers": ["USC00419007"],    # Frio/Nueces confluence
+    "Mathis": ["USC00415661"],          # Nueces at Lake Corpus Christi
 }
 
 DEFAULT_CITIES = ["Corpus Christi"]
