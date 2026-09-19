@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 import urllib.request
 
+import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +23,32 @@ IDS = [
     "USC00417704", "USW00012972",
     "USW00012932",
 ]
+
+CITY_BY_ID = {
+    "USW00012924": "Corpus Christi", "USW00012926": "Corpus Christi",
+    "USC00412011": "Corpus Christi", "USC00416739": "Corpus Christi",
+    "USW00012912": "Victoria", "USW00012921": "San Antonio",
+    "USW00012928": "Kingsville", "USC00414810": "Kingsville",
+    "USC00417704": "Rockport / Aransas", "USW00012972": "Rockport / Aransas",
+    "USW00012932": "Alice",
+}
+
+# Ordered sources used only when the target station has no valid daily value.
+# The first source is the same-city index where one exists; the complete Corpus
+# Christi airport series is the final regional proxy. Every substitution is
+# recorded in the output instead of being flattened into an apparent observation.
+FILL_SOURCES = {
+    "USW00012926": ("USW00012924",),
+    "USC00412011": ("USW00012924",),
+    "USC00416739": ("USW00012924",),
+    "USW00012912": ("USW00012924",),
+    "USW00012921": ("USW00012924",),
+    "USW00012928": ("USW00012924",),
+    "USC00414810": ("USW00012928", "USW00012924"),
+    "USC00417704": ("USW00012924",),
+    "USW00012972": ("USC00417704", "USW00012924"),
+    "USW00012932": ("USW00012924",),
+}
 
 
 def download(path):
@@ -52,6 +79,63 @@ def parse_dly(raw: bytes, station: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def build_analysis_snapshot(frames: list[pd.DataFrame]) -> tuple[pd.DataFrame, list[dict]]:
+    """Build the complete screening matrix while preserving value-level lineage."""
+    dates = pd.date_range("1991-01-01", "2025-12-31", name="date")
+    raw = pd.concat(frames, ignore_index=True)
+    raw["date"] = pd.to_datetime(raw["date"])
+    raw = raw.set_index(["date", "station_id"]).reindex(
+        pd.MultiIndex.from_product([dates, IDS], names=["date", "station_id"])
+    ).reset_index()
+    raw["excluded"] = raw["excluded"].fillna(True).astype(bool)
+    for flag in ("mflag", "qflag", "sflag"):
+        raw[flag] = raw[flag].fillna("")
+
+    observed = raw.pivot(index="date", columns="station_id", values="precip_mm").reindex(columns=IDS)
+    output = []
+    quality = []
+    expected = len(dates)
+    for station in IDS:
+        station_rows = raw.loc[raw.station_id.eq(station)].copy().set_index("date")
+        raw_values = observed[station]
+        analysis_values = raw_values.copy()
+        fill_source = pd.Series("", index=dates, dtype="object")
+        for source_station in FILL_SOURCES.get(station, ()):
+            needs_value = analysis_values.isna() & observed[source_station].notna()
+            analysis_values.loc[needs_value] = observed.loc[needs_value, source_station]
+            fill_source.loc[needs_value] = source_station
+        if analysis_values.isna().any():
+            raise ValueError(f"No declared fill source covers every missing day for {station}")
+
+        station_rows["raw_precip_mm"] = raw_values
+        station_rows["precip_mm"] = analysis_values
+        station_rows["value_origin"] = np.where(raw_values.notna(), "observed", "filled")
+        station_rows["fill_source_station_id"] = fill_source
+        output.append(station_rows.reset_index())
+
+        observed_days = int(raw_values.notna().sum())
+        filled_days = expected - observed_days
+        quality.append({
+            "station_id": station,
+            "city": CITY_BY_ID[station],
+            "expected_days": expected,
+            "raw_observed_days": observed_days,
+            "raw_completeness_pct": round(observed_days / expected * 100, 3),
+            "filled_days": filled_days,
+            "analysis_coverage_days": int(analysis_values.notna().sum()),
+            "analysis_coverage_pct": round(analysis_values.notna().mean() * 100, 3),
+            # Backward-compatible fields for saved packets and report readers.
+            "valid_days": int(analysis_values.notna().sum()),
+            "completeness_pct": round(analysis_values.notna().mean() * 100, 3),
+            "missing_or_excluded_days": int(analysis_values.isna().sum()),
+            "trace_days": int(station_rows.mflag.eq("T").sum()),
+        })
+
+    columns = ["date", "station_id", "precip_mm", "raw_precip_mm", "value_origin",
+               "fill_source_station_id", "mflag", "qflag", "sflag", "excluded"]
+    return pd.concat(output, ignore_index=True)[columns].sort_values(["date", "station_id"]), quality
+
+
 def main():
     with ThreadPoolExecutor(max_workers=4) as pool:
         payloads = list(pool.map(download, ["ghcnd-stations.txt", "ghcnd-version.txt"] + [f"all/{s}.dly" for s in IDS]))
@@ -59,26 +143,20 @@ def main():
     registry = []
     for station in IDS:
         line = next(line for line in metadata.splitlines() if line[:11] == station)
-        registry.append({"id": station, "name": line[41:71].strip(), "latitude": float(line[12:20]),
+        registry.append({"id": station, "name": line[41:71].strip(), "city": CITY_BY_ID[station],
+                         "latitude": float(line[12:20]),
                          "longitude": float(line[21:30]), "elevation_m": float(line[31:37]),
                          "role": "Provisional regional station proxy; catchment representativeness unvalidated",
                          "catchment": None, "source": BASE + f"all/{station}.dly"})
     frames = [parse_dly(raw, station) for station, raw in zip(IDS, payloads[2:])]
-    frame = pd.concat(frames).sort_values(["date", "station_id"])
+    frame, quality = build_analysis_snapshot(frames)
     raw_csv = frame.to_csv(index=False, lineterminator="\n").encode()
-    quality = []
-    expected = len(pd.date_range("1991-01-01", "2025-12-31"))
-    for station, group in frame.groupby("station_id"):
-        valid = int(group.precip_mm.notna().sum())
-        quality.append({"station_id": station, "expected_days": expected, "valid_days": valid,
-                        "missing_or_excluded_days": expected - valid,
-                        "completeness_pct": round(valid / expected * 100, 3),
-                        "trace_days": int(group.mflag.eq("T").sum())})
     manifest = {"schema_version": "1.0", "source": "NOAA NCEI GHCN-Daily", "dataset_version": payloads[1].decode().strip(),
                 "downloaded_at": datetime.now(timezone.utc).isoformat(), "start": "1991-01-01", "end": "2025-12-31",
                 "sha256": hashlib.sha256(raw_csv).hexdigest(), "stations": registry, "quality": quality,
                 "raw_sha256": {s: hashlib.sha256(r).hexdigest() for s, r in zip(IDS, payloads[2:])},
-                "policy": "PRCP only; tenths mm / 10; missing/negative, nonblank QFLAG, MFLAG P excluded; trace = 0; no imputation; MDPR never used. Complete simultaneous windows only.",
+                "lineage_columns": ["raw_precip_mm", "value_origin", "fill_source_station_id"],
+                "policy": "PRCP only; tenths mm / 10; missing/negative, nonblank QFLAG, MFLAG P excluded; trace = 0. Missing station-days use the declared same-city index where available, then Corpus Christi airport as a provisional regional proxy. raw_precip_mm, value_origin and fill_source_station_id preserve every substitution. MDPR is never used.",
                 "documentation": BASE + "readme.txt"}
     target = ROOT / "data"
     target.mkdir(exist_ok=True)

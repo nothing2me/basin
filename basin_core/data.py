@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CachedSource:
-    """Verified immutable snapshot; missing values remain missing."""
+    """Verified immutable snapshot with analysis values and value-level lineage."""
 
     def __init__(self, directory: Path = ROOT / "data", raw: bytes | None = None, manifest: dict | None = None,
                  _daily: pd.DataFrame | None = None, _manifest: dict | None = None, _raw: bytes | None = None):
@@ -20,6 +20,10 @@ class CachedSource:
             self.daily = _daily
             self.manifest = _manifest
             self.raw = _raw or b""
+            self.lineage = pd.DataFrame(
+                np.where(_daily.notna(), "observed", None), index=_daily.index, columns=_daily.columns
+            )
+            self.raw_daily = _daily.copy()
             return
 
         self.raw = raw if raw is not None else (directory / "observations.csv").read_bytes()
@@ -28,7 +32,7 @@ class CachedSource:
             raise ValueError("Snapshot manifest is missing required fields or uses an unsupported schema")
         if hashlib.sha256(self.raw).hexdigest() != self.manifest["sha256"]:
             raise ValueError("Snapshot checksum mismatch. Restore the bundled data or refresh it explicitly.")
-        frame = pd.read_csv(io.BytesIO(self.raw), parse_dates=["date"])
+        frame = pd.read_csv(io.BytesIO(self.raw), parse_dates=["date"], low_memory=False)
         if not {"date", "station_id", "precip_mm"} <= set(frame.columns):
             raise ValueError("Snapshot is missing date, station_id or precip_mm columns")
         if not pd.api.types.is_datetime64_any_dtype(frame.date) or frame.date.isna().any():
@@ -47,14 +51,48 @@ class CachedSource:
         values = frame.precip_mm.dropna().to_numpy()
         if not np.isfinite(values).all() or (values < 0).any():
             raise ValueError("Invalid precipitation in snapshot")
-        self.daily = frame.pivot(index="date", columns="station_id", values="precip_mm").reindex(
-            pd.date_range(self.manifest["start"], self.manifest["end"], freq="D"))
+        index = pd.date_range(self.manifest["start"], self.manifest["end"], freq="D")
+        lineage_columns = self.manifest.get("lineage_columns", [])
+        if lineage_columns:
+            if not set(lineage_columns) <= set(frame.columns):
+                raise ValueError("Snapshot declares lineage columns that are missing from the data")
+            origins = set(frame["value_origin"].dropna().astype(str))
+            if not origins <= {"observed", "filled", "user_provided"}:
+                raise ValueError("Snapshot contains an unsupported rainfall value origin")
+            raw_values = pd.to_numeric(frame["raw_precip_mm"], errors="coerce")
+            observed_rows = frame["value_origin"].eq("observed")
+            filled_rows = frame["value_origin"].eq("filled")
+            if raw_values[observed_rows].isna().any() or not np.allclose(
+                raw_values[observed_rows], frame.loc[observed_rows, "precip_mm"]
+            ):
+                raise ValueError("Observed rainfall lineage must retain the matching raw value")
+            fill_sources = frame["fill_source_station_id"].fillna("").astype(str)
+            if raw_values[filled_rows].notna().any() or not fill_sources[filled_rows].isin(station_ids).all():
+                raise ValueError("Filled rainfall lineage must identify a registered source station")
+            self.lineage = frame.pivot(index="date", columns="station_id", values="value_origin").reindex(index)
+            self.raw_daily = frame.assign(raw_precip_mm=raw_values).pivot(
+                index="date", columns="station_id", values="raw_precip_mm"
+            ).reindex(index)
+        else:
+            self.lineage = frame.assign(value_origin="observed").pivot(
+                index="date", columns="station_id", values="value_origin"
+            ).reindex(index)
+            self.raw_daily = frame.pivot(index="date", columns="station_id", values="precip_mm").reindex(index)
+        self.daily = frame.pivot(index="date", columns="station_id", values="precip_mm").reindex(index)
         self.daily.index.name = "date"
+        self.lineage.index.name = "date"
+        self.raw_daily.index.name = "date"
 
     def select(self, stations: list[str]) -> pd.DataFrame:
         if not stations or len(set(stations)) != len(stations) or not set(stations) <= set(self.daily.columns):
             raise ValueError("Choose at least one distinct station from the snapshot")
         return self.daily[stations].copy()
+
+    def select_lineage(self, stations: list[str]) -> pd.DataFrame:
+        """Return per-day origins so consumers can distinguish observations from fills."""
+        if not stations or len(set(stations)) != len(stations) or not set(stations) <= set(self.daily.columns):
+            raise ValueError("Choose at least one distinct station from the snapshot")
+        return self.lineage[stations].copy()
 
     def with_custom_station(self, station_id: str, name: str, series: pd.Series,
                             location: str = "") -> CachedSource:
@@ -106,6 +144,9 @@ class CachedSource:
             "date": clean_s.index.strftime("%Y-%m-%d"),
             "station_id": station_id,
             "precip_mm": [f"{v:.2f}" for v in clean_s.values],
+            "raw_precip_mm": [f"{v:.2f}" for v in clean_s.values],
+            "value_origin": "user_provided",
+            "fill_source_station_id": "",
             "mflag": "",
             "qflag": "",
             "sflag": "CUSTOM",
@@ -148,12 +189,17 @@ class CachedSource:
                 "station_id": station_id,
                 "expected_days": expected_days,
                 "valid_days": valid_days,
+                "raw_observed_days": valid_days,
+                "raw_completeness_pct": round(valid_days / expected_days * 100, 3) if expected_days else 0.0,
+                "filled_days": 0,
+                "analysis_coverage_days": valid_days,
+                "analysis_coverage_pct": round(valid_days / expected_days * 100, 3) if expected_days else 0.0,
                 "missing_or_excluded_days": expected_days - valid_days,
                 "completeness_pct": round(valid_days / expected_days * 100, 3) if expected_days else 0.0,
                 "trace_days": 0,
             })
         new_manifest["sha256"] = hashlib.sha256(new_raw).hexdigest()
-        return CachedSource(_daily=new_daily, _manifest=new_manifest, _raw=new_raw)
+        return CachedSource(raw=new_raw, manifest=new_manifest)
 
 
 CITY_STATIONS: dict[str, list[str]] = {

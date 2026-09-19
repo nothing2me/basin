@@ -1743,6 +1743,15 @@ if page == "Data":
 
     metadata = pd.DataFrame(source.manifest["stations"]).rename(columns={"id": "station_id"})
     quality = pd.DataFrame(source.manifest["quality"])
+    quality["observed_days"] = quality.get("raw_observed_days", quality.get("valid_days"))
+    quality["observed_pct"] = quality.get("raw_completeness_pct", quality.get("completeness_pct"))
+    quality["filled_days"] = quality.get(
+        "filled_days", quality.get("valid_days", 0) - quality["observed_days"]
+    )
+    quality["analysis_coverage_pct"] = quality.get(
+        "analysis_coverage_pct", quality.get("completeness_pct")
+    )
+    quality["remaining_gap_days"] = quality.get("missing_or_excluded_days", 0)
     station_table = metadata.merge(quality, on="station_id")
 
     with tour_target("data_map"):
@@ -1807,22 +1816,29 @@ if page == "Data":
             st.markdown("**Loaded Analysis Station Registry & Observation Quality**")
             st.caption(
                 "The original Corpus Christi, Victoria, and San Antonio NOAA stations and the expanded regional "
-                "network are provisional rainfall proxies; their source-watershed suitability is unvalidated."
+                "network are provisional rainfall proxies; their source-watershed suitability is unvalidated. "
+                "Observed coverage reports valid NOAA station-days. Filled days are separately identified proxy "
+                "values used to create the complete screening matrix."
             )
             st.dataframe(
-                station_table[["station_id", "name", "latitude", "longitude", "completeness_pct", "missing_or_excluded_days", "trace_days"]],
+                station_table[["station_id", "name", "latitude", "longitude", "observed_days",
+                               "observed_pct", "filled_days", "analysis_coverage_pct",
+                               "remaining_gap_days", "trace_days"]],
                 hide_index=True, width="stretch", height=320,
                 column_config={
                     "station_id": "ID",
                     "name": "Station Name",
                     "latitude": st.column_config.NumberColumn("Lat", format="%.2f"),
                     "longitude": st.column_config.NumberColumn("Lon", format="%.2f"),
-                    "completeness_pct": st.column_config.NumberColumn("Complete %", format="%.3f"),
-                    "missing_or_excluded_days": st.column_config.NumberColumn("Missing"),
+                    "observed_days": st.column_config.NumberColumn("Observed days", format="%d"),
+                    "observed_pct": st.column_config.NumberColumn("Observed %", format="%.3f"),
+                    "filled_days": st.column_config.NumberColumn("Filled days", format="%d"),
+                    "analysis_coverage_pct": st.column_config.NumberColumn("Analysis coverage %", format="%.3f"),
+                    "remaining_gap_days": st.column_config.NumberColumn("Remaining gaps", format="%d"),
                     "trace_days": st.column_config.NumberColumn("Trace"),
                 }
             )
-            st.download_button("Download loaded station registry (CSV)", metadata.to_csv(index=False), "stations.csv", "text/csv")
+            st.download_button("Download loaded station registry (CSV)", station_table.to_csv(index=False), "stations.csv", "text/csv")
         with tab_cat:
             st.markdown("**Region N Geographic Station Catalog**")
             st.caption(f"Catalog retrieved {catalog['retrieved_at'][:10]}. Coverage: all NOAA GHCN-Daily and USGS NWIS sites inside Region N.")
@@ -1976,6 +1992,13 @@ elif page == "Workspace":
                         default=default_selected_cities,
                         help="Selecting a city loads the bundled NOAA observations in that community footprint. These stations are provisional regional rainfall proxies; source-watershed suitability is unvalidated.",
                         key="selected_cities",
+                        on_change=lambda: st.session_state.update(
+                            builder_station_override=stations_for_cities(
+                                [c for c in st.session_state.get("selected_cities", []) if c != "Custom Gauges"],
+                                custom_stations=[s for s in names if s.startswith("LOCAL_")]
+                                if "Custom Gauges" in st.session_state.get("selected_cities", []) else None,
+                            )
+                        ),
                     )
                     encompassed_stations = stations_for_cities(
                         [c for c in selected_cities if c != "Custom Gauges"],
@@ -2467,7 +2490,8 @@ elif page == "Review":
 
                 suggested_draft = (
                     f"Screening review: {f.get('duration_days', 90)}-day window ({f.get('deficit_mm', 0.0)/25.4:.2f} in average shortfall, "
-                    f"rank ≥ {f.get('historical_percentile', 0.0)*100:.0f}%). Rainfall observations verified suitable for storage stress modeling."
+                    f"rank ≥ {f.get('historical_percentile', 0.0)*100:.0f}%). NOAA station inputs are provisional "
+                    "regional rainfall proxies; source-watershed suitability and storage-model fitness remain unvalidated."
                 )
 
                 col_note_hdr, col_note_btn = st.columns([1.0, 2.0])

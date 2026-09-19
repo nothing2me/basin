@@ -30,6 +30,28 @@ def test_corrupt_snapshot(source):
         CachedSource(raw=source.raw + b"x", manifest=source.manifest)
 
 
+def test_snapshot_preserves_observed_and_filled_value_lineage(source):
+    assert source.manifest["lineage_columns"] == [
+        "raw_precip_mm", "value_origin", "fill_source_station_id"
+    ]
+    quality = {row["station_id"]: row for row in source.manifest["quality"]}
+    for station in source.daily.columns:
+        origins = source.select_lineage([station])[station]
+        assert int(origins.eq("observed").sum()) == quality[station]["raw_observed_days"]
+        assert int(origins.eq("filled").sum()) == quality[station]["filled_days"]
+        observed = origins.eq("observed")
+        filled = origins.eq("filled")
+        np.testing.assert_allclose(
+            source.raw_daily.loc[observed, station], source.daily.loc[observed, station]
+        )
+        assert source.raw_daily.loc[filled, station].isna().all()
+
+    padre = quality["USC00416739"]
+    assert padre["raw_completeness_pct"] < 50
+    assert padre["filled_days"] > 6000
+    assert padre["analysis_coverage_pct"] == 100
+
+
 @pytest.mark.parametrize("overrides", [{"durations": ()}, {"months": (13,)}, {"retention_min": -1}, {"retention_max": float("nan")}, {"seed": -1}, {"candidates": 1001}, {"stations": ()}])
 def test_parameters_rejected(source, overrides):
     params = {"stations": tuple(source.daily.columns), **overrides}

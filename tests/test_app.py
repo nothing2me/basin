@@ -29,6 +29,23 @@ def test_searchable_station_picker_and_direct_date_range(tmp_path, monkeypatch):
     )
 
 
+def test_changing_community_reconciles_hidden_station_override(tmp_path, monkeypatch):
+    from basin_core.workspace import Workspace
+
+    original_save = Workspace.save
+    monkeypatch.setattr(Workspace, "save", lambda self: original_save(self, tmp_path))
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
+    app.sidebar.radio[0].set_value("Workspace").run()
+
+    app.multiselect(key="selected_cities").set_value(["Victoria"]).run()
+
+    assert not app.exception
+    assert app.multiselect(key="builder_station_override").value == ["USW00012912"]
+    next(button for button in app.button if button.label == "Create rainfall scenarios").click().run()
+    assert not app.exception
+    assert app.session_state.workspace.params.stations == ("USW00012912",)
+
+
 def test_full_user_workflow(tmp_path, monkeypatch):
     from basin_core.workspace import Workspace
     original_save = Workspace.save

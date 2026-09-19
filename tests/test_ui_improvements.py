@@ -133,6 +133,8 @@ def test_review_decision_gating_and_suggested_rationale(monkeypatch):
     # Note text area is now populated with > 20 chars
     note_area = next(t for t in at.text_area if t.label == "Review note")
     assert len(note_area.value.strip()) >= 20
+    assert "verified suitable" not in note_area.value
+    assert "remain unvalidated" in note_area.value
 
     # Include button is now unlocked
     include_btn = next(b for b in at.button if b.label == "Include")
@@ -203,6 +205,15 @@ def test_primary_ui_uses_one_icon_family_instead_of_emoji():
     assert not any(glyph in source for glyph in retired_emoji)
     for icon in ("history", "tune", "help_outline", "unarchive", "fact_check", "rate_review"):
         assert f":material/{icon}:" in source
+
+
+def test_system_theme_follows_streamlit_theme_and_defines_dark_text_contrast():
+    source = (ROOT / "basin_theme.py").read_text(encoding="utf-8")
+    assert "getComputedStyle(document.body).backgroundColor" in source
+    assert "mode === 'System' && nativeIsLight" in source
+    assert "requestAnimationFrame(() => applyBasinTheme())" in source
+    assert 'body.basin-theme-dark h1' in source
+    assert 'color:var(--basin-text-strong)!important' in source
 
 
 

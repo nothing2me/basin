@@ -584,6 +584,18 @@ body.basin-theme-light h5,
 body.basin-theme-light h6{
     color:var(--basin-text-strong)!important;
 }
+body.basin-theme-dark .stApp,
+body.basin-theme-dark [data-testid="stAppViewContainer"]{
+    color:var(--basin-text)!important;
+}
+body.basin-theme-dark h1,
+body.basin-theme-dark h2,
+body.basin-theme-dark h3,
+body.basin-theme-dark h4,
+body.basin-theme-dark h5,
+body.basin-theme-dark h6{
+    color:var(--basin-text-strong)!important;
+}
 body.basin-theme-light [data-testid="stVerticalBlockBorderWrapper"],
 body.basin-theme-light [data-basin-glass-surface="true"],
 body.basin-theme-light [data-testid="stVerticalBlock"].st-emotion-cache-1qu4don,
@@ -854,16 +866,27 @@ body:not(.basin-theme-light) .basin-suggested-label {
   box-shadow: 0 4px 14px rgba(0,0,0,0.18) !important;
 }
 </style>""")
-    st.html("""<script>(() => {
+    st.html(r"""<script>(() => {
 const applyBasinTheme = (requested) => {
   const mode = requested || localStorage.getItem('basin-theme-mode') || 'System';
-  const isLight = mode === 'Light' ||
-    (mode === 'System' && !window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  // In System mode follow Streamlit's active theme, not the OS preference in
+  // isolation. Streamlit may be configured explicitly (the bundled default is
+  // light), and choosing independently can create dark surfaces with dark text.
+  // Streamlit leaves its native background on body while BASIN textures the
+  // inner app container, so body remains a stable signal after rerenders.
+  const nativeBackground = getComputedStyle(document.body).backgroundColor;
+  const channels = (nativeBackground.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+  const nativeIsLight = channels.length === 3
+    ? (channels[0] * 299 + channels[1] * 587 + channels[2] * 114) / 1000 >= 128
+    : true;
+  const isLight = mode === 'Light' || (mode === 'System' && nativeIsLight);
   document.body.classList.toggle('basin-theme-light', isLight);
   document.body.classList.toggle('basin-theme-dark', !isLight);
 };
 window.__applyBasinTheme = applyBasinTheme;
 applyBasinTheme();
+// Reconcile once after Streamlit's native theme styles finish mounting.
+requestAnimationFrame(() => applyBasinTheme());
 if (!window.__basinSystemThemeListenerAttached) {
   window.__basinSystemThemeListenerAttached = true;
   window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
