@@ -159,10 +159,10 @@ def test_issue_4_privacy_redaction_stubs(approved_workspace):
 
     pdf_bytes = build_fallback_pdf(approved_workspace, accepted, config=config)
     reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
-    page2_text = reader.pages[1].extract_text() or ""
+    full_pdf_text = re.sub(r"\s+", " ", "\n".join([page.extract_text() or "" for page in reader.pages]))
     # Should not repeat the verbose redaction sentence per row
-    assert page2_text.count("Review rationale omitted per export privacy configuration") <= 1
-    assert "Accepted" in page2_text
+    assert full_pdf_text.count("Review rationale omitted per export privacy configuration") <= 1
+    assert "Accepted" in full_pdf_text
 
 
 # ---------------------------------------------------------------------------

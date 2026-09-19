@@ -138,7 +138,7 @@ def rainfall_shortfall_figure(
             tickmode="array",
             tickvals=[0],
             ticktext=[f"{duration} d window"],
-            title_text="Duration Clusters (Days)" if row == rows else None,
+            title_text=None,
             row=row, col=col,
         )
         fig.update_yaxes(range=y_range, showgrid=True, zeroline=False,
@@ -146,11 +146,19 @@ def rainfall_shortfall_figure(
                          showticklabels=col == 1, row=row, col=col)
 
     fig.update_layout(
-        height=370 * rows + 110, margin=dict(l=55, r=20, t=45, b=100),
+        height=370 * rows + 110,
+        margin=dict(l=55, r=20, t=45, b=70 if rows == 1 else 85),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Arial", size=12), hovermode="closest",
-        legend=dict(orientation="h", yanchor="top", y=-0.06, xanchor="left", x=0,
-                    itemclick=False, itemdoubleclick=False),
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.10 if rows == 1 else -0.08,
+            xanchor="center",
+            x=0.5,
+            itemclick=False,
+            itemdoubleclick=False,
+        ),
     )
     return fig
 

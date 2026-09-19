@@ -31,9 +31,7 @@ from basin_theme import apply_design, appearance_picker, custom_appearance, acce
 from basin_core.data import CachedSource, ROOT, CITY_STATIONS, DEFAULT_CITIES, stations_for_cities
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle, generate_brief, summary_record, rainfall_rows
-import importlib
-import basin_core.pdf_report
-importlib.reload(basin_core.pdf_report)
+import basin_core.pdf_report as pdf_report
 from basin_core.pdf_report import ExperimentConfig, generate_pdf_report_with_status, report_state_token, render_html_report
 from basin_core.workspace import Workspace, session_dir
 from basin_core.analysis_context import (AnalysisContext, DECISION_USES, ORGANIZATION_TYPES,
@@ -652,7 +650,7 @@ def render_analysis_focus_card(default_goal="storage"):
     """Dedicated engineering objective card with descriptive guidance and presentation settings."""
     with st.container(border=True):
         st.markdown("#### Analysis Focus & Decision Context")
-        st.caption("Select your primary engineering objective to tailor scenario ranking, key metrics, and review tools.")
+        st.caption("Choose what to focus on first. Select your primary engineering objective to tailor scenario ranking, key metrics, and review tools.")
 
         goal_labels = {
             "storage": "Storage Stress",
@@ -1473,7 +1471,7 @@ def tour_target(target_id: str):
     if active:
         st.markdown(f"""<style>.st-key-{key}{{outline:2px solid currentColor;outline-offset:3px;border-radius:6px;padding:10px;box-shadow:0 0 0 5px color-mix(in srgb,currentColor 8%,transparent)}}
 .st-key-{key} .stPlotlyChart{{min-width:0}}</style>""", unsafe_allow_html=True)
-    with st.container(key=key, width="content" if target_id == "export_panel" else "stretch"):
+    with st.container(key=key, width="stretch"):
         if active:
             st.markdown(f'<div id="tour-{target_id}" class="tutorial-anchor tutorial-target-label">STEP {st.session_state.tutorial_step + 1} · {escape(TOUR_LOCATIONS[target_id])}</div>', unsafe_allow_html=True)
             render_tour_guide(st.session_state.get("workspace"))
@@ -3189,7 +3187,7 @@ elif page == "Exports":
 
         # Single experiment configuration every report on this page is generated from.
         experiment_config = st.session_state.get("experiment_config")
-        if not isinstance(experiment_config, ExperimentConfig):
+        if not (isinstance(experiment_config, ExperimentConfig) or type(experiment_config).__name__ == "ExperimentConfig"):
             experiment_config = ExperimentConfig()
 
         with st.container():
@@ -3353,7 +3351,7 @@ elif page == "Exports":
                             brief_text = generate_brief(w, w.exportable())
                             brief_path = out_dir / f"Hydrologist_Handoff_Brief_{w.id}.md"
                             brief_path.write_text(brief_text, encoding="utf-8")
-                            render_outcome = generate_pdf_report_with_status(w, w.exportable(), include_notes=share, config=experiment_config)
+                            render_outcome = pdf_report.generate_pdf_report_with_status(w, w.exportable(), include_notes=share, config=experiment_config)
                             pdf_bytes = render_outcome.pdf_bytes
                             pdf_path = out_dir / f"BASIN-Executive-Brief-{w.id}.pdf"
                             pdf_path.write_bytes(pdf_bytes)
@@ -3566,7 +3564,7 @@ elif page == "Exports":
                         if preview_state is None:
                             if st.button("Prep PDF Preview", icon=":material/picture_as_pdf:", key=f"btn_prep_pdf_prev_{w.id}", width="stretch"):
                                 with st.spinner("Compiling Executive Brief PDF preview..."):
-                                    preview_outcome = generate_pdf_report_with_status(w, accepted_preview, include_notes=share, config=experiment_config)
+                                    preview_outcome = pdf_report.generate_pdf_report_with_status(w, accepted_preview, include_notes=share, config=experiment_config)
                                     st.session_state["preview_pdf"] = {
                                         "token": preview_token,
                                         "bytes": preview_outcome.pdf_bytes,
