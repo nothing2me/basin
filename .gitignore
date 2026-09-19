@@ -13,3 +13,8 @@ build/
 *.spec
 models/*.gguf
 models/*.tmp
+# Machine-local Streamlit config (per-user, not part of the product)
+.streamlit/credentials.toml
+# Local AI-assistant planning/scratch directories
+.omo/
+.codegraph/

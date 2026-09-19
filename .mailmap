@@ -1,0 +1,11 @@
+# Canonical author identities for git log/blame display.
+# No history is rewritten — this file only changes how identities are shown.
+#
+# Noah committed under several identities early in the hackathon (including a
+# placeholder <noah@example.com>); all map to the canonical identity below.
+Noah Wilborn <noahwilborn@gmail.com> <noah@example.com>
+Noah Wilborn <noahwilborn@gmail.com> <93677972+nothing2me@users.noreply.github.com>
+Noah Wilborn <noahwilborn@gmail.com> nothing2me <noahwilborn@gmail.com>
+
+# Misha Stegall committed under the SH3EEESH account during the hackathon.
+Misha Stegall <sontinets@gmail.com> SH3EEESH <sontinets@gmail.com>
