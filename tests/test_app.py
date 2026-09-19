@@ -211,7 +211,7 @@ def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
 
     # Step through all 7 guided steps across the pipeline.
     for step in range(1, 7):
-        next_btn = next(b for b in app.button if b.label == "Next Step ▶")
+        next_btn = next(b for b in app.button if b.label == "Next Step")
         next_btn.click().run()
         assert not app.exception
         assert app.session_state.tutorial_step == step
@@ -239,12 +239,12 @@ def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
     assert app.session_state.page == "Review"
 
     # Advance back to end and finish
-    next_btn = next(b for b in app.button if b.label == "Next Step ▶")
+    next_btn = next(b for b in app.button if b.label == "Next Step")
     next_btn.click().run()
     assert not app.exception
     assert app.session_state.tutorial_step == 6
 
-    finish_btn = next(b for b in app.button if b.label == "✓ Finish Tutorial")
+    finish_btn = next(b for b in app.button if b.label == "Finish Tutorial")
     finish_btn.click().run()
     assert not app.exception
     assert app.session_state.tutorial_active is False
@@ -254,7 +254,7 @@ def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
     start_btn2.click().run()
     assert not app.exception
     assert app.session_state.tutorial_active is True
-    exit_btn = next(b for b in app.button if b.label == "✕ Exit")
+    exit_btn = next(b for b in app.button if b.label == "Exit")
     exit_btn.click().run()
     assert not app.exception
     assert app.session_state.tutorial_active is False

@@ -111,7 +111,7 @@ def load_source():
 def local_rainfall_preview(expanded=False, as_expander=False):
     ctx = st.expander("Upload and observe your custom CSV.", expanded=expanded) if as_expander else st.container(border=True)
     with ctx:
-        st.markdown("##### 📤 Upload & Observe Custom Station CSV")
+        st.markdown("##### :material/upload_file: Upload & Observe Custom Station CSV")
         st.caption("One station per file. Preview only: uploads do not change scenarios or the NOAA snapshot. Preview stays in this session until you explicitly save reviewed evidence to an active analysis.")
         col_t1, col_t2 = st.columns([1.5, 1.5])
         col_t1.download_button("Download CSV template", TEMPLATE, "local-rainfall-template.csv", "text/csv", width="stretch")
@@ -154,12 +154,12 @@ def local_rainfall_preview(expanded=False, as_expander=False):
         st.plotly_chart(accessible_chart(fig), width="stretch", config={"displayModeBar": False})
         st.dataframe(frame, hide_index=True, width="stretch")
         st.caption(f"Original file SHA-256: {preview.original_sha256}")
-        st.info(f"⚠️ {CUSTOM_CATCHMENT_DISCLAIMER} No percentile, forecast or scenario change is produced by this preview.")
+        st.info(f"{CUSTOM_CATCHMENT_DISCLAIMER} No percentile, forecast or scenario change is produced by this preview.", icon=":material/warning:")
 
         with st.container(border=True):
-            st.markdown("##### 🌟 Data Sovereignty: Use in Scenario Generator")
+            st.markdown("##### :material/database: Data Sovereignty: Use in Scenario Generator")
             st.caption("Register your uploaded rain gauge so you can resample drought scenarios and simulate storage drawdown directly on your own local records.")
-            if st.button("🚀 Activate Gauge & Build Scenarios on Your Data", key=f"btn_activate_custom_gauge_{preview.original_sha256[:8]}", type="primary", width="stretch"):
+            if st.button("Activate Gauge & Build Scenarios on Your Data", key=f"btn_activate_custom_gauge_{preview.original_sha256[:8]}", type="primary", icon=":material/my_location:", width="stretch"):
                 clean_lookup = {pd.to_datetime(d): v for d, v in preview.observations if v is not None}
                 s_series = pd.Series(clean_lookup).sort_index()
                 st_id = f"LOCAL_{preview.station[:10].upper().replace(' ', '_')}"
@@ -291,7 +291,7 @@ def saved_custom_panel(workspace):
         record = versions[identifier]
         st.markdown(f"**Source: {format_custom_source_label(record['station'], record.get('provider'))}**")
         st.caption(f"{format_custom_coverage_dates(record.get('start'), record.get('end'), record.get('valid_days'))} · original unit: {record['input_unit']} · linked scenarios: {', '.join(record['scenario_ids'])}")
-        st.caption(f"⚠️ {CUSTOM_CATCHMENT_DISCLAIMER}")
+        st.caption(f":material/warning: {CUSTOM_CATCHMENT_DISCLAIMER}")
         with st.expander("Source identity and suitability details"):
             st.write({k: record[k] for k in ("id", "station", "location", "provider", "input_unit", "start", "end", "original_sha256", "normalized_sha256", "reference_station", "relationship", "observation_basis", "rationale", "scenario_ids")})
         result = record["comparison"]
@@ -320,7 +320,7 @@ def save(w):
 
 def supporting_documents_panel(workspace: Workspace | None):
     """UI for user-provided supporting document ingestion, extraction, and evidence review."""
-    st.markdown("##### 📄 Supporting Documents & Cited Evidence")
+    st.markdown("##### :material/description: Supporting Documents & Cited Evidence")
     st.caption(
         f"Attach local PDF or plain-text reports as unverified context. "
         f"{DOCUMENT_CATCHMENT_DISCLAIMER} Extraction is not verification; promotion to evidence requires human review."
@@ -423,7 +423,7 @@ def supporting_documents_panel(workspace: Workspace | None):
             st.markdown("**Extracted Text Excerpt**")
             # Render bounded excerpt (up to 5 blocks, each up to 600 chars)
             for b in doc.blocks[:5]:
-                status_icon = "🟢" if b.extraction_status == "success" else ("🟡" if b.extraction_status == "partial" else "⚪")
+                status_icon = ":material/check_circle:" if b.extraction_status == "success" else (":material/pending:" if b.extraction_status == "partial" else ":material/radio_button_unchecked:")
                 preview_text = b.extracted_text[:600] + ("…" if len(b.extracted_text) > 600 else "")
                 if not preview_text.strip():
                     preview_text = "[Empty text block]"
@@ -540,7 +540,7 @@ def supporting_documents_panel(workspace: Workspace | None):
                             st.error(f"Cannot reject document: {exc}")
 
         elif doc.state == DocumentState.ACCEPTED_AS_EVIDENCE.value:
-            st.success("✅ **Accepted as Evidence**")
+            st.success("**Accepted as Evidence**", icon=":material/verified:")
             if doc.review:
                 st.markdown(f"**Confirmed statement**: {doc.review.confirmed_statement}")
                 st.markdown(f"**Reviewer rationale**: {doc.review.reviewer_rationale}")
@@ -710,7 +710,7 @@ def render_analysis_focus_card(default_goal="storage"):
         """, unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
-        st.markdown("##### ⚙️ Presentation & Review Preferences")
+        st.markdown("##### :material/tune: Presentation & Review Preferences")
         col_f_data, col_f_guidance = st.columns(2)
         with col_f_data:
             run_focus_data = st.selectbox(
@@ -739,14 +739,14 @@ def render_analysis_focus_card(default_goal="storage"):
                 local_name = next(curr_names[s] for s in curr_names if s.startswith("LOCAL_"))
                 st.info(f"Custom Gauge Active: Generating scenarios from user-provided dataset '{local_name}' (unverified). {CUSTOM_CATCHMENT_DISCLAIMER}")
             else:
-                st.info("💡 **Custom gauge selected**: Upload your rainfall CSV in the custom upload section below to screen against local observations.")
+                st.info("**Custom gauge selected**: Upload your rainfall CSV in the custom upload section below to screen against local observations.", icon=":material/lightbulb:")
         elif run_focus_data == "example":
             col_ex1, col_ex2 = st.columns([2.5, 1.5])
             col_ex1.caption("The reproducible example pre-loads 6 diverse drought candidates (Seed 22).")
             curr_source = source if "source" in globals() else None
             curr_names = names if "names" in globals() else {}
             if curr_source and curr_names:
-                col_ex2.button("Load Example Run ➔", key="btn_dashboard_load_example_inline", on_click=start_example, args=(curr_source, curr_names), type="primary", width="stretch")
+                col_ex2.button("Load Example Run", icon=":material/arrow_forward:", icon_position="right", key="btn_dashboard_load_example_inline", on_click=start_example, args=(curr_source, curr_names), type="primary", width="stretch")
         elif run_focus_skip:
             st.caption("This run will use the full Review layout. You can choose a focus later in Review.")
 
@@ -1073,13 +1073,13 @@ def decision_summary(w):
         if unique_windows == 1:
             p = lead.provenance
             st.warning(
-                f"📌 **Single Historical Source Window**: All {len(w.scenarios)} candidate scenarios are scaled variations "
+                f":material/calendar_view_day: **Single Historical Source Window**: All {len(w.scenarios)} candidate scenarios are scaled variations "
                 f"of **one** historical record ({p.get('source_start')} to {p.get('source_end')}, {dur_str}). "
                 "This reflects retention/extent variations of that specific sequence, not an empirical multi-year screening across the 1991–2025 record."
             )
         else:
             st.info(
-                f"🔍 **Multi-Year Historical Screening**: Shortlisted from {len(w.scenarios)} candidate scenarios spanning "
+                f":material/manage_search: **Multi-Year Historical Screening**: Shortlisted from {len(w.scenarios)} candidate scenarios spanning "
                 f"**{unique_windows} unique historical source windows** across **{unique_years} distinct calendar years** (durations: {dur_str})."
             )
         st.caption(
@@ -1151,11 +1151,12 @@ def render_top_navigation(current_page, w):
 
         with col:
             st.markdown(f'<div class="basin-header-text-btn {state_class}">', unsafe_allow_html=True)
-            btn_label = label if is_enabled else f"🔒 {label}"
+            btn_label = label
             st.button(
                 btn_label,
                 key=f"nav_tab_{page_key}",
                 disabled=not is_enabled,
+                icon=None if is_enabled else ":material/lock:",
                 on_click=switch_page,
                 args=(page_key,),
                 help=None if is_enabled else "Requires an active analysis run. Generate scenarios in Scenario Builder first.",
@@ -1186,7 +1187,7 @@ def render_bottom_nav(prev_page: str | None, next_page: str | None, next_label: 
             st.markdown(f'<div style="text-align:center;padding-top:8px;font-size:0.88rem;opacity:0.85;font-weight:600;">{note}</div>', unsafe_allow_html=True)
     with col_next:
         if next_page:
-            st.button(f"{next_label} ➔", key=f"nav_next_{next_page}", type="primary", disabled=next_disabled, on_click=on_next or switch_page, args=() if on_next else (next_page,), width="stretch")
+            st.button(next_label, icon=":material/arrow_forward:", icon_position="right", key=f"nav_next_{next_page}", type="primary", disabled=next_disabled, on_click=on_next or switch_page, args=() if on_next else (next_page,), width="stretch")
 
 
 def personal_notes_panel(w):
@@ -1454,9 +1455,11 @@ def render_tour_guide(workspace):
 <div class="tutorial-location">Current section: {escape(TOUR_LOCATIONS[step['target']])}</div>""", unsafe_allow_html=True)
         with st.container(horizontal=True, gap="small"):
             st.button("◀ Prev", key="tutorial_prev", disabled=index == 0, on_click=tutorial_prev)
-            st.button("✓ Finish Tutorial" if index == len(TUTORIAL_STEPS)-1 else "Next Step ▶",
+            st.button("Finish Tutorial" if index == len(TUTORIAL_STEPS)-1 else "Next Step",
+                      icon=":material/check:" if index == len(TUTORIAL_STEPS)-1 else ":material/arrow_forward:",
+                      icon_position="left" if index == len(TUTORIAL_STEPS)-1 else "right",
                       key="tutorial_next", type="primary", on_click=tutorial_next)
-            st.button("✕ Exit", key="tutorial_exit", on_click=tutorial_exit)
+            st.button("Exit", icon=":material/close:", key="tutorial_exit", on_click=tutorial_exit)
             if not on_page:
                 st.button("Return to this step", on_click=return_to_tour_step)
 
@@ -1511,13 +1514,13 @@ top_l, top_c, top_r = st.columns([0.9, 1.2, 1.9], vertical_alignment="center")
 with top_l:
     u_choice = st.selectbox(
         "Units",
-        ["🇺🇸 US · in / ac-ft", "🌐 Metric · mm / m³"],
+        ["US · in / ac-ft", "Metric · mm / m³"],
         index=0 if st.session_state.get("unit_mode", "us") == "us" else 1,
         key="global_unit_selector",
         label_visibility="collapsed",
         help="Switch units across all charts, tables, and KPI metrics.",
     )
-    st.session_state["unit_mode"] = "us" if u_choice.startswith("🇺🇸") else "metric"
+    st.session_state["unit_mode"] = "us" if u_choice.startswith("US") else "metric"
 
 with top_c:
     dark_logo_file = ROOT / "assets" / "basin-logo.png"
@@ -1538,7 +1541,7 @@ with top_c:
 if hasattr(st, "dialog"):
     @st.dialog("Start New Analysis")
     def confirm_reset_dialog():
-        st.warning("⚠️ **Reset active analysis?** Unsaved notes and scenario selections will be cleared.")
+        st.warning("**Reset active analysis?** Unsaved notes and scenario selections will be cleared.", icon=":material/restart_alt:")
         c_yes, c_no = st.columns(2)
         if c_yes.button("Yes, Reset Everything", type="primary", width="stretch", key="modal_btn_reset_yes"):
             st.session_state.clear()
@@ -1555,13 +1558,13 @@ else:
 with top_r:
     u_col1, u_col2, u_col3 = st.columns(3)
     with u_col1:
-        with st.popover("💾 Runs", width="stretch", help="Open or manage saved workspace runs"):
+        with st.popover("Runs", icon=":material/history:", width="stretch", help="Open or manage saved workspace runs"):
             st.markdown("**Saved Workspace Runs**")
             saved_dir = session_dir()
             sessions = sorted(saved_dir.glob("session-*.json"), key=lambda p: p.stat().st_mtime, reverse=True) if saved_dir.exists() else []
             if sessions:
                 total_mb = sum(p.stat().st_size for p in sessions) / (1024 * 1024)
-                st.caption(f"💾 {len(sessions)} saved session(s) · {total_mb:.1f} MB in `{saved_dir.name}/`")
+                st.caption(f":material/save: {len(sessions)} saved session(s) · {total_mb:.1f} MB in `{saved_dir.name}/`")
                 previous = st.selectbox(
                     "Select saved run", sessions,
                     format_func=lambda p: f"{datetime.fromtimestamp(p.stat().st_mtime).strftime('%Y-%m-%d %H:%M')} · {p.stem.replace('session-', '')[:8]}…",
@@ -1580,7 +1583,7 @@ with top_r:
                     except (ValueError, KeyError, OSError, TypeError) as error:
                         st.error(f"Cannot open run: {error}")
                 if len(sessions) > 3:
-                    if st.button("🗑️ Purge drafts older than top 3", key="btn_purge_old_runs", width="stretch"):
+                    if st.button("Purge drafts older than top 3", key="btn_purge_old_runs", icon=":material/delete_sweep:", width="stretch"):
                         for p in sessions[3:]:
                             try:
                                 p.unlink()
@@ -1613,11 +1616,11 @@ with top_r:
             )
 
             st.divider()
-            if st.button("🔄 Start New Analysis", key="btn_reset_analysis_top", width="stretch", help="Clear current run and reset all parameters"):
+            if st.button("Start New Analysis", key="btn_reset_analysis_top", icon=":material/restart_alt:", width="stretch", help="Clear current run and reset all parameters"):
                 confirm_reset_dialog()
 
     with u_col2:
-        with st.popover("⚙️ Settings", width="stretch", help="Appearance, color mode, and developer options"):
+        with st.popover("Settings", icon=":material/tune:", width="stretch", help="Appearance, color mode, and developer options"):
             st.markdown("**Appearance & Preferences**")
             appearance_picker()
             custom_appearance()
@@ -1628,7 +1631,7 @@ with top_r:
             )
 
     with u_col3:
-        with st.popover("❓ Help", width="stretch", help="Guided tour and documentation"):
+        with st.popover("Help", icon=":material/help_outline:", width="stretch", help="Guided tour and documentation"):
             st.markdown("**Guided Walkthrough & Help**")
             st.caption("Step-by-step interactive walkthrough across the 4-step workflow.")
             st.button(
@@ -1689,7 +1692,7 @@ if current_tour_step() and page != current_tour_step()["page"]:
 
 if st.session_state.get("confirm_reset_example"):
     with st.container(border=True):
-        st.warning("⚠️ **Active Analysis in Progress**: The current workspace contains reviewed scenarios or custom evidence. Resetting will replace this workspace.")
+        st.warning("**Active Analysis in Progress**: The current workspace contains reviewed scenarios or custom evidence. Resetting will replace this workspace.", icon=":material/warning:")
         col_c1, col_c2 = st.columns(2)
         pending_example = st.session_state.get("confirm_reset_example")
         confirm_label = "Yes, load crisis demo" if pending_example == "crisis" else "Yes, reset and load example"
@@ -1719,7 +1722,7 @@ if page == "Data":
         data_analysis_context = render_analysis_context_intake(w)
         # Session Restoration Box (regular bordered card under decision context)
         with st.container(border=True):
-            st.markdown("#### 📦 Restore Analysis from Verified .zip")
+            st.markdown("#### :material/unarchive: Restore Analysis from Verified .zip")
             st.caption("Restore and re-verify a complete previously exported BASIN `.zip` data bundle. Re-validates the SHA-256 manifest and mathematical replay on this device.")
             uploaded_bundle = st.file_uploader("Upload BASIN Bundle (.zip)", type=["zip"], key="bundle_restore_uploader")
             if uploaded_bundle is not None:
@@ -1868,10 +1871,10 @@ if page == "Data":
     )
 
 elif w is None and page in ("Review", "Exports"):
-    st.info("💡 **No Active Analysis Run**: This section is locked until scenarios are generated. Start in **Step 2: Scenario Builder** or click 'Try an example' below.")
+    st.info("**No Active Analysis Run**: This section is locked until scenarios are generated. Start in **Step 2: Scenario Builder** or click 'Try an example' below.", icon=":material/info:")
     col_e1, col_e2 = st.columns(2)
     with col_e1:
-        st.button("➔ Go to Step 2: Scenario Builder", key=f"btn_go_workspace_{page}", type="primary", on_click=switch_page, args=("Workspace",), width="stretch")
+        st.button("Go to Step 2: Scenario Builder", icon=":material/arrow_forward:", icon_position="right", key=f"btn_go_workspace_{page}", type="primary", on_click=switch_page, args=("Workspace",), width="stretch")
     with col_e2:
         st.button("Try an example", key=f"btn_try_example_{page}", on_click=start_example, args=(source, names), width="stretch")
     st.button("◀ Return to Step 1: Data Dashboard", key=f"btn_return_data_{page}", on_click=switch_page, args=("Data",), width="stretch")
@@ -1990,11 +1993,11 @@ elif page == "Workspace":
                         if "Custom Gauges" in selected_cities:
                             custom_cnt = len([s for s in names if s.startswith("LOCAL_")])
                             summary_lines.append(f"• **Custom Gauges** ({custom_cnt} uploaded)")
-                        st.info(f"📍 **{len(selected_cities)} Community Footprint Selected ({len(encompassed_stations)} Encompassed Stations)**:\n" + "\n".join(summary_lines))
+                        st.info(f"**{len(selected_cities)} Community Footprint Selected ({len(encompassed_stations)} Encompassed Stations)**:\n" + "\n".join(summary_lines), icon=":material/location_on:")
                     else:
                         st.warning("Select at least one city or community.")
 
-                    with st.expander("🛠️ Advanced Station Overrides (Inspect / Deselect Specific Gauges)", expanded=False):
+                    with st.expander("Advanced Station Overrides (Inspect / Deselect Specific Gauges)", icon=":material/tune:", expanded=False):
                         stations = st.multiselect(
                             "Stations", list(names),
                             default=list(w.params.stations) if w else (encompassed_stations if encompassed_stations else list(names)),
@@ -2040,7 +2043,7 @@ elif page == "Workspace":
                         else:
                             start_date, end_date = selected_dates
                             dur_days = (end_date - start_date).days + 1
-                            st.caption(f"📌 **Single Historical Window**: {start_date} to {end_date} ({dur_days} days) · Generates scaled retention variations of this exact historical record.")
+                            st.caption(f":material/calendar_view_day: **Single Historical Window**: {start_date} to {end_date} ({dur_days} days) · Generates scaled retention variations of this exact historical record.")
                             calendar_ranges.append((
                                 datetime.combine(start_date, datetime.min.time()).isoformat(timespec="minutes"),
                                 datetime.combine(end_date, datetime.strptime("23:59", "%H:%M").time()).isoformat(timespec="minutes"),
@@ -2048,7 +2051,7 @@ elif page == "Workspace":
                         durations = ((end_date - start_date).days + 1,) if not custom_range_incomplete else (90,)
                         months = (start_date.month,) if not custom_range_incomplete else (1,)
                     else:
-                        st.info("🔍 **Multi-Year Historical Search**: Scans the 1991–2025 NOAA record for multi-season drought sequences across distinct years and onset seasons.")
+                        st.info("**Multi-Year Historical Search**: Scans the 1991–2025 NOAA record for multi-season drought sequences across distinct years and onset seasons.", icon=":material/manage_search:")
                         col_d, col_m = st.columns(2)
                         default_durs = [d for d in [90, 180, 270] if d in [30, 60, 90, 180, 270, 365]]
                         chosen_durs = col_d.multiselect("Search durations (days)", [30, 60, 90, 180, 270, 365], default=default_durs, help="Historical window durations to screen.")
@@ -2264,7 +2267,7 @@ elif page == "Workspace":
             note=f"Candidate Shortlist Confirmed ({len(w.selected)} Scenarios)"
         )
     else:
-        st.info("💡 Configure settings above and click 'Create rainfall scenarios' (or 'Try an example') to generate candidates.")
+        st.info("Configure settings above and click 'Create rainfall scenarios' (or 'Try an example') to generate candidates.", icon=":material/lightbulb:")
         render_bottom_nav(
             prev_page="Data",
             next_page=None,
@@ -2273,8 +2276,8 @@ elif page == "Workspace":
 
 elif page == "Review":
     if w is None:
-        st.info("💡 **No Active Analysis Run**: To review drought scenarios, first configure and start a run in **Scenario Builder**.")
-        st.button("➔ Go to Step 2: Scenario Builder", key="btn_review_to_workspace_empty", on_click=switch_page, args=("Workspace",), type="primary")
+        st.info("**No Active Analysis Run**: To review drought scenarios, first configure and start a run in **Scenario Builder**.", icon=":material/info:")
+        st.button("Go to Step 2: Scenario Builder", icon=":material/arrow_forward:", icon_position="right", key="btn_review_to_workspace_empty", on_click=switch_page, args=("Workspace",), type="primary")
     else:
         context = w.analysis_context
         st.info(
@@ -2438,9 +2441,9 @@ elif page == "Review":
         with top_right:
             with tour_target("review_decision"):
                 st.markdown("### Decide on the handoff")
-                status_label = {"accepted": "🟢 Included", "rejected": "🔴 Excluded", "unreviewed": "🟡 Needs review"}[s.status]
+                status_label = {"accepted": ":material/check_circle: Included", "rejected": ":material/cancel: Excluded", "unreviewed": ":material/pending: Needs review"}[s.status]
                 if s.status == "accepted" and s.approved_revision != s.revision:
-                    status_label = "🟡 Needs review of current revision"
+                    status_label = ":material/pending: Needs review of current revision"
                 st.write(f"**{s.id} · Revision {s.revision} · {status_label}**")
                 pending = [i for i in w.selected if w.get(i).status == 'unreviewed' or
                            (w.get(i).status == 'accepted' and w.get(i).approved_revision != w.get(i).revision)]
@@ -2471,7 +2474,7 @@ elif page == "Review":
 
                 col_note_hdr, col_note_btn = st.columns([1.0, 2.0])
                 col_note_hdr.markdown("**Review note**")
-                if col_note_btn.button("📋 Use suggested rationale", key=f"btn_fill_note_{s.id}_{w.id}",
+                if col_note_btn.button("Use suggested rationale", icon=":material/text_snippet:", key=f"btn_fill_note_{s.id}_{w.id}",
                                        help="Auto-populate the review note with a factual screening rationale that you can edit and submit."):
                     st.session_state[note_key] = suggested_draft
                     st.rerun()
@@ -2481,13 +2484,13 @@ elif page == "Review":
                 valid_review_note = len(note.strip()) >= 20
                 char_count = len(note.strip())
                 if not valid_review_note:
-                    st.warning(f"✍️ **Rationale required ({char_count}/20 chars):** Enter ≥20 characters or click '📋 Use suggested rationale'.")
+                    st.warning(f"**Rationale required ({char_count}/20 chars):** Enter ≥20 characters or click 'Use suggested rationale'.", icon=":material/edit_note:")
                 else:
-                    st.caption(f"✅ Rationale requirement met ({char_count} characters). Ready to Include or Exclude.")
+                    st.caption(f":material/task_alt: Rationale requirement met ({char_count} characters). Ready to Include or Exclude.")
 
                 st.caption("Inclusion records your choice of rainfall content. It does not certify hydrologic validity or approve the storage experiment.")
                 if s.id not in w.selected:
-                    st.error(f"⚠️ **Candidate {s.id} is outside the active shortlist.** Only shortlisted scenarios can be included in the handoff export. Switch to 'Edit' tab to swap it into the shortlist first.")
+                    st.error(f"**Candidate {s.id} is outside the active shortlist.** Only shortlisted scenarios can be included in the handoff export. Switch to 'Edit' tab to swap it into the shortlist first.", icon=":material/warning:")
 
                 include_help = "Include this revision in the handoff."
                 exclude_help = "Exclude this revision from the handoff."
@@ -2547,7 +2550,7 @@ elif page == "Review":
                         help=f"Go to next scenario ({next_target})"
                     )
                 if not pending:
-                    st.success("🎉 All shortlisted scenarios reviewed! Ready for export via bottom navigation or sidebar.")
+                    st.success("All shortlisted scenarios reviewed! Ready for export via bottom navigation or sidebar.", icon=":material/task_alt:")
 
         with st.expander("Method and limitations", expanded=False):
             st.markdown(
@@ -2793,7 +2796,7 @@ elif page == "Review":
 
                         with tour_target("review_simulation"):
                             st.markdown("#### Combined storage")
-                            st.caption("⚠️ **Uncalibrated Screening Simulation**: Illustrative mathematical simulation under fixed evaporation and inflow coefficients. Not a safe-yield forecast; does not determine statutory drought stages or restriction dates.")
+                            st.caption(":material/warning: **Uncalibrated Screening Simulation**: Illustrative mathematical simulation under fixed evaporation and inflow coefficients. Not a safe-yield forecast; does not determine statutory drought stages or restriction dates.")
                             if simple_view:
                                 st.plotly_chart(accessible_chart(storage_trajectory_figure(sim_df, chosen_sys.stage_bands_pct)), width="stretch", config={"displayModeBar": False})
                             else:
@@ -2826,13 +2829,13 @@ elif page == "Review":
 
                         if s_crit is not None:
                             st.markdown(f'''<div class="basin-callout-card alert" style="border-left: 5px solid #dc2626;">
-                                <div class="metric-label">🔴 Decision Metric · Critical Storage Breach (≤{band_crit:.0f}%)</div>
+                                <div class="metric-label">Decision Metric · Critical Storage Breach (≤{band_crit:.0f}%)</div>
                                 <div class="metric-val" style="color: var(--basin-danger-text); font-size: 1.4rem; font-weight: 800;">Day {s_crit}</div>
                                 <div class="metric-desc">Critical threshold crossed: modeled combined storage reaches or breaches the {band_crit:.0f}% emergency planning band on Day {s_crit}.</div>
                             </div>''', unsafe_allow_html=True)
                         else:
                             st.markdown(f'''<div class="basin-callout-card" style="border-left: 5px solid #16a34a;">
-                                <div class="metric-label">🟢 Decision Metric · Critical Storage Breach (≤{band_crit:.0f}%)</div>
+                                <div class="metric-label">Decision Metric · Critical Storage Breach (≤{band_crit:.0f}%)</div>
                                 <div class="metric-val" style="color: var(--basin-success-text); font-size: 1.4rem; font-weight: 800;">Not Breached in Window</div>
                                 <div class="metric-desc">Modeled combined storage stays above the {band_crit:.0f}% emergency band throughout this {len(sim_df)}-day window.</div>
                             </div>''', unsafe_allow_html=True)
@@ -2849,7 +2852,7 @@ elif page == "Review":
 
                         # Multi-Sector Delivery Breakdown
                         if not simple_view and "served_domestic_acft" in sim_df.columns and sim_df["served_demand_acft"].sum() > 0:
-                            st.markdown("##### 👥 Multi-Sector Water Delivery")
+                            st.markdown("##### :material/groups: Multi-Sector Water Delivery")
                             sec1, sec2, sec3 = st.columns(3)
                             sec1.metric("Domestic category", f"{sim_df['served_domestic_acft'].sum():,.0f} ac-ft")
                             sec2.metric("Industrial category", f"{sim_df['served_industrial_acft'].sum():,.0f} ac-ft")
@@ -2858,7 +2861,7 @@ elif page == "Review":
 
                         # Demand-Policy Comparison (Sector Curtailment)
                         if not simple_view and len(chosen_sys.stage_bands_pct) >= 4:
-                            with st.expander("⚖️ Demand-policy comparison (sector curtailment)", expanded=False):
+                            with st.expander("Demand-policy comparison (sector curtailment)", icon=":material/balance:", expanded=False):
                                 comp = compare_demand_curtailment_policies(
                                     s.series,
                                     initial_pct=init_pct,
@@ -2919,14 +2922,14 @@ elif page == "Review":
                         if not simple_view and getattr(chosen_sys, "estuary_order_active", False) and sim_df["estuary_pass_through_acft"].sum() == 0:
                             st.caption(f"Configured estuary pass-through assumption: {chosen_sys.estuary_pass_through_fraction:.0%} of modeled inflow, capped at {chosen_sys.estuary_pass_through_cap_acft_day:g} ac-ft/day, is passed through above {chosen_sys.estuary_threshold_pct:.0%} storage; none is passed through at or below it. This is a preset input, not a live regulatory-status determination.")
 
-                        st.info("📢 **Modeled storage result**: " + reservoir_summary(
+                        st.info("**Modeled storage result**: " + reservoir_summary(
                             sim_df, chosen_sys.name, stage_bands_pct=chosen_sys.stage_bands_pct,
-                            initial_pct=init_pct))
+                            initial_pct=init_pct), icon=":material/monitoring:")
                         st.caption(f"Results cover this {len(s.series)}-day window. Threshold timing depends on these assumptions and is not an official restriction date.")
 
                         if not simple_view:
                             with st.container(border=True):
-                                st.markdown("##### 🏛️ Regional Context (Corpus Christi / Region N)")
+                                st.markdown("##### :material/account_balance: Regional Context (Corpus Christi / Region N)")
                                 st.markdown(
                                     """
                                     This panel supplies context for the configured experiment; it is not a live policy or operating-status feed.
@@ -2956,7 +2959,7 @@ elif page == "Review":
 
                 gap_val = f"{crop_def['irrigation_gap_in']:.2f} in" if is_us else f"{crop_def['irrigation_gap_mm']:.1f} mm"
                 st.markdown(f'''<div class="basin-callout-card" style="border-left: 5px solid #087e8b;">
-                    <div class="metric-label">🌾 Decision Metric · Illustrative Net Atmospheric Deficit (ETc - P)</div>
+                    <div class="metric-label">Decision Metric · Illustrative Net Atmospheric Deficit (ETc - P)</div>
                     <div class="metric-val" style="color: var(--basin-info-text); font-size: 1.4rem; font-weight: 800;">{gap_val}</div>
                     <div class="metric-desc">Illustrative Net Atmospheric Deficit (ETc - P): Daily crop evapotranspiration demand minus rainfall, assuming fixed regional ETo and crop coefficients without field soil-moisture carryover or irrigation application efficiency.</div>
                 </div>''', unsafe_allow_html=True)
@@ -2971,15 +2974,15 @@ elif page == "Review":
                     a2.metric("Reference ET (ETo)", f"{crop_def['total_eto_in']*25.4:.1f} mm")
                     a3.metric("Crop ET (ETc)", f"{crop_def['total_etc_in']*25.4:.1f} mm")
 
-                st.info("📢 **Agronomic Takeaway**: " + crop_def["takeaway"])
+                st.info("**Agronomic Takeaway**: " + crop_def["takeaway"], icon=":material/agriculture:")
 
                 with st.container(border=True):
-                    st.markdown("##### 📅 Monthly Irrigation Deficit Breakdown")
+                    st.markdown("##### :material/calendar_month: Monthly Irrigation Deficit Breakdown")
                     m_df = pd.DataFrame(crop_def["monthly_summary"])
                     st.dataframe(m_df, hide_index=True, width="stretch")
 
             with c_fire_tab:
-                st.markdown("##### 🔥 Keetch-Byram Drought Index (KBDI) & Wildfire Stress")
+                st.markdown("##### :material/local_fire_department: Keetch-Byram Drought Index (KBDI) & Wildfire Stress")
                 if simple_view:
                     start_kbdi = int(st.session_state.get(f"kbdi_start_{s.id}_{w.id}", 400))
                     f2 = st.container()
@@ -2993,13 +2996,13 @@ elif page == "Review":
 
                 if kbdi_res.burn_ban_breached:
                     st.markdown(f'''<div class="basin-callout-card alert" style="border-left: 5px solid #dc2626;">
-                        <div class="metric-label">🔴 Decision Metric · Illustrative KBDI Stress Marker (≥ 600)</div>
+                        <div class="metric-label">Decision Metric · Illustrative KBDI Stress Marker (≥ 600)</div>
                         <div class="metric-val" style="color: var(--basin-danger-text); font-size: 1.4rem; font-weight: 800;">Crossed on Day {kbdi_res.burn_ban_day} (Peak: {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.peak_day})</div>
                         <div class="metric-desc">Illustrative meteorological stress marker crossed; county burn bans are legal determinations issued by County Commissioners Courts based on local conditions, not an automated dashboard trigger.</div>
                     </div>''', unsafe_allow_html=True)
                 else:
                     st.markdown(f'''<div class="basin-callout-card" style="border-left: 5px solid #16a34a;">
-                        <div class="metric-label">🟢 Decision Metric · Illustrative KBDI Stress Marker (≥ 600)</div>
+                        <div class="metric-label">Decision Metric · Illustrative KBDI Stress Marker (≥ 600)</div>
                         <div class="metric-val" style="color: var(--basin-success-text); font-size: 1.4rem; font-weight: 800;">Below 600 (Peak: {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.peak_day})</div>
                         <div class="metric-desc">Soil moisture deficit index remains below typical Texas county stress markers throughout the scenario.</div>
                     </div>''', unsafe_allow_html=True)
@@ -3011,15 +3014,16 @@ elif page == "Review":
 
                 if kbdi_res.burn_ban_breached:
                     st.warning(
-                        f"⚠️ **Illustrative KBDI Stress Marker (≥600) Crossed on Day {kbdi_res.burn_ban_day}**: "
+                        f"**Illustrative KBDI Stress Marker (≥600) Crossed on Day {kbdi_res.burn_ban_day}**: "
                         f"Soil moisture depletion marker crossed at Day {kbdi_res.burn_ban_day}; peak KBDI reaches {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.peak_day}. "
                         "Texas county outdoor burn bans are legal determinations made by County Commissioners Courts under Local Government Code § 352.081 based on local fire conditions, not an automated dashboard trigger. "
-                        "Consult the [Texas A&M Forest Service Official Burn Ban Map](https://tfsweb.tamu.edu/wildfire-and-other-disasters/burn-bans-and-information/) for current statutory declarations."
+                        "Consult the [Texas A&M Forest Service Official Burn Ban Map](https://tfsweb.tamu.edu/wildfire-and-other-disasters/burn-bans-and-information/) for current statutory declarations.",
+                        icon=":material/warning:",
                     )
                 else:
-                    st.success(f"✅ KBDI peaks at {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.peak_day}, remaining below the illustrative 600 meteorological stress marker.")
+                    st.success(f"KBDI peaks at {kbdi_res.peak_kbdi:.0f} on Day {kbdi_res.peak_day}, remaining below the illustrative 600 meteorological stress marker.", icon=":material/check_circle:")
 
-                st.info("📢 **Operational Takeaway**: " + kbdi_res.takeaway)
+                st.info("**Operational Takeaway**: " + kbdi_res.takeaway, icon=":material/campaign:")
                 st.caption("Illustrative decision support. Official burn bans are enacted by County Commissioners Courts.")
 
         with tab_rainfall:
@@ -3098,7 +3102,7 @@ elif page == "Review":
                     if "last_swap" in st.session_state:
                         last_out, last_in = st.session_state["last_swap"]
                         if last_in in w.selected:
-                            if st.button(f"↩️ Undo Swap ({last_in} ➔ {last_out})", key=f"btn_undo_swap_{w.id}", width="stretch"):
+                            if st.button(f"Undo Swap ({last_in} to {last_out})", icon=":material/undo:", key=f"btn_undo_swap_{w.id}", width="stretch"):
                                 w.swap(last_in, last_out)
                                 st.session_state.inspect_id = last_out
                                 del st.session_state["last_swap"]
@@ -3173,14 +3177,14 @@ elif page == "Review":
 
 elif page == "Exports":
     if w is None:
-        st.info("💡 **No Active Analysis Run**: To prepare and verify an export packet, first configure and run scenarios in **Scenario Builder**.")
-        st.button("➔ Go to Step 2: Scenario Builder", key="btn_exports_to_workspace_empty", on_click=switch_page, args=("Workspace",), type="primary")
+        st.info("**No Active Analysis Run**: To prepare and verify an export packet, first configure and run scenarios in **Scenario Builder**.", icon=":material/info:")
+        st.button("Go to Step 2: Scenario Builder", icon=":material/arrow_forward:", icon_position="right", key="btn_exports_to_workspace_empty", on_click=switch_page, args=("Workspace",), type="primary")
     else:
         chosen = [w.get(i) for i in w.selected]
         context = w.analysis_context
         _, h_exp_r = st.columns([3.5, 1.2])
         with h_exp_r:
-            if st.button("🔄 Start New Analysis", key="btn_reset_analysis_export", width="stretch", help="Reset all scenarios, reviews and session state to start fresh"):
+            if st.button("Start New Analysis", key="btn_reset_analysis_export", icon=":material/restart_alt:", width="stretch", help="Reset all scenarios, reviews and session state to start fresh"):
                 confirm_reset_dialog()
 
         # Single experiment configuration every report on this page is generated from.
@@ -3261,10 +3265,10 @@ elif page == "Exports":
                 w.exportable()
                 ready = True
                 if not st.session_state.get("packet"):
-                    st.info("📋 **Shortlist Reviewed:** All shortlisted candidates are reviewed and ready for bundle generation.")
+                    st.info("**Shortlist Reviewed:** All shortlisted candidates are reviewed and ready for bundle generation.", icon=":material/fact_check:")
             except ValueError as error:
                 ready = False
-                st.warning(f"⚠️ **Export prerequisite:** {error}")
+                st.warning(f"**Export prerequisite:** {error}", icon=":material/warning:")
                 unreviewed = [s for s in chosen if s.status == "unreviewed" or (s.status == "accepted" and s.approved_revision != s.revision)]
                 from basin_core.simulation import is_current
                 unreviewed_sims = []
@@ -3287,7 +3291,7 @@ elif page == "Exports":
                         help="Explain why one decision applies to this entire shortlist (minimum 20 characters). The audit identifies this as a batch decision."
                     )
                     valid_batch_rationale = len(batch_rationale.strip()) >= 20
-                    if col_a.button("✅ Accept all shortlisted with batch decision", key="btn_accept_all_for_export", type="primary", disabled=not valid_batch_rationale):
+                    if col_a.button("Accept all shortlisted with batch decision", icon=":material/task_alt:", key="btn_accept_all_for_export", type="primary", disabled=not valid_batch_rationale):
                         note = f"included by batch decision: {batch_rationale.strip()}"
                         for s in unreviewed:
                             s.review(True, note, decision_mode="batch")
@@ -3296,7 +3300,7 @@ elif page == "Exports":
                         save(w)
                         st.success("All shortlisted candidates included by batch decision.")
                         st.rerun()
-                    if col_b.button("🔍 Review candidates in Review tab", key="btn_goto_review_tab"):
+                    if col_b.button("Review candidates in Review tab", icon=":material/rate_review:", key="btn_goto_review_tab"):
                         switch_page("Review")
                         st.rerun()
 
@@ -3315,14 +3319,14 @@ elif page == "Exports":
                             help="Recorded in the official audit bundle for saved reservoir simulations."
                         )
                     with col_s2:
-                        if st.button("✅ Approve simulation reviews", key="btn_approve_sim_reviews", type="primary"):
+                        if st.button("Approve simulation reviews", icon=":material/verified:", key="btn_approve_sim_reviews", type="primary"):
                             for s, run in unreviewed_sims:
                                 w.review_simulation(run["id"], sim_batch_note.strip())
                             save(w)
                             st.success("Simulation reviews recorded. Export unlocked.")
                             st.rerun()
                     with col_s3:
-                        if st.button("🗑️ Clear saved simulations", key="btn_clear_sim_reviews", help="Remove illustrative simulations from export so scenarios can be exported immediately."):
+                        if st.button("Clear saved simulations", icon=":material/delete_sweep:", key="btn_clear_sim_reviews", help="Remove illustrative simulations from export so scenarios can be exported immediately."):
                             for s, run in unreviewed_sims:
                                 w.active_simulations.pop(s.id, None)
                             save(w)
@@ -3332,11 +3336,11 @@ elif page == "Exports":
             with tour_target("export_panel"):
                 if not ready:
                     if unreviewed_sims and not unreviewed:
-                        st.warning("⚠️ **Export locked:** Saved reservoir simulation experiments require sign-off. Use '✅ Approve simulation reviews' or '🗑️ Clear saved simulations' above.")
+                        st.warning("**Export locked:** Saved reservoir simulation experiments require sign-off. Use 'Approve simulation reviews' or 'Clear saved simulations' above.", icon=":material/lock:")
                     else:
-                        st.warning("⚠️ **Export locked:** Review decisions required before generating verified bundle. Use '✅ Accept all shortlisted with batch decision' above or review each scenario individually.")
+                        st.warning("**Export locked:** Review decisions required before generating verified bundle. Use 'Accept all shortlisted with batch decision' above or review each scenario individually.", icon=":material/lock:")
                 elif w_has_custom and not share_custom:
-                    st.warning("⚠️ **Custom Evidence Consent Required:** Check 'Include custom numerical inputs and source metadata' above to enable verified export.")
+                    st.warning("**Custom Evidence Consent Required:** Check 'Include custom numerical inputs and source metadata' above to enable verified export.", icon=":material/shield_lock:")
                 if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (w_has_custom and not share_custom), width="stretch"):
                     try:
                         with st.spinner("Compiling verified data bundle, rendering Executive Brief vector PDF, and preparing Excel handoff..."):
@@ -3443,7 +3447,7 @@ elif page == "Exports":
 
             if not packet_fresh and disk_zip.exists() and disk_pdf.exists():
                 if disk_fresh:
-                    st.info(f"📦 **Existing Verified Deliverables on Disk** for run `{w.id}`. (Matches current settings and consent).")
+                    st.info(f"**Existing Verified Deliverables on Disk** for run `{w.id}`. (Matches current settings and consent).", icon=":material/inventory_2:")
                     c_d1, c_d2, c_d3, c_d4 = st.columns([1, 1, 1, 1])
                     c_d1.download_button("Download Saved PDF", disk_pdf.read_bytes(), disk_pdf.name, "application/pdf", key=f"dl_disk_pdf_{w.id}", width="stretch")
                     c_d2.download_button("Download Saved ZIP", disk_zip.read_bytes(), disk_zip.name, "application/zip", key=f"dl_disk_zip_{w.id}", width="stretch")
@@ -3460,11 +3464,11 @@ elif page == "Exports":
                             subprocess.Popen(["xdg-open", str(out_folder.resolve())])
                 else:
                     st.warning(
-                        f"⚠️ **Previous Local Draft Found on Disk** (`output/BASIN-{w.id}.*`). "
+                        f"**Previous Local Draft Found on Disk** (`output/BASIN-{w.id}.*`). "
                         "Settings, review decisions, or privacy consent have changed since this artifact was created. "
                         "Rebuild the verified export above to update the packet."
                     )
-                    if st.button("📁 Open Output Folder (Inspect Historical Drafts)", key=f"btn_open_disk_out_{w.id}"):
+                    if st.button("Open Output Folder (Inspect Historical Drafts)", icon=":material/folder_open:", key=f"btn_open_disk_out_{w.id}"):
                         import subprocess, sys
                         out_folder = ROOT / "output"
                         if sys.platform == "win32":
@@ -3476,7 +3480,7 @@ elif page == "Exports":
 
             if packet_fresh:
                 st.success(
-                    f"✅ **Verified Export Package Ready** (`Run {w.id}`) — SHA-256 integrity verified. "
+                    f"**Verified Export Package Ready** (`Run {w.id}`) - SHA-256 integrity verified. "
                     f"Executive Brief (PDF), Shortlist Workbook (Excel), and Replay Bundle (ZIP) are generated and saved to disk in `output/`."
                 )
 
@@ -3492,7 +3496,7 @@ elif page == "Exports":
                         width="stretch"
                     )
                     if packet.get("pdf_degraded"):
-                        st.warning(f"⚠️ **PDF renderer fallback:** {packet.get('pdf_render_detail', '')}")
+                        st.warning(f"**PDF renderer fallback:** {packet.get('pdf_render_detail', '')}", icon=":material/warning:")
                     else:
                         st.caption(f"PDF renderer: {packet.get('pdf_render_detail', 'unknown')}")
 
@@ -3517,7 +3521,7 @@ elif page == "Exports":
                             subprocess.Popen(["open", str(out_folder.resolve())])
                         else:
                             subprocess.Popen(["xdg-open", str(out_folder.resolve())])
-                st.caption(f"📁 Local copies on disk: `output/{packet.get('saved_pdf', f'BASIN-Executive-Brief-{w.id}.pdf')}`, `output/{packet.get('saved_zip', f'BASIN-{w.id}.zip')}` and `output/{packet.get('saved_brief', f'Hydrologist_Handoff_Brief_{w.id}.md')}`")
+                st.caption(f":material/folder_open: Local copies on disk: `output/{packet.get('saved_pdf', f'BASIN-Executive-Brief-{w.id}.pdf')}`, `output/{packet.get('saved_zip', f'BASIN-{w.id}.zip')}` and `output/{packet.get('saved_brief', f'Hydrologist_Handoff_Brief_{w.id}.md')}`")
                 st.json(packet["report"])
                 st.caption(f"{packet['report']['scenarios_replayed']} revisions verified · daily_rainfall.csv / shortlist.csv / audit.json / input snapshot / checksums")
 
@@ -3541,11 +3545,11 @@ elif page == "Exports":
                 st.session_state.pop("preview_pdf", None)
 
             tab_figures, tab_brief, tab_shortlist, tab_evidence, tab_footprint = st.tabs([
-                "📈 Visual Figures",
-                "📄 Executive Brief",
-                "📊 Shortlist Details",
-                "📁 Evidence & Provenance",
-                "🌱 Environmental Footprint",
+                ":material/monitoring: Visual Figures",
+                ":material/description: Executive Brief",
+                ":material/table_chart: Shortlist Details",
+                ":material/fact_check: Evidence & Provenance",
+                ":material/eco: Environmental Footprint",
             ])
 
             with tab_figures:
@@ -3560,7 +3564,7 @@ elif page == "Exports":
                             st.session_state.pop("preview_pdf", None)
                             preview_state = None
                         if preview_state is None:
-                            if st.button("📕 Prep PDF Preview", key=f"btn_prep_pdf_prev_{w.id}", width="stretch"):
+                            if st.button("Prep PDF Preview", icon=":material/picture_as_pdf:", key=f"btn_prep_pdf_prev_{w.id}", width="stretch"):
                                 with st.spinner("Compiling Executive Brief PDF preview..."):
                                     preview_outcome = generate_pdf_report_with_status(w, accepted_preview, include_notes=share, config=experiment_config)
                                     st.session_state["preview_pdf"] = {
@@ -3572,26 +3576,28 @@ elif page == "Exports":
                                 st.rerun()
                         else:
                             st.download_button(
-                                "📕 Download PDF Preview",
+                                "Download PDF Preview",
                                 preview_state["bytes"],
                                 f"BASIN-Executive-Brief-Preview-{w.id}.pdf",
                                 "application/pdf",
                                 key=f"dl_pdf_preview_{w.id}",
+                                icon=":material/picture_as_pdf:",
                                 width="stretch",
                             )
                     with c_fig_brief:
                         brief_preview_text = generate_brief(w, accepted_preview)
                         st.download_button(
-                            "📄 Download Brief (.md)",
+                            "Download Brief (.md)",
                             brief_preview_text.encode("utf-8"),
                             f"Hydrologist_Handoff_Brief_{w.id}.md",
                             "text/markdown",
                             key=f"dl_brief_preview_fig_{w.id}",
+                            icon=":material/description:",
                             width="stretch",
                         )
                     if preview_state:
                         if preview_state.get("degraded"):
-                            st.warning(f"⚠️ {preview_state.get('detail', '')}")
+                            st.warning(f"{preview_state.get('detail', '')}", icon=":material/warning:")
                         else:
                             st.caption(f"PDF renderer: {preview_state.get('detail', 'unknown')}")
 
@@ -3642,11 +3648,12 @@ elif page == "Exports":
                         st.caption("Draft Hydrologist Handoff Brief in Markdown format.")
                     with c_br_dl:
                         st.download_button(
-                            "📄 Download Brief (.md)",
+                            "Download Brief (.md)",
                             brief_preview_text.encode("utf-8"),
                             f"Hydrologist_Handoff_Brief_{w.id}.md",
                             "text/markdown",
                             key=f"dl_brief_preview_tab_{w.id}",
+                            icon=":material/description:",
                             width="stretch",
                         )
                     with st.container(height=520):

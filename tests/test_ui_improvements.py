@@ -23,8 +23,8 @@ def test_navigation_locked_before_run_created():
     assert not btn_ws.disabled
     assert btn_rev.disabled
     assert btn_exp.disabled
-    assert "🔒" in btn_rev.label
-    assert "🔒" in btn_exp.label
+    assert btn_rev.label == "Review Selections"
+    assert btn_exp.label == "Export"
 
 
 def test_empty_state_on_direct_navigation_without_run():
@@ -36,14 +36,14 @@ def test_empty_state_on_direct_navigation_without_run():
     at.sidebar.radio[0].set_value("Review").run()
     assert not at.exception
     assert any("No Active Analysis Run" in item.value for item in at.info)
-    assert any(b.label == "➔ Go to Step 2: Scenario Builder" for b in at.button)
+    assert any(b.label == "Go to Step 2: Scenario Builder" for b in at.button)
     assert "workspace" not in at.session_state or at.session_state["workspace"] is None
 
     # Switch to Exports via sidebar radio
     at.sidebar.radio[0].set_value("Exports").run()
     assert not at.exception
     assert any("No Active Analysis Run" in item.value for item in at.info)
-    assert any(b.label == "➔ Go to Step 2: Scenario Builder" for b in at.button)
+    assert any(b.label == "Go to Step 2: Scenario Builder" for b in at.button)
     assert "workspace" not in at.session_state or at.session_state["workspace"] is None
 
 
@@ -185,15 +185,24 @@ def test_export_deliverable_workspace_tabs_single_row(monkeypatch):
     # Verify the 5 clean tabs exist and HTML Report is removed
     tab_labels = [t.label for t in at.tabs]
     expected_tabs = [
-        "📈 Visual Figures",
-        "📄 Executive Brief",
-        "📊 Shortlist Details",
-        "📁 Evidence & Provenance",
-        "🌱 Environmental Footprint",
+        ":material/monitoring: Visual Figures",
+        ":material/description: Executive Brief",
+        ":material/table_chart: Shortlist Details",
+        ":material/fact_check: Evidence & Provenance",
+        ":material/eco: Environmental Footprint",
     ]
     for tab in expected_tabs:
         assert any(tab in label for label in tab_labels), f"Missing tab: {tab}"
     assert not any("HTML Report" in label for label in tab_labels), "HTML Report tab should be removed"
+
+
+def test_primary_ui_uses_one_icon_family_instead_of_emoji():
+    """Visible application chrome should use Material Symbols, not platform emoji glyphs."""
+    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    retired_emoji = ("💾", "⚙️", "❓", "📦", "📋", "⚠️", "🔍", "✅", "📈", "📄", "📊", "📁", "🌱")
+    assert not any(glyph in source for glyph in retired_emoji)
+    for icon in ("history", "tune", "help_outline", "unarchive", "fact_check", "rate_review"):
+        assert f":material/{icon}:" in source
 
 
 

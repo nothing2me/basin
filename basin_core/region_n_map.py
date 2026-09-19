@@ -304,7 +304,7 @@ def render_observation_map(stations_df, *, show_catalog=False):
     
     custom_colors = {}
     with col_colors:
-        with st.popover("🎨 Custom colors", help="Customize marker and layer colors for high-contrast projectors or colorblind readability"):
+        with st.popover("Custom colors", icon=":material/palette:", help="Customize marker and layer colors for high-contrast projectors or colorblind readability"):
             st.markdown("**Map Layer & Marker Colors**")
             st.caption("Adjust colors to match high-contrast presentation needs or colorblind accessibility.")
             c_rain = st.color_picker("NOAA rainfall stations", value=st.session_state.get("map_c_rain", COLORS["rain_stations"]), key="map_c_rain")
