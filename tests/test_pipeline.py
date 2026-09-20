@@ -159,6 +159,21 @@ def test_diverse_selection_representatives(workspace):
         assert s.score == max(x.score for x in workspace.scenarios if x.cluster == s.cluster)
 
 
+def test_community_footprint_presets():
+    from basin_core.data import CITY_STATIONS, COMMUNITY_PRESETS_MAP, community_preset_cities
+    regional = community_preset_cities("Regional")
+    watershed = community_preset_cities("Watershed")
+    both = community_preset_cities("Regional + Watershed")
+    assert set(regional) == {"Corpus Christi", "Victoria", "San Antonio", "Kingsville", "Rockport / Aransas", "Alice"}
+    assert set(watershed) == {"Leakey", "Camp Wood", "Hondo", "Crystal City", "Carrizo Springs",
+                              "Pearsall", "Choke Canyon Dam", "Pleasanton", "Three Rivers", "Mathis"}
+    assert set(both) == set(CITY_STATIONS.keys())
+    assert set(regional).isdisjoint(set(watershed))
+    assert list(COMMUNITY_PRESETS_MAP.keys()) == ["Regional", "Watershed", "Regional + Watershed"]
+    with pytest.raises(ValueError):
+        community_preset_cities("Bogus")
+
+
 def test_review_revision_replay_privacy_and_rejection(workspace):
     with pytest.raises(ValueError, match="Review"):
         export_bundle(workspace)

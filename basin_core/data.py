@@ -241,6 +241,30 @@ CITY_STATIONS: dict[str, list[str]] = {
 
 DEFAULT_CITIES = ["Corpus Christi"]
 
+# Community footprints grouped by role for the Scenario Builder preset.
+# Regional: coastal/urban index stations. Watershed: gauges inside the
+# Nueces/Frio/Atascosa drainage basins that feed the reservoirs.
+REGIONAL_CITIES = [
+    "Corpus Christi", "Victoria", "San Antonio", "Kingsville",
+    "Rockport / Aransas", "Alice",
+]
+WATERSHED_CITIES = [
+    "Leakey", "Camp Wood", "Hondo", "Crystal City", "Carrizo Springs",
+    "Pearsall", "Choke Canyon Dam", "Pleasanton", "Three Rivers", "Mathis",
+]
+COMMUNITY_PRESETS_MAP = {
+    "Regional": REGIONAL_CITIES,
+    "Watershed": WATERSHED_CITIES,
+    "Regional + Watershed": REGIONAL_CITIES + WATERSHED_CITIES,
+}
+
+
+def community_preset_cities(preset: str) -> list[str]:
+    """Return the city list for a named community-footprint preset."""
+    if preset not in COMMUNITY_PRESETS_MAP:
+        raise ValueError(f"Unknown community preset: {preset!r}")
+    return list(COMMUNITY_PRESETS_MAP[preset])
+
 
 def stations_for_cities(cities: list[str], custom_stations: list[str] | None = None) -> list[str]:
     """Resolve a list of selected city names to all encompassed official NOAA station IDs."""

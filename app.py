@@ -28,7 +28,8 @@ from basin_core.review_preferences import (DATA_SOURCES, GOALS, GUIDANCE, GUIDED
                                            save_preferences)
 from basin_ui import evidence_panel, comparison_panel, assistant_panel
 from basin_theme import apply_design, appearance_picker, custom_appearance, accessible_chart, reveal_tour_target
-from basin_core.data import CachedSource, ROOT, CITY_STATIONS, DEFAULT_CITIES, stations_for_cities
+from basin_core.data import (CachedSource, ROOT, CITY_STATIONS, DEFAULT_CITIES, stations_for_cities,
+                             COMMUNITY_PRESETS_MAP, community_preset_cities)
 from basin_core.engine import ScenarioParams
 from basin_core.exporter import export_bundle, verify_bundle, generate_brief, summary_record, rainfall_rows
 import basin_core.pdf_report as pdf_report
@@ -1128,6 +1129,17 @@ def switch_page(name):
         st.session_state.inspect_id = w.selected[0]
 
 
+def _apply_community_preset():
+    """Pre-fill the Scenario Builder community selection from a named preset."""
+    preset = st.session_state.get("community_preset")
+    if preset not in COMMUNITY_PRESETS_MAP:
+        return
+    cities = community_preset_cities(preset)
+    custom = [s for s in st.session_state.get("names", []) if s.startswith("LOCAL_")]
+    st.session_state["selected_cities"] = cities
+    st.session_state["builder_station_override"] = stations_for_cities(cities, custom_stations=custom)
+
+
 def render_top_navigation(current_page, w):
     has_run = w is not None
     stages = [
@@ -1986,6 +1998,21 @@ elif page == "Workspace":
                             w_cities.append("Custom Gauges")
                         if w_cities:
                             default_selected_cities = w_cities
+
+                    preset_options = list(COMMUNITY_PRESETS_MAP.keys()) + ["Custom"]
+                    if hasattr(st, "segmented_control"):
+                        st.segmented_control(
+                            "Community footprint",
+                            preset_options,
+                            default="Custom",
+                            key="community_preset",
+                            on_change=_apply_community_preset,
+                            help=("One-click footprint preset for the community selection below: "
+                                  "'Regional' (coastal/urban index stations), 'Watershed' (10 gauges inside the "
+                                  "Nueces/Frio/Atascosa drainage basins), 'Regional + Watershed' (all bundled gauges), "
+                                  "or 'Custom' to keep a manual selection. This only pre-fills which bundled gauges the "
+                                  "scenario builder uses; it does not change any calculation or claim."),
+                        )
 
                     selected_cities = st.multiselect(
                         "Cities / Communities", available_cities,
