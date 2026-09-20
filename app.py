@@ -2745,7 +2745,7 @@ elif page == "Review":
                         "48% (illustrative)": 0.48,
                         "60% (illustrative)": 0.60,
                         "35% (illustrative)": 0.35,
-                        "7.7% (April 2026 context)": 0.077,
+                        "7.8% (April 2026 context)": 0.078,
                     }[init_choice]
 
                     settings = SimulationSettings(
