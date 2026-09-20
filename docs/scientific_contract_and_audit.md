@@ -124,7 +124,7 @@ Any proposed calibration of BASIN's rainfall-to-storage engine must adhere to a 
 ### 4.1 Historical Calibration & Split-Sample Windows
 - **Calibration Period (1991-01-01 to 2010-12-31, 20 Years):** Parameter optimization period spanning moderate and wet cycles.
 - **Validation Period 1 — Drought of Record (2011-01-01 to 2015-12-31, 5 Years):** The historic 2011 Texas single-year drought and prolonged multi-year drawdown.
-- **Validation Period 2 — Modern Day Zero Crisis (2020-01-01 to 2026-06-30, 6.5 Years):** Independent blind test covering the April 2026 all-time low of 7.7% combined storage.
+- **Validation Period 2 — Modern Day Zero Crisis (2020-01-01 to 2026-06-30, 6.5 Years):** Independent blind test covering the April 2026 combined-storage low of 7.8% (City of Corpus Christi April 17, 2026 water-supply update).
 
 ### 4.2 Quantitative Fit Criteria (Mandatory Minimums)
 Before any parameter set is approved for production, it must achieve the following statistical thresholds across all validation periods:

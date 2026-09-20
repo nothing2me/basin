@@ -62,7 +62,7 @@
 > 
 > Why would three college students spend their summer nights obsessed with reservoir evaporation, municipal water codes, and offline AI?
 > 
-> Because living in Texas, drought isn't an abstract concept—it’s our everyday reality. We watched our regional reservoirs plunge to an all-time record low of 7.7% in 2026, while neighbors faced 20 months under lawn-watering bans and steep water surcharges.
+> Because living in Texas, drought isn't an abstract concept—it’s our everyday reality. We watched our regional reservoirs plunge to a record low of 7.8% combined storage in April 2026 (per the City's water-supply update), while neighbors faced 20 months under lawn-watering bans and steep water surcharges.
 > 
 > When we dug deeper, we realized the biggest problem wasn't just a lack of rain; it was a lack of **data democracy**:
 > - Billion-dollar corporations have teams of hydrologists running proprietary river basin models.
@@ -93,7 +93,7 @@
 > As we finalize our presentation deck for the @Zoho USA #fromthegroundup finals next week, here is the complete 5 Ws breakdown of what BASIN is and why it matters:
 > 
 > 📍 **WHERE:**
-> South Texas and the 11-county Coastal Bend (Region N). In 2026, reservoir levels dropped to 7.7%, sparking national headlines that Corpus Christi was on track to become "the first city in America to run out of water."
+> South Texas and the 11-county Coastal Bend (Region N). In April 2026, reservoir levels dropped to 7.8% combined storage, sparking national headlines that Corpus Christi was on track to become "the first city in America to run out of water."
 > 
 > 👥 **WHO:**
 > Rural municipal water districts, agricultural irrigation managers, community planners, and civic leaders. These are the underserved stakeholders who can’t afford $50,000 for engineering consulting firms or wait 6 months for state river basin models.

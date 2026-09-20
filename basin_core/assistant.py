@@ -1016,7 +1016,7 @@ DOMAIN_TOPICS: dict[str, str] = {
         "#### 2. 🧪 Explore with a Prepared Demonstration Run\n"
         "- Want to see immediate results without configuring parameters? On **Step 1: Data Dashboard**:\n"
         "  - Click **'Try an example'** to instantly load 6 diverse drought candidate scenarios (Seed 22).\n"
-        "  - Click **'Load 2026 crisis demo'** to explore an illustrative storage stress test from an actual 7.7% reservoir drought context.\n\n"
+        "  - Click **'Load 2026 crisis demo'** to explore an illustrative storage stress test from an actual 7.8% reservoir drought context.\n\n"
         "#### 3. 🗺️ The 4-Stage Workflow (Top Navigation Stepper)\n"
         "- **Step 1: Data Dashboard** — Verify 35 years of NOAA index precipitation data (1991–2025), inspect paired station anomaly heatmaps, and set your decision context.\n"
         "- **Step 2: Scenario Builder** — Choose community priority presets (e.g., *Crop stress*, *Chronic drought*), configure drought reduction percentages, and generate candidate profiles.\n"

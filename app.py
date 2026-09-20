@@ -1625,7 +1625,7 @@ with utility_group:
                 on_click=start_example,
                 args=(source, names, False, True),
                 width="stretch",
-                help="Starts an illustrative storage experiment from the documented April 2026 7.7% combined-storage crisis condition.",
+                help="Starts an illustrative storage experiment from the documented April 2026 7.8% combined-storage crisis condition.",
             )
 
             st.divider()
@@ -2338,7 +2338,7 @@ elif page == "Review":
         )
         prefs = review_preferences(w.id)
         if st.session_state.get("crisis_demo", False):
-            st.caption("2026 crisis demo · 7.7% is the April 2026 starting-storage context; the selected rainfall sequence and resulting trajectory are illustrative.")
+            st.caption("2026 crisis demo · 7.8% is the April 2026 starting-storage context; the selected rainfall sequence and resulting trajectory are illustrative.")
 
         is_editing = st.session_state.get(f"review_editing_{w.id}", False)
         if prefs.needs_setup or is_editing:
@@ -2732,7 +2732,7 @@ elif page == "Review":
                             "48% (illustrative)",
                             "60% (illustrative)",
                             "35% (illustrative)",
-                            "7.7% (April 2026 context)",
+                            "7.8% (April 2026 context)",
                         ]
                         init_choice = c_init.selectbox("Initial storage", initial_storage_options, key="review_initial_storage")
                         conserve_choice = c_conserve.select_slider("Demand reduction", options=[0, 10, 20, 30], value=0, format_func=lambda v: f"{v}%", key="review_conservation")
