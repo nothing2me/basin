@@ -13,7 +13,8 @@ Updated: September 19, 2026 | Product baseline: source checkout on `main` + `BAS
 
 1. **Sidebar / Launch (`BASIN.exe`)**:
    - Show native desktop execution (EdgeChromium WebView2, no terminal flashing).
-   - Use default settings: three provisional stations (`USW00012924`, `USW00012912`, `USW00012921`); 90, 180, 270 days; Jan/Apr/Jul/Oct; 35–85% retention; 300 candidates; 6 shortlisted; seed 22.
+   - In the Scenario Builder, set **Community footprint → "Watershed"** (one click pre-fills the 10 gauges inside the Nueces/Frio/Atascosa drainage basins — Leakey headwaters through Choke Canyon Dam to Mathis). Keep 90, 180, 270 days; Jan/Apr/Jul/Oct; 35–85% retention; 300 candidates; 6 shortlisted; seed 22.
+   - Say: *"In response to our watershed review, we screen on rainfall inside the basins that actually feed Choke Canyon and Lake Corpus Christi — the reservoir-relevant footprint — rather than coastal airport stations. The regional and combined footprints stay one click away for comparison."*
    - Explain the missing layer: statutory and engineering models (WAM / HEC-ResSim) take substantial time and specialized funding to update — the 2026 Region N plan itself notes the supply model's hydrology stops in 2015. BASIN screens drought scenarios *before* commissioning that work. Generate.
 
 2. **Workspace / Clustering & Ranking**:
@@ -97,6 +98,26 @@ auto-rejects overclaims; the export has **no verdict field**.
 > archetype. Weights are adjustable on the Review screen so anyone can probe
 > sensitivity live." (Full reasoning: `docs/ranking_stability.md`.)
 
+### The watershed-footprint question (from the professor's feedback)
+
+> **Judge/Reviewer:** *"Your earlier runs used coastal stations. Why screen on
+> watershed gauges now?"*
+
+**Answer:**
+> "After our watershed review, we added 10 NOAA gauges inside the Nueces/Frio/
+> Atascosa drainage basins that feed the reservoirs — from Leakey in the
+> headwaters through Choke Canyon Dam to Mathis at the reservoir pools — and made
+> that footprint one click away in the builder. Screening on the watershed gauges
+> captures the rainfall that actually drives reservoir drawdown: the same seed
+> produces scenarios whose simulated drawdowns reflect watershed drought rather
+> than coastal airports. We keep the regional and combined footprints available
+> for comparison, but the watershed footprint is the reservoir-relevant one —
+> still point gauges, not calibrated catchment rainfall, which remains the
+> boundary we claim."
+
+**Demo discipline:** commit to **one footprint per run** and never compare numbers
+across footprints — different station sets produce different (not wrong) scenarios.
+
 ### Demo discipline (from the audit)
 
 - **Lead with the deterministic assistant, keep Qwen optional.** The optional 2.1 GB
@@ -114,7 +135,7 @@ auto-rejects overclaims; the export has **no verdict field**.
 - **Presentation Laptop:** 64-bit Windows with BASIN and its documented runtime prerequisites.
 - **Offline Smoke Test:** run the full suite once on the target laptop:
   `.venv\Scripts\python.exe -m pytest -q` (817 passed / 2 expected skips as of 2026-09-19).
-- **Re-measure on the target laptop:** (a) one no-model run time + energy for the footprint panel, (b) the A/B benchmark multiple if you intend to cite it, (c) the exact breach-day values used in the demo.
+- **Re-measure on the target laptop:** (a) one no-model run time + energy for the footprint panel, (b) the A/B benchmark multiple if you intend to cite it, (c) the exact breach-day and drawdown values **using the Watershed footprint** (the footprint used in the live demo), (d) confirm the Community footprint preset renders and pre-fills correctly on the presentation build.
 - **Projector Rehearsal:** connect external display at 1920×1080 and 1600×900 to ensure high-DPI scaling and split-pane layout render sharply.
 - **Backup Assets:** USB stick containing:
   1. `BASIN.exe` standalone build (rebuilt from current `main`).
