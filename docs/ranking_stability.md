@@ -78,6 +78,13 @@ it would override the user's stated ranking priorities and would replace a
 cluster-maximum exemplar with a lower-scored candidate; the honest disclosure in
 the report is preferred over silently altering the selection contract.
 
+## Cross-seed cluster stability
+
+For the seed-to-seed stability of the archetype families and silhouette, see
+[`docs/cluster_stability.md`](cluster_stability.md): rankings are bit-identical
+per seed, the drought-shape families recur across every seed (Extended Dry Spell
+and Peak Summer in 10/10), and silhouette is stable (0.182–0.227).
+
 ## Q&A talking point
 
 > "Our ranking is deterministic — same seed, same weights, same candidates, so the
