@@ -150,6 +150,12 @@ body.basin-assistant-open [data-testid="stMetricDelta"]{font-size:0.65rem!import
     margin-bottom:12px!important;
     align-items:center!important;
 }
+.st-key-global_unit_selector{max-width:420px!important}
+.st-key-top_utility_group{max-width:570px!important;margin-left:auto!important}
+.st-key-top_utility_group div[data-testid="stPopover"]>button{
+    min-height:2.35rem!important;
+    padding:.35rem .65rem!important;
+}
 .basin-top-logo-wrap{display:flex;justify-content:center;align-items:center;padding:0;margin:-16px auto -8px auto;text-align:center;transform:translateY(-8px)}
 [data-testid="stMarkdownContainer"]:has(.basin-top-logo-wrap), [data-testid="stMarkdownContainer"]:has(.basin-top-logo-wrap) p, [data-testid="stElementContainer"]:has(.basin-top-logo-wrap){margin:0!important;padding:0!important}
 .basin-top-logo-dark{height:68px;width:auto;max-width:330px;object-fit:contain;display:block;background:#1e293b;border:1px solid rgba(255,255,255,0.10);padding:6px 24px;border-radius:12px;box-sizing:content-box;box-shadow:0 3px 10px rgba(0,0,0,0.22)}
@@ -380,6 +386,7 @@ body:not(.basin-assistant-open) .st-key-assistant_tab_open,body:not(.basin-assis
 .st-key-assistant_tab_closed button:hover,.st-key-assistant_tab_open button:hover{background:#2878A0!important;box-shadow:-5px 0 18px rgba(5,21,29,.3)!important}
 @media(max-width:760px){
     .block-container,[data-testid="stMainBlockContainer"]{padding:4rem .8rem 5rem!important}
+    .st-key-global_unit_selector,.st-key-top_utility_group{max-width:none!important;margin-left:0!important}
     [data-testid="stHorizontalBlock"]:has(.st-key-global_unit_selector){
         display:grid!important;grid-template-columns:1fr 1fr!important;gap:.55rem!important;align-items:center!important
     }

@@ -203,7 +203,7 @@ def test_primary_ui_uses_one_icon_family_instead_of_emoji():
     source = (ROOT / "app.py").read_text(encoding="utf-8")
     retired_emoji = ("💾", "⚙️", "❓", "📦", "📋", "⚠️", "🔍", "✅", "📈", "📄", "📊", "📁", "🌱")
     assert not any(glyph in source for glyph in retired_emoji)
-    for icon in ("history", "tune", "help_outline", "unarchive", "fact_check", "rate_review"):
+    for icon in ("history", "settings", "tune", "help_outline", "unarchive", "fact_check", "rate_review"):
         assert f":material/{icon}:" in source
 
 
@@ -214,6 +214,19 @@ def test_system_theme_follows_streamlit_theme_and_defines_dark_text_contrast():
     assert "requestAnimationFrame(() => applyBasinTheme())" in source
     assert 'body.basin-theme-dark h1' in source
     assert 'color:var(--basin-text-strong)!important' in source
+
+
+def test_top_header_keeps_brand_centered_and_utilities_compact():
+    """The three header regions stay balanced and Settings uses the standard gear symbol."""
+    source = (ROOT / "app.py").read_text(encoding="utf-8")
+    styles = (ROOT / "basin_theme.py").read_text(encoding="utf-8")
+
+    assert 'st.columns([1, 1, 1], vertical_alignment="center")' in source
+    assert 'key="top_utility_group"' in source
+    assert 'st.popover("Settings", icon=":material/settings:"' in source
+    assert 'st.popover("Settings", icon=":material/tune:"' not in source
+    assert ".st-key-global_unit_selector{max-width:420px!important}" in styles
+    assert ".st-key-top_utility_group{max-width:570px!important;margin-left:auto!important}" in styles
 
 
 

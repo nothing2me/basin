@@ -1518,8 +1518,8 @@ with st.sidebar:
     page = st.radio("View", ["Data", "Workspace", "Review", "Exports"], key="page",
                     index=0, format_func=PAGE_LABELS.get, label_visibility="collapsed")
 
-# Centered Brand Header with Top-Right Utilities and Top-Left Unit Selector
-top_l, top_c, top_r = st.columns([0.9, 1.2, 1.9], vertical_alignment="center")
+# Balanced brand header with the BASIN mark anchored to the true page center.
+top_l, top_c, top_r = st.columns([1, 1, 1], vertical_alignment="center")
 
 with top_l:
     u_choice = st.selectbox(
@@ -1566,7 +1566,10 @@ else:
         st.rerun()
 
 with top_r:
-    u_col1, u_col2, u_col3 = st.columns(3)
+    utility_group = st.container(key="top_utility_group")
+
+with utility_group:
+    u_col1, u_col2, u_col3 = st.columns(3, gap="small")
     with u_col1:
         with st.popover("Runs", icon=":material/history:", width="stretch", help="Open or manage saved workspace runs"):
             st.markdown("**Saved Workspace Runs**")
@@ -1630,7 +1633,7 @@ with top_r:
                 confirm_reset_dialog()
 
     with u_col2:
-        with st.popover("Settings", icon=":material/tune:", width="stretch", help="Appearance, color mode, and developer options"):
+        with st.popover("Settings", icon=":material/settings:", width="stretch", help="Appearance, color mode, and developer options"):
             st.markdown("**Appearance & Preferences**")
             appearance_picker()
             custom_appearance()
