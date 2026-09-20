@@ -136,7 +136,8 @@ class Workspace:
     def active_simulation(self, identifier: str) -> dict | None:
         return next((r for r in self.simulation_runs if r["id"] == self.active_simulations.get(identifier)), None)
 
-    def review_simulation(self, run_id: str, rationale: str) -> None:
+    def review_simulation(self, run_id: str, rationale: str, reviewer_name: str = "",
+                          reviewer_role: str = "") -> None:
         from basin_core.simulation import is_current, validate_run
         run = next((r for r in self.simulation_runs if r["id"] == run_id), None)
         if run is None or not is_current(self, run) or self.active_simulations.get(run["scenario_id"]) != run_id:
@@ -144,7 +145,14 @@ class Workspace:
         if not isinstance(rationale, str) or not rationale.strip():
             raise ValueError("Record a public simulation review rationale")
         validate_run(self, run)
-        self.simulation_reviews[run_id] = {"run_id": run_id, "at": utc_now(), "rationale": rationale.strip()}
+        self.simulation_reviews[run_id] = {
+            "run_id": run_id,
+            "at": utc_now(),
+            "rationale": rationale.strip(),
+            "review_scope": "internal assumption review of an uncalibrated sensitivity experiment; not engineering sign-off",
+            "reviewer_name": reviewer_name.strip() if isinstance(reviewer_name, str) and reviewer_name.strip() else "Identity not recorded",
+            "reviewer_role": reviewer_role.strip() if isinstance(reviewer_role, str) and reviewer_role.strip() else "Internal screening reviewer",
+        }
 
     def review_token(self, identifier: str) -> str:
         from basin_core.simulation import content_hash, evidence_context

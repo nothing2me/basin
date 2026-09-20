@@ -229,7 +229,7 @@ def uploaded_reference_comparison(preview, raw):
     fig.update_yaxes(title="Daily rainfall · mm")
     st.plotly_chart(accessible_chart(fig), width="stretch", config={"displayModeBar": False})
     st.dataframe(frame, hide_index=True, width="stretch")
-    st.caption("This is a live preview. Save reviewed evidence above to retain a version, link it to scenarios and include it in a consented verified packet.")
+    st.caption("This is a live preview. Save reviewed evidence above to retain a version, link it to scenarios and include it in a consented replayable packet.")
     include = st.checkbox("Include my uploaded values in a downloadable comparison report", key=f"share_comparison_{token}_{relation}")
     if include:
         report = {"schema_version": "rainfall-comparison-1", "method": "paired-valid-calendar-days-v1",
@@ -689,7 +689,7 @@ def render_analysis_focus_card(default_goal="storage"):
             "handoff": {
                 "title": "Regulatory Handoff & Governance (Council & Planning)",
                 "does": "Emphasizes multi-criteria weighted scoring, transparent audit logs, and verifiable SHA-256 data integrity for official decision-making by city councils and regional water authorities.",
-                "changes": "Highlights station completeness, review rationales, audit trail history, and one-click Executive Technical Brief PDF and verified ZIP packet exports in Step 4."
+                "changes": "Highlights station coverage lineage, internal review rationales, audit history, a companion Executive Technical Brief and a replay-verified ZIP in Step 4."
             },
             "compare": {
                 "title": "Comparison & Sensitivity (Multi-Scenario Analysis)",
@@ -1042,7 +1042,7 @@ PAGE_ACTIONS = {
     "Data": "Check source identity, coverage, location and limitations before building scenarios.",
     "Workspace": "Configure settings, prioritize weights, and compare shortlisted candidates.",
     "Review": "Compare rainfall with its reference, check the evidence, and decide whether to include this revision.",
-    "Exports": "Confirm the privacy choice, build the packet, and download the verified files.",
+    "Exports": "Confirm the privacy choice, build the packet, and download the replayable files.",
 }
 
 
@@ -1306,7 +1306,7 @@ TUTORIAL_STEPS = [
         "tag": "AUDITABLE HANDOFF · EXPERT REVIEW",
         "title": "7. Export a Reviewed Evidence Packet",
         "desc": "Packages reviewed rainfall, public evidence, unresolved conflicts and a readable brief. Replay checks internal consistency within its stated scope.",
-        "directive": "Click Build verified export in the highlighted area to build the reviewed handoff ZIP.",
+        "directive": "Click Build replayable handoff in the highlighted area to build the reviewed handoff ZIP.",
     }
 ]
 
@@ -1735,7 +1735,7 @@ if page == "Data":
         data_analysis_context = render_analysis_context_intake(w)
         # Session Restoration Box (regular bordered card under decision context)
         with st.container(border=True):
-            st.markdown("#### :material/unarchive: Restore Analysis from Verified .zip")
+            st.markdown("#### :material/unarchive: Restore Analysis from Replay-Verified .zip")
             st.caption("Restore and re-verify a complete previously exported BASIN `.zip` data bundle. Re-validates the SHA-256 manifest and mathematical replay on this device.")
             uploaded_bundle = st.file_uploader("Upload BASIN Bundle (.zip)", type=["zip"], key="bundle_restore_uploader")
             if uploaded_bundle is not None:
@@ -1748,7 +1748,7 @@ if page == "Data":
                         st.session_state.data_accepted = True
                         st.session_state.scenarios_accepted = True
                         save(restored_w)
-                        st.success(f"Verified Bundle Restored: {verif['scenarios_replayed']} scenarios replayed successfully.")
+                        st.success(f"Replay and integrity checks passed: {verif['scenarios_replayed']} scenarios replayed successfully.")
                         st.session_state.page = "Review"
                         st.rerun()
                     except Exception as err:
@@ -1869,7 +1869,7 @@ if page == "Data":
         with tab_meta:
             st.markdown("**Snapshot Manifest & Quality Policy**")
             age = (datetime.now(timezone.utc) - datetime.fromisoformat(source.manifest["downloaded_at"])).days
-            st.info(f"Verified NOAA Baseline Snapshot: Downloaded {source.manifest['downloaded_at'][:10]} ({age} days ago). Pinned SHA-256: `{source.manifest['sha256'][:16]}…`")
+            st.info(f"Hash-checked NOAA baseline snapshot: Downloaded {source.manifest['downloaded_at'][:10]} ({age} days ago). Recorded SHA-256: `{source.manifest['sha256'][:16]}…`")
             st.json(source.manifest)
             col_m1, col_m2 = st.columns(2)
             col_m1.download_button("Download methodology", (ROOT / "docs/methodology.md").read_bytes(), "BASIN-methodology.md", "text/markdown")
@@ -1896,7 +1896,7 @@ if page == "Data":
         next_label="Accept Baseline & Proceed to Step 2",
         next_disabled=data_analysis_context is None,
         on_next=accept_data_baseline,
-        note="Baseline Observations Verified"
+        note="Baseline Snapshot Hash Checked"
     )
 
 elif w is None and page in ("Review", "Exports"):
@@ -2475,7 +2475,7 @@ elif page == "Review":
             c_sc2.metric("Historical Severity", f"≥ {pct_val}", f"Rank vs {f['benchmark_n']} windows")
 
             conc_val = f"{f['concurrence']*100:.0f}%"
-            c_sc3.metric("Station Concurrence", conc_val, "Widespread stress")
+            c_sc3.metric("Station Concurrence", conc_val, "Selected-station overlap")
 
             dry_val = f"{f.get('max_dry_days', 0)} days"
             c_sc4.metric("Longest Dry Run", dry_val, "< 1 mm/day")
@@ -2487,7 +2487,10 @@ elif page == "Review":
                 st.markdown("**Factual Construction & Climatological Baseline**")
                 st.markdown(f"• **Precipitation Baseline:** {construction}" + (" (Includes later rainfall edits; see revision history.)" if rainfall_edits else ""))
                 st.markdown(f"• **Climatological Reference:** Net rainfall deficit equals or exceeds **{pct_val}** of {f['benchmark_n']} matched historical windows with the same duration and starting month (1991–2020 NOAA reference baseline).")
-                st.markdown(f"• **Spatial Scope:** Direct observations from NOAA index stations (Corpus Christi, Victoria, San Antonio) weighted equally across the regional basin.")
+                st.markdown(
+                    f"• **Spatial Scope:** Equal-weight screening across {len(s.series.columns)} selected NOAA point stations "
+                    f"({', '.join(s.series.columns)}). Point-gauge selection does not establish catchment-average rainfall or runoff response."
+                )
 
         with top_right:
             with tour_target("review_decision"):
@@ -2499,6 +2502,21 @@ elif page == "Review":
                 pending = [i for i in w.selected if w.get(i).status == 'unreviewed' or
                            (w.get(i).status == 'accepted' and w.get(i).approved_revision != w.get(i).revision)]
                 st.caption(f"{len(w.selected) - len(pending)} of {len(w.selected)} shortlisted scenarios reviewed")
+
+                if "internal_reviewer_name" not in st.session_state:
+                    st.session_state.internal_reviewer_name = "BASIN project team"
+                if "internal_reviewer_role" not in st.session_state:
+                    st.session_state.internal_reviewer_role = "Internal scenario-screening reviewer"
+                reviewer_name = st.text_input(
+                    "Internal reviewer name or team",
+                    key="internal_reviewer_name",
+                    help="Identifies who made the screening decision. This is not an external hydrologic approval.",
+                )
+                reviewer_role = st.text_input(
+                    "Reviewer role",
+                    key="internal_reviewer_role",
+                )
+                st.caption("The exported audit labels this as an internal screening review, not professional approval.")
 
                 attached = set(w.evidence_refs[s.id])
                 conflicts = [c for c in w.conflicts if c['status'] == 'unresolved' and
@@ -2558,14 +2576,14 @@ elif page == "Review":
                     if st.button("Include", key=f"btn_accept_{s.id}_{s.revision}",
                                  type="primary", width="stretch", disabled=s.id not in w.selected or not valid_review_note,
                                  help=include_help):
-                        s.review(True, note)
+                        s.review(True, note, reviewer_name=reviewer_name, reviewer_role=reviewer_role)
                         save(w)
                         st.rerun()
                 with exclude_col:
                     if st.button("Exclude", key=f"btn_reject_{s.id}_{s.revision}", width="stretch", disabled=s.id not in w.selected or not valid_review_note,
                                  help=exclude_help):
                         try:
-                            s.review(False, note)
+                            s.review(False, note, reviewer_name=reviewer_name, reviewer_role=reviewer_role)
                             save(w)
                             st.rerun()
                         except ValueError as error:
@@ -2791,7 +2809,11 @@ elif page == "Review":
                         if st.button("Save experiment review", key=f"review_simulation_{preview_run['id']}"):
                             try:
                                 saved_run = w.run_simulation(s.id, settings)
-                                w.review_simulation(saved_run["id"], simulation_rationale)
+                                w.review_simulation(
+                                    saved_run["id"], simulation_rationale,
+                                    reviewer_name=st.session_state.get("internal_reviewer_name", "BASIN project team"),
+                                    reviewer_role=st.session_state.get("internal_reviewer_role", "Internal scenario-screening reviewer"),
+                                )
                                 st.rerun()
                             except ValueError as error:
                                 st.error(str(error))
@@ -3299,6 +3321,18 @@ elif page == "Exports":
                 unsafe_allow_html=True,
             )
             st.markdown("#### 1. Export Controls & Verification")
+            if "internal_reviewer_name" not in st.session_state:
+                st.session_state.internal_reviewer_name = "BASIN project team"
+            if "internal_reviewer_role" not in st.session_state:
+                st.session_state.internal_reviewer_role = "Internal scenario-screening reviewer"
+            with st.expander("Internal reviewer identity", expanded=False):
+                st.text_input(
+                    "Reviewer name or team",
+                    key="internal_reviewer_name",
+                    help="Recorded with new screening decisions. It does not imply external hydrologic approval.",
+                )
+                st.text_input("Reviewer role", key="internal_reviewer_role")
+                st.caption("Review scope: internal rainfall-scenario screening and assumption review only.")
             share = st.checkbox("Include provider notes and free-text review notes", value=False, key=f"share_notes_{w.id}")
             share_custom = False
             w_has_custom = workspace_has_custom(w)
@@ -3333,7 +3367,7 @@ elif page == "Exports":
                     st.info(
                         f"**{len(unreviewed)} shortlisted candidate(s) require review before export:** "
                         f"{', '.join(s.id for s in unreviewed)}.\n\n"
-                        "BASIN's scientific provenance standard requires each shortlisted scenario to have a deliberate human decision (Accept or Reject) before generating a verified engineering bundle."
+                        "BASIN requires each shortlisted scenario to have a deliberate internal screening decision (Include or Exclude) before generating a replayable handoff bundle. This is not external hydrologic approval."
                     )
                     col_a, col_b = st.columns([1, 1])
                     batch_rationale = col_a.text_input(
@@ -3346,9 +3380,17 @@ elif page == "Exports":
                     if col_a.button("Accept all shortlisted with batch decision", icon=":material/task_alt:", key="btn_accept_all_for_export", type="primary", disabled=not valid_batch_rationale):
                         note = f"included by batch decision: {batch_rationale.strip()}"
                         for s in unreviewed:
-                            s.review(True, note, decision_mode="batch")
+                            s.review(
+                                True, note, decision_mode="batch",
+                                reviewer_name=st.session_state.get("internal_reviewer_name", "BASIN project team"),
+                                reviewer_role=st.session_state.get("internal_reviewer_role", "Internal scenario-screening reviewer"),
+                            )
                         for s, run in unreviewed_sims:
-                            w.review_simulation(run["id"], f"Simulation review: {batch_rationale.strip()}")
+                            w.review_simulation(
+                                run["id"], f"Simulation review: {batch_rationale.strip()}",
+                                reviewer_name=st.session_state.get("internal_reviewer_name", "BASIN project team"),
+                                reviewer_role=st.session_state.get("internal_reviewer_role", "Internal scenario-screening reviewer"),
+                            )
                         save(w)
                         st.success("All shortlisted candidates included by batch decision.")
                         st.rerun()
@@ -3358,22 +3400,26 @@ elif page == "Exports":
 
                 if unreviewed_sims:
                     st.info(
-                        f"**{len(unreviewed_sims)} scenario(s) have saved reservoir simulations awaiting engineering sign-off:** "
+                        f"**{len(unreviewed_sims)} scenario(s) have saved reservoir simulations awaiting internal assumption review:** "
                         f"{', '.join(s.id for s, r in unreviewed_sims)}.\n\n"
-                        "BASIN's scientific provenance standard requires any saved reservoir drawdown experiments included in the verified audit bundle to have an engineering review rationale, or to be dismissed if illustrative."
+                        "Saved uncalibrated storage experiments must have an internal assumption-review rationale or be removed from the replayable bundle. This review is not engineering sign-off."
                     )
                     col_s1, col_s2, col_s3 = st.columns([1.8, 1, 1])
                     with col_s1:
                         sim_batch_note = st.text_input(
                             "Simulation review rationale",
-                            value="Verified reservoir storage drawdown simulation and mass-balance trajectory under operational assumptions.",
+                            value="Internal assumption review: inputs inspected; uncalibrated storage trajectory retained only as illustrative sensitivity, not hydrologic validation or an operational forecast.",
                             key="input_sim_batch_rationale",
                             help="Recorded in the official audit bundle for saved reservoir simulations."
                         )
                     with col_s2:
-                        if st.button("Approve simulation reviews", icon=":material/verified:", key="btn_approve_sim_reviews", type="primary"):
+                        if st.button("Record internal assumption reviews", icon=":material/fact_check:", key="btn_approve_sim_reviews", type="primary"):
                             for s, run in unreviewed_sims:
-                                w.review_simulation(run["id"], sim_batch_note.strip())
+                                w.review_simulation(
+                                    run["id"], sim_batch_note.strip(),
+                                    reviewer_name=st.session_state.get("internal_reviewer_name", "BASIN project team"),
+                                    reviewer_role=st.session_state.get("internal_reviewer_role", "Internal scenario-screening reviewer"),
+                                )
                             save(w)
                             st.success("Simulation reviews recorded. Export unlocked.")
                             st.rerun()
@@ -3388,14 +3434,14 @@ elif page == "Exports":
             with tour_target("export_panel"):
                 if not ready:
                     if unreviewed_sims and not unreviewed:
-                        st.warning("**Export locked:** Saved reservoir simulation experiments require sign-off. Use 'Approve simulation reviews' or 'Clear saved simulations' above.", icon=":material/lock:")
+                        st.warning("**Export locked:** Saved storage experiments require internal assumption review. Record that review or clear the illustrative simulations above.", icon=":material/lock:")
                     else:
-                        st.warning("**Export locked:** Review decisions required before generating verified bundle. Use 'Accept all shortlisted with batch decision' above or review each scenario individually.", icon=":material/lock:")
+                        st.warning("**Export locked:** Review decisions are required before generating the replayable bundle. Use the batch decision above or review each scenario individually.", icon=":material/lock:")
                 elif w_has_custom and not share_custom:
-                    st.warning("**Custom Evidence Consent Required:** Check 'Include custom numerical inputs and source metadata' above to enable verified export.", icon=":material/shield_lock:")
-                if st.button("Build verified export", key="btn_build_verified_export", type="primary", disabled=not ready or (w_has_custom and not share_custom), width="stretch"):
+                    st.warning("**Custom Evidence Consent Required:** Check 'Include custom numerical inputs and source metadata' above to enable the replayable export.", icon=":material/shield_lock:")
+                if st.button("Build replayable handoff", key="btn_build_verified_export", type="primary", disabled=not ready or (w_has_custom and not share_custom), width="stretch"):
                     try:
-                        with st.spinner("Compiling verified data bundle, rendering Executive Brief vector PDF, and preparing Excel handoff..."):
+                        with st.spinner("Compiling the replayable data bundle, rendering the companion Executive Brief, and preparing the Excel handoff..."):
                             payload = export_bundle(w, share, include_custom=share_custom)
                             report = verify_bundle(payload)
                             out_dir = ROOT / "output"
@@ -3477,7 +3523,7 @@ elif page == "Exports":
             if packet and not packet_fresh:
                 st.session_state.pop("packet", None)
                 packet = None
-                st.info("Inputs, experiment settings or consent changed since the last export. Rebuild the verified export to download it again.")
+                st.info("Inputs, experiment settings or consent changed since the last export. Rebuild the replayable handoff to download it again.")
 
             disk_zip = ROOT / "output" / f"BASIN-{w.id}.zip"
             disk_pdf = ROOT / "output" / f"BASIN-Executive-Brief-{w.id}.pdf"
@@ -3499,7 +3545,7 @@ elif page == "Exports":
 
             if not packet_fresh and disk_zip.exists() and disk_pdf.exists():
                 if disk_fresh:
-                    st.info(f"**Existing Verified Deliverables on Disk** for run `{w.id}`. (Matches current settings and consent).", icon=":material/inventory_2:")
+                    st.info(f"**Existing replayable deliverables on disk** for run `{w.id}`. They match the current settings and consent.", icon=":material/inventory_2:")
                     c_d1, c_d2, c_d3, c_d4 = st.columns([1, 1, 1, 1])
                     c_d1.download_button("Download Saved PDF", disk_pdf.read_bytes(), disk_pdf.name, "application/pdf", key=f"dl_disk_pdf_{w.id}", width="stretch")
                     c_d2.download_button("Download Saved ZIP", disk_zip.read_bytes(), disk_zip.name, "application/zip", key=f"dl_disk_zip_{w.id}", width="stretch")
@@ -3518,7 +3564,7 @@ elif page == "Exports":
                     st.warning(
                         f"**Previous Local Draft Found on Disk** (`output/BASIN-{w.id}.*`). "
                         "Settings, review decisions, or privacy consent have changed since this artifact was created. "
-                        "Rebuild the verified export above to update the packet."
+                        "Rebuild the replayable handoff above to update the packet."
                     )
                     if st.button("Open Output Folder (Inspect Historical Drafts)", icon=":material/folder_open:", key=f"btn_open_disk_out_{w.id}"):
                         import subprocess, sys
@@ -3532,7 +3578,7 @@ elif page == "Exports":
 
             if packet_fresh:
                 st.success(
-                    f"**Verified Export Package Ready** (`Run {w.id}`) - SHA-256 integrity verified. "
+                    f"**Replayable handoff ready** (`Run {w.id}`) — ZIP replay and SHA-256 integrity checks passed. "
                     f"Executive Brief (PDF), Shortlist Workbook (Excel), and Replay Bundle (ZIP) are generated and saved to disk in `output/`."
                 )
 
@@ -3575,7 +3621,7 @@ elif page == "Exports":
                             subprocess.Popen(["xdg-open", str(out_folder.resolve())])
                 st.caption(f":material/folder_open: Local copies on disk: `output/{packet.get('saved_pdf', f'BASIN-Executive-Brief-{w.id}.pdf')}`, `output/{packet.get('saved_zip', f'BASIN-{w.id}.zip')}` and `output/{packet.get('saved_brief', f'Hydrologist_Handoff_Brief_{w.id}.md')}`")
                 st.json(packet["report"])
-                st.caption(f"{packet['report']['scenarios_replayed']} revisions verified · daily_rainfall.csv / shortlist.csv / audit.json / input snapshot / checksums")
+                st.caption(f"{packet['report']['scenarios_replayed']} revisions replayed · daily_rainfall.csv / shortlist.csv / audit.json / input snapshot / checksums")
 
             st.markdown("#### Experiment Configuration")
             if not experiment_config.selected:

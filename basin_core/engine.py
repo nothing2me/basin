@@ -219,15 +219,21 @@ class Scenario:
     def digest(self) -> str:
         return rainfall_digest(self.series)
 
-    def review(self, accept: bool, note: str = "", decision_mode: str = "individual"):
+    def review(self, accept: bool, note: str = "", decision_mode: str = "individual",
+               reviewer_name: str = "", reviewer_role: str = ""):
         if not note.strip():
             raise ValueError("Add a reason so the review decision can be understood later")
         if decision_mode not in {"individual", "batch"}:
             raise ValueError("Review decision mode must be individual or batch")
         self.status = "accepted" if accept else "rejected"
         self.approved_revision = self.revision if accept else None
+        reviewer_name = reviewer_name.strip() if isinstance(reviewer_name, str) else ""
+        reviewer_role = reviewer_role.strip() if isinstance(reviewer_role, str) else ""
         self.history.append({"action": self.status, "revision": self.revision, "at": utc_now(),
                              "series_sha256": self.digest(), "decision_mode": decision_mode,
+                             "review_scope": "internal rainfall-scenario screening; not external hydrologic approval",
+                             "reviewer_name": reviewer_name or "Identity not recorded",
+                             "reviewer_role": reviewer_role or "Internal screening reviewer",
                              "private_note": note})
 
     def edit(self, reference: Reference, note: str, factor: float | None = None, replacement: pd.DataFrame | None = None):

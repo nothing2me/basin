@@ -858,21 +858,24 @@ def format_compounding_tier_footnote(metrics: ReportMetrics | None) -> str:
 
 
 def build_station_completeness_table_html(workspace) -> str:
-    """Generate quantitative observational data completeness table for Section 6."""
+    """Separate raw observations from proxy-filled analysis coverage."""
     try:
         prov = get_data_provenance(workspace)
         rows = []
         for s in prov.get("stations", []):
-            pct = s.get("completeness_pct")
-            pct_str = f"{pct:.2f}%" if pct is not None else "N/A"
-            missing = s.get("missing_days", 0)
+            observed_pct = s.get("observed_pct")
+            observed_pct_str = f"{observed_pct:.2f}%" if observed_pct is not None else "N/A"
+            analysis_pct = s.get("analysis_coverage_pct")
+            analysis_pct_str = f"{analysis_pct:.2f}%" if analysis_pct is not None else "N/A"
             rows.append(
                 f"<tr>"
                 f"<td><strong>{escape(s['name'])}</strong></td>"
                 f"<td><span class=\"font-mono\">{escape(s['id'])}</span></td>"
                 f"<td>{escape(prov.get('period', '1991–2025'))}</td>"
-                f"<td>{missing:,} days</td>"
-                f"<td><strong>{pct_str}</strong></td>"
+                f"<td>{s.get('observed_days', 0):,} / {observed_pct_str}</td>"
+                f"<td>{s.get('filled_days', 0):,}</td>"
+                f"<td>{analysis_pct_str}</td>"
+                f"<td>{s.get('remaining_gap_days', 0):,}</td>"
                 f"</tr>"
             )
         if not rows:
@@ -880,10 +883,10 @@ def build_station_completeness_table_html(workspace) -> str:
         return (
             '<div class="section-title" style="font-size: 9pt; border-left: none; padding-left: 0; margin-top: 6px;">Quantitative Station Data Completeness & Quality Policy</div>'
             '<p style="font-size: 7.5pt; color: #475569; margin: 3px 0 6px 0;">'
-            '<strong>Station Network Roles:</strong> Primary NOAA proxy stations (Corpus Christi network [Intl AP, NAS, NWS, Padre Island], Alice Intl, Kingsville NAAS) anchor the lower Nueces basin centroid; secondary network stations (Rockport, Victoria, San Antonio) provide regional context, spatial continuity, coastal-inland gradient tracking, and QA cross-validation across the Coastal Bend.'
+            '<strong>Coverage meaning:</strong> Observed coverage counts valid NOAA station-days. Filled days are separately identified proxy values used to create the complete screening matrix; they are not observations.'
             '</p>'
             '<table style="margin-top: 4px;">'
-            '<thead><tr><th>Station Name</th><th>Station ID</th><th>Record Period</th><th>Missing/Excluded</th><th>Completeness</th></tr></thead>'
+            '<thead><tr><th>Station Name</th><th>Station ID</th><th>Record Period</th><th>Observed days / %</th><th>Proxy-filled days</th><th>Analysis coverage</th><th>Remaining gaps</th></tr></thead>'
             f'<tbody>{"".join(rows)}</tbody>'
             '</table>'
         )
@@ -950,7 +953,7 @@ def build_ml_comparison_block_html(workspace, metrics: ReportMetrics | None = No
             <div class="section-title">ML Selection Methodology & Diversity Evidence</div>
             <div class="callout" style="border-left-color: #087e8b; background: #f0fdfa; margin-bottom: 8px;">
                 <div class="callout-title" style="color: #0f766e;">K-Means Representative Selection vs. Naive Alternatives</div>
-                <p>BASIN prioritizes diverse cluster representatives across a 5-dimensional feature space (deficit severity, duration, multi-station concurrence, summer seasonality, and dry-spell length). Naive score-only ranking suffers from the <em>clone problem</em>—selecting repetitive slices of the same single historic storm. As demonstrated below, cluster-based selection maximizes group coverage and mean pairwise feature separation while preserving high analytical priority.</p>
+                <p>BASIN groups candidates in a multi-factor feature space containing five shared features (deficit severity, duration, selected-station concurrence, summer seasonality, and dry-spell length) plus one normalized deficit feature for each selected station. The comparison below measures group coverage and feature separation; it does not establish hydrologic classes or statistical validity.</p>
             </div>
             <table>
                 <thead>
@@ -970,7 +973,7 @@ def build_ml_comparison_block_html(workspace, metrics: ReportMetrics | None = No
                 <strong>Candidate pool duration distribution:</strong> {cand_dist_str}. Under default multi-criteria ranking weights (Severity 40%, Concurrence 25%, Duration 20%, Season 15%), longer 270-day droughts accumulate larger cumulative precipitation deficits and maximum duration scores, causing 270-day scenarios to emerge as cluster exemplars unless shorter-duration weights or duration-filtered candidate pools are selected.
             </p>
             <p style="font-size: 7.5pt; color: #475569; margin-top: 4px; line-height: 1.35;">
-                <strong>Trade-off Disclosure:</strong> Diversity-optimized selection accepts an intentional reduction in raw average priority score (~{score_basin:.1f} vs. {score_naive:.1f}) in order to eliminate redundant drought patterns, expanding representative group coverage from {cov_naive} to {cov_basin} of {total_clusters} clusters across the meteorologic spectrum.
+                <strong>Trade-off Disclosure:</strong> Representative selection accepts an intentional reduction in raw average priority score (~{score_basin:.1f} vs. {score_naive:.1f}) to reduce repeated patterns, expanding group coverage from {cov_naive} to {cov_basin} of {total_clusters} mathematical clusters in this candidate pool.
             </p>
             <p style="font-size: 7.5pt; color: #475569; margin-top: 4px; line-height: 1.35;">
                 <strong>Clustering context & silhouette baseline:</strong> K-Means feature clustering yields a silhouette score of <strong>{sil_str}</strong>. In hydrologic drought spaces with mixed continuous features, silhouette values in the 0.20–0.35 range reflect weak-to-borderline cluster separation due to overlapping continuous meteorological distributions. The multi-method comparison table above serves as the direct empirical evidence for diversity-optimized scenario selection, rather than the silhouette metric alone.
@@ -982,7 +985,7 @@ def build_ml_comparison_block_html(workspace, metrics: ReportMetrics | None = No
 
 
 def build_paired_sensitivity_block_html(metrics: ReportMetrics) -> str:
-    """Generate comparative stress finding callout for 35% initial storage benchmark."""
+    """Generate a clearly bounded assumption-sensitivity appendix callout."""
     stressed = metrics.stressed_case
     if not stressed:
         return ""
@@ -991,11 +994,11 @@ def build_paired_sensitivity_block_html(metrics: ReportMetrics) -> str:
     ratio = stressed.get("evap_to_conservation_ratio")
     day_b = stressed.get("day_base_20", "N/A")
     day_c = stressed.get("day_cons_20", "N/A")
-    ratio_phrase = f" Summer reservoir evaporation ({stressed.get('mean_evaporation_acft', 0):,.0f} ac-ft/day) exceeds consumer conservation savings by approximately <strong>{ratio}:1</strong>, illustrating how evaporation dominates demand reductions during late-stage drought." if ratio is not None else ""
+    ratio_phrase = f" The configured seasonal evaporation rates produce a mean modeled evaporation of {stressed.get('mean_evaporation_acft', 0):,.0f} ac-ft/day and an evaporation-to-conservation ratio of <strong>{ratio}:1</strong>. These are consequences of the entered assumptions, not observed hydrologic findings." if ratio is not None else ""
     return f"""
     <div class="callout" style="border-left-color: #f59e0b; background: #fffbeb; margin-top: 8px;">
-        <div class="callout-title" style="color: #92400e;">Comparative Stress Finding — 35% Initial Storage Benchmark</div>
-        <p>To evaluate system sensitivity under stressed antecedent conditions, a paired benchmark run is simulated starting at <strong>35% initial storage</strong>. Under this severe baseline, the primary scenario breaches the 20% critical reserve band at <strong>Day {day_b}</strong>. Applying 15% emergency conservation defers the breach to <strong>Day {day_c} ({delay_str} gained)</strong>.{ratio_phrase}</p>
+        <div class="callout-title" style="color: #92400e;">Appendix: Illustrative 35%/15% Assumption Sensitivity</div>
+        <p>This uncalibrated accounting comparison starts at <strong>35% assumed storage</strong>. Under the configured inputs, the trajectory crosses the illustrative 20% band at <strong>Day {day_b}</strong>; a 15% demand-reduction assumption changes that to <strong>Day {day_c} ({delay_str})</strong>. These days are model-window indices, not threshold forecasts or operational dates.{ratio_phrase}</p>
     </div>
     """
 
@@ -1452,13 +1455,12 @@ def validate_report_prose_against_metrics(
         diff_pct = round(((metrics.mean_evaporation_acft - metrics.mean_served_demand_acft) / metrics.mean_served_demand_acft) * 100)
         exp_diff_str = f"{diff_pct:+d}%"
         if "Dominant loss term" in normalized_text or "evap exceeds demand" in normalized_text or "exceeds customer demand" in normalized_text:
+            if diff_pct != 47 and ("+47%" in normalized_text or "~47%" in normalized_text):
+                raise AssertionError("Criterion 2 failed: Stale draft exceedance '+47%' found in narrative prose when actual differs.")
             if exp_diff_str not in normalized_text and f"{abs(diff_pct)}%" not in normalized_text:
                 raise AssertionError(
                     f"Criterion 2 failed: Expected evaporation exceedance of {exp_diff_str}, but not found in prose."
                 )
-            if diff_pct != 47:
-                if "+47%" in normalized_text or "~47%" in normalized_text:
-                    raise AssertionError("Criterion 2 failed: Stale draft exceedance '+47%' found in narrative prose when actual differs.")
 
     # Criterion 3: Priority Scores & Coverage
     if comp_data:
@@ -1638,7 +1640,7 @@ def render_html_report(
             conservation_sub = "*Accelerated under simulation settings"
         else:
             conservation_val = "0 Days*"
-            conservation_sub = f"*Evaporation dominates at Day {day_base_3}"
+            conservation_sub = f"*Configured runs reach the band on the same modeled day ({day_base_3})"
     elif day_base_3 is not None and day_cons_3 is None:
         conservation_val = "Delay not defined*"
         conservation_sub = f"*Chosen run did not reach {critical_pct:g}% within the modeled window"
@@ -1661,7 +1663,7 @@ def render_html_report(
         if metrics.mean_served_demand_acft and metrics.mean_served_demand_acft > 0:
             diff_pct = round(((metrics.mean_evaporation_acft - metrics.mean_served_demand_acft) / metrics.mean_served_demand_acft) * 100)
             comp_phrase = f"evap exceeds demand by {diff_pct:+d}%" if diff_pct >= 0 else f"demand exceeds evap by {abs(diff_pct)}%"
-            loss_driver_sub = f"Mean evaporation load (vs {metrics.mean_served_demand_acft:,.0f} ac-ft/day demand; {comp_phrase}, dominating summer drawdown)"
+            loss_driver_sub = f"Configured seasonal rates yield this modeled evaporation (vs {metrics.mean_served_demand_acft:,.0f} ac-ft/day served demand; {comp_phrase}). Assumption-driven, not observed."
         else:
             loss_driver_sub = f"Mean evaporation load ({metrics.mean_evaporation_acft:,.0f} ac-ft/day)"
     else:
@@ -1766,8 +1768,13 @@ def render_html_report(
     benchmark_table_html = ""
     if metrics.stressed_case:
         st = metrics.stressed_case
-        p_base = f"Day {metrics.day_base_stage3}" if metrics.day_base_stage3 is not None else ">365 Days (Preserved)"
-        p_cons = f"Day {metrics.day_cons_stage3}" if metrics.day_cons_stage3 is not None else ">365 Days (Preserved)"
+        modeled_days = max(
+            len(metrics.sim_base) if metrics.sim_base is not None else 0,
+            len(metrics.sim_cons) if metrics.sim_cons is not None else 0,
+        )
+        window_label = f"Not reached within {modeled_days}-day modeled window" if modeled_days else "Not reached within modeled window"
+        p_base = f"Day {metrics.day_base_stage3}" if metrics.day_base_stage3 is not None else window_label
+        p_cons = f"Day {metrics.day_cons_stage3}" if metrics.day_cons_stage3 is not None else window_label
         p_def = (
             f"+{metrics.day_cons_stage3 - metrics.day_base_stage3} Days Gained"
             if (metrics.day_base_stage3 is not None and metrics.day_cons_stage3 is not None)
@@ -1778,7 +1785,7 @@ def render_html_report(
         s_delay = st.get("conservation_delay_days", 0)
         s_def = f"+{s_delay} Days Gained (Day {st.get('day_base_20')} &rarr; {st.get('day_cons_20')})"
         ratio_val = st.get("evap_to_conservation_ratio")
-        ratio_note = f" (Evaporation to conservation ratio {ratio_val}:1 — surface evaporation dominates municipal conservation during summer drought)" if ratio_val else ""
+        ratio_note = f" (The configured rates produce an evaporation-to-conservation ratio of {ratio_val}:1; this is assumption-driven.)" if ratio_val else ""
         benchmark_table_html = f"""
         <div class="section-title" style="font-size: 8.5pt; border-left: none; padding-left: 0; margin-top: 8px;">Antecedent Storage Benchmark & Conservation Intervention (35% vs. 48% Baseline)</div>
         <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
@@ -1900,6 +1907,13 @@ def render_html_report(
         entry_note = review_event.get("private_note") or review_event.get("note")
         decision_mode = review_event.get("decision_mode", "individual")
         mode_label = "Batch decision" if decision_mode == "batch" else "Individual review"
+        reviewer_name = review_event.get("reviewer_name", "Identity not recorded")
+        reviewer_role = review_event.get("reviewer_role", "Internal screening reviewer")
+        review_scope = review_event.get("review_scope", "internal rainfall-scenario screening; not external hydrologic approval")
+        identity_display = (
+            f'<div class="text-sm" style="color: #475569; margin-top: 3px;"><strong>Internal reviewer:</strong> '
+            f'{escape(reviewer_name)} · {escape(reviewer_role)}. Scope: {escape(review_scope)}.</div>'
+        )
 
         if include_notes and entry_note:
             note_display = f'<div class="text-sm italic" style="color: #0f172a; margin-top: 3px;"><strong>{mode_label}.</strong> <strong>Private review note (consented export):</strong> {escape(entry_note)}</div>'
@@ -1930,6 +1944,7 @@ def render_html_report(
                 {rationale_display}
                 {public_display}
                 {note_display}
+                {identity_display}
             </td>
         </tr>
         """
@@ -2002,6 +2017,13 @@ def render_html_report(
             <div style="text-align: center;"><img src="data:image/png;base64,{metrics.milestone_chart_png_b64}" style="width: 100%; max-width: 680px; height: auto; border: 1px solid #cbd5e1; border-radius: 4px;" alt="Stage Trigger Milestone Chart"></div>
         </div>
         """
+
+    primary_features = getattr(primary_scenario, "features", {}) or {}
+    primary_duration = int(primary_features.get("duration_days", 0))
+    primary_deficit = float(primary_features.get("deficit_mm", 0.0))
+    primary_percentile = float(primary_features.get("historical_percentile", 0.0)) * 100
+    primary_benchmark_n = int(primary_features.get("benchmark_n", 0))
+    active_station_count = len(primary_scenario.series.columns) if primary_scenario is not None and hasattr(primary_scenario, "series") else 0
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -2273,38 +2295,36 @@ def render_html_report(
     <div class="report-section" id="section-1">
         <div class="section-title">1. Executive Summary</div>
         <p style="font-size: 8pt; margin-bottom: 4px;"><strong>Intended decision context:</strong> {escape(audience_label)} · {escape(county_label)}. {escape(context_boundary)}</p>
-        <p style="font-size: 7.2pt; color: #64748b; margin-top: 2px; margin-bottom: 6px;"><strong>Verification Scope:</strong> The companion archive BASIN-{escape(run_id[:14])}.zip contains the cryptographically sealed (SHA-256) data and Python calculation ledger. This PDF brief is an illustrative presentation deliverable compiled from those verified outputs.</p>
+        <p style="font-size: 7.2pt; color: #64748b; margin-top: 2px; margin-bottom: 6px;"><strong>Replay Scope:</strong> The companion archive BASIN-{escape(run_id[:14])}.zip contains SHA-256 hash-checked data and a Python calculation ledger. Successful replay establishes internal consistency within that declared scope. This PDF is a readable companion outside the replay contract.</p>
         <div class="callout">
             <div class="callout-title">The Bottom Line — Executive Overview</div>
-            <p>This report presents human-reviewed rainfall stress scenarios and an <strong>illustrative reservoir drawdown experiment</strong> across the reservoirs the model represents ({escape(capacity_breakdown)}; combined <strong>{total_capacity:,.0f} ac-ft</strong>). {overview_sentence} <em>This simulation is an exploratory sensitivity tool, not an operational delivery forecast.</em></p>
+            <p>This report presents <strong>{len(accepted)} internally reviewed rainfall-stress scenarios</strong> for expert handoff. The primary scenario spans <strong>{primary_duration} days</strong>, has an equal-station mean rainfall shortfall of <strong>{primary_deficit:,.1f} mm</strong>, and ranks at or above <strong>{primary_percentile:.0f}%</strong> of {primary_benchmark_n} matched historical windows. These point-gauge scenarios identify rainfall conditions worth deeper modeling; they do not estimate reservoir inflow or water-supply reliability.</p>
             {unavailable_banner}
         </div>
 
         <div class="kpi-row">
             <div class="kpi-card neutral">
-                <div class="kpi-label">Illustrative Depletion Window</div>
-                <div class="kpi-val">{depletion_range_val}</div>
-                <div class="kpi-sub">{depletion_range_sub}</div>
+                <div class="kpi-label">Reviewed Rainfall Shortlist</div>
+                <div class="kpi-val">{len(accepted)} scenarios</div>
+                <div class="kpi-sub">Internal screening decisions; not external approval</div>
             </div>
             <div class="kpi-card neutral">
-                <div class="kpi-label">Simulated Tipping Point Tier</div>
-                <div class="kpi-val">{escape(tipping_point_tier)}</div>
-                <div class="kpi-sub">{escape(tipping_point_sub)}</div>
+                <div class="kpi-label">Primary Scenario Duration</div>
+                <div class="kpi-val">{primary_duration} days</div>
+                <div class="kpi-sub">Synchronized window across {active_station_count} selected point gauges</div>
             </div>
             <div class="kpi-card neutral">
-                <div class="kpi-label">Simulated Mandate Impact</div>
-                <div class="kpi-val">{conservation_val}</div>
-                <div class="kpi-sub">{conservation_sub}</div>
+                <div class="kpi-label">Mean Rainfall Shortfall</div>
+                <div class="kpi-val">{primary_deficit:,.1f} mm</div>
+                <div class="kpi-sub">Equal-station screening metric</div>
             </div>
             <div class="kpi-card neutral">
-                <div class="kpi-label">Modeled Loss Driver</div>
-                <div class="kpi-val">{loss_driver_val}</div>
-                <div class="kpi-sub">{loss_driver_sub}</div>
+                <div class="kpi-label">Matched Historical Rank</div>
+                <div class="kpi-val">≥ {primary_percentile:.0f}%</div>
+                <div class="kpi-sub">Compared with {primary_benchmark_n} matched windows; not a probability</div>
             </div>
         </div>
 
-        {paired_sensitivity_html}
-        {tac_and_policy_html}
     </div>
 
     <!-- Universal Top Banner (Follows Executive Summary Orientation) -->
@@ -2323,7 +2343,7 @@ def render_html_report(
             <strong>Technical Terms Gloss:</strong>
             <strong>Concurrence:</strong> fraction of eligible 30-day windows with all selected stations simultaneously in deficit.
             · <strong>Empirical percentile:</strong> historical shortfall rank relative to matched observation windows.
-            · <strong>Reference window gating (n &ge; 5):</strong> minimum benchmark sample size required for comparative evaluation.
+            · <strong>Reference window gating (n &ge; 5):</strong> minimum reporting rule for an empirical comparison; five windows remain a small sample and do not establish statistical validity.
             · <strong>Priority score:</strong> multi-criteria weighted rank score (Severity {w_sev}%, Concurrence {w_conc}%, Duration {w_dur}%, Season {w_seas}%) prioritizing scenarios within each cluster.
         </div>
         <table style="table-layout: fixed;">
@@ -2443,6 +2463,8 @@ def render_html_report(
         <p style="font-size: 7.2pt; color: #64748b; margin-top: 4px; margin-bottom: 8px;">
             <strong>Compounding Rainfall Multipliers:</strong> {format_compounding_tier_footnote(metrics)}
         </p>
+        {tac_and_policy_html}
+        {paired_sensitivity_html}
         {benchmark_table_html}
     </div>
 
@@ -3571,7 +3593,7 @@ def build_fallback_pdf(
             conservation_sub = "*Accelerated under these settings"
         else:
             conservation_val = "0 Days Gained*"
-            conservation_sub = "*Evaporation dominates municipal demand"
+            conservation_sub = "*Configured runs reach the band on the same modeled day"
     elif day_base_3 is not None and day_cons_3 is None:
         conservation_val = "Delay not defined*"
         conservation_sub = f"*Chosen run did not reach {critical_pct:g}% in the modeled window"
@@ -3644,30 +3666,26 @@ def build_fallback_pdf(
     if metrics.highest_breached_day is not None and "breached" not in highest_desc.lower():
         highest_desc += f" (Day {metrics.highest_breached_day})"
 
+    primary_features = getattr(primary_scenario, "features", {}) or {}
+    primary_duration = int(primary_features.get("duration_days", 0))
+    primary_deficit = float(primary_features.get("deficit_mm", 0.0))
+    primary_percentile = float(primary_features.get("historical_percentile", 0.0)) * 100
+    primary_benchmark_n = int(primary_features.get("benchmark_n", 0))
+    active_station_count = len(primary_scenario.series.columns) if primary_scenario is not None and hasattr(primary_scenario, "series") else 0
     findings = [
-        f"- Combined storage across the model's reservoirs: {total_capacity:,.0f} ac-ft ({capacity_breakdown} ac-ft).",
-        (f"- Tested under initial storage of {init_frac * 100:g}%, with {cons_frac * 100:g}% emergency demand reduction modeled."
-         if metrics.available else
-         f"- Requested settings were {init_frac * 100:g}% initial storage and {cons_frac * 100:g}% emergency demand reduction; nothing was simulated."),
-        f"- Multi-station drought proxy reconstructed from NOAA GHCN-Daily network (primary watershed proxy stations: Corpus Christi network [Intl AP, NAS, NWS, Padre Island], Alice Intl, Kingsville NAAS; regional context stations: Rockport, Victoria, San Antonio).",
-        f"- Highest response band reached across 4 modeled tiers: {highest_desc}.",
-        tier_finding,
-        mandate_finding,
-        (f"- Dominant loss term: reservoir evaporation (~{metrics.mean_evaporation_acft:,.0f} ac-ft/day) exceeds customer demand (~{metrics.mean_served_demand_acft:,.0f} ac-ft/day) by {round(((metrics.mean_evaporation_acft - metrics.mean_served_demand_acft) / metrics.mean_served_demand_acft) * 100):+d}%, dominating summer drawdown."
-         if (metrics.available and metrics.mean_evaporation_acft is not None and metrics.mean_served_demand_acft is not None and metrics.mean_served_demand_acft > 0) else
-         "- Dominant loss term not computed for this report."),
-        f"- {clip_text(body_text.rstrip('.'), 110)}.",
+        f"- {len(accepted)} rainfall scenarios were included through internal screening review; this is not external hydrologic approval.",
+        f"- Primary scenario: {primary_duration} synchronized days across {active_station_count} selected NOAA point gauges.",
+        f"- Equal-station mean rainfall shortfall: {primary_deficit:,.1f} mm.",
+        f"- Historical rank: at or above {primary_percentile:.0f}% of {primary_benchmark_n} matched windows; this empirical rank is not a probability.",
+        "- Point-gauge screening does not establish catchment-average precipitation, rainfall-runoff response, reservoir inflow, or water-supply reliability.",
+        "- The separately labeled storage appendix is an uncalibrated assumption sensitivity and is not part of the rainfall-screening conclusion.",
     ]
+    if not metrics.available:
+        findings.append(f"- {UNAVAILABLE}: {metrics.unavailable_reason}; nothing was simulated.")
 
-    # Paired 35% sensitivity finding (Item 9)
-    if metrics.stressed_case:
-        st = metrics.stressed_case
-        ratio_val = st.get('evap_to_conservation_ratio')
-        ratio_str = f" Evaporation to conservation ratio: {ratio_val}:1 (evaporation dominates demand savings)." if ratio_val is not None else ""
-        if st.get('day_base_20') is not None:
-            findings.insert(1, f"- Paired 35% benchmark finding: breaches Band 3 at Day {st.get('day_base_20')}; 15% conservation defers to Day {st.get('day_cons_20', 'N/A')} (+{st.get('conservation_delay_days', 0)} d gained).{ratio_str}")
-        else:
-            findings.insert(1, f"- Paired 35% benchmark finding: maintains Band 3 (>20%) reserve throughout modeled window under 35% antecedent storage.{ratio_str}")
+    # The fixed 35%/15% comparison is intentionally excluded from executive
+    # findings. It remains in the assumptions appendix as an uncalibrated
+    # sensitivity calculation.
 
     p1 = doc.add_page()
 
@@ -3690,24 +3708,22 @@ def build_fallback_pdf(
         size=7.0,
     )
     flow.paragraph(
-        f"Verification Scope: The companion archive BASIN-{clip_text(run_id, 14)}.zip contains the cryptographically sealed (SHA-256) data and Python calculation ledger. This PDF brief is an illustrative presentation deliverable compiled from those verified outputs.",
+        f"Replay Scope: The companion archive BASIN-{clip_text(run_id, 14)}.zip contains SHA-256 hash-checked data and a Python calculation ledger. Successful replay establishes internal consistency within that declared scope. This PDF is outside the replay contract.",
         size=6.6, color=(0.35, 0.4, 0.48),
     )
     flow.heading("THE BOTTOM LINE -- EXECUTIVE OVERVIEW", size=8.5)
     primary_id = getattr(primary_scenario, "id", "None")
     flow.paragraph(
-        f"This report presents human-reviewed rainfall stress scenarios and an illustrative reservoir drawdown "
-        f"experiment across the reservoirs the model represents ({capacity_breakdown}; combined {total_capacity:,.0f} ac-ft). "
-        f"This evaluation tests primary Scenario {primary_id} and compares all {len(accepted)} shortlisted candidate drawdown trajectories starting at {init_frac * 100:.0f}% initial storage. "
-        f"It measures whether emergency conservation ({cons_frac * 100:g}%) defers reaching the illustrative {critical_pct:g}% reserve band (Band 3). "
-        f"Across all 4 modeled response bands, the highest band reached is {highest_desc}. "
-        f"This simulation is an exploratory sensitivity tool, not an operational delivery forecast.",
+        f"This report presents {len(accepted)} internally reviewed rainfall-stress scenarios for expert handoff. "
+        f"Primary Scenario {primary_id} spans {primary_duration} synchronized days, has an equal-station mean shortfall of {primary_deficit:,.1f} mm, "
+        f"and ranks at or above {primary_percentile:.0f}% of {primary_benchmark_n} matched historical windows. "
+        "These point-gauge scenarios identify rainfall conditions worth carrying into formal modeling; they do not estimate reservoir inflow or water-supply reliability.",
         size=7.0,
     )
     cards = [
-        ("ILLUSTRATIVE DEPLETION", depletion_range_val, depletion_range_sub, (0.08, 0.45, 0.55)),
-        (card2_title, conservation_val, conservation_sub, (0.1, 0.55, 0.35)),
-        ("DOMINANT LOSS DRIVER", loss_driver_val, loss_driver_sub, (0.75, 0.25, 0.2)),
+        ("REVIEWED RAINFALL SHORTLIST", f"{len(accepted)} scenarios", "Internal screening; not external approval", (0.08, 0.45, 0.55)),
+        ("PRIMARY SCENARIO", f"{primary_duration} days", f"{active_station_count} selected point gauges", (0.1, 0.55, 0.35)),
+        ("MATCHED HISTORICAL RANK", f">= {primary_percentile:.0f}%", f"n={primary_benchmark_n}; empirical rank, not probability", (0.25, 0.35, 0.65)),
     ]
     flow.metric_cards(cards)
     flow.findings_box("KEY PLANNING FINDINGS & HYDROLOGIC CONTEXT", findings)
@@ -3751,9 +3767,9 @@ def build_fallback_pdf(
 
     flow.paragraph(
         "Technical Terminology & Model Impact:\n"
-        "• Concurrence: fraction of eligible 30-day windows with all selected stations simultaneously in deficit. High concurrence accelerates joint reservoir drawdown across both watersheds.\n"
+        "• Concurrence: fraction of eligible 30-day windows with all selected stations simultaneously in deficit. It describes overlap among selected gauges; it does not establish runoff or reservoir response.\n"
         "• Empirical percentile: historical shortfall rank relative to matched observation windows.\n"
-        "• Reference window gating (n >= 5): minimum benchmark sample size required for comparative evaluation, ensuring statistically valid analogs.\n"
+        "• Reference window gating (n >= 5): minimum reporting rule for an empirical comparison. Five matched windows remain a small sample and do not establish statistical validity.\n"
         "• Priority score: multi-criteria weighted rank score prioritizing scenarios within each cluster based on volume, duration, and summer timing.",
         size=6.2, color=(0.35, 0.4, 0.48),
     )
@@ -3779,10 +3795,12 @@ def build_fallback_pdf(
             if "batch" in mode_label.lower():
                 batch_note_captured = cleaned_n
 
+        reviewer_name = clean_pdf_text(str(review_event.get("reviewer_name", "Identity not recorded")))
+        reviewer_role = clean_pdf_text(str(review_event.get("reviewer_role", "Internal screening reviewer")))
         if include_notes and entry_note:
-            note = f"{mode_label} · Accepted; private note: {clean_pdf_text(str(entry_note))}"
+            note = f"{mode_label} · Accepted by {reviewer_name} ({reviewer_role}); private note: {clean_pdf_text(str(entry_note))}"
         else:
-            note = f"{mode_label} · Accepted"
+            note = f"{mode_label} · Accepted by {reviewer_name} ({reviewer_role}); internal screening, not external approval"
 
         rationale = format_scenario_ranking_rationale(scenario, workspace) if workspace else ""
         full_note = (rationale + " | " if rationale else "") + note
@@ -3804,18 +3822,18 @@ def build_fallback_pdf(
         ], index, size=6.8)
 
     if include_notes and batch_note_captured and "omitted" not in batch_note_captured.lower():
-        flow.paragraph(f'* Batch Review Disposition Note: "{batch_note_captured}". Shortlist reflects verified multi-criteria ranking scores.', size=6.2, color=(0.3, 0.35, 0.4))
+        flow.paragraph(f'* Batch Review Disposition Note: "{batch_note_captured}". Shortlist reflects deterministic multi-criteria ranking scores.', size=6.2, color=(0.3, 0.35, 0.4))
 
     has_private_notes = any(
         (bool(getattr(s, "notes", None)) or any(bool(h.get("note") or h.get("private_note")) for h in getattr(s, "history", [])))
         for s in accepted
     )
     if has_private_notes and not include_notes:
-        note_disclaimer = "* Review rationale omitted per export privacy configuration. Shortlist reflects verified multi-criteria ranking scores."
+        note_disclaimer = "* Review rationale omitted per export privacy configuration. Shortlist reflects deterministic multi-criteria ranking scores."
     elif has_private_notes and include_notes:
-        note_disclaimer = "* Private analyst notes included under authorized export settings. Shortlist reflects verified multi-criteria ranking scores."
+        note_disclaimer = "* Private analyst notes included under authorized export settings. Shortlist reflects deterministic multi-criteria ranking scores."
     else:
-        note_disclaimer = "* No private analyst commentary attached to candidate records. Shortlist reflects verified multi-criteria ranking scores."
+        note_disclaimer = "* No private analyst commentary attached to candidate records. Shortlist reflects deterministic multi-criteria ranking scores."
     flow.paragraph(note_disclaimer, size=6.2, color=(0.45, 0.5, 0.55))
 
     _dur_weight = int(getattr(workspace, "weights", {}).get("duration", 25)) if workspace else 25
@@ -3829,8 +3847,8 @@ def build_fallback_pdf(
     flow.break_page()
     flow.heading("3. REVIEW DECISION AND RATIONALE", size=9.5)
     flow.paragraph(
-        "Candidate scenarios were evaluated and accepted by human review. Review notes and dispositions recorded above "
-        "reflect analyst findings regarding historical drought representativeness and local relevance.",
+        "Candidate scenarios were included through internal rainfall-screening review. The reviewer identity and role are recorded above. "
+        "These dispositions document handoff choices; they are not external hydrologic validation or professional approval.",
         size=7.0,
     )
     if provider_note:
@@ -3851,8 +3869,8 @@ def build_fallback_pdf(
             sil_str = f"{silhouette:.3f}" if silhouette is not None else "0.349"
             flow.heading("ML SELECTION METHODOLOGY & DIVERSITY COMPARISON", size=8.5)
             flow.paragraph(
-                "BASIN prioritizes diverse cluster representatives across 5 feature dimensions over naive score-only ranking "
-                "to eliminate the clone problem (repetitive slices of a single historic storm).",
+                f"BASIN groups candidates using five shared rainfall features plus one normalized deficit feature for each of the {len(workspace.params.stations)} selected stations. "
+                "The groups reduce repeated mathematical patterns; they are not validated hydrologic drought classes.",
                 size=6.8, color=(0.35, 0.4, 0.48),
             )
             ml_cols = [
@@ -4007,13 +4025,13 @@ def build_fallback_pdf(
         evap_str = f"~{int(metrics.mean_evaporation_acft):,} ac-ft/d" if metrics.mean_evaporation_acft else "~550–750 ac-ft/d"
         demand_str = f"~{int(metrics.mean_served_demand_acft):,} ac-ft/d" if metrics.mean_served_demand_acft else "~370 ac-ft/d"
         flow.paragraph(
-            f"Hydrologic Note on Tier Sensitivity: In severe drought screening conditions, varying rainfall retention between 100% and 40% alters total reservoir inflow by less than 0.5% of combined capacity. Total drawdown trajectory is overwhelmingly driven by customer withdrawals ({demand_str}) and reservoir surface evaporation ({evap_str}), resulting in tightly bounded minimum storage ({pct_range_str}) across retention tiers.",
+            f"Assumption-Sensitivity Note: Under this uncalibrated accounting setup, varying rainfall retention between 100% and 40% changes the modeled result much less than the configured withdrawal ({demand_str}) and seasonal evaporation ({evap_str}) terms. The tightly bounded minimum storage ({pct_range_str}) shows that this experiment is weakly responsive to rainfall under the entered coefficients; it is not a hydrologic finding.",
             size=6.6, color=(0.30, 0.35, 0.42),
         )
 
     if metrics.stressed_case:
         st = metrics.stressed_case
-        flow.heading("ANTECEDENT STORAGE BENCHMARK & CONSERVATION INTERVENTION", size=8.0)
+        flow.heading("APPENDIX: ILLUSTRATIVE 35%/15% ASSUMPTION SENSITIVITY", size=8.0)
         bench_cols = [
             (42, "Antecedent Condition", 125),
             (170, "Initial Storage", 70),
@@ -4022,8 +4040,13 @@ def build_fallback_pdf(
             (455, "Threshold Deferral", 115),
         ]
         flow.table_header(bench_cols)
-        p_base = f"Day {metrics.day_base_stage3}" if metrics.day_base_stage3 is not None else ">365 d (Preserved)"
-        p_cons = f"Day {metrics.day_cons_stage3}" if metrics.day_cons_stage3 is not None else ">365 d (Preserved)"
+        modeled_days = max(
+            len(metrics.sim_base) if metrics.sim_base is not None else 0,
+            len(metrics.sim_cons) if metrics.sim_cons is not None else 0,
+        )
+        window_label = f"Not reached in {modeled_days} d" if modeled_days else "Not reached in window"
+        p_base = f"Day {metrics.day_base_stage3}" if metrics.day_base_stage3 is not None else window_label
+        p_cons = f"Day {metrics.day_cons_stage3}" if metrics.day_cons_stage3 is not None else window_label
         p_def = (
             f"+{metrics.day_cons_stage3 - metrics.day_base_stage3} d gained"
             if (metrics.day_base_stage3 is not None and metrics.day_cons_stage3 is not None)
@@ -4054,7 +4077,7 @@ def build_fallback_pdf(
             (s_def, "/F2"),
         ], 1, size=6.8)
         ratio_val = st.get("evap_to_conservation_ratio")
-        ratio_note = f" (Evaporation to conservation ratio {ratio_val}:1 — surface evaporation dominates municipal conservation during summer drought)" if ratio_val else ""
+        ratio_note = f" (Configured rates produce an evaporation-to-conservation ratio of {ratio_val}:1; this is assumption-driven.)" if ratio_val else ""
         flow.paragraph(
             f"The paired 35% benchmark run evaluates system sensitivity under stressed antecedent conditions, testing whether emergency conservation delays reserve depletion when starting below 40% capacity.{ratio_note}",
             size=6.8, color=(0.35, 0.4, 0.48),
@@ -4082,9 +4105,8 @@ def build_fallback_pdf(
         pass
 
     flow.paragraph(
-        "Interpretation: Drawdown trajectories demonstrate projected storage under active customer demand and net reservoir "
-        "surface evaporation. When summer evaporation exceeds municipal demand, surface evaporation accelerates reservoir "
-        "decline regardless of demand conservation alone.",
+        "Assumption-sensitivity interpretation: these trajectories are produced by the configured demand, seasonal evaporation, "
+        "capacity and linear rainfall-to-inflow inputs. Their close spacing shows weak rainfall sensitivity under this setup; it is not an observed hydrologic finding or forecast.",
         size=6.8, color=(0.35, 0.4, 0.48),
     )
 
@@ -4111,25 +4133,26 @@ def build_fallback_pdf(
             st_rows = prov.get("stations", [])
             if st_rows:
                 flow.heading("QUANTITATIVE STATION DATA COMPLETENESS & QUALITY POLICY", size=8.5)
-                flow.paragraph("Station Network Roles: Primary NOAA proxy stations (Corpus Christi network [Intl AP, NAS, NWS, Padre Island], Alice Intl, Kingsville NAAS) anchor the lower Nueces basin centroid; secondary network stations (Rockport, Victoria, San Antonio) provide regional context, spatial continuity, coastal-inland gradient tracking, and QA cross-validation across the Coastal Bend.", size=6.8, color=(0.35, 0.4, 0.48))
+                flow.paragraph("Coverage meaning: observed coverage counts valid NOAA station-days. Filled days are separately identified proxy values used to create the complete screening matrix; they are not observations. All stations are point gauges; catchment representativeness and runoff response remain unvalidated.", size=6.8, color=(0.35, 0.4, 0.48))
                 st_cols = [
                     (42, "Station Name", 145),
                     (190, "Station ID", 110),
                     (305, "Record Period", 100),
-                    (410, "Missing Days", 75),
-                    (490, "Completeness", 80),
+                    (410, "Observed / Raw %", 75),
+                    (490, "Filled / Analysis / Gaps", 86),
                 ]
                 flow.table_header(st_cols)
                 for idx, s in enumerate(st_rows):
-                    pct = s.get("completeness_pct")
-                    pct_str = f"{pct:.2f}%" if pct is not None else "N/A"
-                    missing = s.get("missing_days", 0)
+                    observed_pct = s.get("observed_pct")
+                    observed_pct_str = f"{observed_pct:.2f}%" if observed_pct is not None else "N/A"
+                    analysis_pct = s.get("analysis_coverage_pct")
+                    analysis_pct_str = f"{analysis_pct:.2f}%" if analysis_pct is not None else "N/A"
                     flow.table_row([
                         (s["name"], "/F2"),
                         (s["id"], "/F3"),
                         (prov.get("period", "1991-2025"), "/F1"),
-                        (f"{missing:,} d", "/F1"),
-                        (pct_str, "/F2"),
+                        (f"{s.get('observed_days', 0):,} / {observed_pct_str}", "/F1"),
+                        (f"{s.get('filled_days', 0):,} filled; {analysis_pct_str} analysis; {s.get('remaining_gap_days', 0):,} gaps", "/F2"),
                     ], idx, size=6.8)
         except Exception:
             pass

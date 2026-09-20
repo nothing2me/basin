@@ -6,7 +6,7 @@ This is a rehearsal plan, not an organizer rules record. The repository supports
 
 ## Presentation claim rule
 
-Use only behavior demonstrated by the frozen release. Say “internally replayed” for the verified ZIP, “illustrative” for storage experiments and “observed on the development machine” for current browser acceptance. Do not say certified, zero-hallucination, any laptop, exact operational breaking point, independently validated, or measured productivity improvement.
+Use only behavior demonstrated by the frozen release. Say “replay-verified within its declared scope” for the ZIP, “illustrative” for storage experiments and “observed on the development machine” for current browser acceptance. Do not say certified, zero-hallucination, any laptop, exact operational breaking point, independently validated, or measured productivity improvement.
 
 The sentence judges should remember:
 
@@ -36,7 +36,7 @@ The sentence judges should remember:
 - Show the chosen Review focus and the **More tools** disclosure.
 - If storage is relevant, select a configured system and identify all assumptions on screen. The Review preview is retained for the current session/report; do not call it a saved schema 2.2 experiment.
 - Describe threshold days as outcomes of those inputs. Do not convert them into official restriction dates, forecasts or policy recommendations.
-- If demonstrating a storage experiment, choose the workspace water system first. Review and assistant tools share that selection. Record the experiment review before export so the exact system inputs, settings, trajectories and rationale can be replayed from the verified packet.
+- Keep storage closed in the core demonstration. If a judge asks to see it, choose the workspace water system first, identify every input as an assumption, and explain that weak rainfall sensitivity limits hydrologic interpretation. Record the internal assumption review before export so the exact system inputs, settings, trajectories and rationale can be replayed from the bundle.
 
 ### 2:15–2:45 — Human decision and handoff
 
@@ -81,7 +81,7 @@ The core uses local KMeans grouping and deterministic ranking. The optional embe
 **Can generated answers invent numbers?**
 Tool results come from application-owned calculations and rendering, with validation and call limits. This narrows risk but is not a universal guarantee. Users should rely on cited scenario/tool outputs and review assumptions.
 
-**What does verified mean?**
+**What does replay-verified mean?**
 The ZIP verifier recomputes the declared numerical and provenance scope and checks SHA-256 file identities. It does not authenticate upstream sources, digitally sign the packet or validate scientific assumptions.
 
 **Does the storage experiment predict an emergency date?**

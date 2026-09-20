@@ -397,7 +397,15 @@ def get_data_provenance(workspace: Workspace) -> dict:
         stations.append({
             "id": s["id"], "name": s["name"],
             "latitude": s["latitude"], "longitude": s["longitude"],
-            "completeness_pct": q.get("completeness_pct"),
+            "observed_days": q.get("raw_observed_days", q.get("valid_days")),
+            "observed_pct": q.get("raw_completeness_pct", q.get("completeness_pct")),
+            "filled_days": q.get("filled_days", 0),
+            "analysis_coverage_days": q.get("analysis_coverage_days", q.get("valid_days")),
+            "analysis_coverage_pct": q.get("analysis_coverage_pct", q.get("completeness_pct")),
+            "remaining_gap_days": q.get("missing_or_excluded_days"),
+            # Compatibility aliases for older callers. These describe analysis
+            # coverage, not raw observational completeness.
+            "completeness_pct": q.get("analysis_coverage_pct", q.get("completeness_pct")),
             "missing_days": q.get("missing_or_excluded_days"),
         })
     return {

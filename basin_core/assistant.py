@@ -457,11 +457,13 @@ def _render_check_export_readiness(data: dict) -> str:
 
 
 def _render_get_data_provenance(data: dict) -> str:
-    header = "| Station | ID | Lat | Lon | Complete % | Missing days |\n|---|---|---|---|---|---|"
+    header = "| Station | ID | Observed days | Observed % | Proxy-filled days | Analysis coverage % | Remaining gaps |\n|---|---|---:|---:|---:|---:|---:|"
     rows = []
     for s in data["stations"]:
-        rows.append(f"| {s['name']} | {s['id']} | {s['latitude']} | {s['longitude']} "
-                    f"| {s['completeness_pct']} | {s['missing_days']} |")
+        rows.append(
+            f"| {s['name']} | {s['id']} | {s.get('observed_days')} | {s.get('observed_pct')} "
+            f"| {s.get('filled_days', 0)} | {s.get('analysis_coverage_pct')} | {s.get('remaining_gap_days')} |"
+        )
     data = dict(data)
     data["station_table"] = header + "\n" + "\n".join(rows)
     return TEMPLATES["get_data_provenance"].format_map(data)
@@ -1008,7 +1010,7 @@ DOMAIN_TOPICS: dict[str, str] = {
     ),
     "workflow_guide": (
         "### 🧭 Welcome to BASIN: How to Explore & Navigate the Platform\n\n"
-        "BASIN (**Basin Analysis and Scenario Intelligence Navigator**) is an engineering decision-support tool for water providers and regional authorities to screen drought scenarios, test reservoir storage drawdown, and prepare verified hydrologic handoffs.\n\n"
+        "BASIN (**Basin Analysis and Scenario Intelligence Navigator**) is a pre-model screening and expert-handoff tool that turns rainfall observations and explicit assumptions into a transparent scenario shortlist.\n\n"
         "Here are the best ways to get oriented and figure out the application:\n\n"
         "#### 1. 🎓 Take the Interactive Walkthrough Tour\n"
         "- On **Step 1: Data Dashboard**, click the **'Start tutorial'** button in the top banner.\n"
@@ -1034,7 +1036,7 @@ DOMAIN_TOPICS: dict[str, str] = {
         "- **Continuous NOAA Records**: View synchronized daily precipitation spanning 1991–2025 across regional NOAA stations.\n"
         "- **Custom Local Gauges**: In the bottom metadata expander (*Upload Custom Catchment CSV*), upload daily precipitation records for local rain gauges.\n"
         "- **Analysis Focus**: Select your primary decision objective (*Storage Stress*, *Agronomics*, *Regulatory Handoff*, or *Comparison*) to tailor metrics across subsequent steps.\n"
-        "- **Saved Runs**: Reopen saved workspace runs or restore from a verified `.zip` bundle.\n\n"
+        "- **Saved Runs**: Reopen saved workspace runs or restore from a replay-verified `.zip` bundle.\n\n"
         "👉 *Next step: When your baseline is ready, click **'Step 2: Scenarios'** in the top navigation.*"
     ),
     "step_2_guide": (
@@ -1060,12 +1062,12 @@ DOMAIN_TOPICS: dict[str, str] = {
     ),
     "step_4_guide": (
         "### 📦 Guide to Step 4: Exports & Deliverables\n\n"
-        "Step 4 compiles the verified handoff packet for hydrologists and councils:\n"
+        "Step 4 compiles the replayable handoff packet for expert review:\n"
         "- **Readiness Checklist**: Confirms that all shortlisted scenarios have an approved or rejected decision with notes.\n"
         "- **Privacy & Local Data Consent**: If local rain gauge data is used, check the consent box to include it in the portable export bundle.\n"
         "- **Deliverables**:\n"
         "  - **Executive Technical Brief (PDF)**: Clean, publication-ready summary with decision rationale, figures, and limitations.\n"
-        "  - **Verified Data Bundle (ZIP)**: Replayable archive with exact raw CSV data, scenario definitions, review decisions, and SHA-256 manifest.\n"
+        "  - **Replay-Verified Data Bundle (ZIP)**: Archive with exact raw CSV data, scenario definitions, internal review decisions, and a SHA-256 manifest. Replay checks its declared internal-consistency scope; it does not validate hydrology.\n"
         "  - **Excel Audit Workbook (XLSX)**: Complete tabular data for external modeling (HEC-HMS, WAM, spreadsheets)."
     ),
     "kbdi_faq": (
@@ -1102,7 +1104,7 @@ DOMAIN_TOPICS: dict[str, str] = {
         "#### 5. 🔥 KBDI Wildfire Index & 🌾 Crop Water Shortfall\n"
         "- **Where**: On **Step 3: Review Selections** under the *Agronomic & Wildfire Stress* tab.\n"
         "- **What it does**: Calculates daily Keetch-Byram Drought Index (KBDI ≥ 600 burn ban thresholds) and sorghum/cotton crop irrigation deficits.\n\n"
-        "#### 6. 📄 Standalone Verified Executive Brief (PDF & HTML)\n"
+        "#### 6. 📄 Companion Executive Brief (PDF & HTML)\n"
         "- **Where**: On **Step 4: Export**.\n"
         "- **What it does**: Once you accept candidates, compiles a publication-ready PDF brief and interactive HTML brief with complete audit signatures for city councils and hydrologists.\n\n"
         "💡 **Quick Recommendation**: On **Step 1**, click **'Try an example'** or **'Load 2026 crisis demo'** to populate real data immediately without configuring anything!"
@@ -1120,7 +1122,7 @@ DOMAIN_TOPICS: dict[str, str] = {
         "| **Modeled Milestone Timeline** | Step 3 | Experiment-relative days to assumed storage-band crossings; not projected calendar dates |\n"
         "| **KBDI Wildfire Index Calculator** | Step 3 | Soil moisture and deep organic fuel dryness tracking for county burn ban evaluation |\n"
         "| **Agronomic Crop Water Deficit** | Step 3 | Net atmospheric irrigation deficit calculation for regional sorghum and cotton |\n"
-        "| **Verified Handoff Bundle Generator** | Step 4 | SHA-256 signed audit ZIP package, PDF Executive Brief, and Excel workbook |\n"
+        "| **Replayable Handoff Generator** | Step 4 | SHA-256 hash-checked ZIP package, companion PDF, and Excel workbook |\n"
         "| **Analyst AI Assistant** | Right Tab | Natural-language query router and direct scenario calculation engine |\n\n"
         "Ask me about any specific tool (e.g., *'Tell me about the reservoir simulator'* or *'How does the heatmap work?'*) to learn more!"
     ),
@@ -1131,23 +1133,23 @@ DOMAIN_TOPICS: dict[str, str] = {
         "#### 🚀 The 3-Minute Quickstart (The Easiest Way to Begin):\n"
         "1. **Load Data**: On **Step 1: Data Dashboard**, click **'Try an example'**. This instantly loads 6 diverse historical drought candidates so you don't have to configure anything.\n"
         "2. **Explore Assumptions**: Click **Step 3: Review Selections** in the top navigation bar. Toggle **'Explore storage under assumed conditions'** to inspect an illustrative, uncalibrated storage sensitivity.\n"
-        "3. **Approve & Export**: Click **'Accept'** on the scenario you want to plan for, then go to **Step 4: Export** to download your verified PDF brief for your board or council.\n\n"
+        "3. **Review & Export**: Record an internal Include or Exclude decision, then go to **Step 4: Export** to build the replayable ZIP and companion PDF.\n\n"
         "#### 🗺️ The 4 Stages at a Glance:\n"
         "- **Step 1: Data Dashboard** — See 35 years of NOAA rainfall records (1991–2025).\n"
         "- **Step 2: Scenario Builder** — Choose your priorities (e.g. chronic multi-year drought vs. acute summer heat).\n"
         "- **Step 3: Review Selections** — Review rainfall scenarios and optional illustrative diagnostics.\n"
-        "- **Step 4: Export** — Generate signed PDF briefs and replayable data bundles.\n\n"
+        "- **Step 4: Export** — Generate companion PDF briefs and replay-verified data bundles.\n\n"
         "💬 *You can also ask me specific questions anytime, such as: 'Explain B-042', 'What is concurrence?', or 'Test reservoir at 35%'!*"
     ),
     "export_locked_explainer": (
         "### 🔒 Why the Export Button is Locked (and How to Unlock It)\n\n"
-        "BASIN is an engineering decision-support tool, so it includes an **Accountability Gate**: it will never let an unreviewed or unverified scenario be exported into an official council briefing.\n\n"
+        "BASIN includes an **Accountability Gate**: every shortlisted revision needs an internal Include or Exclude decision before export. This is a screening record, not professional approval.\n\n"
         "#### How to unlock the Export button in seconds:\n"
         "1. Go to **Step 3: Review Selections**.\n"
         "2. Ensure all shortlisted scenarios have been evaluated.\n"
         "3. **Fastest shortcut**: Click the green button at the top:\n"
         "   👉 **'✅ Accept all shortlisted with batch decision'**\n"
-        "4. Return to **Step 4: Export**. The **'Build verified export'** button will turn blue and unlock immediately!\n\n"
+        "4. Return to **Step 4: Export**. The **'Build replayable handoff'** button will unlock.\n\n"
         "*(Note: If you uploaded custom rain gauge data, also check the 'Include custom numerical inputs' consent box on Step 4).*"
     ),
     "custom_data_guide": (
@@ -1311,13 +1313,13 @@ def _render_next_steps_guide(workspace) -> str:
         )
     else:
         return (
-            f"### 🧭 Next Step: Build & Download Verified Deliverables\n\n"
+            f"### 🧭 Next Step: Build & Download the Replayable Handoff\n\n"
             f"🎉 **Your review is complete!** You have **{accepted_count} accepted scenario(s)** ready for handoff.\n\n"
             f"1. Navigate to **Step 4: Export** in the top navigation bar.\n"
-            f"2. Click **'Build verified export'** to compile your audit package.\n"
+            f"2. Click **'Build replayable handoff'** to compile the package.\n"
             f"3. Download your deliverables:\n"
             f"   - **Executive Technical Brief (PDF)**: Formatted presentation brief for City Councils and regional boards.\n"
-            f"   - **Verified Data Bundle (ZIP)**: SHA-256 cryptographically verified audit package with raw daily CSVs and replay metadata.\n"
+            f"   - **Replay-Verified Data Bundle (ZIP)**: SHA-256 hash-checked package with raw daily CSVs and replay metadata. Replay establishes internal consistency, not hydrologic validity.\n"
             f"   - **HTML Brief**: Click *'Compile & View Full HTML Report'* to preview the standalone brief directly in your browser."
         )
 

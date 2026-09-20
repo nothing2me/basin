@@ -105,7 +105,7 @@ def test_simple_and_advanced_review_density(monkeypatch):
     # On Exports: 2-column layout and preview tabs are present
     at.sidebar.radio[0].set_value("Exports").run()
     assert not at.exception
-    assert any(b.label == "Build verified export" for b in at.button)
+    assert any(b.label == "Build replayable handoff" for b in at.button)
     assert any("Export Controls & Verification" in m.value for m in at.markdown)
     assert any("Deliverable Workspace & Documentation" in m.value for m in at.markdown)
 

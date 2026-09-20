@@ -87,7 +87,8 @@ def test_render_html_report(approved):
     assert "The Bottom Line — Executive Overview" in html
     assert "Illustrative Drought Response Reference Framework" in html
     assert "Illustrative Storage Sensitivity Spectrum (Non-Predictive)" in html
-    assert "Illustrative Depletion Window" in html
+    assert "Reviewed Rainfall Shortlist" in html
+    assert "Matched Historical Rank" in html
     assert "badge-danger" not in html
     assert "Provenance & Verification Scope" in html
     assert approved.id in html
@@ -215,7 +216,7 @@ def test_missing_simulation_shows_explicit_unavailable_state(approved, accepted)
     assert "Simulation unavailable" in html
     assert "No substitute figures are shown." in html
     # Captions and narrative must not describe a run that did not happen.
-    assert "no run was produced for this report" in html
+    assert "Simulated drawdown across" not in html
     assert "Derived using primary scenario" not in html
     assert "First tier breaching Stage 3 in sim" not in html
 
@@ -224,7 +225,7 @@ def test_settings_are_not_described_as_tested_when_nothing_ran(approved):
     """Settings echoed back must not imply a simulation was performed with them."""
     assert b"nothing was simulated" in build_fallback_pdf(approved, [])
     assert b"Tested under initial storage" not in build_fallback_pdf(approved, [])
-    assert b"Tested under initial storage" in build_fallback_pdf(approved, approved.exportable())
+    assert b"EXPERIMENT CONFIGURATION USED FOR THIS REPORT" in build_fallback_pdf(approved, approved.exportable())
 
 
 # --------------------------------------------------------------------------------------
@@ -295,8 +296,8 @@ def test_short_unbreached_window_does_not_claim_six_months(approved):
         primary.series = original.iloc[:30].copy()
         html = render_html_report(approved, accepted, initial_pct=1.0)
         pdf = build_fallback_pdf(approved, accepted, initial_pct=1.0)
-        assert 'No breach in modeled window' in html
-        assert b'No breach in window' in pdf
+        assert 'Not reached within 30-day modeled window' in html
+        assert b'Not reached in 30 d' in pdf
         assert '>6 Mo' not in html and b'>6 Mo' not in pdf
     finally:
         primary.series = original
@@ -364,35 +365,37 @@ def test_station_completeness_table_in_observation_provenance(approved):
     pdf_bytes = build_fallback_pdf(approved, accepted)
 
     assert "Quantitative Station Data Completeness" in html
-    assert "Missing/Excluded" in html
-    assert "Completeness" in html
+    assert "Observed days / %" in html
+    assert "Proxy-filled days" in html
+    assert "Analysis coverage" in html
     assert "%" in html
     assert b"QUANTITATIVE STATION DATA COMPLETENESS" in pdf_bytes
 
 
-def test_multi_band_reporting_in_bottom_line(approved):
-    """Item 8: Highest response band reached is reported across all 4 tiers."""
+def test_multi_band_reporting_stays_in_storage_appendix(approved):
+    """Storage bands remain available without leading the executive summary."""
     accepted = approved.exportable()
     # At 35% initial storage, Band 1 (40%) is already crossed at day 0 or day 1, Band 2 (30%) is crossed later
     html = render_html_report(approved, accepted, initial_pct=0.35)
     pdf_bytes = build_fallback_pdf(approved, accepted, initial_pct=0.35)
 
-    assert "highest band" in html.lower()
-    assert "Band" in html
-    assert b"highest response band reached" in pdf_bytes.lower() or b"highest band" in pdf_bytes.lower()
+    assert "Illustrative Storage Sensitivity Spectrum" in html
+    assert "Band 1" in html and "Band 3" in html
+    assert "Reviewed Rainfall Shortlist" in html
+    assert b"MULTI-TIER STRESS SPECTRUM" in pdf_bytes
 
 
-def test_paired_35_percent_benchmark_finding(approved):
-    """Item 9: Paired 35% initial storage benchmark finding callout."""
+def test_paired_35_percent_benchmark_is_bounded_appendix(approved):
+    """The fixed benchmark is assumption sensitivity, not an executive finding."""
     accepted = approved.exportable()
     html = render_html_report(approved, accepted)
     pdf_bytes = build_fallback_pdf(approved, accepted)
 
-    assert "Comparative Stress Finding — 35% Initial Storage Benchmark" in html
-    assert "35% initial storage" in html
-    assert "20% critical reserve" in html
-    assert "evaporation" in html.lower()
-    assert b"35% benchmark finding" in pdf_bytes.lower() or b"35% initial storage benchmark" in pdf_bytes.lower()
+    title = "Appendix: Illustrative 35%/15% Assumption Sensitivity"
+    assert title in html
+    assert "not observed hydrologic findings" in html
+    assert "Comparative Stress Finding" not in html
+    assert b"ILLUSTRATIVE 35%/15% ASSUMPTION SENSITIVITY" in pdf_bytes
 
 
 def test_public_summary_vs_private_review_notes(approved):
@@ -452,11 +455,13 @@ def test_inline_plain_language_glosses(approved):
 
     assert "fraction of eligible 30-day windows with all selected stations simultaneously in deficit" in html
     assert "historical shortfall rank relative to matched observation windows" in html
-    assert "minimum benchmark sample size required for comparative evaluation" in html
+    assert "minimum reporting rule for an empirical comparison" in html
+    assert "do not establish statistical validity" in html
 
     assert "fraction of eligible 30-day windows with all selected stations simultaneously in deficit" in pdf_text
     assert "historical shortfall rank relative to matched observation windows" in pdf_text
-    assert "minimum benchmark sample size required for comparative evaluation" in pdf_text
+    assert "minimum reporting rule for an empirical comparison" in pdf_text
+    assert "do not establish statistical validity" in pdf_text
 
 
 def test_long_config_strings_do_not_overflow(approved):

@@ -27,21 +27,20 @@ Updated: September 19, 2026 | Product baseline: source checkout on `main` + `BAS
    - Explain that the embedded intent engine maps supported questions to **13 deterministic Python tools and fixed templates** — no language model or inference server is used for these answers.
    - Ask a follow-up like *"What was station concurrence in `<id>`?"* and read the value from the screen.
 
-4. **Review / 1-Click Multi-Tier Stress Spectrum**:
-   - Switch Series to **Reservoir simulation → Multi-Tier Stress Spectrum (100% · 80% · 60% · 40%)**.
-   - Set Initial Storage to a value and **read the countdown matrix off the screen** (do not quote a memorized day).
-   - Move Emergency Conservation up and show the breach day extends. Read both values aloud.
-   - Frame the physics honestly: *"In this screening run, summer reservoir surface evaporation dominates the drawdown relative to the conservation savings — the exact ratio is on screen."*
-   - If asked: this is an **illustrative mass-balance screening run, not a forecast** — see the positioning section.
+4. **Review / Rainfall Decision**:
+   - Compare the shortlisted rainfall scenario with its matched historical reference and inspect its source stations, duration, deficit, concurrence and coverage lineage.
+   - Record the internal reviewer name or team, role and rationale. Say: *"This is our team's screening decision about which rainfall content belongs in the handoff. It is not external hydrologic approval."*
+   - Keep the storage experiment closed during the core demo. Open it only for a judge question about assumptions, and describe every number as a consequence of the configured uncalibrated accounting inputs.
 
-5. **Review & Verified Export**:
+5. **Replayable Handoff**:
    - Accept the scenario and log a hydrologist note (*"Reviewed: acute summer concurrent deficit"* — use "Reviewed", not "Verified").
-   - Open **Exports** and click **Build verified export**.
-   - Spotlight the **Executive Technical Brief (PDF)** and the companion deliverables: full replay ZIP bundle, verified Markdown brief, and **Open Output Folder** with green SHA-256 verification.
+   - Open **Exports** and click **Build replayable handoff**.
+   - Spotlight the **Executive Technical Brief (PDF)** and the companion deliverables: replay-verified ZIP bundle, Markdown handoff brief, and **Open Output Folder** with SHA-256 integrity results.
    - Say: *"The ZIP is replay-verified end-to-end. The PDF is the readable companion and is stamped as outside that verification contract."* — that honesty is a feature, not a caveat.
 
 6. **Close on Impact & Usefulness**:
    - The A/B benchmark exists in `research/benchmark_no_basin_packet/` (audit trail, checksums, scenario outputs). You may describe it as *"an internal benchmark comparing from-scratch coding against BASIN"* — **do not cite a multiple unless you re-measure it on the target laptop first**. Lead with correctness and provenance instead: *"the exported packet lets a hydrologist trace every scenario back to its inputs."*
+   - Close with: *"Would this packet help you identify and document rainfall scenarios worth carrying into a formal water-supply model? What additional data and validation would you require before relying on its outputs for an operational drought decision?"*
 
 ---
 
@@ -107,13 +106,11 @@ auto-rejects overclaims; the export has **no verdict field**.
 > "After our watershed review, we added 10 NOAA gauges inside the Nueces/Frio/
 > Atascosa drainage basins that feed the reservoirs — from Leakey in the
 > headwaters through Choke Canyon Dam to Mathis at the reservoir pools — and made
-> that footprint one click away in the builder. Screening on the watershed gauges
-> captures the rainfall that actually drives reservoir drawdown: the same seed
-> produces scenarios whose simulated drawdowns reflect watershed drought rather
-> than coastal airports. We keep the regional and combined footprints available
-> for comparison, but the watershed footprint is the reservoir-relevant one —
-> still point gauges, not calibrated catchment rainfall, which remains the
-> boundary we claim."
+> that footprint one click away in the builder. It is a more relevant set of point
+> observations for screening rainfall over the source basins than coastal airport
+> stations. We keep the regional and combined footprints available for comparison.
+> These gauges are not calibrated catchment rainfall, and BASIN has not established
+> a rainfall-runoff relationship from them."
 
 **Demo discipline:** commit to **one footprint per run** and never compare numbers
 across footprints — different station sets produce different (not wrong) scenarios.
@@ -140,7 +137,7 @@ across footprints — different station sets produce different (not wrong) scena
 - **Backup Assets:** USB stick containing:
   1. `BASIN.exe` standalone build (rebuilt from current `main`).
   2. Offline `.venv` wheelhouse.
-  3. A pre-exported verified `BASIN-Export-*.zip`.
+  3. A pre-exported replay-verified `BASIN-Export-*.zip`.
   4. Video recording of the 3-minute sequence.
 
 ---

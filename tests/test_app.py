@@ -101,7 +101,7 @@ def test_full_user_workflow(tmp_path, monkeypatch):
         next(b for b in app.button if b.label == "Include").click().run()
         assert not app.exception
     app.sidebar.radio[0].set_value("Exports").run()
-    next(b for b in app.button if b.label == "Build verified export").click().run()
+    next(b for b in app.button if b.label == "Build replayable handoff").click().run()
     assert not app.exception
     assert any("Rainfall Scenario Handoff" in m.value for m in app.markdown)
     assert app.session_state.packet["share"] is False
@@ -114,7 +114,7 @@ def test_full_user_workflow(tmp_path, monkeypatch):
     assert not app.exception
     assert app.session_state.workspace.get(inspected).status == "unreviewed"
     app.sidebar.radio[0].set_value("Exports").run()
-    assert next(b for b in app.button if b.label == "Build verified export").disabled
+    assert next(b for b in app.button if b.label == "Build replayable handoff").disabled
     app.sidebar.radio[0].set_value("Data").run()
     assert not app.exception
 
@@ -237,7 +237,7 @@ def test_interactive_tutorial_walkthrough(tmp_path, monkeypatch):
     assert app.session_state.page == "Exports"
 
     # The tour must explain the review gate, never silently approve demo data.
-    assert next(b for b in app.button if b.label == "Build verified export").disabled
+    assert next(b for b in app.button if b.label == "Build replayable handoff").disabled
     assert any("Export is locked" in m.value for m in app.markdown)
     assert all(app.session_state.workspace.get(i).status == "unreviewed"
                for i in app.session_state.workspace.selected)
@@ -293,7 +293,7 @@ def test_first_use_example_is_reviewable_not_approved(tmp_path, monkeypatch):
     assert len(workspace.selected) == 6
     assert all(workspace.get(i).status == "unreviewed" for i in workspace.selected)
     app.sidebar.radio[0].set_value("Exports").run()
-    assert next(b for b in app.button if b.label == "Build verified export").disabled
+    assert next(b for b in app.button if b.label == "Build replayable handoff").disabled
 
 
 def test_crisis_demo_uses_documented_starting_context_without_approval(tmp_path, monkeypatch):
@@ -430,9 +430,9 @@ def test_activated_gauge_gets_consent_control_without_comparison_record(tmp_path
     app.sidebar.radio[0].set_value("Exports").run()
 
     consent = next(c for c in app.checkbox if c.label.startswith("Include custom numerical inputs"))
-    build = next(b for b in app.button if b.label == "Build verified export")
+    build = next(b for b in app.button if b.label == "Build replayable handoff")
     assert build.disabled
     consent.check().run()
-    build = next(b for b in app.button if b.label == "Build verified export")
+    build = next(b for b in app.button if b.label == "Build replayable handoff")
     assert not build.disabled
 

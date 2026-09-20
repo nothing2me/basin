@@ -88,19 +88,17 @@ def test_issue_1_and_8_antecedent_35pct_benchmark(approved_workspace):
     assert f"Day {d_cons}" in html
     assert "gained" in html.lower()
     assert "Delay not defined*" not in html
-    assert "Maintained &gt;20%*" in html or "Maintained >20%*" in html
-    assert "*Band 3 preserved" in html
+    assert "Appendix: Illustrative 35%/15% Assumption Sensitivity" in html
 
     # Vector PDF check
     pdf_bytes = build_fallback_pdf(approved_workspace, accepted, config=config)
     reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
     full_pdf_text = re.sub(r"\s+", " ", "\n".join([page.extract_text() or "" for page in reader.pages]))
 
-    assert "ANTECEDENT STORAGE BENCHMARK" in full_pdf_text
+    assert "ILLUSTRATIVE 35%/15% ASSUMPTION SENSITIVITY" in full_pdf_text
     assert str(d_base) in full_pdf_text
     assert str(d_cons) in full_pdf_text
     assert f"+{delay} d gained" in full_pdf_text or f"+{delay} days gained" in full_pdf_text.lower()
-    assert "Maintained >20%*" in full_pdf_text
     assert "Delay not defined" not in full_pdf_text
 
 
@@ -194,18 +192,15 @@ def test_issue_6_evaporation_interpretation(approved_workspace):
     config = ExperimentConfig(selected=True, scenario_id=primary.id, scenario_revision=primary.revision)
 
     metrics = compute_report_metrics(primary, config)
-    diff_pct = round(((metrics.mean_evaporation_acft - metrics.mean_served_demand_acft) / metrics.mean_served_demand_acft) * 100)
-    expected_pct_str = f"{diff_pct:+d}%"
-
     html = render_html_report(approved_workspace, accepted, config=config)
-    assert expected_pct_str in html
-    assert "dominating summer drawdown" in html
+    assert "not observed hydrologic findings" in html
+    assert "dominating summer drawdown" not in html
 
     pdf_bytes = build_fallback_pdf(approved_workspace, accepted, config=config)
     reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
     full_pdf_text = re.sub(r"\s+", " ", "\n".join([page.extract_text() or "" for page in reader.pages]))
-    assert expected_pct_str in full_pdf_text
-    assert "dominating summer drawdown" in full_pdf_text
+    assert "not an observed hydrologic finding or forecast" in full_pdf_text
+    assert "dominating summer drawdown" not in full_pdf_text
 
 
 # ---------------------------------------------------------------------------
@@ -219,9 +214,9 @@ def test_issue_7_front_loaded_verification_scope(approved_workspace):
     pdf_bytes = build_fallback_pdf(approved_workspace, accepted, config=config)
     reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
     page1_text = reader.pages[0].extract_text() or ""
-    assert "Verification Scope:" in page1_text
+    assert "Replay Scope:" in page1_text
     assert "companion archive" in page1_text
-    assert "illustrative presentation deliverable" in page1_text
+    assert "outside the replay contract" in page1_text
 
 
 # ---------------------------------------------------------------------------
@@ -233,15 +228,16 @@ def test_issue_9_and_10_station_roles_and_provenance(approved_workspace):
     config = ExperimentConfig(selected=True, scenario_id=primary.id, scenario_revision=primary.revision)
 
     html = render_html_report(approved_workspace, accepted, config=config)
-    assert "Primary NOAA proxy stations" in html or "Three primary NOAA proxy stations" in html
-    assert "secondary network stations" in html
+    assert "Coverage meaning" in html
+    assert "Watershed gauges" in html
+    assert "Proxy-filled days" in html
     assert "Beeville" not in html
 
     pdf_bytes = build_fallback_pdf(approved_workspace, accepted, config=config)
     reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
     full_pdf_text = re.sub(r"\s+", " ", "\n".join([page.extract_text() or "" for page in reader.pages]))
-    assert "Primary NOAA proxy stations" in full_pdf_text or "Three primary NOAA proxy stations" in full_pdf_text
-    assert "secondary network stations" in full_pdf_text
+    assert "Observed / Raw %" in full_pdf_text
+    assert "Filled / Analysis / Gaps" in full_pdf_text
     assert "Beeville" not in full_pdf_text
 
     brief = generate_brief(approved_workspace, accepted)
@@ -313,7 +309,8 @@ def test_issue_17_findings_box_wrapping(approved_workspace):
 
     # Every key bullet text should be present without truncated ellipses '...'
     assert "Scenario" in page1_text
-    assert "Nueces Basin" in page1_text or "Corpus Christi" in page1_text
+    assert "rainfall" in page1_text.lower()
+    assert "point gauges" in page1_text.lower()
     assert "..." not in page1_text
 
 
@@ -430,7 +427,7 @@ def test_cross_report_isolation(approved_workspace):
     assert "38%" in text_a
     assert "38%" not in text_b
     assert "55%" in text_b
-    assert "55%" not in text_a
+    assert "Initial Storage 55%" not in text_a
     assert "15% emergency demand reduction" in text_a or "15% conservation" in text_a.lower()
     assert "0% emergency demand reduction" in text_b or "0% conservation" in text_b.lower()
 

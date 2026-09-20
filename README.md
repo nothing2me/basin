@@ -39,7 +39,7 @@ While substantial summer rainfall partially replenished the basin to **~39.9% co
 2. **The Pre-Engineering Screening Void:** Municipal utilities, regional water planning groups, and Water Control & Improvement Districts (WCIDs) facing supply stress need a way to screen and shortlist plausible worst-case rainfall patterns before contracting multi-month engineering studies.
 3. **Ad-Hoc Spreadsheets:** Informal spreadsheet models frequently lack spatial synchrony across sub-basins, risk computational corruption, and provide no cryptographic audit trail for public accountability.
 
-**BASIN fills this gap.** It acts as an **Agile L0/L1 Screening Layer** that transforms 35 years of verified NOAA climate observations into defensible, reproducible drought stress scenarios and verified engineering handoff bundles.
+**BASIN fills this gap.** It acts as a **pre-model screening and expert-handoff layer** that transforms a hash-identified NOAA rainfall snapshot and explicit assumptions into transparent rainfall-stress scenarios and a replayable handoff bundle. Replay checks the declared files and calculations for internal consistency; it does not validate hydrology.
 
 ---
 
@@ -94,8 +94,8 @@ The application will bind strictly to loopback (`http://127.0.0.1:8501`) with **
 [Synchronized Historical Window Resampling (PCG64)]
                       │
                       ▼
-[5-Dimensional Hydrologic Feature Extraction]
-(Severity, Duration, Basin Concurrence, Summer Ratio, Dry-Spell Persistence)
+[Multi-Factor Rainfall Feature Extraction]
+(Five shared features plus one normalized deficit feature per selected station)
                       │
                       ▼
 [Local Unsupervised K-Means Clustering (k=6)]

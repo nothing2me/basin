@@ -204,6 +204,21 @@ def test_review_revision_replay_privacy_and_rejection(workspace):
         assert b"PRIVATE-SENTINEL" in archive.read("audit.json")
 
 
+def test_internal_reviewer_identity_is_publicly_scoped(workspace):
+    for identifier in workspace.selected:
+        workspace.get(identifier).review(
+            True,
+            "PRIVATE-REVIEW-NOTE",
+            reviewer_name="BASIN project team",
+            reviewer_role="Internal scenario-screening reviewer",
+        )
+    with zipfile.ZipFile(io.BytesIO(export_bundle(workspace, include_notes=False))) as archive:
+        audit = archive.read("audit.json")
+    assert b"PRIVATE-REVIEW-NOTE" not in audit
+    assert b"BASIN project team" in audit
+    assert b"internal rainfall-scenario screening; not external hydrologic approval" in audit
+
+
 def test_cluster_profiling_and_community_presets(workspace):
     assert "group_profiles" in workspace.clustering
     for cluster_id, profile_name in workspace.clustering["group_profiles"].items():
