@@ -49,6 +49,35 @@ Implications BASIN honors:
   cluster) with ranking used to order candidates *within* the pool — so correlated
   features cannot silently collapse the shortlist into one archetype.
 
+## Empirical consequence: duration skew in the shortlist
+
+Measured 2026-09-19 across six generation seeds (22, 7, 101, 3, 55, 99) with the
+default weights (severity 40 / duration 25 / concurrence 25 / season 10):
+
+- The candidate pool is roughly balanced by duration class (90d ≈ 97, 180d ≈ 118,
+  270d ≈ 85 of 300), yet **every seed produced a shortlist with 4–5 of 6 scenarios
+  at 270 days** and only one at 90 or 180.
+- Mean cumulative deficit grows strongly with window length in the pool:
+  **90d ≈ 91 mm, 180d ≈ 156 mm, 270d ≈ 236 mm**. Cumulative deficit is not a
+  duration-independent severity measure.
+- The ranking's severity component is already duration-normalized
+  (`historical_percentile` against matched windows of the same duration), but the
+  **duration component (default 25% weight) is raw `duration_days / 365`**, which
+  gives a 270-day window a structural ≈ 12-point advantage over a 90-day window
+  (0.74 vs 0.25 × 25). This, not severity, is the dominant driver of the skew.
+
+**Consequence:** with default weights the shortlist concentrates on longer modeled
+windows while still spanning multiple cluster archetypes. This is disclosed in the
+export report ("Shortlist duration mix: …"). It is **not** a bug in clustering —
+clusters form on the full feature vector — but a structural consequence of
+expressing the user's duration preference as a raw fraction of 365 days. If a
+reviewer wants duration-balanced shortlists, lower the duration weight (e.g., the
+"illustrative rural provider" preset) or raise severity. A duration-diversity
+selection guarantee was considered and deliberately **not** implemented, because
+it would override the user's stated ranking priorities and would replace a
+cluster-maximum exemplar with a lower-scored candidate; the honest disclosure in
+the report is preferred over silently altering the selection contract.
+
 ## Q&A talking point
 
 > "Our ranking is deterministic — same seed, same weights, same candidates, so the

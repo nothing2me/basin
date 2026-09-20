@@ -197,7 +197,7 @@
     {
       "id": "USC00411720",
       "name": "CHOKE CANYON DAM",
-      "city": "Choke Canyon",
+      "city": "Choke Canyon Dam",
       "latitude": 28.4675,
       "longitude": -98.2525,
       "elevation_m": 70.1,
@@ -480,7 +480,7 @@
     },
     {
       "station_id": "USC00411720",
-      "city": "Choke Canyon",
+      "city": "Choke Canyon Dam",
       "expected_days": 12784,
       "raw_observed_days": 12727,
       "raw_completeness_pct": 99.554,

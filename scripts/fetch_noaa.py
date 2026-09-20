@@ -52,7 +52,7 @@ CITY_BY_ID = {
     "USC00415113": "Leakey", "USC00411398": "Camp Wood",
     "USC00414254": "Hondo", "USC00412160": "Crystal City",
     "USC00411486": "Carrizo Springs", "USC00416879": "Pearsall",
-    "USC00411720": "Choke Canyon", "USC00417111": "Pleasanton",
+    "USC00411720": "Choke Canyon Dam", "USC00417111": "Pleasanton",
     "USC00419007": "Three Rivers", "USC00415661": "Mathis",
 }
 

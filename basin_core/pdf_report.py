@@ -219,6 +219,40 @@ def report_state_token(workspace_id, accepted: Sequence, include_notes: bool,
     )
 
 
+def station_network_summary(workspace) -> str:
+    """Human-readable summary of the full bundled station network, split into
+    regional stations and watershed gauges. Distinct from the run's active subset
+    (``workspace.params.stations``), which only holds the stations the user chose."""
+    manifest_stations = getattr(getattr(workspace, "source", None), "manifest", {}).get("stations", [])
+    if not manifest_stations:
+        return "unavailable"
+    regional = sorted({s.get("city", "") for s in manifest_stations
+                       if s.get("role", "").startswith("Provisional")})
+    watershed = sorted({s.get("city", "") for s in manifest_stations
+                        if s.get("role", "").startswith("Watershed")})
+    parts = [f"Regional ({', '.join(regional)})"]
+    if watershed:
+        parts.append(f"Watershed gauges ({', '.join(watershed)})")
+    return "; ".join(parts)
+
+
+def duration_mix_note(accepted: Sequence, w_dur: int) -> str:
+    """Honest explanation of the shortlist's duration composition, computed from
+    the actual accepted scenarios. Severity is normalized to matched windows of
+    the same duration (historical percentile); the user's duration preference and
+    cumulative deficit both grow with window length, so shortlists concentrate on
+    longer modeled windows while still spanning multiple cluster archetypes."""
+    from collections import Counter
+    if not accepted:
+        return ""
+    counts = Counter(s.features.get("duration_days") for s in accepted if s.features)
+    dur_mix = ", ".join(f"{d}-day x{n}" for d, n in sorted(counts.items()))
+    return (f"Shortlist duration mix: {dur_mix}. Severity is ranked against matched windows of the "
+            f"same duration (historical percentile), but the user-configured duration preference "
+            f"({w_dur}% weight) and cumulative deficit both grow with window length, so the shortlist "
+            f"concentrates on longer modeled windows while still spanning multiple cluster archetypes.")
+
+
 def select_primary_scenario(accepted: Sequence, config: ExperimentConfig):
     """Pick the scenario the experiment was configured on, without substituting silently.
 
@@ -1447,7 +1481,9 @@ def validate_report_prose_against_metrics(
     # Criterion 4: Station Whitelist & Unauthorized Station Check
     if re.search(r"\bBeeville\b", normalized_text, re.IGNORECASE):
         raise AssertionError("Criterion 4 failed: Unauthorized station name 'Beeville' found in report prose.")
-    if re.search(r"stations?[^.\n]*Choke Canyon", normalized_text, re.IGNORECASE) or re.search(r"Choke Canyon[^.\n]*station", normalized_text, re.IGNORECASE):
+    # "Choke Canyon Dam" is a legitimate watershed gauge; a bare "Choke Canyon"
+    # in station context means the reservoir name was misused as a proxy.
+    if re.search(r"stations?[^.\n]*Choke Canyon(?! Dam)", normalized_text, re.IGNORECASE) or re.search(r"Choke Canyon(?! Dam)[^.\n]*station", normalized_text, re.IGNORECASE):
         raise AssertionError("Criterion 4 failed: 'Choke Canyon' was cited as a station proxy instead of a reservoir.")
 
     # Criterion 5: Review Selection Truth
@@ -1523,8 +1559,8 @@ def render_html_report(
     gloss_weights = getattr(workspace, "weights", {}) or {}
     w_sev = gloss_weights.get("severity", 40)
     w_conc = gloss_weights.get("concurrence", 25)
-    w_dur = gloss_weights.get("duration", 20)
-    w_seas = gloss_weights.get("season", 15)
+    w_dur = gloss_weights.get("duration", 25)
+    w_seas = gloss_weights.get("season", 10)
     primary_id = primary_scenario.id if primary_scenario else "None"
     analysis_context = getattr(workspace, "analysis_context", None)
     audience_label = getattr(analysis_context, "audience_label", "Region N planning area")
@@ -1844,6 +1880,11 @@ def render_html_report(
 
     scenario_html_rows = ""
     scenario_inventory_rows = ""
+    _dur_note_text = duration_mix_note(accepted, w_dur)
+    _html_dur_note = (
+        f'<p style="font-size: 6.8pt; color: #64748b; margin-top: 4px;">{escape(_dur_note_text)}</p>'
+        if _dur_note_text else ""
+    )
     for s in accepted:
         prov = s.provenance
         feat = getattr(s, "features", {})
@@ -2283,7 +2324,7 @@ def render_html_report(
             <strong>Concurrence:</strong> fraction of eligible 30-day windows with all selected stations simultaneously in deficit.
             · <strong>Empirical percentile:</strong> historical shortfall rank relative to matched observation windows.
             · <strong>Reference window gating (n &ge; 5):</strong> minimum benchmark sample size required for comparative evaluation.
-            · <strong>Composite score:</strong> multi-criteria weighted rank score (Severity {w_sev}%, Concurrence {w_conc}%, Duration {w_dur}%, Season {w_seas}%) prioritizing scenarios within each cluster.
+            · <strong>Priority score:</strong> multi-criteria weighted rank score (Severity {w_sev}%, Concurrence {w_conc}%, Duration {w_dur}%, Season {w_seas}%) prioritizing scenarios within each cluster.
         </div>
         <table style="table-layout: fixed;">
             <colgroup><col style="width: 16%;"><col style="width: 28%;"><col style="width: 16%;"><col style="width: 20%;"><col style="width: 20%;"></colgroup>
@@ -2322,6 +2363,7 @@ def render_html_report(
                 {scenario_html_rows if scenario_html_rows else '<tr><td colspan="6" style="text-align: center; color: #64748b;">No accepted scenarios.</td></tr>'}
             </tbody>
         </table>
+        {_html_dur_note}
         {provider_notes_html}
         {ml_methodology_html}
     </div>
@@ -2408,7 +2450,7 @@ def render_html_report(
     <div class="report-section" id="section-6">
         <div class="section-title">6. Observation Provenance</div>
         <p style="font-size: 7.5pt; color: #475569; margin-bottom: 6px;">
-            <strong>Primary Station Proxies:</strong> NOAA GHCN-Daily precipitation, {escape(record_span)} · Stations: {escape(stations)}
+            <strong>Primary Station Proxies:</strong> NOAA GHCN-Daily precipitation, {escape(record_span)} · Network: {escape(station_network_summary(workspace))} · Active this run: {escape(stations)}
         </p>
         {station_completeness_html}
         {custom_provenance_html}
@@ -3712,7 +3754,7 @@ def build_fallback_pdf(
         "• Concurrence: fraction of eligible 30-day windows with all selected stations simultaneously in deficit. High concurrence accelerates joint reservoir drawdown across both watersheds.\n"
         "• Empirical percentile: historical shortfall rank relative to matched observation windows.\n"
         "• Reference window gating (n >= 5): minimum benchmark sample size required for comparative evaluation, ensuring statistically valid analogs.\n"
-        "• Composite score: multi-criteria weighted rank score prioritizing scenarios within each cluster based on volume, duration, and summer timing.",
+        "• Priority score: multi-criteria weighted rank score prioritizing scenarios within each cluster based on volume, duration, and summer timing.",
         size=6.2, color=(0.35, 0.4, 0.48),
     )
     flow.heading("SHORTLISTED CANDIDATE SCENARIOS (Accepted for Planning Analysis)", size=8.0)
@@ -3775,6 +3817,11 @@ def build_fallback_pdf(
     else:
         note_disclaimer = "* No private analyst commentary attached to candidate records. Shortlist reflects verified multi-criteria ranking scores."
     flow.paragraph(note_disclaimer, size=6.2, color=(0.45, 0.5, 0.55))
+
+    _dur_weight = int(getattr(workspace, "weights", {}).get("duration", 25)) if workspace else 25
+    _dur_note = duration_mix_note(accepted, _dur_weight)
+    if _dur_note:
+        flow.paragraph(_dur_note, size=6.2, color=(0.4, 0.45, 0.5))
 
     # -------------------------------------------------------------------------
     # SECTION 3: REVIEW DECISION AND RATIONALE (Page 3)
@@ -3888,12 +3935,9 @@ def build_fallback_pdf(
 
     flow.heading("ILLUSTRATIVE STORAGE BANDS USED BY THIS EXPERIMENT -- NOT ADOPTED POLICY", size=8.5)
     band_actions = {
-        "Band 1": ("Public awareness notices, voluntary reduction targets, leak audit escalation.",
-                   "Generic planning language; effect on storage is not quantified here."),
-        "Band 2": ("Restrictions on landscape irrigation and non-essential outdoor use.",
-                   "Generic planning language; effect on storage is not quantified here."),
-        "Band 3": ("Emergency curtailment across accounts; drought surcharge pricing.",
-                   "Generic planning language; effect on storage is not quantified here."),
+        "Band 1": ("Public awareness notices, voluntary reduction targets, leak audit escalation.", "Generic planning language."),
+        "Band 2": ("Restrictions on landscape irrigation and non-essential outdoor use.", "Generic planning language."),
+        "Band 3": ("Emergency curtailment across accounts; drought surcharge pricing.", "Generic planning language."),
         "Band 4": ("Supply-emergency protocols prioritizing public health and safety.",
                    "Last band the model distinguishes before storage exhaustion."),
     }
@@ -3911,6 +3955,10 @@ def build_fallback_pdf(
     flow.table_header(band_columns)
     for idx, (stg, cap, act) in enumerate(rows_framework):
         flow.table_row([(stg, "/F2"), (cap, "/F1"), (act, "/F1")], idx, size=6.8)
+    flow.paragraph(
+        "* Specific curtailment volume/magnitude is not modeled dynamically per band; response effect is illustrative.",
+        size=6.2, color=(0.4, 0.45, 0.5),
+    )
 
     # -------------------------------------------------------------------------
     # SECTION 5: EXPERIMENT RESULTS (Page 4 Continued)
@@ -4050,7 +4098,11 @@ def build_fallback_pdf(
         format_custom_source_label,
     )
     flow.heading("6. OBSERVATION PROVENANCE", size=9.5)
-    flow.paragraph(f"Primary Station Proxies: NOAA GHCN-Daily {stations}.", size=7.0)
+    flow.paragraph(
+        f"Primary Station Proxies: NOAA GHCN-Daily precipitation. Network: {station_network_summary(workspace)}. "
+        f"Active this run: {stations}.",
+        size=7.0,
+    )
 
     # Station Completeness Table (Item 7)
     if workspace is not None and hasattr(workspace, "source"):

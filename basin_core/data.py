@@ -233,7 +233,7 @@ CITY_STATIONS: dict[str, list[str]] = {
     "Crystal City": ["USC00412160"],    # upper Nueces (Winter Garden)
     "Carrizo Springs": ["USC00411486"], # upper Nueces (Winter Garden)
     "Pearsall": ["USC00416879"],        # Frio River
-    "Choke Canyon": ["USC00411720"],    # Frio at Choke Canyon Reservoir
+    "Choke Canyon Dam": ["USC00411720"],  # Frio at Choke Canyon Reservoir
     "Pleasanton": ["USC00417111"],      # Atascosa River
     "Three Rivers": ["USC00419007"],    # Frio/Nueces confluence
     "Mathis": ["USC00415661"],          # Nueces at Lake Corpus Christi

@@ -11,7 +11,7 @@ STATUSES = ("unreviewed", "reviewed for this exercise", "provisional")
 def initial_evidence(source):
     manifest = source.manifest
     common = {"source_date": manifest["end"], "retrieved_at": manifest["downloaded_at"],
-              "geographic_scope": "Corpus Christi, Victoria and San Antonio station locations; catchments unvalidated",
+              "geographic_scope": "Regional and Nueces/Frio/Atascosa watershed station locations; point gauges, catchments unvalidated",
               "review_status": "provisional", "private_note": ""}
     ds_version = manifest['dataset_version'].strip().rstrip('.')
     noaa_desc = (
@@ -21,8 +21,8 @@ def initial_evidence(source):
     definitions = [
         ("noaa-snapshot", "NOAA daily precipitation snapshot", "NOAA NCEI", manifest["documentation"], "observation", "mm/day",
          noaa_desc),
-        ("station-suitability", "Regional index station network", "NOAA NCEI", "docs/methodology.md", "observation", "",
-         "Continuous multi-decadal daily precipitation index stations across the Nueces basin (Corpus Christi, Victoria, San Antonio). Observations are point measurements without spatial area weighting."),
+        ("station-suitability", "Regional and watershed station network", "NOAA NCEI", "docs/methodology.md", "observation", "",
+         "Continuous multi-decadal daily precipitation stations across the Nueces basin: 11 regional stations (Corpus Christi, Victoria, San Antonio, Kingsville, Rockport/Aransas, Alice) and 10 watershed gauges inside the Nueces/Frio/Atascosa drainage basins (Leakey, Camp Wood, Hondo, Crystal City, Carrizo Springs, Pearsall, Choke Canyon Dam, Pleasanton, Three Rivers, Mathis). Observations are point measurements without spatial area weighting."),
         ("rainfall-method", "Constructed rainfall and measured deficit", "BASIN implementation", "docs/methodology.md", "derived calculation", "mm per station",
          "Synchronized complete whole historical windows; station rainfall is multiplied by retained fractions. Net station deficits are clipped at zero and averaged equally. This is not streamflow scaling."),
         ("matched-reference", "Matched rainfall reference and concurrence", "BASIN implementation", "docs/methodology.md", "derived calculation", "mm; fraction",
