@@ -760,7 +760,9 @@ body.basin-theme-light .st-key-assistant_conversation{{
 /* Explicit Dark Mode Overrides for Drawers & Assistant Controls */
 body.basin-theme-dark .st-key-assistant_drawer,
 body:not(.basin-theme-light) .st-key-assistant_drawer {
-    background: #1E262C !important;
+    /* Keep the authored contour layers above intact. A background shorthand
+       here clears background-image and turns the drawer into a flat panel. */
+    background-color: #091B25 !important;
     color: #E7ECEF !important;
     border-left: 1.5px solid #65737D !important;
 }

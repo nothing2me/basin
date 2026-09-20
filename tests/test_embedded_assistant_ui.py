@@ -38,6 +38,17 @@ def test_chat_message_avatar_inset_and_green_theme():
     assert '[data-testid="stChatMessage"] [data-testid^="stChatMessageAvatar"]' in theme_source
 
 
+def test_dark_assistant_drawer_preserves_topographic_background():
+    theme_source = (ROOT / "basin_theme.py").read_text(encoding="utf-8")
+    drawer_override = theme_source.split(
+        "/* Explicit Dark Mode Overrides for Drawers & Assistant Controls */"
+    )[1].split("body.basin-theme-dark .st-key-notes_drawer_closed")[0]
+
+    assert 'url("{_TOPOGRAPHY_DATA_URI}")!important' in theme_source
+    assert "background-color: #091B25 !important" in drawer_override
+    assert "background: #1E262C !important" not in drawer_override
+
+
 
 def test_embedded_drawer_chat_query(workspace, monkeypatch):
     def no_network(*args, **kwargs):
