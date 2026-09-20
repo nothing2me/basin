@@ -29,7 +29,7 @@
 
 ## 🌊 Why BASIN? (Regional Context)
 
-In mid-April 2026, the primary surface water reservoirs supplying approximately 500,000 residents and heavy industry across the Texas Coastal Bend (Region N)—**Lake Corpus Christi** and **Choke Canyon Reservoir**—fell to an all-time historical low of **7.7% combined capacity**. This brought the reservoir system near its 75,000 acre-foot dead-storage threshold, the physical level where intake pumps cavitate, silt intrusion threatens water quality, and gravity conveyance fails.
+In mid-April 2026, the primary surface water reservoirs supplying approximately 500,000 residents and heavy industry across the Texas Coastal Bend (Region N)—**Lake Corpus Christi** and **Choke Canyon Reservoir**—fell to an all-time historical low of **7.8% combined capacity** (City of Corpus Christi water-supply update, April 17, 2026, reporting April 16). This brought the reservoir system near its 75,000 acre-foot dead-storage threshold, the physical level where intake pumps cavitate, silt intrusion threatens water quality, and gravity conveyance fails.
 
 While substantial summer rainfall partially replenished the basin to **~39.9% combined capacity** by mid-September 2026 (Lake Corpus Christi ~85.1%, Choke Canyon ~22.5%), the regional water system remains near the **Stage 1 / Band 1 drought threshold (40%)**, underscoring ongoing structural vulnerability.
 

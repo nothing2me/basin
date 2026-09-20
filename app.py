@@ -1354,7 +1354,7 @@ def start_example(source, names, force: bool = False, crisis_demo: bool = False)
     st.session_state.assistant_history = []
     if crisis_demo:
         st.session_state["storage_experiment"] = True
-        st.session_state["review_initial_storage"] = "7.7% (April 2026 context)"
+        st.session_state["review_initial_storage"] = "7.8% (April 2026 context)"
         st.session_state["review_conservation"] = 0
         st.session_state["review_pipeline_active"] = True
         store_review_preferences(

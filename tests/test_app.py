@@ -307,7 +307,7 @@ def test_crisis_demo_uses_documented_starting_context_without_approval(tmp_path,
     assert not app.exception
     assert app.session_state.page == "Review"
     assert app.session_state.storage_experiment is True
-    assert app.session_state.review_initial_storage == "7.7% (April 2026 context)"
+    assert app.session_state.review_initial_storage == "7.8% (April 2026 context)"
     assert abs(app.session_state.experiment_config.initial_pct - 0.077) < 1e-12
     assert all(s.status == "unreviewed" for s in app.session_state.workspace.scenarios)
     assert any("resulting trajectory are illustrative" in item.value for item in app.caption)

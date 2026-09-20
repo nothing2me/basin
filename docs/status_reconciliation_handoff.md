@@ -18,7 +18,7 @@ Source inspection originally found a material boundary that earlier prose blurre
 - `docs/claim_inventory.md`
 - `docs/methodology.md`
 - `docs/presentation_plan.md`
-- `docs/finalist_showcase_master_deck.md`
+- `docs/archive/finalist_showcase_master_deck.md`
 - `docs/social_media_assets_and_schedule.md`
 - `docs/day_of_surprise_rapid_response_guide.md`
 - `docs/tasks_1_3_integration_review.md`
