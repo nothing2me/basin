@@ -35,9 +35,9 @@
 > 
 > Out of hundreds of nationwide submissions, our team—Noah Wilborn, Mohammed Asad Khan, and Misha Stegall—has been selected as one of the **Top 5 Finalists** to present our project at Zoho’s North American Headquarters in Pleasanton on September 22!
 > 
-> We built **BASIN** (Basin Analysis & Scenario Integrity Network) to solve an urgent crisis unfolding right here in Texas: small municipal water utilities and rural communities facing historic drought with zero accessible, transparent planning tools.
+> We built **BASIN** (Basin Analysis & Scenario Intelligence Navigator) in response to a challenge we saw in Texas: rainfall evidence, scenario assumptions, and review decisions can become scattered across downloads, spreadsheets, screenshots, and meeting notes.
 > 
-> Instead of forcing communities to rely on $50,000 engineering consulting contracts or fragile, un-audited spreadsheets, BASIN provides an open, 100% on-device decision-support platform that transforms public climate observations into verified drought stress scenarios in minutes.
+> BASIN provides an open, on-device workflow that turns public rainfall observations and explicit assumptions into a transparent scenario shortlist for technical review. Its replayable handoff preserves the data, calculations, limitations, and human screening decisions.
 > 
 > A huge thank you to Ariel, Garrett, Mira, and the entire @Zoho USA team for creating a competition centered around real community impact.
 > 
@@ -70,9 +70,9 @@
 > 
 > We wanted to change that equation.
 > 
-> - **Noah** focused on physical mass balance, EAC reservoir evaporation curves, and making sure the math is 100% physically conserved.
-> - **Mohammed** built our on-device AI engine, pinning a quantized local LLM (Qwen-2.5-3B) that calls deterministic tools with zero cloud calls and zero hallucinations.
-> - **Misha** conducted field interviews with rural water operators and advocates to ensure the interface speaks plain language and serves real community needs.
+> - **Noah** focused on the rainfall-screening workflow, the illustrative storage accounting experiment, and transparent assumptions.
+> - **Mohammed** built the optional on-device assistant, connecting a pinned local language model to deterministic BASIN tools so calculations remain inspectable.
+> - **Misha** focused on plain-language review, evidence provenance, and the human handoff workflow.
 > 
 > On September 22, we’re taking our prototype to Pleasanton to pitch to Zoho’s judges. We can't wait to share what we've built!
 > 
@@ -96,20 +96,20 @@
 > South Texas and the 11-county Coastal Bend (Region N). In April 2026, reservoir levels dropped to 7.8% combined storage, sparking national headlines that Corpus Christi was on track to become "the first city in America to run out of water."
 > 
 > 👥 **WHO:**
-> Rural municipal water districts, agricultural irrigation managers, community planners, and civic leaders. These are the underserved stakeholders who can’t afford $50,000 for engineering consulting firms or wait 6 months for state river basin models.
+> Municipal and rural water providers, community planners, and technical reviewers who need to organize rainfall evidence and shortlist questions before commissioning formal analysis.
 > 
 > ❓ **WHAT:**
-> BASIN (Basin Analysis & Scenario Integrity Network) is an agile, 100% on-device hydrologic screening workbench. It turns raw public NOAA rainfall observations into diverse, stress-tested drought scenarios and generates a cryptographically sealed (SHA-256) engineering handoff bundle.
+> BASIN (Basin Analysis & Scenario Intelligence Navigator) is an on-device, pre-model rainfall-scenario screening and expert-handoff tool. It turns a pinned NOAA rainfall snapshot and explicit assumptions into a reviewable shortlist and a SHA-256 hash-checked, replayable ZIP. The checks establish internal consistency within the ZIP's declared scope, not hydrologic validation or professional approval.
 > 
 > ⚙️ **HOW (THE AI ARCHITECTURE):**
 > Many AI projects fail in municipal government because language models hallucinate. In water planning, an invented reservoir elevation could trigger a false emergency or delay critical conservation.
 > BASIN solves this with a **dual-AI architecture**:
-> 1. **Unsupervised K-Means Machine Learning:** Automatically clusters 300 candidate drought scenarios across a 5-dimensional hydrologic feature space (deficit, duration, spatial concurrence, season, max dry spell) into distinct physical archetypes, eliminating confirmation bias.
-> 2. **Local Pinned LLM (Qwen-2.5-3B via GGUF):** Runs entirely on CPU with zero cloud connection. The LLM is barred from doing arithmetic; it acts purely as an intent classifier that invokes 13 deterministic Python analysis tools.
-> 3. **Exact Physical Conservation:** Models dual-reservoir dynamics with dynamic power-law evaporation, enforcing $|\text{Error}| < 10^{-6}$ acre-feet on every daily time step.
+> 1. **Unsupervised K-Means clustering:** Groups 300 rainfall candidates using five shared features plus one normalized station-deficit feature per selected station, then selects one high-scoring representative from each cluster for human review.
+> 2. **Optional local assistant:** A pinned Qwen model can route plain-language questions to deterministic BASIN tools. The rainfall workflow remains usable without the model, and no AI system is presented as incapable of error.
+> 3. **Illustrative storage accounting:** A secondary, uncalibrated experiment checks numerical mass balance under visible capacity, demand, evaporation, pipeline, and rainfall-to-inflow assumptions. It is not a reservoir forecast or reliability model.
 > 
 > 🎯 **WHY:**
-> Water data sovereignty belongs in the hands of the community. Transparent tools empower citizens and council members to evaluate real policy choices—like the Fair Water Charter Amendment on the upcoming November ballot—with mathematical rigor and zero black-box bias.
+> Transparent tools can help communities and technical reviewers inspect where data came from, how scenarios were transformed, why a scenario was shortlisted, and which questions still require formal water-supply modeling and professional review.
 > 
 > We are deeply grateful to Zoho for championing grassroots civic tech. See you in Pleasanton on Tuesday! 🚀
 > 
