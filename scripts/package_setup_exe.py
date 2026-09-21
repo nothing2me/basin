@@ -12,16 +12,33 @@ DIST_DIR = ROOT / "dist"
 PAYLOAD_ZIP = DIST_DIR / "basin_payload.zip"
 ICON_PATH = ROOT / "assets" / "basin.ico"
 WIZARD_SCRIPT = ROOT / "scripts" / "installer_wizard.py"
+VERSION_PATH = ROOT / "scripts" / "version_info_setup.txt"
 
 
 def package_setup_exe():
     print("=== Building BASIN Standalone Offline Setup Executable ===", flush=True)
 
-    # 1. Build offline bundle and payload archive if needed
-    if not PAYLOAD_ZIP.exists():
-        print("Payload archive missing. Running build_offline_bundle.py...", flush=True)
-        from scripts.build_offline_bundle import build_bundle
-        build_bundle()
+    # 1. Always rebuild the launcher and payload from the current checkout. Reusing
+    # an existing payload can silently publish stale application code or data.
+    release_launcher = ROOT / "BASIN-release.exe"
+    build_env = os.environ.copy()
+    build_env["BASIN_BUILD_NAME"] = "BASIN-release"
+    build_env["BASIN_LAUNCHER_PATH"] = str(release_launcher)
+    print("Rebuilding BASIN.exe from the current checkout...", flush=True)
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "build_exe.py")],
+        cwd=str(ROOT),
+        env=build_env,
+        check=True,
+    )
+
+    print("Rebuilding the offline payload from the current checkout...", flush=True)
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "build_offline_bundle.py")],
+        cwd=str(ROOT),
+        env=build_env,
+        check=True,
+    )
 
     if not PAYLOAD_ZIP.exists():
         raise FileNotFoundError(f"Failed to produce {PAYLOAD_ZIP}")
@@ -36,6 +53,7 @@ def package_setup_exe():
         "--onefile",
         "--noconsole",
         f"--icon={ICON_PATH}",
+        f"--version-file={VERSION_PATH}",
         f"--add-data={PAYLOAD_ZIP};.",
         "--name=Setup-BASIN",
         "--distpath=.",

@@ -47,7 +47,7 @@ While substantial summer rainfall partially replenished the basin to **~39.9% co
 
 For municipal water managers, utility directors, consulting hydrologists, and civic leaders who want to run BASIN locally without installing Python, Git, or developer tooling:
 
-1. Download **[Setup-BASIN.exe (v1.0.0)](https://github.com/nothing2me/basin/releases)** (~191 MB standalone installer).
+1. Download **[Setup-BASIN.exe (v1.0.0)](https://github.com/nothing2me/basin/releases)** (~262 MiB standalone installer).
 2. Run the installer wizard. It installs directly to your local user directory (`%LOCALAPPDATA%\Programs\BASIN`) and requires **zero administrator privileges**.
 3. Launch **BASIN** from your Windows Start Menu or Desktop shortcut. The application runs natively in an accelerated local WebView2 window with 35 years of NOAA regional climate records pre-indexed.
 

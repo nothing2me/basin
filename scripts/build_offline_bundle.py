@@ -113,12 +113,17 @@ def copy_application_files():
     log(f"Copying application files into {BUNDLE_DIR}...")
     BUNDLE_DIR.mkdir(parents=True, exist_ok=True)
     
-    # 1. Native launcher BASIN.exe
-    launcher_exe = ROOT / "BASIN.exe"
+    # 1. Native launcher BASIN.exe. Release packaging can provide a dedicated
+    # staged launcher so an open development executable cannot make the bundle stale.
+    launcher_override = os.environ.get("BASIN_LAUNCHER_PATH", "").strip()
+    launcher_exe = Path(launcher_override) if launcher_override else ROOT / "BASIN.exe"
     if not launcher_exe.exists():
         log("Compiling BASIN.exe first...")
-        from scripts.build_exe import build_exe
-        build_exe()
+        subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "build_exe.py")],
+            cwd=str(ROOT),
+            check=True,
+        )
     shutil.copy2(launcher_exe, BUNDLE_DIR / "BASIN.exe")
 
     # 2. Root files used by the app and its reproducibility manifest.

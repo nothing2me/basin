@@ -10,6 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def output_name() -> str:
     """Use a staged name when Windows has the installed executable open."""
+    requested_name = os.environ.get("BASIN_BUILD_NAME", "").strip()
+    if requested_name:
+        return requested_name
     target = ROOT / "BASIN.exe"
     if not target.exists():
         return "BASIN"
@@ -29,6 +32,7 @@ def build_exe():
 
     icon_path = ROOT / "assets" / "basin.ico"
     launcher_path = ROOT / "scripts" / "launcher.py"
+    version_path = ROOT / "scripts" / "version_info_launcher.txt"
     name = output_name()
 
     cmd = [
@@ -41,6 +45,7 @@ def build_exe():
         "--noconsole",
         "--collect-all=webview",
         f"--icon={icon_path}",
+        f"--version-file={version_path}",
         f"--name={name}",
         "--distpath=.",
         str(launcher_path)

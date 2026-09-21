@@ -61,11 +61,13 @@ def run_smoke_test() -> dict:
     print("\n[Step 1] Initializing QwenInferenceClient (Process Worker)...")
     t_load_start = time.time()
     client = QwenInferenceClient(model_path)
+    status = client.wait_until_ready(timeout=120.0)
     load_time = time.time() - t_load_start
-    print(f"Worker initialized in {load_time:.2f}s, status: {client.status}")
+    print(f"Worker initialized in {load_time:.2f}s, status: {status}")
 
-    if client.status != "ready":
-        print(f"FAIL: Client status is '{client.status}'. Error: {client.error_message}")
+    if status != "ready":
+        print(f"FAIL: Client status is '{status}'. Error: {client.error_message}")
+        client.shutdown()
         sys.exit(1)
 
     # Prepare tools schema for Qwen
