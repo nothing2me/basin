@@ -178,14 +178,14 @@ def test_upload_ui_save_restore_and_export_consent(tmp_path, monkeypatch):
     accept_all(w)
     app.sidebar.radio[0].set_value("Exports").run()
     assert not app.exception
-    assert next(b for b in app.button if b.label == "Build verified export").disabled
+    assert next(b for b in app.button if b.label == "Build replayable handoff").disabled
     next(c for c in app.checkbox if c.label.startswith("Include custom numerical inputs")).check().run()
-    next(b for b in app.button if b.label == "Build verified export").click().run()
+    next(b for b in app.button if b.label == "Build replayable handoff").click().run()
     assert not app.exception
     assert app.session_state.packet["report"]["custom_comparisons_replayed"] == 1
     next(c for c in app.checkbox if c.label.startswith("Include custom numerical inputs")).uncheck().run()
     assert not app.exception
-    assert next(b for b in app.button if b.label == "Build verified export").disabled
+    assert next(b for b in app.button if b.label == "Build replayable handoff").disabled
 
 
 def test_audit_failure_preserves_last_saved_session(workspace, tmp_path, monkeypatch):

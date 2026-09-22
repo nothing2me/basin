@@ -26,12 +26,12 @@ ROOT = Path(__file__).resolve().parents[1]
 INSTALL_PATHS = ("Setup BASIN.cmd", ".github/workflows/tests.yml", "README.md", "start_basin.sh")
 
 # Packages the assistant boundary depends on. Pinning these is what makes the reviewed
-# proxy/redirect/timeout behaviour reproducible; see docs/dependency_advisories_2026-09-09.md.
+# proxy/redirect/timeout behaviour reproducible; see SECURITY.md.
 ASSISTANT_PACKAGES = ("ollama", "httpx", "httpcore", "pydantic", "pydantic-core",
                       "annotated-types", "typing-inspection")
 
 # The optional native runtime for embedded Qwen lives in its own hash-locked file, installed
-# only by scripts/install_native_runtime.py; see docs/native_runtime_handoff.md.
+# only by scripts/install_native_runtime.py; see SECURITY.md.
 NATIVE_REQUIREMENTS = "requirements-native.txt"
 NATIVE_INSTALLER = "scripts/install_native_runtime.py"
 NATIVE_PACKAGES = ("llama-cpp-python",)

@@ -19,6 +19,7 @@
 - [Developer & Hydrologist CLI Setup](#-developer--hydrologist-cli-setup)
 - [Architecture & Analytical Pipeline](#-architecture--analytical-pipeline)
 - [Core Capabilities](#️-core-capabilities)
+- [Documentation](#-documentation)
 - [Repository Structure](#-repository-structure)
 - [Verification & Test Suite](#-verification--test-suite)
 - [Data Provenance & Citations](#-data-provenance--citations)
@@ -128,6 +129,14 @@ The original three-station baseline and the expanded NOAA station network are **
 
 ---
 
+## 📚 Documentation
+
+The maintained technical documentation is indexed in [`docs/README.md`](docs/README.md). It covers the methodology, scientific and verification boundaries, export schema, numerical stability, station-suitability review, release evidence, security, and third-party terms.
+
+Development task boards, agent handoffs, review prompts, imported research packets, and presentation rehearsal drafts are intentionally excluded from the release repository.
+
+---
+
 ## 📁 Repository Structure
 
 ```text
@@ -146,7 +155,7 @@ basin/
 │   ├── simulation.py           # Mass-conserving multi-reservoir drawdown engine
 │   └── tools.py                # Deterministic analytical tools for LLM assistant
 ├── data/                       # Bundled NOAA climate records & historical baselines
-├── docs/                       # Technical briefs, methodology notes, and specs
+├── docs/                       # Maintained public methods, verification, and release docs
 ├── models/                     # Storage directory for optional local GGUF models
 ├── scripts/                    # Helper utilities, verification, and desktop launcher
 │   ├── demo_smoke.py           # Offline socket-blocked smoke test

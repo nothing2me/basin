@@ -146,7 +146,7 @@ def test_editing_a_scenario_drops_a_prepared_preview(app):
 
 
 def test_built_export_is_discarded_when_settings_change(app):
-    next(b for b in app.button if b.label == "Build verified export").click().run()
+    next(b for b in app.button if b.label == "Build replayable handoff").click().run()
     assert not app.exception
     packet = app.session_state.packet
     assert packet["report"]["verified"]
@@ -162,7 +162,7 @@ def test_built_export_is_discarded_when_settings_change(app):
 
     assert "packet" not in app.session_state
     assert not any("Download Executive Brief (PDF)" in b.label for b in app.download_button)
-    assert any("Rebuild the verified export" in i.value for i in app.info)
+    assert any("Rebuild the replayable handoff" in i.value for i in app.info)
 
 
 def test_exported_pdf_uses_the_selected_settings(app):
@@ -173,7 +173,7 @@ def test_exported_pdf_uses_the_selected_settings(app):
     review_current_experiment(app)
     configured = app.session_state.experiment_config
     app.sidebar.radio[0].set_value("Exports").run()
-    next(b for b in app.button if b.label == "Build verified export").click().run()
+    next(b for b in app.button if b.label == "Build replayable handoff").click().run()
     assert not app.exception
 
     pdf_bytes = app.session_state.packet["pdf_bytes"]
@@ -258,7 +258,7 @@ def test_hiding_experiment_preserves_report_configuration(app):
     assert not app.exception
     assert app.session_state.experiment_config == configured
     app.sidebar.radio[0].set_value("Exports").run()
-    next(b for b in app.button if b.label == "Build verified export").click().run()
+    next(b for b in app.button if b.label == "Build replayable handoff").click().run()
     assert not app.exception
     assert app.session_state.packet["config"] == configured.fingerprint()
     assert b"35% of combined capacity" in app.session_state.packet["pdf_bytes"]
@@ -273,7 +273,7 @@ def test_hiding_experiment_preserves_report_configuration(app):
 
 def test_export_reports_which_renderer_produced_the_pdf(app):
     """On this platform BASIN's built-in renderer runs; the export flow discloses that."""
-    next(b for b in app.button if b.label == "Build verified export").click().run()
+    next(b for b in app.button if b.label == "Build replayable handoff").click().run()
     assert not app.exception
     packet = app.session_state.packet
     assert packet["pdf_renderer"] == "vector_fallback"
@@ -300,7 +300,7 @@ def test_export_surfaces_a_degraded_browser_fallback_to_the_user(app, monkeypatc
     # re-reads on every Streamlit script rerun rather than mutating global interpreter state.
     monkeypatch.setattr(pdf_report, "generate_pdf_report_with_status", _forced_degraded)
 
-    next(b for b in app.button if b.label == "Build verified export").click().run()
+    next(b for b in app.button if b.label == "Build replayable handoff").click().run()
     assert not app.exception
     packet = app.session_state.packet
     assert packet["pdf_renderer"] == "vector_fallback"
@@ -318,7 +318,7 @@ def test_revoking_note_consent_removes_sentinel_from_a_rebuilt_pdf(app):
     scenario.review(True, "PRIVATE-DEMO-SENTINEL")
 
     app.checkbox(key=f"share_notes_{w.id}").set_value(True).run()
-    next(b for b in app.button if b.label == "Build verified export").click().run()
+    next(b for b in app.button if b.label == "Build replayable handoff").click().run()
     assert not app.exception
     assert b"PRIVATE-DEMO-SENTINEL" in app.session_state.packet["pdf_bytes"]
 
@@ -328,6 +328,6 @@ def test_revoking_note_consent_removes_sentinel_from_a_rebuilt_pdf(app):
     assert "packet" not in app.session_state
     assert not any("Download Executive Brief (PDF)" in b.label for b in app.download_button)
 
-    next(b for b in app.button if b.label == "Build verified export").click().run()
+    next(b for b in app.button if b.label == "Build replayable handoff").click().run()
     assert not app.exception
     assert b"PRIVATE-DEMO-SENTINEL" not in app.session_state.packet["pdf_bytes"]

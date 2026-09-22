@@ -4,7 +4,7 @@
 
 NOAA NCEI GHCN-Daily: https://doi.org/10.7289/V5D21VHZ. Documentation: https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt. Dataset version, retrieval time, URLs and hashes are in data/manifest.json. These are public federal meteorological observations, not BASIN-authored measurements; no endorsement is implied.
 
-TWDB (Texas Water Development Board) reservoir storage/capacity data and TCEQ (Texas Commission on Environmental Quality) WAM parameter baselines are public state planning materials cited in `docs/methodology.md` and the export methodology. Original research bytes in `research/incoming/` and `research/sources/` are preserved for audit; the supplied city drought contingency plan PDF is retained for offline page-level verification only and is not redistributed.
+TWDB (Texas Water Development Board) reservoir storage/capacity data and TCEQ (Texas Commission on Environmental Quality) WAM parameter baselines are public state planning materials cited in `docs/methodology.md` and the export methodology. Dataset identifiers, retrieval details, transformations, and hashes used by the application are recorded in the maintained methodology and manifests; working research packets are not distributed in this repository.
 
 ## Code and packaged wheels
 

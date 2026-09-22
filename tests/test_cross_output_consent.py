@@ -6,7 +6,7 @@ review notes private, or who does not consent to sharing custom uploaded data, m
 that decision honored the same way in every output -- and revoking consent after a first
 export must actually remove the previously-included content from the next one, not just
 hide a stale download button. This uses a synthetic sentinel string rather than any real
-private information, per docs/report_device_acceptance.md.
+private information, per docs/verification_scope.md.
 """
 import zipfile
 from io import BytesIO

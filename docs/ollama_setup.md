@@ -3,8 +3,8 @@
 Current main uses embedded Qwen with deterministic fallback for active chat. Ollama
 helpers are retained for compatibility/auditing; installing Ollama does not enable a
 second chat route. These instructions cover those optional helpers, not embedded Qwen.
-The raw inventory filter now rejects remote or ambiguous metadata; see
-`docs/model_security_handoff.md`. The older A-1 finding is fixed for these helpers.
+The raw inventory filter rejects remote or ambiguous metadata. Security boundaries and
+the supported release configuration are summarized in [`SECURITY.md`](../SECURITY.md).
 
 BASIN's calculation engine, scenario generation, review workflow, export bundle and PDF
 report all run with none of this installed. The assistant is optional throughout: when any
@@ -115,4 +115,4 @@ Not established by any of this:
   remote/cloud markers, inconsistent aliases and incomplete local-model metadata.
   This fixes finding A-1's metadata-loss issue; daemon-reported metadata still does
   not prove where inference executes. The current embedded chat does not call these
-  Ollama helpers. See `docs/model_security_handoff.md` for scope and evidence.
+  Ollama helpers. See [`SECURITY.md`](../SECURITY.md) for the supported security boundary.

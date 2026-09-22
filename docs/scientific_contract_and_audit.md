@@ -161,7 +161,7 @@ The following affirmative claims are strictly **PROHIBITED** in all software int
 | *"Scientifically validated / Hydrologist certified."* | Automated numerical consistency tests do not constitute professional hydrologic validation. | *"Numerically verified mass balance; pending formal external domain calibration."* |
 | *"Scaling rainfall 50% scales drought severity 50%."* | Hydrologic drought is non-linear; a 50% rainfall reduction often causes an 80–90% streamflow reduction. | *"Rainfall retention scales precipitation volume; non-linear runoff responses require watershed modeling."* |
 
-An automated validator function `validate_report_text_against_prohibited_claims(text)` is implemented in [`basin_core/scientific_contract.py`](file:///c:/Users/sonti/Terminus%20Clone/basin-latest/basin_core/scientific_contract.py) to prevent prohibited claims from being generated in reports.
+An automated validator function `validate_report_text_against_prohibited_claims(text)` is implemented in [`basin_core/scientific_contract.py`](../basin_core/scientific_contract.py) to prevent prohibited claims from being generated in reports.
 
 ---
 

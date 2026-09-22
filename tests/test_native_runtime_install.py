@@ -89,7 +89,7 @@ def test_runtime_does_not_enable_the_llama_cpp_disk_cache():
     """Advisory guard: diskcache 5.6.3 (GHSA-w8v5-vhqr-4h9v) unpickles cache files.
 
     llama-cpp-python only creates a diskcache.Cache through LlamaDiskCache/set_cache. The
-    inactive-code-path rationale in docs/native_runtime_handoff.md depends on BASIN never doing so;
+    inactive-code-path rationale in SECURITY.md depends on BASIN never doing so;
     revisit that note before this assertion is changed.
     """
     source = (ROOT / "basin_core" / "qwen_runtime.py").read_text(encoding="utf-8")

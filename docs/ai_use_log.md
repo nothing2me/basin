@@ -11,7 +11,7 @@ Every result was reviewed, edited, verified and accepted by the team, which
 remains fully responsible for the shipped work:
 
 - **OpenAI GPT-5.6 Astra** — core engine and application development, debugging, code review.
-- **Google Gemini 3.8 Flash** — performance/UX engineering and architecture planning (the completed responsiveness and rerun-trigger engineering plan, and the follow-on implementation plan, are Gemini-assisted; see `HANDOFF.md` and `docs/gemini_next_implementation_plan.md`), plus general coding.
+- **Google Gemini 3.8 Flash** — performance, UX engineering, architecture planning, and general coding.
 - **Anthropic Claude** — advanced research, codebase analysis, documentation and release engineering.
 - **OpenAI Codex** (early period, 2026-09-05/06) — reviewed supplied design, audit, survey and event materials; early implementation, verification, packaging and documentation.
 
@@ -25,7 +25,7 @@ remains fully responsible for the shipped work:
 | 09-12 → 09-13 | T1–T6 technical gates; scientific contract; document ingestion foundation; offline Region N satellite basemap; Windows PDF visual export; assistant routing |
 | 09-14 → 09-15 | Builder simplification; second independent audit + 5-fix execution plan; performance/rerun-trigger engineering (Gemini plan); demand-policy comparison; PDF browser rendering; executable rebuilds |
 | 09-16 → 09-18 | GitHub Pages showcase; 1-click installer with optional Qwen download; README overhaul; UI/theme/map polish; PDF page-break and disclaimer fixes; offline assistant question coverage |
-| 09-19 | Release preparation: CI hardening (concurrency + timeout), git hygiene (author mailmap, ignore rules, branch cleanup), clickable PDF TOC + ensemble drawdown overlays, NOAA snapshot refresh (in progress) |
+| 09-19 → 09-20 | Release preparation: CI hardening, repository cleanup, PDF navigation, ensemble drawdown overlays, NOAA snapshot refresh, installer validation, and release documentation |
 
 ## Guardrails (unchanged)
 

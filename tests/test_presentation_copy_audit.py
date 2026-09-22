@@ -208,7 +208,7 @@ def test_scientific_scope_disclosures_are_consistent():
     exporter_text = (ROOT / "basin_core" / "exporter.py").read_text(encoding="utf-8")
     report_text = (ROOT / "basin_core" / "pdf_report.py").read_text(encoding="utf-8")
     methodology_text = (ROOT / "docs" / "methodology.md").read_text(encoding="utf-8")
-    roadmap_text = (ROOT / "TODO.md").read_text(encoding="utf-8")
+    suitability_text = (ROOT / "docs" / "watershed_representativeness_checklist.md").read_text(encoding="utf-8")
 
     for text in (app_text, assistant_text, exporter_text, report_text, methodology_text):
         assert "reservoir inflow" in text
@@ -216,6 +216,6 @@ def test_scientific_scope_disclosures_are_consistent():
 
     assert "provisional regional proxies" in app_text
     assert "not learned AI feature importance" in app_text
-    assert "watershed validation" in roadmap_text
-    assert "streamflow" in roadmap_text
+    assert "watershed" in suitability_text.lower()
+    assert "runoff" in suitability_text.lower()
     assert "Catchment Average" not in (ROOT / "basin_core" / "visualizers.py").read_text(encoding="utf-8")

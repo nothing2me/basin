@@ -25,9 +25,8 @@ The Review page exposes the four ranking weights as sliders with an instant
 **rerank** control (and a weight-preview comparison). A user can:
 
 1. Raise/lower severity vs. duration and watch which scenario leads change.
-2. Use `scripts/evaluate_selection.py` / the built-in selection comparison to
-   compare the weighted shortlist against a score-only and a seeded-random
-   shortlist (diversity trade-off is disclosed in the report).
+2. Use the built-in selection comparison to compare the weighted shortlist against
+   alternative priorities; the report discloses the resulting diversity trade-off.
 
 This makes the ranking **auditable**: any reviewer can reproduce how the shortlist
 responds to priorities, which is the governance feature the tool is built around.

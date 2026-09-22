@@ -291,7 +291,7 @@ ILLUSTRATIVE_BANDS: tuple[tuple[float, str], ...] = (
     (0.15, "Band 4"),
 )
 
-# TWDB volumetric survey figures recorded in research/incoming/BASIN_Research_Packet.md.
+# TWDB volumetric survey figures used by the illustrative storage experiment.
 # They are a sourced external reference and deliberately differ from the model assumption
 # above; the report states both rather than implying the model reproduces the surveys.
 SURVEYED_CAPACITIES_ACFT = {"Lake Corpus Christi": 256062.0, "Choke Canyon": 662820.0}

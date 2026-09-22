@@ -31,15 +31,12 @@ def build_icon():
     png_path = ASSETS / "basin.png"
     img.resize((256, 256), Image.Resampling.LANCZOS).save(png_path, "PNG")
 
-    # Save Windows multi-resolution .ico to both assets/ and root
+    # Save the Windows multi-resolution icon in the canonical assets directory.
     ico_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
     ico_path_assets = ASSETS / "basin.ico"
-    ico_path_root = ROOT / "basin.ico"
     img.save(ico_path_assets, format="ICO", sizes=ico_sizes)
-    img.save(ico_path_root, format="ICO", sizes=ico_sizes)
 
     print(f"Generated {ico_path_assets} ({ico_path_assets.stat().st_size} bytes)")
-    print(f"Generated {ico_path_root} ({ico_path_root.stat().st_size} bytes)")
     print(f"Generated {png_path} ({png_path.stat().st_size} bytes)")
     print(f"Generated {ASSETS / 'basin-logo.png'} ({(ASSETS / 'basin-logo.png').stat().st_size} bytes)")
 

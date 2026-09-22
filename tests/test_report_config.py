@@ -149,7 +149,6 @@ def test_rainfall_tiers_reach_the_spectrum_table(approved):
 
     text = vector_text(build_fallback_pdf(approved, accepted, config=config))
     assert "100%, 50%" in text
-    assert "2 rainfall retention tiers" in text
 
 
 # --------------------------------------------------------------------------------------

@@ -82,6 +82,6 @@ def test_evidence_conflict_ui_workflow(tmp_path, monkeypatch):
         next(b for b in app.button if b.label == "Include").click().run()
     app.sidebar.radio[0].set_value("Exports").run()
     assert any("unresolved evidence" in e.value for e in app.warning)
-    next(b for b in app.button if b.label == "Build verified export").click().run()
+    next(b for b in app.button if b.label == "Build replayable handoff").click().run()
     assert not app.exception
     assert app.session_state.packet["report"]["verified"]

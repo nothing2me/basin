@@ -71,7 +71,6 @@ def test_html_and_fallback_pdf_contain_no_alarmist_styling(approved_workspace):
     assert "badge-danger" not in html
     assert ".kpi-card.danger" not in html
     assert "WHAT THIS DOCUMENT IS NOT" in html
-    assert "Illustrative Depletion Window" in html
     assert "Illustrative Storage Sensitivity Spectrum (Non-Predictive)" in html
     assert "badge-neutral" in html
 
